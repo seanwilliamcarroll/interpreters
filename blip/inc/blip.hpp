@@ -4,32 +4,32 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Source file for Blip class
+//*  Purpose : Top level Blip class
 //*
 //*
 //****************************************************************************
+#pragma once
+//****************************************************************************
 
-#include <vector>                                        // For vector
-#include <blip.hpp>                                      // For Blip class
-#include <blipast.hpp>                                   // For BlipAST class
-#include <sc/token.hpp>                                  // For Token class
+#include <vector>
+#include <sc/token.hpp>
+#include <blipast.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
-using namespace sc;
 
-Blip::Blip() {}
+class Blip {
+public:
 
-Blip::~Blip() {}
+  Blip();
 
-BlipAST Blip::Parse(const std::vector<Token> tokens) {
+  ~Blip();
 
-  // TODO: Parse tokens and construct Blip AST
+  BlipAST Parse(const std::vector<sc::Token> tokens);
   
-  return BlipAST();
-}
-
+private:
+};
 
 //****************************************************************************
 } // namespace blip

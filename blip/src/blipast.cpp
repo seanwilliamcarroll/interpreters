@@ -4,14 +4,13 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Source file for Blip class
+//*  Purpose : Source file for BlipAST class
 //*
 //*
 //****************************************************************************
 
-#include <vector>                                        // For vector
-#include <blip.hpp>                                      // For Blip class
-#include <blipast.hpp>                                   // For BlipAST class
+#include <iostream>                                      // For cout
+#include <blipast.hpp>                                   // For blip class
 #include <sc/token.hpp>                                  // For Token class
 
 //****************************************************************************
@@ -19,17 +18,13 @@ namespace blip {
 //****************************************************************************
 using namespace sc;
 
-Blip::Blip() {}
+BlipAST::BlipAST() {}
 
-Blip::~Blip() {}
+BlipAST::~BlipAST() {}
 
-BlipAST Blip::Parse(const std::vector<Token> tokens) {
-
-  // TODO: Parse tokens and construct Blip AST
-  
-  return BlipAST();
+void BlipAST::PrettyPrint() {
+  std::cout << "TODO: PrettyPrint the Blip AST" << std::endl;
 }
-
 
 //****************************************************************************
 } // namespace blip

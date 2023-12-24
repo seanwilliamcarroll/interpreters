@@ -4,32 +4,33 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Source file for Blip class
+//*  Purpose : BlipAST class to represent the abstract syntax tree of the blip
+//*            language
 //*
 //*
 //****************************************************************************
+#pragma once
+//****************************************************************************
 
-#include <vector>                                        // For vector
-#include <blip.hpp>                                      // For Blip class
-#include <blipast.hpp>                                   // For BlipAST class
-#include <sc/token.hpp>                                  // For Token class
+#include <vector>
+#include <blipast.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
-using namespace sc;
 
-Blip::Blip() {}
+class BlipAST {
+public:
 
-Blip::~Blip() {}
+  BlipAST();
 
-BlipAST Blip::Parse(const std::vector<Token> tokens) {
+  ~BlipAST();
 
-  // TODO: Parse tokens and construct Blip AST
+  void PrettyPrint();
+
+private:
   
-  return BlipAST();
-}
-
+};
 
 //****************************************************************************
 } // namespace blip
