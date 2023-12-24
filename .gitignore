@@ -1,32 +1,18 @@
-# Prerequisites
-*.d
+#*********** Copyright © 2023 Sean Caroll, Jonathon Bell. All rights reserved.
+#**
+#**
+#**  Version : $Header:$
+#**
+#**
+#**  Purpose : Specifies intentionally untracked files to ignore.
+#**
+#**
+#**  See Also: https://git-scm.com/docs/gitignore
+#**            for more on '.gitignore' files.
+#**
+#**
+#*****************************************************************************
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+.*
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+#*****************************************************************************
