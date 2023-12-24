@@ -8,7 +8,7 @@
 
 After installing MacPorts:
 
-    > sudo port install clang-7 cmake
+    > sudo port install clang-17 cmake
     > sudo port select clang mp-clang-17
 
 ### Building
