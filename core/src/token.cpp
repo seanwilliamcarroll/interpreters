@@ -31,9 +31,12 @@ bool Token::is_same_lexeme_as(Token const &other) const {
   return m_lexeme == other.m_lexeme;
 }
 
+bool Token::is_same_type_lexeme_as(Token const &other) const {
+  return is_same_type_as(other) && is_same_lexeme_as(other);
+}
+
 bool Token::operator==(Token const &other) const {
-  return (m_loc == other.m_loc) && (is_same_type_as(other)) &&
-         (is_same_lexeme_as(other));
+  return (m_loc == other.m_loc) && is_same_type_lexeme_as(other);
 }
 
 std::ostream &Token::dump(std::ostream &out) {

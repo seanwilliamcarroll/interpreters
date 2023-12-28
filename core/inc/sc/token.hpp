@@ -55,6 +55,8 @@ struct Token {
 
   virtual bool is_same_lexeme_as(Token const &other) const;
 
+  virtual bool is_same_type_lexeme_as(Token const &other) const;
+
   bool operator==(Token const &other) const;
 
   const SourceLocation m_loc;

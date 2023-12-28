@@ -28,6 +28,8 @@ SourceLocation::SourceLocation(unsigned int line, unsigned int column,
 SourceLocation::SourceLocation(const std::string &file_name)
     : SourceLocation(1, 0, file_name) {}
 
+SourceLocation::SourceLocation() : SourceLocation("") {}
+
 std::ostream &SourceLocation::dump(std::ostream &out) const {
   out << "SourceLocation: ";
   out << m_file_name;

@@ -27,6 +27,8 @@ struct SourceLocation {
 
   SourceLocation(const std::string &file_name);
 
+  SourceLocation();
+
   std::ostream &dump(std::ostream &out) const;
   bool operator==(SourceLocation const &other) const;
 
