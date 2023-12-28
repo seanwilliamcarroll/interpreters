@@ -20,19 +20,17 @@ namespace sc {
 //****************************************************************************
 
 struct SourceLocation;
-  
+
 using TokenType = unsigned int;
 
 struct Token;
 
-template <typename T>
-struct TokenOf;
+template <typename T> struct TokenOf;
 
 class LexerInterface;
 
 using KeywordsMap = std::map<std::string, TokenType>;
-  
-  
+
 //****************************************************************************
 } // namespace sc
 //****************************************************************************

@@ -11,8 +11,8 @@
 #pragma once
 //****************************************************************************
 
-#include <sc/sc.hpp>
 #include <lexer.hpp>
+#include <sc/sc.hpp>
 
 //****************************************************************************
 namespace blip {
@@ -20,15 +20,14 @@ namespace blip {
 
 class Blip {
 public:
-  Blip(std::istream& in_stream, const std::string& file_name = "<input>");
+  Blip(std::istream &in_stream, const std::string &file_name = "<input>");
 
   void rep();
-  
+
 private:
   Lexer m_lexer;
 };
 
-  
 //****************************************************************************
 } // namespace blip
 //****************************************************************************

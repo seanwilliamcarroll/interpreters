@@ -9,14 +9,14 @@
 //*
 //****************************************************************************
 
-#include <iostream>                                      // For cout
-#include <sstream>                                       // For stringstream
-#include <fstream>                                       // For fstream
-#include <blip.hpp>                                      // For example
+#include <blip.hpp> // For example
+#include <fstream>  // For fstream
+#include <iostream> // For cout
+#include <sstream>  // For stringstream
 
 //****************************************************************************
 
-void repl(std::iostream& input_stream, blip::Blip& blip_lang) {
+void repl(std::iostream &input_stream, blip::Blip &blip_lang) {
   for (;;) {
     std::cout << "-> ";
 
@@ -24,23 +24,23 @@ void repl(std::iostream& input_stream, blip::Blip& blip_lang) {
     std::getline(std::cin, next_line);
 
     input_stream << next_line;
-    
+
     blip_lang.rep();
   }
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
 
   if (argc == 1) {
     std::stringstream s;
     blip::Blip blip_lang(s);
     repl(s, blip_lang);
-  } else if (argc == 2){
+  } else if (argc == 2) {
     // Load and run file
     std::fstream input_file;
     // Unsafe, but good for testing
     input_file.open(argv[1], std::fstream::in);
-    
+
     blip::Blip blip_lang(input_file, argv[1]);
 
     blip_lang.rep();

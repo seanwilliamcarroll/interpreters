@@ -10,32 +10,36 @@
 //****************************************************************************
 
 #include <iostream>
-#include <string>
 #include <memory>
+#include <string>
 
-#include <sc/sc.hpp>                                   // For forward decls
-#include <sc/token.hpp>                                // For Token classes
-#include <sc/core_lexer.hpp>                           // For CoreLexer class
+#include <sc/core_lexer.hpp> // For CoreLexer class
+#include <sc/sc.hpp>         // For forward decls
+#include <sc/token.hpp>      // For Token classes
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-CoreLexer::CoreLexer(std::istream& in_stream, const KeywordsMap& keywords, const std::string& file_name)
-  : m_in_stream(in_stream), m_keywords(keywords), m_current_loc(SourceLocation(file_name)) {}
+CoreLexer::CoreLexer(std::istream &in_stream, const KeywordsMap &keywords,
+                     const std::string &file_name)
+    : m_in_stream(in_stream), m_keywords(keywords),
+      m_current_loc(SourceLocation(file_name)) {}
 
 std::unique_ptr<Token> CoreLexer::getNextToken() {
   std::unique_ptr<Token> output = nullptr;
   char character;
   if (peek(character)) {
-    switch(character) {
+    switch (character) {
     case '(':
-      output = std::make_unique<Token>(m_current_loc, token_type::LEFT_PAREND, "(");
+      output =
+          std::make_unique<Token>(m_current_loc, token_type::LEFT_PAREND, "(");
       advance();
       return output;
       break;
     case ')':
-      output = std::make_unique<Token>(m_current_loc, token_type::RIGHT_PAREND, ")");
+      output =
+          std::make_unique<Token>(m_current_loc, token_type::RIGHT_PAREND, ")");
       advance();
       return output;
       break;
@@ -62,19 +66,20 @@ std::unique_ptr<Token> CoreLexer::getNextToken() {
     }
   } else if (m_in_stream.eof()) {
     reset_eof();
-    return std::make_unique<Token>(m_current_loc, token_type::EOF_TOKENTYPE, "EOF");
+    return std::make_unique<Token>(m_current_loc, token_type::EOF_TOKENTYPE,
+                                   "EOF");
   } else {
     std::cerr << "Unexpected error!" << std::endl;
     return output;
   }
 }
 
-std::unique_ptr<Token>  CoreLexer::identifier(){
+std::unique_ptr<Token> CoreLexer::identifier() {
   std::string lexeme = "";
   char character;
   SourceLocation starting_loc = SourceLocation(m_current_loc);
   while (peek(character)) {
-    switch(character){
+    switch (character) {
     case '(':
     case ')':
     case ';':
@@ -83,34 +88,34 @@ std::unique_ptr<Token>  CoreLexer::identifier(){
     case '\r':
     case '\n':
       // TODO: determine if literal or identifier
-      return std::make_unique<Token>(starting_loc, lookup_keyword(lexeme), lexeme);
+      return std::make_unique<Token>(starting_loc, lookup_keyword(lexeme),
+                                     lexeme);
     default:
       lexeme += advance();
       break;
     }
   }
-  if (lexeme == ""){
+  if (lexeme == "") {
     // TODO
     // throw std::exception
   }
   return std::make_unique<Token>(starting_loc, lookup_keyword(lexeme), lexeme);
 }
 
-TokenType CoreLexer::lookup_keyword(const std::string& lexeme){
+TokenType CoreLexer::lookup_keyword(const std::string &lexeme) {
   if (m_keywords.count(lexeme) == 1) {
     return m_keywords.at(lexeme);
   }
   return token_type::IDENTIFIER;
 }
 
-  
-void CoreLexer::comment(){
+void CoreLexer::comment() {
   // Peek at next character, if whitespace, keep advancing until not.
   char character;
 
   advance();
-  
-  if (peek(character)){
+
+  if (peek(character)) {
     if (character == '-') {
       advance();
       block_comment();
@@ -119,7 +124,7 @@ void CoreLexer::comment(){
   } else {
     return;
   }
-  
+
   while (peek(character)) {
     switch (character) {
     case '\r':
@@ -132,7 +137,7 @@ void CoreLexer::comment(){
   }
 }
 
-void CoreLexer::block_comment(){
+void CoreLexer::block_comment() {
   // Keep throwing away characters until we see the end of a block comment
   // If we hit EOF, throw an exception
   char character;
@@ -160,8 +165,7 @@ void CoreLexer::block_comment(){
   // throw std::exception;
 }
 
-  
-void CoreLexer::whitespace(){
+void CoreLexer::whitespace() {
   // Peek at next character, if whitespace, keep advancing until not.
   char character;
   while (peek(character)) {
@@ -176,7 +180,7 @@ void CoreLexer::whitespace(){
   }
 }
 
-bool CoreLexer::peek(char& character) {
+bool CoreLexer::peek(char &character) {
   char temp_character = m_in_stream.peek();
 
   if (temp_character == EOF) {
@@ -186,14 +190,14 @@ bool CoreLexer::peek(char& character) {
   character = temp_character;
   return true;
 }
-  
-void CoreLexer::line_break(){
+
+void CoreLexer::line_break() {
   char character;
   while (peek(character)) {
     switch (character) {
     case '\r':
     case '\n':
-      if (!m_in_stream.get(character)){
+      if (!m_in_stream.get(character)) {
         character = '\0';
       }
       m_current_loc.m_line++;
@@ -205,9 +209,9 @@ void CoreLexer::line_break(){
   }
 }
 
-char CoreLexer::advance(){
+char CoreLexer::advance() {
   char character;
-  if (!m_in_stream.get(character)){
+  if (!m_in_stream.get(character)) {
     character = '\0';
   }
   m_current_loc.m_column++;
@@ -219,7 +223,7 @@ void CoreLexer::reset_eof() {
   m_current_loc.m_line = 1;
   m_current_loc.m_column = 0;
 }
-  
+
 //****************************************************************************
 } // namespace sc
 //****************************************************************************

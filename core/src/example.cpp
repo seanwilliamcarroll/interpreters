@@ -9,7 +9,7 @@
 //*
 //****************************************************************************
 
-#include "sc/example.hpp"                                // For example()
+#include "sc/example.hpp" // For example()
 
 //****************************************************************************
 namespace sc {
@@ -22,10 +22,7 @@ namespace sc {
  *
  * @return 'i' multiplied by 3.
  */
-int example(int i)
-{
-  return i * 3;
-}
+int example(int i) { return i * 3; }
 
 //****************************************************************************
 } // namespace sc
