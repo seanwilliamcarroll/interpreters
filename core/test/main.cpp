@@ -8,7 +8,7 @@
 //*
 //*
 //*  See Also:
-//https://github.com/doctest/doctest/blob/master/doc/markdown/main.md
+// https://github.com/doctest/doctest/blob/master/doc/markdown/main.md
 //*            for more on the doctest main entry point.
 //*
 //*
