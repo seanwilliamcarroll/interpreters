@@ -45,12 +45,17 @@ const sc::TokenType DOT = 19;
 
 struct Token {
 
-  Token(const SourceLocation &loc, TokenType type, const std::string &lexeme)
-      : m_loc(loc), m_type(type), m_lexeme(lexeme) {}
+  Token(const SourceLocation &loc, TokenType type, const std::string &lexeme);
 
-  virtual ~Token() {}
+  virtual ~Token();
 
   virtual std::ostream &dump(std::ostream &out);
+
+  virtual bool is_same_type_as(Token const &other) const;
+
+  virtual bool is_same_lexeme_as(Token const &other) const;
+
+  bool operator==(Token const &other) const;
 
   const SourceLocation m_loc;
   const TokenType m_type;
@@ -60,10 +65,11 @@ struct Token {
 template <typename T> struct TokenOf : public Token {
 
   TokenOf(const SourceLocation &loc, TokenType type, const std::string &lexeme,
-          const T &value)
-      : Token(loc, type, lexeme), m_value(value) {}
+          const T &value);
 
-  virtual ~TokenOf() {}
+  virtual ~TokenOf();
+
+  bool operator==(TokenOf const &other) const;
 
   virtual std::ostream &dump(std::ostream &out) override;
 

@@ -4,36 +4,27 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : SourceLocation class
+//*  Purpose : Exception classes
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <iostream>
+#include <stdexcept>
 #include <string>
+
+#include <sc/sc.hpp>
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-struct SourceLocation {
-  // std::source_location is in C++20, which I don't think we currently support?
+class LexerException : public std::runtime_error {
+public:
+  LexerException(const std::string &message);
 
-  SourceLocation(unsigned int line, unsigned int column,
-                 const std::string &file_name,
-                 const std::string &function_name = "");
-
-  SourceLocation(const std::string &file_name);
-
-  std::ostream &dump(std::ostream &out) const;
-  bool operator==(SourceLocation const &other) const;
-
-  unsigned int m_line;
-  unsigned int m_column;
-  std::string m_file_name;
-  std::string m_function_name;
+private:
 };
 
 //****************************************************************************

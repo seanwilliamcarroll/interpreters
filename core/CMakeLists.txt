@@ -18,7 +18,7 @@ project(core VERSION 0.1.0)
 #*****************************************************************************
 
 add_library(core STATIC
-  src/token.cpp src/core_lexer.cpp src/example.cpp)
+  src/exceptions.cpp src/source_location.cpp src/token.cpp src/core_lexer.cpp src/example.cpp)
 
 target_include_directories(core PUBLIC inc)
 

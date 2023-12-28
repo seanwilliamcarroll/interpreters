@@ -4,36 +4,23 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Forward declarations of major classes and types
+//*  Purpose : source file for exceptions header file
 //*
 //*
-//****************************************************************************
-#pragma once
 //****************************************************************************
 
-#include <map>
-#include <memory>
+#include <iostream>
 #include <string>
+
+#include <sc/exceptions.hpp> // For exception classes
+#include <sc/sc.hpp>         // For forward decls
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-class LexerException;
-
-struct SourceLocation;
-
-using TokenType = unsigned int;
-
-struct Token;
-
-template <typename T> struct TokenOf;
-
-class LexerInterface;
-
-class CoreLexer;
-
-using KeywordsMap = std::map<std::string, TokenType>;
+LexerException::LexerException(const std::string &message)
+    : std::runtime_error(message) {}
 
 //****************************************************************************
 } // namespace sc

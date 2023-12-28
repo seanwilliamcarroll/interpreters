@@ -11,9 +11,11 @@
 
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include <sc/core_lexer.hpp> // For CoreLexer class
+#include <sc/exceptions.hpp> // For exceptions classes
 #include <sc/sc.hpp>         // For forward decls
 #include <sc/token.hpp>      // For Token classes
 
@@ -133,11 +135,18 @@ std::unique_ptr<Token> CoreLexer::comparison_operator() {
       }
       break;
     default:
-      // TODO error used this function incorrectly
+      std::string exception_message =
+          "Invalid usage of CoreLexer::comparison_operator, did not expect "
+          "character ";
+      exception_message = exception_message + std::to_string(character) +
+                          " (value: " + std::to_string(int(character)) + ")";
+      throw LexerException(exception_message);
       break;
     }
   } else {
-    // TODO error used this function incorrectly
+    std::string exception_message =
+        "Invalid usage of CoreLexer::comparison_operator, did not expect EOF";
+    throw LexerException(exception_message);
   }
   return std::make_unique<Token>(starting_loc, type, lexeme);
 }
@@ -164,8 +173,10 @@ std::unique_ptr<Token> CoreLexer::identifier() {
     }
   }
   if (lexeme == "") {
-    // TODO
-    // throw std::exception
+    std::string exception_message =
+        "Invalid usage of CoreLexer::identifier, did not find any characters "
+        "to form the lexeme";
+    throw LexerException(exception_message);
   }
   return std::make_unique<Token>(starting_loc, lookup_keyword(lexeme), lexeme);
 }
@@ -229,8 +240,10 @@ void CoreLexer::block_comment() {
       break;
     }
   }
-  // TODO
-  // throw std::exception;
+  std::stringstream exception_message;
+  exception_message << "Did not see end of block comment at ";
+  m_current_loc.dump(exception_message);
+  throw LexerException(exception_message.str());
 }
 
 void CoreLexer::whitespace() {
@@ -265,9 +278,7 @@ void CoreLexer::line_break() {
     switch (character) {
     case '\r':
     case '\n':
-      if (!m_in_stream.get(character)) {
-        character = '\0';
-      }
+      m_in_stream.get(character);
       m_current_loc.m_line++;
       m_current_loc.m_column = 0;
       break;
