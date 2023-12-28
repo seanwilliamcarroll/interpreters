@@ -32,37 +32,44 @@ std::unique_ptr<Token> CoreLexer::getNextToken() {
   if (peek(character)) {
     switch (character) {
     case '(':
-      output =
-          std::make_unique<Token>(m_current_loc, token_type::LEFT_PAREND, "(");
-      advance();
-      return output;
-      break;
+      return single_char_token(token_type::LEFT_PAREND, "(");
     case ')':
-      output =
-          std::make_unique<Token>(m_current_loc, token_type::RIGHT_PAREND, ")");
-      advance();
-      return output;
-      break;
+      return single_char_token(token_type::RIGHT_PAREND, ")");
     case ';':
       // Start of end of line comment or block comment
       comment();
       return getNextToken();
-      break;
     case ' ':
     case '\t':
       // Whitespace
       whitespace();
       return getNextToken();
-      break;
     case '\r':
     case '\n':
       // Line break
       line_break();
       return getNextToken();
-      break;
+    case '+':
+      return single_char_token(token_type::PLUS, "+");
+    case '-':
+      return single_char_token(token_type::MINUS, "-");
+    case '*':
+      return single_char_token(token_type::TIMES, "*");
+    case '/':
+      return single_char_token(token_type::DIV, "/");
+    case '^':
+      return single_char_token(token_type::XOR, "^");
+    case '~':
+      return single_char_token(token_type::TILDE, "~");
+    case '.':
+      return single_char_token(token_type::DOT, ".");
+    case '=':
+    case '>':
+    case '<':
+    case '!':
+      return comparison_operator();
     default:
       return identifier();
-      break;
     }
   } else if (m_in_stream.eof()) {
     reset_eof();
@@ -72,6 +79,67 @@ std::unique_ptr<Token> CoreLexer::getNextToken() {
     std::cerr << "Unexpected error!" << std::endl;
     return output;
   }
+}
+
+std::unique_ptr<Token> CoreLexer::single_char_token(TokenType type,
+                                                    const std::string &lexeme) {
+  std::unique_ptr<Token> output =
+      std::make_unique<Token>(m_current_loc, type, lexeme);
+  advance();
+  return output;
+}
+
+std::unique_ptr<Token> CoreLexer::comparison_operator() {
+  std::string lexeme = "";
+  char character;
+  SourceLocation starting_loc = SourceLocation(m_current_loc);
+  TokenType type = token_type::INVALID;
+  if (peek(character)) {
+    switch (character) {
+    case '=':
+      lexeme += advance();
+      if (peek(character) && character == '=') {
+        lexeme += advance();
+        type = token_type::EQEQ;
+      } else {
+        type = token_type::EQ;
+      }
+      break;
+    case '<':
+      lexeme += advance();
+      if (peek(character) && character == '=') {
+        lexeme += advance();
+        type = token_type::LTEQ;
+      } else {
+        type = token_type::LT;
+      }
+      break;
+    case '>':
+      lexeme += advance();
+      if (peek(character) && character == '=') {
+        lexeme += advance();
+        type = token_type::GTEQ;
+      } else {
+        type = token_type::GT;
+      }
+      break;
+    case '!':
+      lexeme += advance();
+      if (peek(character) && character == '=') {
+        lexeme += advance();
+        type = token_type::NOTEQ;
+      } else {
+        type = token_type::NOT;
+      }
+      break;
+    default:
+      // TODO error used this function incorrectly
+      break;
+    }
+  } else {
+    // TODO error used this function incorrectly
+  }
+  return std::make_unique<Token>(starting_loc, type, lexeme);
 }
 
 std::unique_ptr<Token> CoreLexer::identifier() {

@@ -19,18 +19,11 @@ namespace blip {
 //****************************************************************************
 
 namespace blip_token_types {
-const sc::TokenType IF = 5;
-const sc::TokenType WHILE = 6;
-const sc::TokenType SET = 7;
-const sc::TokenType BEGIN = 8;
-const sc::TokenType PLUS = 9;
-const sc::TokenType MINUS = 10;
-const sc::TokenType TIMES = 11;
-const sc::TokenType DIV = 12;
-const sc::TokenType EQ = 13;
-const sc::TokenType LT = 14;
-const sc::TokenType GT = 15;
-const sc::TokenType PRINT = 16;
+const sc::TokenType IF = 50;
+const sc::TokenType WHILE = 51;
+const sc::TokenType SET = 52;
+const sc::TokenType BEGIN = 53;
+const sc::TokenType PRINT = 54;
 } // namespace blip_token_types
 
 class Lexer : public sc::CoreLexer {

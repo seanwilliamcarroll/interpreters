@@ -35,6 +35,9 @@ protected:
   void line_break();
   char advance();
   void block_comment();
+  std::unique_ptr<Token> single_char_token(TokenType type,
+                                           const std::string &lexeme);
+  std::unique_ptr<Token> comparison_operator();
   std::unique_ptr<Token> identifier();
   TokenType lookup_keyword(const std::string &lexeme);
   bool peek(char &character);

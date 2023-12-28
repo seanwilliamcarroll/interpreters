@@ -25,6 +25,10 @@ void repl(std::iostream &input_stream, blip::Blip &blip_lang) {
 
     input_stream << next_line;
 
+    if (next_line == "quit") {
+      return;
+    }
+
     blip_lang.rep();
   }
 }
