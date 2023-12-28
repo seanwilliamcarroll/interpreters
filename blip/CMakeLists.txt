@@ -15,8 +15,15 @@
 
 project(blip VERSION 0.1.0)
 
-add_executable(blip src/blip.cpp)
+add_executable(blip src/main.cpp)
 
-target_link_libraries(blip core)
+add_library(bliplib STATIC
+  src/blip.cpp src/lexer.cpp)
+
+target_include_directories(bliplib PUBLIC inc)
+
+target_link_libraries(bliplib core)
+
+target_link_libraries(blip bliplib)
 
 #****************************************************************************
