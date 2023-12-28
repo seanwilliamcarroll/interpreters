@@ -27,7 +27,7 @@ public:
   CoreLexer(std::istream &in_stream, const KeywordsMap &keywords,
             const std::string &file_name = "<input>");
 
-  virtual std::unique_ptr<Token> getNextToken() override;
+  virtual std::unique_ptr<Token> get_next_token() override;
 
 protected:
   void comment();
@@ -42,11 +42,6 @@ protected:
   TokenType lookup_keyword(const std::string &lexeme);
   bool peek(char &character);
   void reset_eof();
-
-private:
-  std::istream &m_in_stream;
-  const KeywordsMap m_keywords;
-  SourceLocation m_current_loc;
 };
 
 //****************************************************************************

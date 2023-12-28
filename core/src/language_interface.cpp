@@ -4,38 +4,25 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Forward declarations of major classes and types
+//*  Purpose : LanguageInterface class source file
 //*
 //*
-//****************************************************************************
-#pragma once
 //****************************************************************************
 
-#include <map>
+#include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
+
+#include <sc/language_interface.hpp> // For LanguageInterface classes
+#include <sc/sc.hpp>                 // For forward decls
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-class LexerException;
-
-struct SourceLocation;
-
-using TokenType = unsigned int;
-
-struct Token;
-
-template <typename T> struct TokenOf;
-
-class LexerInterface;
-
-class CoreLexer;
-
-using KeywordsMap = std::map<std::string, TokenType>;
-
-class LanguageInterface;
+LanguageInterface::LanguageInterface(std::unique_ptr<LexerInterface> lexer)
+    : m_lexer(std::move(lexer)) {}
 
 //****************************************************************************
 } // namespace sc

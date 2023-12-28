@@ -25,10 +25,9 @@ namespace sc {
 
 CoreLexer::CoreLexer(std::istream &in_stream, const KeywordsMap &keywords,
                      const std::string &file_name)
-    : m_in_stream(in_stream), m_keywords(keywords),
-      m_current_loc(SourceLocation(file_name)) {}
+    : LexerInterface(in_stream, keywords, file_name) {}
 
-std::unique_ptr<Token> CoreLexer::getNextToken() {
+std::unique_ptr<Token> CoreLexer::get_next_token() {
   std::unique_ptr<Token> output = nullptr;
   char character;
   if (peek(character)) {
@@ -40,17 +39,17 @@ std::unique_ptr<Token> CoreLexer::getNextToken() {
     case ';':
       // Start of end of line comment or block comment
       comment();
-      return getNextToken();
+      return get_next_token();
     case ' ':
     case '\t':
       // Whitespace
       whitespace();
-      return getNextToken();
+      return get_next_token();
     case '\r':
     case '\n':
       // Line break
       line_break();
-      return getNextToken();
+      return get_next_token();
     case '+':
       return single_char_token(token_type::PLUS, "+");
     case '-':

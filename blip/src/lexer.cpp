@@ -20,7 +20,7 @@ using namespace sc;
 Lexer::Lexer(std::istream &in_stream, const std::string &file_name)
     : CoreLexer(in_stream, construct_keywords_map(), file_name) {}
 
-KeywordsMap Lexer::construct_keywords_map() {
+KeywordsMap Lexer::construct_keywords_map() const {
   KeywordsMap keywords = {{"if", blip_token_types::IF},
                           {"while", blip_token_types::WHILE},
                           {"set", blip_token_types::SET},

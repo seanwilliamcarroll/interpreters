@@ -4,38 +4,29 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Forward declarations of major classes and types
+//*  Purpose : LexerInterface class source file
 //*
 //*
-//****************************************************************************
-#pragma once
 //****************************************************************************
 
-#include <map>
+#include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
+
+#include <sc/lexer_interface.hpp> // For Token classes
+#include <sc/sc.hpp>              // For forward decls
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
+LexerInterface::LexerInterface(std::istream &in_stream,
+                               const KeywordsMap &keywords,
+                               const std::string &file_name)
+    : m_in_stream(in_stream), m_keywords(keywords),
+      m_current_loc(SourceLocation(file_name)) {}
 
-class LexerException;
-
-struct SourceLocation;
-
-using TokenType = unsigned int;
-
-struct Token;
-
-template <typename T> struct TokenOf;
-
-class LexerInterface;
-
-class CoreLexer;
-
-using KeywordsMap = std::map<std::string, TokenType>;
-
-class LanguageInterface;
+LexerInterface::~LexerInterface() {}
 
 //****************************************************************************
 } // namespace sc
