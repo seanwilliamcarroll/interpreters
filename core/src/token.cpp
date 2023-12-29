@@ -64,6 +64,11 @@ template <typename T> std::ostream &TokenOf<T>::dump(std::ostream &out) {
   return out;
 }
 
+template struct TokenOf<std::string>;
+template struct TokenOf<int>;
+template struct TokenOf<double>;
+template struct TokenOf<bool>;
+
 //****************************************************************************
 } // namespace sc
 //****************************************************************************

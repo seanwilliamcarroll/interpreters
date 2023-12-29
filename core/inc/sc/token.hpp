@@ -41,6 +41,10 @@ const sc::TokenType TILDE = 16;
 const sc::TokenType NOT = 17;
 const sc::TokenType NOTEQ = 18;
 const sc::TokenType DOT = 19;
+const sc::TokenType INT_LITERAL = 20;
+const sc::TokenType STRING_LITERAL = 21;
+const sc::TokenType DOUBLE_LITERAL = 22;
+const sc::TokenType BOOL_LITERAL = 23;
 } // namespace token_type
 
 struct Token {
@@ -77,6 +81,11 @@ template <typename T> struct TokenOf : public Token {
 
   const T m_value;
 };
+
+using TokenString = TokenOf<std::string>;
+using TokenInt = TokenOf<int>;
+using TokenDouble = TokenOf<double>;
+using TokenBool = TokenOf<bool>;
 
 //****************************************************************************
 } // namespace sc

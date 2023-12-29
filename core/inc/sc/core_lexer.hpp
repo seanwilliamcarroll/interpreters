@@ -39,9 +39,16 @@ protected:
                                            const std::string &lexeme);
   std::unique_ptr<Token> comparison_operator();
   std::unique_ptr<Token> identifier();
+  std::unique_ptr<Token> string();
+  std::string escaped_character();
+  std::unique_ptr<Token> minus_or_number();
+  std::unique_ptr<Token> number(const SourceLocation &original_loc,
+                                const std::string &prefix = "");
   TokenType lookup_keyword(const std::string &lexeme);
   bool peek(char &character);
+  void expect_peek(char &character, const std::string &additional_message);
   void reset_eof();
+  void unexpected_character(char character, const std::string &function_name);
 };
 
 //****************************************************************************
