@@ -19,7 +19,7 @@ namespace sc {
 //****************************************************************************
 
 struct SourceLocation {
-  // std::source_location is in C++20, which I don't think we currently support?
+  // std::source_location is not mutable, therefore we do need this struct
 
   SourceLocation(unsigned int line, unsigned int column,
                  const std::string &file_name,

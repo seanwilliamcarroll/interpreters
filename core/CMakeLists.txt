@@ -21,9 +21,7 @@ add_library(core STATIC
   src/exceptions.cpp
   src/source_location.cpp
   src/token.cpp
-  src/lexer_interface.cpp
   src/core_lexer.cpp
-  src/language_interface.cpp
   src/example.cpp)
 
 target_include_directories(core PUBLIC inc)
@@ -42,6 +40,12 @@ target_link_libraries(core-test
   rapidcheck
   doctest::doctest)
 
+if (APPLE)
+  set_target_properties(core-test PROPERTIES
+    BUILD_RPATH "/opt/local/libexec/llvm-17/lib"
+  )
+endif (APPLE)
+  
 #*****************************************************************************
 
 add_test(NAME core.example COMMAND core-test -ts=core.example)

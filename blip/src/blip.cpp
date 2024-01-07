@@ -13,8 +13,10 @@
 #include <memory>
 #include <string>
 
-#include <blip.hpp>     // For Blip
-#include <sc/token.hpp> // For Token
+#include <blip.hpp>               // For Blip
+#include <sc/lexer_interface.hpp> // For LexerInterface
+#include <sc/sc.hpp>              // For TokenType
+#include <sc/token.hpp>           // For Token, CommonTokenEnum
 
 //****************************************************************************
 namespace blip {
@@ -22,31 +24,42 @@ namespace blip {
 
 using namespace sc;
 
-Blip::Blip(std::istream &in_stream, const std::string &file_name)
-    : LanguageInterface(construct_lexer(in_stream, file_name)) {}
+enum BlipTokenType : TokenType {
+  INVALID_START = CommonTokenEnum::INVALID_END,
+
+  IF,
+  WHILE,
+  SET,
+  BEGIN,
+  PRINT,
+
+  INVALID_END
+};
+
+struct BlipTokenEnum {
+  using enum BlipTokenType;
+};
+
+Blip::Blip(std::istream &in_stream, const char *hint)
+    : m_lexer(make_lexer(in_stream,
+                         {{"if", BlipTokenEnum::IF},
+                          {"while", BlipTokenEnum::WHILE},
+                          {"set", BlipTokenEnum::SET},
+                          {"begin", BlipTokenEnum::BEGIN},
+                          {"print", BlipTokenEnum::PRINT}},
+                         hint)) {}
 
 void Blip::rep() {
   std::unique_ptr<Token> next_token = nullptr;
   // For debug
   while (next_token == nullptr ||
-         next_token->m_type != token_type::EOF_TOKENTYPE) {
+         next_token->m_type != CommonTokenEnum::EOF_TOKENTYPE) {
     next_token = m_lexer->get_next_token();
     std::cout << "Got next token: ";
     std::cout.flush();
     next_token->dump(std::cout);
     std::cout << std::endl;
   }
-}
-
-void Blip::parse() {
-  throw std::runtime_error("Blip::parse is unimplemented!");
-}
-
-void Blip::eval() { throw std::runtime_error("Blip::eval is unimplemented!"); }
-
-std::unique_ptr<LexerInterface>
-Blip::construct_lexer(std::istream &in_stream, const std::string &file_name) {
-  return std::make_unique<Lexer>(in_stream, file_name);
 }
 
 //****************************************************************************

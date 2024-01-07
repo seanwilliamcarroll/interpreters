@@ -11,8 +11,9 @@
 #pragma once
 //****************************************************************************
 
-#include <map>
-#include <string>
+#include <initializer_list>
+#include <iosfwd>
+#include <string_view>
 
 //****************************************************************************
 namespace sc {
@@ -26,15 +27,15 @@ using TokenType = unsigned int;
 
 struct Token;
 
-template <typename T> struct TokenOf;
+template <typename> struct TokenOf;
 
-class LexerInterface;
+struct LexerInterface;
 
-class CoreLexer;
+using Keyword = std::pair<const std::string_view, TokenType>;
 
-using KeywordsMap = std::map<std::string, TokenType>;
-
-class LanguageInterface;
+std::unique_ptr<LexerInterface> make_lexer(std::istream &,
+                                           std::initializer_list<Keyword>,
+                                           const char *hint = "<input>");
 
 //****************************************************************************
 } // namespace sc

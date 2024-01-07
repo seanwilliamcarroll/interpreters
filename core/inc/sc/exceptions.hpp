@@ -23,7 +23,7 @@ namespace sc {
 
 class LexerException : public std::runtime_error {
 public:
-  LexerException(const std::string &message, const SourceLocation &loc);
+  LexerException(const std::string &message, const SourceLocation &);
 };
 
 //****************************************************************************

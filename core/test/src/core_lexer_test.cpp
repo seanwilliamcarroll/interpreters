@@ -16,7 +16,6 @@
 //****************************************************************************
 
 #include "core_test_lib.hpp"      // For arbitraries
-#include "sc/core_lexer.hpp"      // For CoreLexer class
 #include "sc/source_location.hpp" // For SourceLocation class
 #include "sc/token.hpp"           // For Token class
 #include <doctest/doctest.h>      // For doctest

@@ -11,29 +11,22 @@
 #pragma once
 //****************************************************************************
 
-#include <lexer.hpp>
-#include <sc/language_interface.hpp>
+#include <sc/lexer_interface.hpp>
 #include <sc/sc.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
-class Blip : public sc::LanguageInterface {
+class Blip {
 public:
-  Blip(std::istream &in_stream, const std::string &file_name = "<input>");
-
-  // FIXME: These functions should have arguments and return values eventually
-  virtual void parse() override;
-  virtual void eval() override;
+  Blip(std::istream &, const char *hint = "<input>");
 
   // Read Eval Print
   void rep();
 
-protected:
-  virtual std::unique_ptr<sc::LexerInterface>
-  construct_lexer(std::istream &in_stream,
-                  const std::string &file_name = "<input>") override;
+private:
+  std::unique_ptr<sc::LexerInterface> m_lexer;
 };
 
 //****************************************************************************
