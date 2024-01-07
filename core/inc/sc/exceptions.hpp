@@ -12,7 +12,7 @@
 //****************************************************************************
 
 #include <stdexcept>
-#include <string>
+#include <string_view>
 
 #include <sc/sc.hpp>
 #include <sc/source_location.hpp> // For SourceLocation classes
@@ -23,7 +23,7 @@ namespace sc {
 
 class LexerException : public std::runtime_error {
 public:
-  LexerException(const std::string &message, const SourceLocation &);
+  LexerException(std::string_view message, const SourceLocation &);
 };
 
 //****************************************************************************

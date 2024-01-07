@@ -12,6 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 #include <sc/exceptions.hpp>      // For exception classes
 #include <sc/sc.hpp>              // For forward decls
@@ -21,7 +22,7 @@
 namespace sc {
 //****************************************************************************
 
-std::string construct_message(const std::string &message,
+std::string construct_message(std::string_view message,
                               const SourceLocation &loc) {
   std::stringstream s;
   s << "LexerException: ";
@@ -30,7 +31,7 @@ std::string construct_message(const std::string &message,
   return s.str();
 }
 
-LexerException::LexerException(const std::string &message,
+LexerException::LexerException(std::string_view message,
                                const SourceLocation &loc)
     : std::runtime_error(construct_message(message, loc)) {}
 
