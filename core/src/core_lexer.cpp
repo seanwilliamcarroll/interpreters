@@ -35,6 +35,19 @@ struct CoreLexer : LexerInterface {
       : m_in_stream(in_stream), m_keywords(keywords), m_line(1), m_column(0),
         m_hint(hint) {}
 
+  auto make_token(TokenType t) const {
+      return std::make_unique<Token>(get_current_loc(), t);
+  }
+
+  auto make_token(const SourceLocation& l, TokenType t) const {
+      return std::make_unique<Token>(l, t);
+  }
+
+  template<class value>
+  auto make_token(const SourceLocation&l, TokenType t, const value& v) const {
+      return std::make_unique<TokenOf<value>>(l, t, v);
+  }
+
   std::unique_ptr<Token> get_next_token() {
     char character;
     if (peek(character)) {
@@ -69,7 +82,7 @@ struct CoreLexer : LexerInterface {
       }
     } else if (m_in_stream.eof()) {
       reset_eof();
-      return std::make_unique<Token>(get_current_loc(), Token::EOF_TOKENTYPE);
+      return make_token(Token::EOF_TOKENTYPE);
     } else {
       std::cerr << "Unexpected error!" << std::endl;
       return {};
@@ -150,24 +163,21 @@ struct CoreLexer : LexerInterface {
 
     // Create and return token
     if (is_double) {
-      const double value = std::stod(lexeme);
-      return std::make_unique<TokenDouble>(loc, Token::DOUBLE_LITERAL, value);
+      return make_token(loc, Token::DOUBLE_LITERAL, std::stod(lexeme));
     }
 
     if (has_minus) {
       if (lexeme.size() == 2 && lexeme.at(1) == '0') {
         // Very specific case that json.org supports but stoi doesn't
-        return std::make_unique<TokenInt>(loc, Token::INT_LITERAL, 0);
+        return make_token(loc, Token::INT_LITERAL, 0);
       }
     }
 
-    const int value = std::stoi(lexeme);
-    return std::make_unique<TokenInt>(loc, Token::INT_LITERAL, value);
+    return make_token(loc, Token::INT_LITERAL, std::stoi(lexeme));
   }
 
   std::unique_ptr<Token> single_char_token(TokenType type) {
-    std::unique_ptr<Token> output =
-        std::make_unique<Token>(get_current_loc(), type);
+    auto output = make_token(type);
     advance();
     return output;
   }
@@ -213,8 +223,7 @@ struct CoreLexer : LexerInterface {
       throw CompilerException(exception_message, get_current_loc());
     }
 
-    return std::make_unique<TokenString>(starting_loc, Token::STRING_LITERAL,
-                                         value);
+    return make_token(starting_loc, Token::STRING_LITERAL, value);
   }
 
   std::string escaped_character() {
@@ -254,14 +263,13 @@ struct CoreLexer : LexerInterface {
     if (lexeme == "true" || lexeme == "false") {
       bool value;
       std::istringstream(lexeme) >> std::boolalpha >> value;
-      return std::make_unique<TokenBool>(starting_loc, Token::BOOL_LITERAL,
-                                         value);
+      return make_token(starting_loc, Token::BOOL_LITERAL, value);
     }
     auto token_type = lookup_keyword(lexeme);
     if (token_type == Token::IDENTIFIER) {
-      return std::make_unique<TokenString>(starting_loc, token_type, lexeme);
+      return make_token(starting_loc, token_type, lexeme);
     } else {
-      return std::make_unique<Token>(starting_loc, token_type);
+      return make_token(starting_loc, token_type);
     }
   }
 
