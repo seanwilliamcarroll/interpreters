@@ -36,24 +36,23 @@ struct CoreLexer : LexerInterface {
         m_hint(hint) {}
 
   auto make_token(TokenType t) const {
-      return std::make_unique<Token>(get_current_loc(), t);
+    return std::make_unique<Token>(get_current_loc(), t);
   }
 
-  auto make_token(const SourceLocation& l, TokenType t) const {
-      return std::make_unique<Token>(l, t);
+  auto make_token(const SourceLocation &l, TokenType t) const {
+    return std::make_unique<Token>(l, t);
   }
 
-  template<class value>
-  auto make_token(const SourceLocation&l, TokenType t, const value& v) const {
-      return std::make_unique<TokenOf<value>>(l, t, v);
+  template <class value>
+  auto make_token(const SourceLocation &l, TokenType t, const value &v) const {
+    return std::make_unique<TokenOf<value>>(l, t, v);
   }
 
-  template<class ... args>
-  [[noreturn]] void on_error(args&& ... a) const {
+  template <class... args> [[noreturn]] void on_error(args &&...a) const {
 
-    std::ostringstream o;                                // Local stringstream
+    std::ostringstream o; // Local stringstream
 
-    (o << ... << a);                                     // Fold operator <<
+    (o << ... << a); // Fold operator <<
 
     throw CompilerException(o.str(), get_current_loc());
   }
@@ -203,7 +202,8 @@ struct CoreLexer : LexerInterface {
 
     // Don't need the " character
     if (advance() != '"') {
-      on_error("Invalid usage of CoreLexer::string, first character must be '\"'");
+      on_error(
+          "Invalid usage of CoreLexer::string, first character must be '\"'");
     }
 
     bool last_char_double_quote = false;
@@ -249,18 +249,16 @@ struct CoreLexer : LexerInterface {
       // case 'u': // Don't need hex value for the moment
     }
 
-    on_error(
-        "Invalid usage of CoreLexer::escaped_character, cannot escape character ",
-        character,
-        " (value: ",
-        static_cast<int>(character),
-        ")");
+    on_error("Invalid usage of CoreLexer::escaped_character, cannot escape "
+             "character ",
+             character, " (value: ", static_cast<int>(character), ")");
   }
 
   std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
                                            const std::string &lexeme) {
     if (lexeme.empty()) {
-      on_error("Invalid usage of CoreLexer::create_identifier, did not find any "
+      on_error(
+          "Invalid usage of CoreLexer::create_identifier, did not find any "
           "characters to form the lexeme");
     }
     if (lexeme == "true") {
@@ -313,7 +311,8 @@ struct CoreLexer : LexerInterface {
     // Peek at next character, if whitespace, keep advancing until not.
     char character;
     if (advance() != ';') {
-      on_error("Invalid usage of CoreLexer::comment, first character must be ';'");
+      on_error(
+          "Invalid usage of CoreLexer::comment, first character must be ';'");
     }
 
     if (!peek(character)) {
@@ -426,14 +425,11 @@ struct CoreLexer : LexerInterface {
     m_column = 0;
   }
 
-  void unexpected_character(char character, std::string_view function_name) const {
-    on_error("Invalid usage of CoreLexer::",
-              function_name,
-              ", did not expect character ",
-              character,
-              " (value: ",
-              static_cast<int>(character),
-              ")");
+  void unexpected_character(char character,
+                            std::string_view function_name) const {
+    on_error("Invalid usage of CoreLexer::", function_name,
+             ", did not expect character ", character,
+             " (value: ", static_cast<int>(character), ")");
   }
 
   SourceLocation get_current_loc() const {
