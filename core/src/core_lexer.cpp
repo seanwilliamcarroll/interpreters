@@ -36,7 +36,6 @@ struct CoreLexer : LexerInterface {
         m_hint(hint) {}
 
   std::unique_ptr<Token> get_next_token() {
-    std::unique_ptr<Token> output = nullptr;
     char character;
     if (peek(character)) {
       switch (character) {
@@ -73,7 +72,7 @@ struct CoreLexer : LexerInterface {
       return std::make_unique<Token>(get_current_loc(), Token::EOF_TOKENTYPE);
     } else {
       std::cerr << "Unexpected error!" << std::endl;
-      return output;
+      return {};
     }
   }
 
