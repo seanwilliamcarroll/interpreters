@@ -353,7 +353,7 @@ struct CoreLexer : LexerInterface {
         break;
       }
     }
-    std::stringstream exception_message;
+    std::ostringstream exception_message;
     exception_message << "Did not see end of block comment at "
                       << get_current_loc();
     on_error(exception_message.str());
@@ -410,7 +410,7 @@ struct CoreLexer : LexerInterface {
   char advance() {
     char character;
     if (!m_in_stream.get(character)) {
-      std::stringstream exception_message;
+      std::ostringstream exception_message;
       exception_message << "Expected to be able to advance but saw EOF";
       on_error(exception_message.str());
     }
