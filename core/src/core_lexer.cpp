@@ -80,7 +80,7 @@ struct CoreLexer : LexerInterface {
   std::unique_ptr<Token> number() {
     // https://www.json.org/json-en.html
     const SourceLocation loc = get_current_loc();
-    std::string lexeme = "";
+    std::string lexeme;
 
     bool is_double = false;
     bool has_minus = false;
@@ -175,7 +175,7 @@ struct CoreLexer : LexerInterface {
 
   std::unique_ptr<Token> string() {
     // https://www.json.org/json-en.html
-    std::string value = "";
+    std::string value;
     char character;
     const SourceLocation starting_loc = get_current_loc();
 
@@ -245,7 +245,7 @@ struct CoreLexer : LexerInterface {
 
   std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
                                            const std::string &lexeme) {
-    if (lexeme == "") {
+    if (lexeme.empty()) {
       std::string exception_message =
           "Invalid usage of CoreLexer::create_identifier, did not find any "
           "characters "
@@ -267,7 +267,7 @@ struct CoreLexer : LexerInterface {
   }
 
   std::unique_ptr<Token> identifier() {
-    std::string lexeme = "";
+    std::string lexeme;
     char character;
     SourceLocation starting_loc = get_current_loc();
     bool is_end = false;
