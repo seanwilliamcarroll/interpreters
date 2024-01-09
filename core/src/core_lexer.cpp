@@ -48,6 +48,11 @@ struct CoreLexer : LexerInterface {
       return std::make_unique<TokenOf<value>>(l, t, v);
   }
 
+  [[noreturn]]
+  void on_error(std::string_view s) const {
+      throw CompilerException(s, get_current_loc());
+  }
+
   std::unique_ptr<Token> get_next_token() {
     char character;
     if (peek(character)) {
@@ -193,9 +198,7 @@ struct CoreLexer : LexerInterface {
 
     // Don't need the " character
     if (advance() != '"') {
-      std::string exception_message =
-          "Invalid usage of CoreLexer::string, first character must be '\"'";
-      throw CompilerException(exception_message, get_current_loc());
+      on_error("Invalid usage of CoreLexer::string, first character must be '\"'");
     }
 
     bool last_char_double_quote = false;
@@ -217,10 +220,8 @@ struct CoreLexer : LexerInterface {
       }
     }
     if (!last_char_double_quote) {
-      std::string exception_message =
-          "Invalid usage of CoreLexer::string, did not expect EOF before final "
-          "double quote (\")";
-      throw CompilerException(exception_message, get_current_loc());
+      on_error("Invalid usage of CoreLexer::string, did not expect EOF before final "
+          "double quote (\")");
     }
 
     return make_token(starting_loc, Token::STRING_LITERAL, value);
@@ -248,17 +249,14 @@ struct CoreLexer : LexerInterface {
         "character ";
     exception_message += character;
     exception_message += " (value: " + std::to_string(int(character)) + ").";
-    throw CompilerException(exception_message, get_current_loc());
+    on_error(exception_message);
   }
 
   std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
                                            const std::string &lexeme) {
     if (lexeme.empty()) {
-      std::string exception_message =
-          "Invalid usage of CoreLexer::create_identifier, did not find any "
-          "characters "
-          "to form the lexeme";
-      throw CompilerException(exception_message, get_current_loc());
+      on_error("Invalid usage of CoreLexer::create_identifier, did not find any "
+          "characters to form the lexeme");
     }
     if (lexeme == "true" || lexeme == "false") {
       bool value;
@@ -309,9 +307,7 @@ struct CoreLexer : LexerInterface {
     // Peek at next character, if whitespace, keep advancing until not.
     char character;
     if (advance() != ';') {
-      std::string exception_message =
-          "Invalid usage of CoreLexer::comment, first character must be ';'";
-      throw CompilerException(exception_message, get_current_loc());
+      on_error("Invalid usage of CoreLexer::comment, first character must be ';'");
     }
 
     if (!peek(character)) {
@@ -391,9 +387,7 @@ struct CoreLexer : LexerInterface {
 
   void expect_peek(char &character, const std::string &additional_message) {
     if (!peek(character)) {
-      std::string exception_message =
-          "CoreLexer::expect_peek failed: " + additional_message;
-      throw CompilerException(exception_message, get_current_loc());
+      on_error("CoreLexer::expect_peek failed: " + additional_message);
     }
   }
 
@@ -438,7 +432,7 @@ struct CoreLexer : LexerInterface {
         "character ";
     exception_message = exception_message + character +
                         " (value: " + std::to_string(int(character)) + ")";
-    throw CompilerException(exception_message, get_current_loc());
+    on_error(exception_message);
   }
 
   SourceLocation get_current_loc() const {
