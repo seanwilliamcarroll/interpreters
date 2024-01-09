@@ -356,7 +356,7 @@ struct CoreLexer : LexerInterface {
     std::stringstream exception_message;
     exception_message << "Did not see end of block comment at "
                       << get_current_loc();
-    throw CompilerException(exception_message.str(), get_current_loc());
+    on_error(exception_message.str());
   }
 
   void whitespace() {
@@ -412,7 +412,7 @@ struct CoreLexer : LexerInterface {
     if (!m_in_stream.get(character)) {
       std::stringstream exception_message;
       exception_message << "Expected to be able to advance but saw EOF";
-      throw CompilerException(exception_message.str(), get_current_loc());
+      on_error(exception_message.str());
     }
     m_column++;
     return character;
