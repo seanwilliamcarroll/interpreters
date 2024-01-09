@@ -90,8 +90,9 @@ struct CoreLexer : LexerInterface {
         return identifier();
       }
     } else if (m_in_stream.eof()) {
+      auto current_loc = get_current_loc();
       reset_eof();
-      return make_token(Token::EOF_TOKENTYPE);
+      return make_token(current_loc, Token::EOF_TOKENTYPE);
     } else {
       std::cerr << "Unexpected error!" << std::endl;
       return {};
