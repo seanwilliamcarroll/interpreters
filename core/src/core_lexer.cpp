@@ -31,7 +31,7 @@ namespace {
 struct CoreLexer : LexerInterface {
 
   CoreLexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
-            const char *hint = "<input>")
+            const char *hint)
       : m_in_stream(in_stream), m_keywords(keywords), m_line(1), m_column(0),
         m_hint(hint) {}
 
