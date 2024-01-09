@@ -48,9 +48,14 @@ struct CoreLexer : LexerInterface {
       return std::make_unique<TokenOf<value>>(l, t, v);
   }
 
-  [[noreturn]]
-  void on_error(std::string_view s) const {
-      throw CompilerException(s, get_current_loc());
+  template<class ... args>
+  [[noreturn]] void on_error(args&& ... a) const {
+
+    std::ostringstream o;                                // Local stringstream
+
+    (o << ... << a);                                     // Fold operator <<
+
+    throw CompilerException(o.str(), get_current_loc());
   }
 
   std::unique_ptr<Token> get_next_token() {
@@ -220,8 +225,8 @@ struct CoreLexer : LexerInterface {
       }
     }
     if (!last_char_double_quote) {
-      on_error("Invalid usage of CoreLexer::string, did not expect EOF before final "
-          "double quote (\")");
+      on_error("Invalid usage of CoreLexer::string, did not expect EOF before"
+               " final double quote (\")");
     }
 
     return make_token(starting_loc, Token::STRING_LITERAL, value);
@@ -244,12 +249,12 @@ struct CoreLexer : LexerInterface {
       // case 'u': // Don't need hex value for the moment
     }
 
-    std::string exception_message =
-        "Invalid usage of CoreLexer::escaped_character, cannot escape "
-        "character ";
-    exception_message += character;
-    exception_message += " (value: " + std::to_string(int(character)) + ").";
-    on_error(exception_message);
+    on_error(
+        "Invalid usage of CoreLexer::escaped_character, cannot escape character ",
+        character,
+        " (value: ",
+        static_cast<int>(character),
+        ")");
   }
 
   std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
@@ -353,10 +358,8 @@ struct CoreLexer : LexerInterface {
         break;
       }
     }
-    std::ostringstream exception_message;
-    exception_message << "Did not see end of block comment at "
-                      << get_current_loc();
-    on_error(exception_message.str());
+
+    on_error("Did not see end of block comment at ", get_current_loc());
   }
 
   void whitespace() {
@@ -385,9 +388,9 @@ struct CoreLexer : LexerInterface {
     return true;
   }
 
-  void expect_peek(char &character, const std::string &additional_message) {
+  void expect_peek(char &character, std::string_view additional_message) {
     if (!peek(character)) {
-      on_error("CoreLexer::expect_peek failed: " + additional_message);
+      on_error("CoreLexer::expect_peek failed: ", additional_message);
     }
   }
 
@@ -410,9 +413,7 @@ struct CoreLexer : LexerInterface {
   char advance() {
     char character;
     if (!m_in_stream.get(character)) {
-      std::ostringstream exception_message;
-      exception_message << "Expected to be able to advance but saw EOF";
-      on_error(exception_message.str());
+      on_error("Expected to be able to advance but saw EOF");
     }
     m_column++;
     return character;
@@ -424,15 +425,14 @@ struct CoreLexer : LexerInterface {
     m_column = 0;
   }
 
-  void unexpected_character(char character,
-                            const std::string &function_name) const {
-    std::string exception_message =
-        "Invalid usage of CoreLexer::" + function_name +
-        ", did not expect "
-        "character ";
-    exception_message = exception_message + character +
-                        " (value: " + std::to_string(int(character)) + ")";
-    on_error(exception_message);
+  void unexpected_character(char character, std::string_view function_name) const {
+    on_error("Invalid usage of CoreLexer::",
+              function_name,
+              ", did not expect character ",
+              character,
+              " (value: ",
+              int(character),
+              ")");
   }
 
   SourceLocation get_current_loc() const {
