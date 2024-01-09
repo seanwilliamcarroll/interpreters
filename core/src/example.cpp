@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$

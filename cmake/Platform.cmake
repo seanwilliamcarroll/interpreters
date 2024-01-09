@@ -1,4 +1,4 @@
-#********************************** Copyright C2=A9 2023 Cambridge Semantics, Inc.
+#***** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 #**
 #**
 #**  Version : $Header:$

@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -30,37 +30,21 @@ TEST_SUITE("core.token") {
 
   TEST_CASE("sc::token_equality") {
     rc::check("Given same args, Tokens should be identical",
-              [](const SourceLocation &loc, const std::string &lexeme,
-                 TokenType type) {
-                auto token_a = Token(loc, type, lexeme);
-                auto token_b = Token(loc, type, lexeme);
-                RC_ASSERT(token_a.is_same_type_as(token_b));
-                RC_ASSERT(token_a.is_same_lexeme_as(token_b));
-                RC_ASSERT(token_a.is_same_type_lexeme_as(token_b));
-                RC_ASSERT(token_a == token_b);
+              [](const SourceLocation &loc, TokenType type) {
+                auto token_a = Token(loc, type);
+                auto token_b = Token(loc, type);
+                RC_ASSERT(token_a.get_token_type() == token_b.get_token_type());
+                RC_ASSERT(token_a.get_location() == token_b.get_location());
               });
   }
 
   TEST_CASE("sc::token_type_equality") {
     rc::check("type equality doesn't care about location or lexeme",
               [](const SourceLocation &loc_a, const SourceLocation &loc_b,
-                 const std::string &lexeme_a, const std::string &lexeme_b,
                  TokenType type) {
-                auto token_a = Token(loc_a, type, lexeme_a);
-                auto token_b = Token(loc_b, type, lexeme_b);
-                RC_ASSERT(token_a.is_same_type_as(token_b));
-              });
-  }
-
-  TEST_CASE("sc::token_type_lexeme_equality") {
-    rc::check("type_lexeme equality doesn't care about location",
-              [](const SourceLocation &loc_a, const SourceLocation &loc_b,
-                 const std::string &lexeme, TokenType type) {
-                auto token_a = Token(loc_a, type, lexeme);
-                auto token_b = Token(loc_b, type, lexeme);
-                RC_ASSERT(token_a.is_same_type_as(token_b));
-                RC_ASSERT(token_a.is_same_lexeme_as(token_b));
-                RC_ASSERT(token_a.is_same_type_lexeme_as(token_b));
+                auto token_a = Token(loc_a, type);
+                auto token_b = Token(loc_b, type);
+                RC_ASSERT(token_a.get_token_type() == token_b.get_token_type());
               });
   }
 }

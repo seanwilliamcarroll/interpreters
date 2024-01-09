@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -10,7 +10,6 @@
 //****************************************************************************
 
 #include <iostream>
-#include <string>
 
 #include <sc/sc.hpp>              // For forward decls
 #include <sc/source_location.hpp> // For SourceLocation struct
@@ -19,32 +18,18 @@
 namespace sc {
 //****************************************************************************
 
-SourceLocation::SourceLocation(unsigned int line, unsigned int column,
-                               const std::string &file_name,
-                               const std::string &function_name)
-    : m_line(line), m_column(column), m_file_name(file_name),
-      m_function_name(function_name) {}
+SourceLocation::SourceLocation(const char *file_name, unsigned int line,
+                               unsigned int column)
+    : line(line), column(column), file_name(file_name) {}
 
-SourceLocation::SourceLocation(const std::string &file_name)
-    : SourceLocation(1, 0, file_name) {}
-
-SourceLocation::SourceLocation() : SourceLocation("") {}
-
-std::ostream &SourceLocation::dump(std::ostream &out) const {
-  out << "SourceLocation: ";
-  out << m_file_name;
-  if (m_function_name != "") {
-    out << "::" << m_function_name;
-  }
-  out << "::" << m_line;
-  out << ":" << m_column;
-  return out;
+std::ostream &operator<<(std::ostream &out, const SourceLocation &loc) {
+  return out << "SourceLocation: " << loc.file_name << "::" << loc.line << ":"
+             << loc.column;
 }
 
-bool SourceLocation::operator==(SourceLocation const &other) const {
-  return (m_line == other.m_line) && (m_column == other.m_column) &&
-         (m_file_name == other.m_file_name) &&
-         (m_function_name == other.m_function_name);
+bool operator==(const SourceLocation &loc_a, const SourceLocation &loc_b) {
+  return loc_a.line == loc_b.line && loc_a.column == loc_b.column &&
+         loc_a.file_name == loc_b.file_name;
 }
 
 //****************************************************************************

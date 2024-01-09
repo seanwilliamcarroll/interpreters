@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -25,14 +25,12 @@ namespace sc {
 std::string construct_message(std::string_view message,
                               const SourceLocation &loc) {
   std::stringstream s;
-  s << "LexerException: ";
-  loc.dump(s);
-  s << message;
+  s << "CompilerException: " << loc << " " << message;
   return s.str();
 }
 
-LexerException::LexerException(std::string_view message,
-                               const SourceLocation &loc)
+CompilerException::CompilerException(std::string_view message,
+                                     const SourceLocation &loc)
     : std::runtime_error(construct_message(message, loc)) {}
 
 //****************************************************************************

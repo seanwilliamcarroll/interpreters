@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -11,7 +11,8 @@
 #pragma once
 //****************************************************************************
 
-#include <iostream>
+#include <iosfwd>
+#include <string>
 
 #include <sc/sc.hpp>
 #include <sc/source_location.hpp>
@@ -20,64 +21,56 @@
 namespace sc {
 //****************************************************************************
 
-enum CommonTokenType : TokenType {
-  INVALID_START = 0,
+class Token {
+public:
+  enum CommonTokenType : TokenType {
+    EOF_TOKENTYPE = 0,
+    LEFT_PAREND,
+    RIGHT_PAREND,
+    IDENTIFIER,
+    INT_LITERAL,
+    STRING_LITERAL,
+    DOUBLE_LITERAL,
+    BOOL_LITERAL,
 
-  EOF_TOKENTYPE,
-  LEFT_PAREND,
-  RIGHT_PAREND,
-  IDENTIFIER,
-  INT_LITERAL,
-  STRING_LITERAL,
-  DOUBLE_LITERAL,
-  BOOL_LITERAL,
+    START_TOKEN = EOF_TOKENTYPE,
+    END_TOKEN = BOOL_LITERAL
+  };
 
-  INVALID_END
-};
+  Token(const SourceLocation &, TokenType);
 
-struct CommonTokenEnum {
-  using enum CommonTokenType;
-};
+  virtual ~Token() = default;
 
-struct Token {
+  virtual std::ostream &dump(std::ostream &) const;
 
-  Token(const SourceLocation &, TokenType, const std::string &lexeme);
+  const auto &get_location() const { return m_loc; }
 
-  virtual ~Token();
+  auto get_token_type() const { return m_type; }
 
-  virtual std::ostream &dump(std::ostream &);
-
-  virtual bool is_same_type_as(Token const &) const;
-
-  virtual bool is_same_lexeme_as(Token const &) const;
-
-  virtual bool is_same_type_lexeme_as(Token const &) const;
-
-  bool operator==(Token const &) const;
-
+private:
   const SourceLocation m_loc;
   const TokenType m_type;
-  const std::string m_lexeme;
 };
 
-template <typename T> struct TokenOf : public Token {
+template <typename T> class TokenOf : public Token {
+public:
+  TokenOf(const SourceLocation &, TokenType, const T &value);
 
-  TokenOf(const SourceLocation &, TokenType, const std::string &lexeme,
-          const T &value);
+  virtual std::ostream &dump(std::ostream &) const;
 
-  virtual ~TokenOf();
+  const T &get_value() const { return m_value; }
 
-  bool operator==(TokenOf const &) const;
-
-  virtual std::ostream &dump(std::ostream &) override;
-
+private:
   const T m_value;
 };
 
+using TokenIdentifier = TokenOf<std::string>;
 using TokenString = TokenOf<std::string>;
 using TokenInt = TokenOf<int>;
 using TokenDouble = TokenOf<double>;
 using TokenBool = TokenOf<bool>;
+
+std::ostream &operator<<(std::ostream &, const Token &);
 
 //****************************************************************************
 } // namespace sc

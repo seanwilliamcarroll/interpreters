@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -13,21 +13,22 @@
 
 #include <initializer_list>
 #include <iosfwd>
+#include <memory>
 #include <string_view>
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-class LexerException;
+struct CompilerException;
 
 struct SourceLocation;
 
 using TokenType = unsigned int;
 
-struct Token;
+class Token;
 
-template <typename> struct TokenOf;
+template <typename> class TokenOf;
 
 struct LexerInterface;
 

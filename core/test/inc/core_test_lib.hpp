@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -26,19 +26,18 @@ namespace rc {
 
 template <> struct Arbitrary<sc::SourceLocation> {
   static Gen<sc::SourceLocation> arbitrary() {
-    return gen::build<sc::SourceLocation>(
-        gen::set(&sc::SourceLocation::m_line),
-        gen::set(&sc::SourceLocation::m_column),
-        gen::set(&sc::SourceLocation::m_file_name),
-        gen::set(&sc::SourceLocation::m_function_name));
+    return gen::construct<sc::SourceLocation>(
+        // This is hacky, but not sure of a better way
+        gen::map(gen::arbitrary<std::string>(),
+                 [](const std::string &in_str) { return in_str.c_str(); }),
+        gen::arbitrary<unsigned int>(), gen::arbitrary<unsigned int>());
   }
 };
 
 template <> struct Arbitrary<sc::Token> {
   static Gen<sc::Token> arbitrary() {
     return gen::construct<sc::Token>(gen::arbitrary<sc::SourceLocation>(),
-                                     gen::arbitrary<sc::TokenType>(),
-                                     gen::arbitrary<std::string>());
+                                     gen::arbitrary<sc::TokenType>());
   }
 };
 

@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -10,64 +10,39 @@
 //****************************************************************************
 
 #include <iostream>
+#include <string>
 
-#include "sc/sc.hpp"    // For forward decls
-#include "sc/token.hpp" // For Token classes
+#include "sc/exceptions.hpp" // For UnknownTokenTypeException classes
+#include "sc/sc.hpp"         // For forward decls
+#include "sc/token.hpp"      // For Token classes
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
-Token::Token(const SourceLocation &loc, TokenType type,
-             const std::string &lexeme)
-    : m_loc(loc), m_type(type), m_lexeme(lexeme) {}
+Token::Token(const SourceLocation &loc, TokenType type)
+    : m_loc(loc), m_type(type) {}
 
-Token::~Token() {}
-
-bool Token::is_same_type_as(Token const &other) const {
-  return m_type == other.m_type;
-}
-
-bool Token::is_same_lexeme_as(Token const &other) const {
-  return m_lexeme == other.m_lexeme;
-}
-
-bool Token::is_same_type_lexeme_as(Token const &other) const {
-  return is_same_type_as(other) && is_same_lexeme_as(other);
-}
-
-bool Token::operator==(Token const &other) const {
-  return (m_loc == other.m_loc) && is_same_type_lexeme_as(other);
-}
-
-std::ostream &Token::dump(std::ostream &out) {
-  out << "Lexeme: \"" << m_lexeme << "\" ";
-  m_loc.dump(out);
-  out << " TokenType: " << m_type;
+std::ostream &Token::dump(std::ostream &out) const {
+  out << get_location() << " TokenType: " << get_token_type();
   return out;
 }
 
 template <typename T>
-TokenOf<T>::TokenOf(const SourceLocation &loc, TokenType type,
-                    const std::string &lexeme, const T &value)
-    : Token(loc, type, lexeme), m_value(value) {}
+TokenOf<T>::TokenOf(const SourceLocation &loc, TokenType type, const T &value)
+    : Token(loc, type), m_value(value) {}
 
-template <typename T> TokenOf<T>::~TokenOf() {}
-
-template <typename T>
-bool TokenOf<T>::operator==(TokenOf<T> const &other) const {
-  return this->Token::operator==(other) && (m_value == other.m_value);
+template <typename T> std::ostream &TokenOf<T>::dump(std::ostream &out) const {
+  return Token::dump(out) << " Value: " << get_value();
 }
 
-template <typename T> std::ostream &TokenOf<T>::dump(std::ostream &out) {
-  Token::dump(out);
-  out << " Value: " << m_value;
-  return out;
+std::ostream &operator<<(std::ostream &out, const Token &token) {
+  return token.dump(out);
 }
 
-template struct TokenOf<std::string>;
-template struct TokenOf<int>;
-template struct TokenOf<double>;
-template struct TokenOf<bool>;
+template class TokenOf<std::string>;
+template class TokenOf<int>;
+template class TokenOf<double>;
+template class TokenOf<bool>;
 
 //****************************************************************************
 } // namespace sc

@@ -1,18 +1,20 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : An example executable.
+//*  Purpose : Main driver of blip interpreter
 //*
 //*
 //****************************************************************************
 
-#include <blip.hpp> // For example
 #include <fstream>  // For fstream
 #include <iostream> // For cout
 #include <sstream>  // For stringstream
+#include <stdexcept>
+
+#include <blip.hpp> // For Blip class
 
 //****************************************************************************
 

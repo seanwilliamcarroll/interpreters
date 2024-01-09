@@ -1,4 +1,4 @@
-//********* Copyright © 2023 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
@@ -32,8 +32,8 @@ struct CoreLexer : LexerInterface {
 
   CoreLexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
             const char *hint = "<input>")
-      : m_in_stream(in_stream), m_keywords(keywords),
-        m_current_loc(SourceLocation(hint)) {}
+      : m_in_stream(in_stream), m_keywords(keywords), m_line(1), m_column(0),
+        m_hint(hint) {}
 
   std::unique_ptr<Token> get_next_token() {
     std::unique_ptr<Token> output = nullptr;
@@ -41,9 +41,9 @@ struct CoreLexer : LexerInterface {
     if (peek(character)) {
       switch (character) {
       case '(':
-        return single_char_token(CommonTokenEnum::LEFT_PAREND, "(");
+        return single_char_token(Token::LEFT_PAREND);
       case ')':
-        return single_char_token(CommonTokenEnum::RIGHT_PAREND, ")");
+        return single_char_token(Token::RIGHT_PAREND);
       case ';':
         // Start of end of line comment or block comment
         comment();
@@ -70,8 +70,7 @@ struct CoreLexer : LexerInterface {
       }
     } else if (m_in_stream.eof()) {
       reset_eof();
-      return std::make_unique<Token>(m_current_loc,
-                                     CommonTokenEnum::EOF_TOKENTYPE, "EOF");
+      return std::make_unique<Token>(get_current_loc(), Token::EOF_TOKENTYPE);
     } else {
       std::cerr << "Unexpected error!" << std::endl;
       return output;
@@ -80,7 +79,7 @@ struct CoreLexer : LexerInterface {
 
   std::unique_ptr<Token> number() {
     // https://www.json.org/json-en.html
-    SourceLocation loc(m_current_loc);
+    const SourceLocation loc = get_current_loc();
     std::string lexeme = "";
 
     bool is_double = false;
@@ -153,27 +152,23 @@ struct CoreLexer : LexerInterface {
     // Create and return token
     if (is_double) {
       const double value = std::stod(lexeme);
-      return std::make_unique<TokenDouble>(loc, CommonTokenEnum::DOUBLE_LITERAL,
-                                           lexeme, value);
+      return std::make_unique<TokenDouble>(loc, Token::DOUBLE_LITERAL, value);
     }
 
     if (has_minus) {
       if (lexeme.size() == 2 && lexeme.at(1) == '0') {
         // Very specific case that json.org supports but stoi doesn't
-        return std::make_unique<TokenInt>(loc, CommonTokenEnum::INT_LITERAL,
-                                          lexeme, 0);
+        return std::make_unique<TokenInt>(loc, Token::INT_LITERAL, 0);
       }
     }
 
     const int value = std::stoi(lexeme);
-    return std::make_unique<TokenInt>(loc, CommonTokenEnum::INT_LITERAL, lexeme,
-                                      value);
+    return std::make_unique<TokenInt>(loc, Token::INT_LITERAL, value);
   }
 
-  std::unique_ptr<Token> single_char_token(TokenType type,
-                                           const std::string &lexeme) {
+  std::unique_ptr<Token> single_char_token(TokenType type) {
     std::unique_ptr<Token> output =
-        std::make_unique<Token>(m_current_loc, type, lexeme);
+        std::make_unique<Token>(get_current_loc(), type);
     advance();
     return output;
   }
@@ -182,7 +177,7 @@ struct CoreLexer : LexerInterface {
     // https://www.json.org/json-en.html
     std::string value = "";
     char character;
-    SourceLocation starting_loc = SourceLocation(m_current_loc);
+    const SourceLocation starting_loc = get_current_loc();
 
     expect_peek(character,
                 "Invalid usage of CoreLexer::string, did not expect EOF");
@@ -191,7 +186,7 @@ struct CoreLexer : LexerInterface {
     if (advance() != '"') {
       std::string exception_message =
           "Invalid usage of CoreLexer::string, first character must be '\"'";
-      throw LexerException(exception_message, m_current_loc);
+      throw CompilerException(exception_message, get_current_loc());
     }
 
     bool last_char_double_quote = false;
@@ -216,12 +211,11 @@ struct CoreLexer : LexerInterface {
       std::string exception_message =
           "Invalid usage of CoreLexer::string, did not expect EOF before final "
           "double quote (\")";
-      throw LexerException(exception_message, m_current_loc);
+      throw CompilerException(exception_message, get_current_loc());
     }
 
-    std::string lexeme = std::string("\\\"" + value + "\\\"");
-    return std::make_unique<TokenString>(
-        starting_loc, CommonTokenEnum::STRING_LITERAL, lexeme, value);
+    return std::make_unique<TokenString>(starting_loc, Token::STRING_LITERAL,
+                                         value);
   }
 
   std::string escaped_character() {
@@ -246,14 +240,39 @@ struct CoreLexer : LexerInterface {
         "character ";
     exception_message += character;
     exception_message += " (value: " + std::to_string(int(character)) + ").";
-    throw LexerException(exception_message, m_current_loc);
+    throw CompilerException(exception_message, get_current_loc());
+  }
+
+  std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
+                                           const std::string &lexeme) {
+    if (lexeme == "") {
+      std::string exception_message =
+          "Invalid usage of CoreLexer::create_identifier, did not find any "
+          "characters "
+          "to form the lexeme";
+      throw CompilerException(exception_message, get_current_loc());
+    }
+    if (lexeme == "true" || lexeme == "false") {
+      bool value;
+      std::istringstream(lexeme) >> std::boolalpha >> value;
+      return std::make_unique<TokenBool>(starting_loc, Token::BOOL_LITERAL,
+                                         value);
+    }
+    auto token_type = lookup_keyword(lexeme);
+    if (token_type == Token::IDENTIFIER) {
+      return std::make_unique<TokenString>(starting_loc, token_type, lexeme);
+    } else {
+      return std::make_unique<Token>(starting_loc, token_type);
+    }
   }
 
   std::unique_ptr<Token> identifier() {
     std::string lexeme = "";
     char character;
-    SourceLocation starting_loc = SourceLocation(m_current_loc);
-    while (peek(character)) {
+    SourceLocation starting_loc = get_current_loc();
+    bool is_end = false;
+    expect_peek(character, __FUNCTION__);
+    while (peek(character) && !is_end) {
       switch (character) {
       case '(':
       case ')':
@@ -262,36 +281,21 @@ struct CoreLexer : LexerInterface {
       case '\t':
       case '\r':
       case '\n':
-        // TODO: determine if literal or identifier
-        return std::make_unique<Token>(starting_loc, lookup_keyword(lexeme),
-                                       lexeme);
+        is_end = true;
+        break;
       default:
         lexeme += advance();
         break;
       }
     }
-    if (lexeme == "") {
-      std::string exception_message =
-          "Invalid usage of CoreLexer::identifier, did not find any characters "
-          "to form the lexeme";
-      throw LexerException(exception_message, m_current_loc);
-    }
-    if (lexeme == "true" || lexeme == "false") {
-      bool value;
-      std::istringstream(lexeme) >> std::boolalpha >> value;
-      return std::make_unique<TokenBool>(
-          starting_loc, CommonTokenEnum::BOOL_LITERAL, lexeme, value);
-    }
-
-    return std::make_unique<Token>(starting_loc, lookup_keyword(lexeme),
-                                   lexeme);
+    return create_identifier(starting_loc, lexeme);
   }
 
   TokenType lookup_keyword(std::string_view lexeme) const {
     if (m_keywords.count(lexeme) == 1) {
       return m_keywords.at(lexeme);
     }
-    return CommonTokenEnum::IDENTIFIER;
+    return Token::IDENTIFIER;
   }
 
   void comment() {
@@ -300,7 +304,7 @@ struct CoreLexer : LexerInterface {
     if (advance() != ';') {
       std::string exception_message =
           "Invalid usage of CoreLexer::comment, first character must be ';'";
-      throw LexerException(exception_message, m_current_loc);
+      throw CompilerException(exception_message, get_current_loc());
     }
 
     if (!peek(character)) {
@@ -347,9 +351,9 @@ struct CoreLexer : LexerInterface {
       }
     }
     std::stringstream exception_message;
-    exception_message << "Did not see end of block comment at ";
-    m_current_loc.dump(exception_message);
-    throw LexerException(exception_message.str(), m_current_loc);
+    exception_message << "Did not see end of block comment at "
+                      << get_current_loc();
+    throw CompilerException(exception_message.str(), get_current_loc());
   }
 
   void whitespace() {
@@ -382,7 +386,7 @@ struct CoreLexer : LexerInterface {
     if (!peek(character)) {
       std::string exception_message =
           "CoreLexer::expect_peek failed: " + additional_message;
-      throw LexerException(exception_message, m_current_loc);
+      throw CompilerException(exception_message, get_current_loc());
     }
   }
 
@@ -393,8 +397,8 @@ struct CoreLexer : LexerInterface {
       case '\r':
       case '\n':
         m_in_stream.get(character);
-        m_current_loc.m_line++;
-        m_current_loc.m_column = 0;
+        m_line++;
+        m_column = 0;
         break;
       default:
         return;
@@ -407,16 +411,16 @@ struct CoreLexer : LexerInterface {
     if (!m_in_stream.get(character)) {
       std::stringstream exception_message;
       exception_message << "Expected to be able to advance but saw EOF";
-      throw LexerException(exception_message.str(), m_current_loc);
+      throw CompilerException(exception_message.str(), get_current_loc());
     }
-    m_current_loc.m_column++;
+    m_column++;
     return character;
   }
 
   void reset_eof() {
     m_in_stream.clear();
-    m_current_loc.m_line = 1;
-    m_current_loc.m_column = 0;
+    m_line = 1;
+    m_column = 0;
   }
 
   void unexpected_character(char character,
@@ -427,12 +431,18 @@ struct CoreLexer : LexerInterface {
         "character ";
     exception_message = exception_message + character +
                         " (value: " + std::to_string(int(character)) + ")";
-    throw LexerException(exception_message, m_current_loc);
+    throw CompilerException(exception_message, get_current_loc());
+  }
+
+  SourceLocation get_current_loc() const {
+    return SourceLocation(m_hint, m_line, m_column);
   }
 
   std::istream &m_in_stream;
   const std::unordered_map<std::string_view, TokenType> m_keywords;
-  SourceLocation m_current_loc;
+  unsigned int m_line;
+  unsigned int m_column;
+  const char *m_hint;
 };
 
 //****************************************************************************
