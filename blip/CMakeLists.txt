@@ -15,8 +15,25 @@
 
 project(blip VERSION 0.1.0)
 
-add_executable(blip src/blip.cpp)
+add_executable(blip-exe src/main.cpp)
 
-target_link_libraries(blip core)
+set_target_properties(blip-exe PROPERTIES OUTPUT_NAME blip)
+
+add_library(blip-lib STATIC
+  src/blip.cpp)
+
+set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
+
+target_include_directories(blip-lib PUBLIC inc)
+
+target_link_libraries(blip-lib core)
+
+target_link_libraries(blip-exe blip-lib)
+
+if (APPLE)
+  set_target_properties(blip-exe PROPERTIES
+    BUILD_RPATH "/opt/local/libexec/llvm-17/lib"
+  )
+endif(APPLE)
 
 #****************************************************************************

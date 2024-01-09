@@ -4,26 +4,47 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : An example library header file.
+//*  Purpose : blip::Blip
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-//****************************************************************************
-namespace sc {
-//****************************************************************************
+#include <iosfwd>
+#include <memory>
 
-/**
- * Returns the given integer multiplied by 3.
- *
- * @param  i  The integer to triple.
- *
- * @return 'i' multiplied by 3.
- */
-int example(int);
+#include <sc/lexer_interface.hpp>
+#include <sc/sc.hpp>
+#include <sc/token.hpp>
 
 //****************************************************************************
-} // namespace sc
+namespace blip {
+//****************************************************************************
+
+class Blip {
+public:
+  enum BlipTokenType : sc::TokenType {
+    IF = sc::Token::END_TOKEN + 1,
+    WHILE,
+    SET,
+    BEGIN,
+    PRINT,
+    DEFINE,
+
+    START_TOKEN = IF,
+    END_TOKEN = DEFINE
+  };
+
+  Blip(std::istream &, const char *hint = "<input>");
+
+  // Read Eval Print
+  void rep();
+
+private:
+  std::unique_ptr<sc::LexerInterface> m_lexer;
+};
+
+//****************************************************************************
+} // namespace blip
 //****************************************************************************

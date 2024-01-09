@@ -28,6 +28,7 @@ project(interpreters
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(CTest)
+include(Platform)
 
 find_package(DocTest       2.4.11 REQUIRED)
 find_package(RapidCheck           REQUIRED)

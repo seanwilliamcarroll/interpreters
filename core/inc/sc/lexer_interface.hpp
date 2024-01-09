@@ -4,25 +4,25 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : An example library source file.
+//*  Purpose : LexerInterface abstract interface
 //*
 //*
 //****************************************************************************
+#pragma once
+//****************************************************************************
 
-#include "sc/example.hpp" // For example()
+#include <memory>
+
+#include <sc/sc.hpp>
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-/**
- * Returns the given integer multiplied by 3.
- *
- * @param  i  The integer to triple.
- *
- * @return 'i' multiplied by 3.
- */
-int example(int i) { return i * 3; }
+struct LexerInterface {
+  virtual ~LexerInterface() = default;
+  virtual std::unique_ptr<Token> get_next_token() = 0;
+};
 
 //****************************************************************************
 } // namespace sc

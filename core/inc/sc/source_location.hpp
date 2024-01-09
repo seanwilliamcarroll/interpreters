@@ -4,25 +4,32 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : An example library source file.
+//*  Purpose : SourceLocation class
 //*
 //*
 //****************************************************************************
+#pragma once
+//****************************************************************************
 
-#include "sc/example.hpp" // For example()
+#include <iosfwd>
+#include <string>
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-/**
- * Returns the given integer multiplied by 3.
- *
- * @param  i  The integer to triple.
- *
- * @return 'i' multiplied by 3.
- */
-int example(int i) { return i * 3; }
+struct SourceLocation {
+
+  SourceLocation(const char *file_name = "", unsigned int line = 1,
+                 unsigned int column = 0);
+
+  const unsigned int line;
+  const unsigned int column;
+  const std::string file_name;
+};
+
+std::ostream &operator<<(std::ostream &, const SourceLocation &);
+bool operator==(const SourceLocation &, const SourceLocation &);
 
 //****************************************************************************
 } // namespace sc

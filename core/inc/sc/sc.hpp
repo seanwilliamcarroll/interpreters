@@ -4,25 +4,39 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : An example library header file.
+//*  Purpose : Forward declarations of major classes and types
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
+#include <initializer_list>
+#include <iosfwd>
+#include <memory>
+#include <string_view>
+
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-/**
- * Returns the given integer multiplied by 3.
- *
- * @param  i  The integer to triple.
- *
- * @return 'i' multiplied by 3.
- */
-int example(int);
+struct CompilerException;
+
+struct SourceLocation;
+
+using TokenType = unsigned int;
+
+class Token;
+
+template <typename> class TokenOf;
+
+struct LexerInterface;
+
+using Keyword = std::pair<const std::string_view, TokenType>;
+
+std::unique_ptr<LexerInterface> make_lexer(std::istream &,
+                                           std::initializer_list<Keyword>,
+                                           const char *hint = "<input>");
 
 //****************************************************************************
 } // namespace sc

@@ -4,25 +4,32 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : An example library source file.
+//*  Purpose : Exception classes
 //*
 //*
 //****************************************************************************
+#pragma once
+//****************************************************************************
 
-#include "sc/example.hpp" // For example()
+#include <stdexcept>
+#include <string_view>
+
+#include <sc/sc.hpp>
 
 //****************************************************************************
 namespace sc {
 //****************************************************************************
 
-/**
- * Returns the given integer multiplied by 3.
- *
- * @param  i  The integer to triple.
- *
- * @return 'i' multiplied by 3.
- */
-int example(int i) { return i * 3; }
+struct CompilerException : std::runtime_error {
+  // FIXME: Check on use of string_view
+  //        Decide where to construct the message itself
+
+  CompilerException(std::string_view message, const SourceLocation &);
+};
+
+struct UnknownTokenTypeException : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
 
 //****************************************************************************
 } // namespace sc
