@@ -432,7 +432,7 @@ struct CoreLexer : LexerInterface {
               ", did not expect character ",
               character,
               " (value: ",
-              int(character),
+              static_cast<int>(character),
               ")");
   }
 
