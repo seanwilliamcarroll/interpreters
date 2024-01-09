@@ -263,10 +263,11 @@ struct CoreLexer : LexerInterface {
       on_error("Invalid usage of CoreLexer::create_identifier, did not find any "
           "characters to form the lexeme");
     }
-    if (lexeme == "true" || lexeme == "false") {
-      bool value;
-      std::istringstream(lexeme) >> std::boolalpha >> value;
-      return make_token(starting_loc, Token::BOOL_LITERAL, value);
+    if (lexeme == "true") {
+      return make_token(starting_loc, Token::BOOL_LITERAL, true);
+    }
+    if (lexeme == "false") {
+      return make_token(starting_loc, Token::BOOL_LITERAL, false);
     }
     auto token_type = lookup_keyword(lexeme);
     if (token_type == Token::IDENTIFIER) {
