@@ -116,9 +116,11 @@ struct CoreLexer : LexerInterface {
       has_minus = true;
     }
 
+    // If whitespace/EOF, just return the - as identifier
+    if (!peek(character) || std::isspace(character)) {
+      return create_identifier(loc, lexeme);
+    }
     // Next character determines if we can have multiple digits
-    expect_peek(character,
-                "Invalid usage of CoreLexer::number, did not expect EOF");
     if (std::isdigit(character)) {
       lexeme += advance();
       if (character != '0') {
@@ -129,8 +131,6 @@ struct CoreLexer : LexerInterface {
           lexeme += advance();
         }
       }
-    } else if (std::isspace(character)) {
-      return create_identifier(loc, lexeme);
     } else {
       unexpected_character(character, __FUNCTION__);
     }
