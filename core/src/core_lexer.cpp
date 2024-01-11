@@ -129,6 +129,8 @@ struct CoreLexer : LexerInterface {
           lexeme += advance();
         }
       }
+    } else if (std::isspace(character)) {
+      return create_identifier(loc, lexeme);
     } else {
       unexpected_character(character, __FUNCTION__);
     }
