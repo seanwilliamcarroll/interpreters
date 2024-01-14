@@ -59,7 +59,7 @@ struct CoreLexer : LexerInterface {
 
   std::unique_ptr<Token> get_next_token() {
     char character;
-    if (peek(character)) {
+    while (peek(character)) {
       switch (character) {
       case '(':
         return single_char_token(Token::LEFT_PAREND);
@@ -73,12 +73,12 @@ struct CoreLexer : LexerInterface {
       case '\t':
         // Whitespace
         whitespace();
-        return get_next_token();
+        continue;
       case '\r':
       case '\n':
         // Line break
         line_break();
-        return get_next_token();
+        continue;
       case '-':
         return number();
       case '"':
@@ -89,7 +89,8 @@ struct CoreLexer : LexerInterface {
         }
         return identifier();
       }
-    } else if (m_in_stream.eof()) {
+    }
+    if (m_in_stream.eof()) {
       auto current_loc = get_current_loc();
       reset_eof();
       return make_token(current_loc, Token::EOF_TOKENTYPE);
