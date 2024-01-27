@@ -31,6 +31,7 @@ target_include_directories(core PUBLIC inc)
 add_executable(core-test
   test/src/main.cpp
   test/src/token_test.cpp
+  test/src/core_lexer_test.cpp
   test/src/example_test.cpp)
 
 target_include_directories(core-test PUBLIC test/inc)
