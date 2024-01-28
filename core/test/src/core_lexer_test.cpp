@@ -29,49 +29,169 @@ namespace sc {
 //****************************************************************************
 TEST_SUITE("core.lexer") {
 
-  // FIXME: Add tests
-  std::vector<std::unique_ptr<Token>> get_all_tokens(LexerInterface * lexer) {
-    std::vector<std::unique_ptr<Token>> tokens;
-
-    std::unique_ptr<Token> token = lexer->get_next_token();
-    CHECK(token != nullptr);
-    while (token->get_token_type() != Token::EOF_TOKENTYPE) {
-      tokens.push_back(std::move(token));
-      token = lexer->get_next_token();
-      CHECK(token != nullptr);
-    }
-    // Last EOF token
-    tokens.push_back(std::move(token));
-    return tokens;
+  auto whitespace_generator() {
+    return rc::gen::apply(
+        [](const std::vector<char> &char_vector) {
+          return std::string(char_vector.begin(), char_vector.end());
+        },
+        rc::gen::suchThat(rc::gen::container<std::vector<char>>(
+                              rc::gen::element<char>(' ', '\t', '\n', '\r')),
+                          [](const std::vector<char> &char_vector) {
+                            return char_vector.size() < 10000;
+                          }));
   }
 
-  void add_whitespace_stream(std::stringstream & in_stream,
-                             const unsigned int num_chars) {
-    for (unsigned int char_index = 0; char_index < num_chars; ++char_index) {
-      in_stream << *rc::gen::element(' ', '\t', '\n', '\r');
-    }
+  auto random_digit_generator() { return rc::gen::inRange('0', '9'); }
+
+  auto random_digits_generator() {
+    // Want to make sure we at least get one digit from this generator, but not
+    // larger than 9 digits
+    return rc::gen::apply(
+        [](const std::vector<char> &char_vector) {
+          return std::string(char_vector.begin(), char_vector.end());
+        },
+        rc::gen::suchThat(
+            rc::gen::container<std::vector<char>>(random_digit_generator()),
+            [](const std::vector<char> &char_vector) {
+              return char_vector.size() > 0 && char_vector.size() < 10;
+            }));
   }
+
+  auto digits_before_decimal_generator() {
+    return rc::gen::join(rc::gen::element(
+        rc::gen::just<std::string>("0"),
+        rc::gen::suchThat(
+            random_digits_generator(), [](const std::string &input_string) {
+              return input_string.size() > 0 && input_string.at(0) != '0';
+            })));
+  }
+
+  auto minus_generator() { return rc::gen::just<std::string>("-"); }
+
+  auto optional_null_string(auto input_gen) {
+    return rc::gen::join<std::string>(
+        rc::gen::element(input_gen, rc::gen::just<std::string>("")));
+  }
+
+  auto optional_minus_generator() {
+    return optional_null_string(minus_generator());
+  }
+
+  auto fractional_generator() {
+    return rc::gen::apply(
+        [](const std::string &input_string) {
+          return std::string(".") + input_string;
+        },
+        random_digits_generator());
+  }
+
+  auto exponential_generator() {
+    // Not perfect, hardcoded number to keep doubles in range
+    return rc::gen::apply(
+        [](const std::string &e_term, const std::string &unary_term,
+           unsigned int input) {
+          return e_term + unary_term + std::to_string(input);
+        },
+        rc::gen::element<std::string>("e", "E"),
+        rc::gen::element<std::string>("", "+", "-"),
+        rc::gen::inRange<unsigned int>(0, 300));
+  }
+
+  // Test Cases
 
   TEST_CASE("sc::lexer_empty") {
     std::istringstream in_stream;
     auto lexer = make_lexer(in_stream, {});
-    auto tokens = get_all_tokens(lexer.get());
-    CHECK(tokens.size() == 1);
-    CHECK(tokens.at(0)->get_token_type() == Token::EOF_TOKENTYPE);
+    auto token = lexer->get_next_token();
+    CHECK(token != nullptr);
+    CHECK(token->get_token_type() == Token::EOF_TOKENTYPE);
   }
 
   TEST_CASE("sc::lexer_whitespace") {
-    rc::check("Given stream of whitespace, return only 1 token ", [] {
+    rc::check("Given stream of whitespace, return only 1 token", [] {
       std::stringstream in_stream;
-      // Generate random stream of whitespace characters
-      const unsigned int num_chars = *rc::gen::inRange(0, 10000);
-      add_whitespace_stream(in_stream, num_chars);
+      in_stream << *whitespace_generator();
+
       auto lexer = make_lexer(in_stream, {});
-      auto tokens = get_all_tokens(lexer.get());
-      CHECK(tokens.size() == 1);
-      CHECK(tokens.at(tokens.size() - 1)->get_token_type() ==
-            Token::EOF_TOKENTYPE);
+
+      auto token = lexer->get_next_token();
+      CHECK(token != nullptr);
+      CHECK(token->get_token_type() == Token::EOF_TOKENTYPE);
     });
+  }
+
+  TEST_CASE("sc::lexer_integers") {
+    rc::check("Test lexing of different integer numbers", [] {
+      // Combinator to test different forms of numbers based on json parsing
+      // spec
+
+      // Build up each branching point as generators
+      std::stringstream in_stream;
+      in_stream << *optional_minus_generator()
+                << *digits_before_decimal_generator();
+
+      auto lexer = make_lexer(in_stream, {});
+
+      auto first_token = lexer->get_next_token();
+      CHECK(first_token != nullptr);
+      CHECK(first_token->get_token_type() == Token::INT_LITERAL);
+
+      auto second_token = lexer->get_next_token();
+      CHECK(second_token != nullptr);
+      CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+    });
+  }
+
+  TEST_CASE("sc::lexer_doubles_fractional") {
+    rc::check("Test lexing of different double numbers: containing decimal",
+              [] {
+                // Combinator to test different forms of numbers based on json
+                // parsing spec
+
+                // Build up each branching point as generators
+
+                std::stringstream in_stream;
+                in_stream << *optional_minus_generator()
+                          << *digits_before_decimal_generator()
+                          << *fractional_generator()
+                          << *optional_null_string(exponential_generator());
+
+                auto lexer = make_lexer(in_stream, {});
+
+                auto first_token = lexer->get_next_token();
+                CHECK(first_token != nullptr);
+                CHECK(first_token->get_token_type() == Token::DOUBLE_LITERAL);
+
+                auto second_token = lexer->get_next_token();
+                CHECK(second_token != nullptr);
+                CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+              });
+  }
+
+  TEST_CASE("sc::lexer_doubles_exponential") {
+    rc::check("Test lexing of different double numbers: containing exponential",
+              [] {
+                // Combinator to test different forms of numbers based on json
+                // parsing spec
+
+                // Build up each branching point as generators
+
+                std::stringstream in_stream;
+                in_stream << *optional_minus_generator()
+                          << *digits_before_decimal_generator()
+                          << *optional_null_string(fractional_generator())
+                          << *exponential_generator();
+
+                auto lexer = make_lexer(in_stream, {});
+
+                auto first_token = lexer->get_next_token();
+                CHECK(first_token != nullptr);
+                CHECK(first_token->get_token_type() == Token::DOUBLE_LITERAL);
+
+                auto second_token = lexer->get_next_token();
+                CHECK(second_token != nullptr);
+                CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+              });
   }
 }
 //****************************************************************************
