@@ -29,11 +29,46 @@ namespace sc {
 //****************************************************************************
 TEST_SUITE("core.lexer") {
 
-  auto whitespace_generator() {
+  auto any_char_but_generator(auto generator, char char_to_skip) {
+    return rc::gen::suchThat(generator, [char_to_skip](char input_char) {
+      return input_char != char_to_skip;
+    });
+  }
+
+  auto any_char_but_generator(auto generator,
+                              const std::vector<char> &chars_to_skip) {
+    return rc::gen::suchThat(generator, [&chars_to_skip](char input_char) {
+      return std::none_of(chars_to_skip.begin(), chars_to_skip.end(),
+                          [input_char](char inner_input_char) {
+                            return input_char == inner_input_char;
+                          });
+    });
+  }
+
+  auto skip_range_generator(auto generator, char char_begin_inclusive,
+                            char char_end_inclusive) {
+    return rc::gen::suchThat(
+        generator, [char_begin_inclusive, char_end_inclusive](char input_char) {
+          return input_char >= char_begin_inclusive &&
+                 input_char <= char_end_inclusive;
+        });
+  }
+
+  // FIXME: Probably shouldn't need this
+  auto ascii_characters_generator() {
+    return skip_range_generator(rc::gen::character<char>(), 32, 127);
+  }
+
+  auto concat_char_generator(auto generator) {
     return rc::gen::apply(
         [](const std::vector<char> &char_vector) {
           return std::string(char_vector.begin(), char_vector.end());
         },
+        generator);
+  }
+
+  auto whitespace_generator() {
+    return concat_char_generator(
         rc::gen::suchThat(rc::gen::container<std::vector<char>>(
                               rc::gen::element<char>(' ', '\t', '\n', '\r')),
                           [](const std::vector<char> &char_vector) {
@@ -192,6 +227,60 @@ TEST_SUITE("core.lexer") {
                 CHECK(second_token != nullptr);
                 CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
               });
+  }
+
+  TEST_CASE("sc::lexer_parends") {
+    std::stringstream in_stream;
+    in_stream << "()";
+    auto lexer = make_lexer(in_stream, {});
+    for (const auto &token_type :
+         {Token::LEFT_PAREND, Token::RIGHT_PAREND, Token::EOF_TOKENTYPE}) {
+      auto token = lexer->get_next_token();
+      CHECK(token != nullptr);
+      CHECK(token->get_token_type() == token_type);
+    }
+  }
+
+  TEST_CASE("sc::block_commnet") {
+    rc::check("Given stream of valid block_commnet, return only 1 token", [] {
+      std::stringstream in_stream;
+      in_stream << ";-";
+      // FIXME: Not handling unicode correctly?
+      in_stream << *concat_char_generator(rc::gen::container<std::vector<char>>(
+          any_char_but_generator(ascii_characters_generator(), ';')));
+      in_stream << "-;";
+
+      auto lexer = make_lexer(in_stream, {});
+
+      auto token = lexer->get_next_token();
+      CHECK(token != nullptr);
+      CHECK(token->get_token_type() == Token::EOF_TOKENTYPE);
+    });
+  }
+
+  TEST_CASE("sc::string") {
+    rc::check(
+        "Given stream of valid string, return only 2 tokens, STRING_LITERAL "
+        "and EOF_TOKENTYPE, without escape characters",
+        [] {
+          // FIXME: Not handling unicode correctly?
+          std::stringstream in_stream;
+          in_stream << "\"";
+          in_stream << *concat_char_generator(
+              rc::gen::container<std::vector<char>>(any_char_but_generator(
+                  ascii_characters_generator(), {'"', '\\'})));
+          in_stream << "\"";
+
+          auto lexer = make_lexer(in_stream, {});
+
+          auto first_token = lexer->get_next_token();
+          CHECK(first_token != nullptr);
+          CHECK(first_token->get_token_type() == Token::STRING_LITERAL);
+
+          auto second_token = lexer->get_next_token();
+          CHECK(second_token != nullptr);
+          CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+        });
   }
 }
 //****************************************************************************
