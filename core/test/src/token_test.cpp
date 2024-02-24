@@ -25,9 +25,6 @@
 namespace sc {
 //****************************************************************************
 TEST_SUITE("core.token") {
-
-  // TODO: Perhaps expand this?
-
   TEST_CASE("sc::token_equality") {
     rc::check("Given same args, Tokens should be identical",
               [](const SourceLocation &loc, TokenType type) {
@@ -39,7 +36,7 @@ TEST_SUITE("core.token") {
   }
 
   TEST_CASE("sc::token_type_equality") {
-    rc::check("type equality doesn't care about location or lexeme",
+    rc::check("type equality doesn't care about location",
               [](const SourceLocation &loc_a, const SourceLocation &loc_b,
                  TokenType type) {
                 auto token_a = Token(loc_a, type);
