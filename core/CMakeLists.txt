@@ -41,12 +41,6 @@ target_link_libraries(core-test
   rapidcheck
   doctest::doctest)
 
-if (APPLE)
-  set_target_properties(core-test PROPERTIES
-    BUILD_RPATH "/opt/local/libexec/llvm-17/lib"
-  )
-endif (APPLE)
-  
 #*****************************************************************************
 
 add_test(NAME core.example COMMAND core-test -ts=core.example)
