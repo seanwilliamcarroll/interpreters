@@ -46,6 +46,16 @@ Create `CMakeUserPresets.json` in the project root, inheriting from `base`:
 Adjust the clang version and SDK path to match your system. The SDK path can be
 found with `xcrun --show-sdk-path`.
 
+### Git Hooks
+
+This project includes shared git hooks in `.githooks/`. To use them, configure
+your local clone to point at that directory:
+
+    git config core.hooksPath .githooks
+
+Currently includes a **pre-commit** hook that runs `clang-format` on staged
+C/C++ files. If `clang-format` is not installed, the hook is silently skipped.
+
 ### Building
 
     cmake --preset macports
