@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include "sc/ast.hpp"
 #include "sc/exceptions.hpp"
 #include "sc/source_location.hpp"
 #include <iosfwd>
@@ -33,7 +34,10 @@ public:
 
   virtual ~Parser() = default;
 
-
+  std::unique_ptr<sc::AstNode> parse() {
+    return {};
+  }
+  
 private:
   const sc::Token &peek() {
     if (m_current_token == nullptr) {
