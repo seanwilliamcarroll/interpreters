@@ -20,11 +20,18 @@
 namespace sc {
 //****************************************************************************
 
-struct CompilerException : std::runtime_error {
+struct LexerException : std::runtime_error {
   // FIXME: Check on use of string_view
   //        Decide where to construct the message itself
 
-  CompilerException(std::string_view message, const SourceLocation &);
+  LexerException(std::string_view message, const SourceLocation &);
+};
+
+struct ParserException : std::runtime_error {
+  // FIXME: Check on use of string_view
+  //        Decide where to construct the message itself
+
+  ParserException(std::string_view message, const SourceLocation &);
 };
 
 struct UnknownTokenTypeException : std::runtime_error {
