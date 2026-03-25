@@ -14,16 +14,48 @@ explicit, so the grammar is unambiguous and easy to recurse over.
 
 ## Step 1: Write the Grammar
 
-Before any code, write down the grammar informally. For an s-expression language:
+### Informal summary
 
-- An **expression** is either an atom or a list
-- An **atom** is a literal (int, string, bool) or an identifier
+- An **expression** is either an atom or a parenthesized list
+- An **atom** is a literal (int, double, string, bool) or an identifier
 - A **list** is `(` followed by one or more expressions, followed by `)`
 - Some lists are **special forms** — keywords with fixed, known structure:
   `if`, `while`, `set`, `begin`, `define`, `print`
-- Anything else is a **function call** (identifier + arguments)
+- Anything else is a **function call** (callee expression + arguments)
 
-Write this out precisely in English before writing code. It forces clear thinking.
+### Formal grammar
+
+```
+program     ::= expression* EOF
+
+expression  ::= atom
+              | '(' list ')'
+
+atom        ::= INT_LITERAL
+              | DOUBLE_LITERAL
+              | STRING_LITERAL
+              | BOOL_LITERAL
+              | IDENTIFIER
+
+list        ::= 'if'     expression expression expression?          -- condition, then, else?
+              | 'while'  expression expression                       -- condition, body
+              | 'set'    IDENTIFIER expression                       -- variable assignment
+              | 'begin'  expression+                                 -- sequencing
+              | 'print'  expression                                  -- output
+              | 'define' IDENTIFIER expression                       -- variable definition
+              | 'define' '(' IDENTIFIER IDENTIFIER* ')' expression   -- function definition
+              | expression expression*                               -- function call
+```
+
+### Design notes
+
+- **`define` is overloaded**: `(define x 42)` for variables, `(define (f x y) body)` for
+  functions. The parser distinguishes by peeking after `define` — `(` means function form,
+  `IDENTIFIER` means variable form.
+- **`if` has optional else**: parser peeks for `)` after the then-branch to decide.
+- **`while` takes one body expression**: use `(while cond (begin ...))` for multiple statements.
+- **`set` target is a bare `IDENTIFIER`** — no nested lvalues.
+- **Function call callee is any expression**, allowing `((get-fn) arg)` — not just identifiers.
 
 ---
 
@@ -50,15 +82,13 @@ implementing anything — they define what the parser is trying to build.
 - `CallNode` — callee identifier + argument list
 - `ProgramNode` — top-level list of expressions (root of the tree)
 
-**Key design question:** one class hierarchy or `std::variant`?
+**Decision:** Inheritance (`AstNode` base class + subclasses). Familiar, easy to extend,
+and consistent with the existing `Token` hierarchy. General-purpose leaf nodes and the base
+class live in `core/`; blip-specific special forms live in `blip/`.
 
-| Approach | Pros | Cons |
-|---|---|---|
-| Inheritance (`AstNode` base + subclasses) | Familiar OOP, easy to add new node types | Visiting requires virtual dispatch or Visitor pattern |
-| `std::variant` | Exhaustive matching — compiler flags missed cases | Adding node types requires editing the variant everywhere |
-
-Inheritance is the more familiar starting point. `std::variant` is worth knowing
-about as a more modern alternative.
+`DefineNode` splits into two forms:
+- `DefineVarNode` — name + value expression
+- `DefineFnNode` — name + parameter list + body expression
 
 ---
 
