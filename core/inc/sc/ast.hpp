@@ -42,39 +42,67 @@ private:
 // Each leaf wraps a single value. These correspond to the `atom` rule
 // in the grammar. IntLiteral is filled in as an example.
 
-class IntLiteral : public AstNode {
+template <typename LiteralType>
+class AbstractLiteral : public AstNode {
 public:
-  IntLiteral(const SourceLocation &loc, int value)
-      : AstNode(loc), m_value(value) {}
+  AbstractLiteral(const SourceLocation &loc, LiteralType value)
+    : AstNode(loc), m_value(std::move(value)) {}
 
-  int get_value() const { return m_value; }
+  LiteralType get_value() const { return m_value; }
 
 private:
-  const int m_value;
+  const LiteralType m_value;
 };
 
-// TODO: DoubleLiteral — same shape as IntLiteral but holds a double
+using IntLiteral = AbstractLiteral<int>;
 
-// TODO: StringLiteral — holds a std::string
+using DoubleLiteral = AbstractLiteral<double>;
 
-// TODO: BoolLiteral — holds a bool
+using StringLiteral = AbstractLiteral<std::string>;
 
-// TODO: Identifier — holds a std::string (the name)
-//       Hint: structurally identical to StringLiteral, but it means
-//       something different — it's a *reference* to a binding, not a value.
+using BoolLiteral = AbstractLiteral<bool>;
+
+class Identifier : public AstNode {
+public:
+  Identifier(const SourceLocation &location, std::string name)
+      : AstNode(location), m_name(std::move(name)) {}
+
+  const std::string& get_name() const { return m_name; }
+  
+private:
+  const std::string m_name;
+};
+
 
 // --- Interior nodes (generic) ---------------------------------------------
 //
 // CallNode and ProgramNode are language-agnostic — most s-expression
 // languages would have them.
 
-// TODO: ProgramNode — owns a vector<unique_ptr<AstNode>> (the top-level
-//       expressions). This is the root of the tree.
-//       Hint: the constructor should take the vector by move.
+class ProgramNode : public AstNode {
+public:
+  ProgramNode(const SourceLocation &location, std::vector<std::unique_ptr<AstNode>> program) : AstNode(location), m_program(std::move(program)) {}
 
-// TODO: CallNode — owns a callee (unique_ptr<AstNode>) and an argument
-//       list (vector<unique_ptr<AstNode>>).
-//       Hint: the callee is any expression, not just an identifier.
+  const std::vector<std::unique_ptr<AstNode>>& get_program() const {return m_program;}
+
+private:
+  std::vector<std::unique_ptr<AstNode>> m_program;
+};
+
+class CallNode : public AstNode {
+public:
+  CallNode(const SourceLocation &location, std::unique_ptr<AstNode> callee,
+           std::vector<std::unique_ptr<AstNode>> arguments)
+    : AstNode(location), m_callee(std::move(callee)), m_arguments(std::move(arguments)) {}
+
+  const AstNode& get_callee() const {return *m_callee;}
+
+  const std::vector<std::unique_ptr<AstNode>>& get_arguments() const {return m_arguments;}
+  
+private:
+  std::unique_ptr<AstNode> m_callee;
+  std::vector<std::unique_ptr<AstNode>> m_arguments;
+};
 
 //****************************************************************************
 } // namespace sc

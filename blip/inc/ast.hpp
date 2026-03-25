@@ -22,6 +22,7 @@ namespace blip {
 //****************************************************************************
 
 using sc::AstNode;
+using sc::Identifier;
 using sc::SourceLocation;
 
 // --- Special forms --------------------------------------------------------
@@ -50,19 +51,100 @@ private:
   std::unique_ptr<AstNode> m_else_branch;
 };
 
-// TODO: WhileNode — condition + body (both unique_ptr<AstNode>)
+class WhileNode : public AstNode {
+public:
+  WhileNode(const SourceLocation &location, std::unique_ptr<AstNode> condition, std::unique_ptr<AstNode> body)
+    : AstNode(location), m_condition(std::move(condition)), m_body(std::move(body)) {}
 
-// TODO: SetNode — name (std::string) + value (unique_ptr<AstNode>)
+  const AstNode& get_condition() const {return *m_condition;}
+  
+  const AstNode& get_body() const {return *m_body;}
+  
+private:
+  const std::unique_ptr<AstNode> m_condition;
+  const std::unique_ptr<AstNode> m_body;
+};
 
-// TODO: BeginNode — owns a vector<unique_ptr<AstNode>> (one or more exprs)
+class SetNode : public AstNode {
+public:
+  SetNode(const SourceLocation &location,
+          std::unique_ptr<Identifier> name,
+          std::unique_ptr<AstNode> value)
+      : AstNode(location), m_name(std::move(name)),
+        m_value(std::move(value)) {}
 
-// TODO: PrintNode — owns one expression (unique_ptr<AstNode>)
+  const Identifier &get_name() const { return *m_name; }
 
-// TODO: DefineVarNode — name (std::string) + value (unique_ptr<AstNode>)
+  const AstNode &get_value() const { return *m_value; }
+  
+private:
+  const std::unique_ptr<Identifier> m_name;
+  const std::unique_ptr<AstNode> m_value;
+};
 
-// TODO: DefineFnNode — name (std::string) + parameter names
-//       (vector<std::string>) + body (unique_ptr<AstNode>)
-//       Hint: parameters are just names at definition time, not expressions.
+
+// May make sense to push this into core as AstListNode, add iterator, operator[], etc
+class BeginNode : public AstNode {
+public:
+  BeginNode(const SourceLocation &location,
+            std::vector<std::unique_ptr<AstNode>> expressions)
+      : AstNode(location), m_expressions(std::move(expressions)) {}
+
+  const std::vector<std::unique_ptr<AstNode>>& get_expressions() const {return m_expressions;}
+  
+private:
+  const std::vector<std::unique_ptr<AstNode>> m_expressions;
+};
+
+class PrintNode : public AstNode {
+public:
+  PrintNode(const SourceLocation &location, std::unique_ptr<AstNode> expression)
+      : AstNode(location), m_expression(std::move(expression)) {}
+
+  const AstNode& get_expression() const {return *m_expression;}
+  
+private:
+  const std::unique_ptr<AstNode> m_expression;
+};
+
+
+// Literally the same as set, just alias?
+class DefineVarNode : public AstNode {
+public:
+  DefineVarNode(const SourceLocation &location,
+          std::unique_ptr<Identifier> name,
+          std::unique_ptr<AstNode> value)
+      : AstNode(location), m_name(std::move(name)),
+        m_value(std::move(value)) {}
+
+  const Identifier &get_name() const { return *m_name; }
+
+  const AstNode &get_value() const { return *m_value; }
+
+private:
+  const std::unique_ptr<Identifier> m_name;
+  const std::unique_ptr<AstNode> m_value;  
+};
+
+class DefineFnNode : public AstNode {
+public:
+  DefineFnNode(const SourceLocation &location, std::unique_ptr<Identifier> name,
+               std::vector<std::unique_ptr<Identifier>> arguments,
+          std::unique_ptr<AstNode> body)
+    : AstNode(location), m_name(std::move(name)), m_arguments(std::move(arguments)),
+        m_body(std::move(body)) {}
+
+  const Identifier &get_name() const { return *m_name; }
+
+  const std::vector<std::unique_ptr<Identifier>>& get_arguments() const {return m_arguments;}
+  
+  const AstNode &get_body() const { return *m_body; }
+
+private:
+  const std::unique_ptr<Identifier> m_name;
+  const std::vector<std::unique_ptr<Identifier>> m_arguments;
+  const std::unique_ptr<AstNode> m_body;  
+};
 
 //****************************************************************************
 } // namespace blip
