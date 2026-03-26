@@ -18,9 +18,8 @@
 #include <memory>
 #include <sstream>
 
+#include <blip_tokens.hpp>
 #include <sc/lexer_interface.hpp>
-#include <sc/sc.hpp>
-#include <sc/token.hpp>
 
 //****************************************************************************
 namespace blip {
@@ -38,11 +37,13 @@ public:
 
 private:
   std::unique_ptr<sc::AstNode> parse_expression();
-  const sc::Token &peek();
+  std::unique_ptr<sc::AstNode> parse_list();
 
-  std::unique_ptr<sc::Token> advance();
+  const Token &peek();
 
-  std::unique_ptr<sc::Token> expect(sc::TokenType);
+  std::unique_ptr<Token> advance();
+
+  std::unique_ptr<Token> expect(BlipTokenType, const char *function_name);
 
   template <class... args>
   [[noreturn]] void on_error(const sc::SourceLocation &location,
@@ -56,7 +57,7 @@ private:
   }
 
   const std::unique_ptr<sc::LexerInterface> m_lexer;
-  std::unique_ptr<sc::Token> m_current_token;
+  std::unique_ptr<Token> m_current_token;
 };
 
 //****************************************************************************
