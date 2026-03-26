@@ -153,6 +153,200 @@ TEST_SUITE("blip.parser") {
     CHECK(lit->get_value() == 42);
   }
 
+  TEST_CASE("parse set") {
+    auto ast = parse_string("(set x 10)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *set = dynamic_cast<SetNode *>(program->get_program()[0].get());
+    REQUIRE(set != nullptr);
+    CHECK(set->get_name().get_name() == "x");
+
+    auto *val = dynamic_cast<const sc::IntLiteral *>(&set->get_value());
+    REQUIRE(val != nullptr);
+    CHECK(val->get_value() == 10);
+  }
+
+  TEST_CASE("parse begin") {
+    auto ast = parse_string("(begin 1 2 3)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *begin = dynamic_cast<BeginNode *>(program->get_program()[0].get());
+    REQUIRE(begin != nullptr);
+    REQUIRE(begin->get_expressions().size() == 3);
+
+    auto *first =
+        dynamic_cast<sc::IntLiteral *>(begin->get_expressions()[0].get());
+    REQUIRE(first != nullptr);
+    CHECK(first->get_value() == 1);
+
+    auto *last =
+        dynamic_cast<sc::IntLiteral *>(begin->get_expressions()[2].get());
+    REQUIRE(last != nullptr);
+    CHECK(last->get_value() == 3);
+  }
+
+  TEST_CASE("parse if with else") {
+    auto ast = parse_string("(if true 1 2)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *if_node = dynamic_cast<IfNode *>(program->get_program()[0].get());
+    REQUIRE(if_node != nullptr);
+
+    auto *cond =
+        dynamic_cast<const sc::BoolLiteral *>(&if_node->get_condition());
+    REQUIRE(cond != nullptr);
+    CHECK(cond->get_value() == true);
+
+    auto *then_br =
+        dynamic_cast<const sc::IntLiteral *>(&if_node->get_then_branch());
+    REQUIRE(then_br != nullptr);
+    CHECK(then_br->get_value() == 1);
+
+    auto *else_br =
+        dynamic_cast<const sc::IntLiteral *>(if_node->get_else_branch());
+    REQUIRE(else_br != nullptr);
+    CHECK(else_br->get_value() == 2);
+  }
+
+  TEST_CASE("parse if without else") {
+    auto ast = parse_string("(if false 99)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *if_node = dynamic_cast<IfNode *>(program->get_program()[0].get());
+    REQUIRE(if_node != nullptr);
+    CHECK(if_node->get_else_branch() == nullptr);
+
+    auto *then_br =
+        dynamic_cast<const sc::IntLiteral *>(&if_node->get_then_branch());
+    REQUIRE(then_br != nullptr);
+    CHECK(then_br->get_value() == 99);
+  }
+
+  TEST_CASE("parse while") {
+    auto ast = parse_string("(while true 42)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *wh = dynamic_cast<WhileNode *>(program->get_program()[0].get());
+    REQUIRE(wh != nullptr);
+
+    auto *cond = dynamic_cast<const sc::BoolLiteral *>(&wh->get_condition());
+    REQUIRE(cond != nullptr);
+    CHECK(cond->get_value() == true);
+
+    auto *body = dynamic_cast<const sc::IntLiteral *>(&wh->get_body());
+    REQUIRE(body != nullptr);
+    CHECK(body->get_value() == 42);
+  }
+
+  TEST_CASE("parse define variable") {
+    auto ast = parse_string("(define x 5)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineVarNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "x");
+
+    auto *val = dynamic_cast<const sc::IntLiteral *>(&def->get_value());
+    REQUIRE(val != nullptr);
+    CHECK(val->get_value() == 5);
+  }
+
+  TEST_CASE("parse define function") {
+    auto ast = parse_string("(define (add a b) (print a))");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineFnNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "add");
+    REQUIRE(def->get_arguments().size() == 2);
+    CHECK(def->get_arguments()[0]->get_name() == "a");
+    CHECK(def->get_arguments()[1]->get_name() == "b");
+
+    auto *body = dynamic_cast<const PrintNode *>(&def->get_body());
+    REQUIRE(body != nullptr);
+  }
+
+  // --- Function calls -------------------------------------------------------
+
+  TEST_CASE("parse function call") {
+    auto ast = parse_string("(foo 1 2)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *call = dynamic_cast<sc::CallNode *>(program->get_program()[0].get());
+    REQUIRE(call != nullptr);
+
+    auto *callee = dynamic_cast<const sc::Identifier *>(&call->get_callee());
+    REQUIRE(callee != nullptr);
+    CHECK(callee->get_name() == "foo");
+
+    REQUIRE(call->get_arguments().size() == 2);
+    auto *arg0 = dynamic_cast<sc::IntLiteral *>(call->get_arguments()[0].get());
+    REQUIRE(arg0 != nullptr);
+    CHECK(arg0->get_value() == 1);
+  }
+
+  TEST_CASE("parse function call no args") {
+    auto ast = parse_string("(foo)");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *call = dynamic_cast<sc::CallNode *>(program->get_program()[0].get());
+    REQUIRE(call != nullptr);
+
+    auto *callee = dynamic_cast<const sc::Identifier *>(&call->get_callee());
+    REQUIRE(callee != nullptr);
+    CHECK(callee->get_name() == "foo");
+    CHECK(call->get_arguments().size() == 0);
+  }
+
+  // --- Nested expressions ---------------------------------------------------
+
+  TEST_CASE("parse nested expression") {
+    auto ast = parse_string("(print (if true 1 2))");
+    auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *print = dynamic_cast<PrintNode *>(program->get_program()[0].get());
+    REQUIRE(print != nullptr);
+
+    auto *if_node = dynamic_cast<const IfNode *>(&print->get_expression());
+    REQUIRE(if_node != nullptr);
+
+    auto *then_br =
+        dynamic_cast<const sc::IntLiteral *>(&if_node->get_then_branch());
+    REQUIRE(then_br != nullptr);
+    CHECK(then_br->get_value() == 1);
+
+    auto *else_br =
+        dynamic_cast<const sc::IntLiteral *>(if_node->get_else_branch());
+    REQUIRE(else_br != nullptr);
+    CHECK(else_br->get_value() == 2);
+  }
+
+  // --- Error cases ----------------------------------------------------------
+
+  TEST_CASE("begin with no expressions throws") {
+    CHECK_THROWS_AS(parse_string("(begin)"), sc::ParserException);
+  }
+
   TEST_CASE("parse empty program") {
     auto ast = parse_string("");
     auto *program = dynamic_cast<sc::ProgramNode *>(ast.get());
