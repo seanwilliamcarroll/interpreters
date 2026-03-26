@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Requires a local `CMakeUserPresets.json` (gitignored) — see README.md for the template.
 
 ```bash
-cmake --preset macports                  # configure (run once, or after CMake changes)
-cmake --build --preset macports          # build
-ctest --preset macports                  # run all tests
-ctest --preset macports -R core.lexer    # run a single test suite by name
+cmake --preset mp                  # configure (run once, or after CMake changes)
+cmake --build --preset mp          # build
+ctest --preset mp                  # run all tests
+ctest --preset mp -R core.lexer    # run a single test suite by name
 ```
 
 Test suite names: `core.example`, `core.token`, `core.lexer`.

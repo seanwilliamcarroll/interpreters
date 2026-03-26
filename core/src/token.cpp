@@ -44,6 +44,29 @@ template class TokenOf<int>;
 template class TokenOf<double>;
 template class TokenOf<bool>;
 
+std::string token_type_to_string(TokenType type) {
+  switch (type) {
+  case Token::EOF_TOKENTYPE:
+    return "EOF";
+  case Token::LEFT_PAREND:
+    return "LEFT_PAREND";
+  case Token::RIGHT_PAREND:
+    return "RIGHT_PAREND";
+  case Token::IDENTIFIER:
+    return "IDENTIFIER";
+  case Token::INT_LITERAL:
+    return "INT_LITERAL";
+  case Token::STRING_LITERAL:
+    return "STRING_LITERAL";
+  case Token::DOUBLE_LITERAL:
+    return "DOUBLE_LITERAL";
+  case Token::BOOL_LITERAL:
+    return "BOOL_LITERAL";
+  default:
+    return "UNKNOWN(" + std::to_string(type) + ")";
+  }
+}
+
 //****************************************************************************
 } // namespace sc
 //****************************************************************************

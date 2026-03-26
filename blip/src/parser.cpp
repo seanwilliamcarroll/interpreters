@@ -61,11 +61,11 @@ std::unique_ptr<sc::AstNode> Parser::parse_expression() {
   case BlipToken::LEFT_PAREND:
     return parse_list();
   case BlipToken::RIGHT_PAREND:
-    on_error(token.get_location(),
-             "Unexpected Token of type: ", token.get_token_type());
+    on_error(token.get_location(), "Unexpected token: ",
+             token_type_to_string(token.get_token_type()));
   default:
     on_error(token.get_location(),
-             "Unknown Token of type: ", token.get_token_type());
+             "Unknown token: ", token_type_to_string(token.get_token_type()));
   }
 }
 
@@ -105,8 +105,8 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
                                          std::move(node_to_print));
     }
     default:
-      on_error(peek().get_location(),
-               "Unexpected Token in list of type: ", peek().get_token_type());
+      on_error(peek().get_location(), "Unexpected token in list: ",
+               token_type_to_string(peek().get_token_type()));
     }
   }
 
@@ -146,7 +146,8 @@ std::unique_ptr<Token> Parser::expect(BlipTokenType token_type,
   const auto &current_token = peek();
   if (current_token.get_token_type() != token_type) {
     on_error(current_token.get_location(), function_name,
-             " => Unexpected Token of type: ", current_token.get_token_type());
+             " => Unexpected token: ",
+             token_type_to_string(current_token.get_token_type()));
   }
   return advance();
 }

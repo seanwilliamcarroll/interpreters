@@ -43,6 +43,8 @@ using sc::TokenIdentifier;
 using sc::TokenInt;
 using sc::TokenString;
 
+std::string token_type_to_string(BlipTokenType type);
+
 //****************************************************************************
 } // namespace blip
 //****************************************************************************

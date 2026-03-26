@@ -21,6 +21,7 @@ set_target_properties(blip-exe PROPERTIES OUTPUT_NAME blip)
 
 add_library(blip-lib STATIC
   src/blip.cpp
+  src/blip_tokens.cpp
   src/parser.cpp)
 
 set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
