@@ -38,27 +38,25 @@ std::unique_ptr<sc::AstNode> Parser::parse() {
 
 std::unique_ptr<sc::AstNode> Parser::parse_expression() {
   auto token = advance();
+
+  auto to_literal =
+      []<typename InputToken, typename OutputAstNode>(sc::Token *token) {
+        auto literal_token = dynamic_cast<InputToken *>(token);
+        return std::make_unique<OutputAstNode>(literal_token->get_location(),
+                                               literal_token->get_value());
+      };
+
   switch (token->get_token_type()) {
-  case sc::Token::BOOL_LITERAL: {
-    auto bool_token = dynamic_cast<sc::TokenBool *>(token.get());
-    return std::make_unique<sc::BoolLiteral>(bool_token->get_location(),
-                                             bool_token->get_value());
-  }
-  case sc::Token::INT_LITERAL: {
-    auto int_token = dynamic_cast<sc::TokenInt *>(token.get());
-    return std::make_unique<sc::IntLiteral>(int_token->get_location(),
-                                            int_token->get_value());
-  }
-  case sc::Token::STRING_LITERAL: {
-    auto string_token = dynamic_cast<sc::TokenString *>(token.get());
-    return std::make_unique<sc::StringLiteral>(string_token->get_location(),
-                                               string_token->get_value());
-  }
-  case sc::Token::DOUBLE_LITERAL: {
-    auto double_token = dynamic_cast<sc::TokenDouble *>(token.get());
-    return std::make_unique<sc::DoubleLiteral>(double_token->get_location(),
-                                               double_token->get_value());
-  }
+  case sc::Token::BOOL_LITERAL:
+    return to_literal.operator()<sc::TokenBool, sc::BoolLiteral>(token.get());
+  case sc::Token::INT_LITERAL:
+    return to_literal.operator()<sc::TokenInt, sc::IntLiteral>(token.get());
+  case sc::Token::STRING_LITERAL:
+    return to_literal.operator()<sc::TokenString, sc::StringLiteral>(
+        token.get());
+  case sc::Token::DOUBLE_LITERAL:
+    return to_literal.operator()<sc::TokenDouble, sc::DoubleLiteral>(
+        token.get());
   default:
     on_error(token->get_location(),
              "Unexpected Token of type: ", peek().get_token_type());
