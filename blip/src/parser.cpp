@@ -37,29 +37,35 @@ std::unique_ptr<sc::AstNode> Parser::parse() {
 }
 
 std::unique_ptr<sc::AstNode> Parser::parse_expression() {
-  auto token = advance();
+  const auto &token = peek();
 
-  auto to_literal =
+  auto to_atom =
       []<typename InputToken, typename OutputAstNode>(sc::Token *token) {
         auto literal_token = dynamic_cast<InputToken *>(token);
         return std::make_unique<OutputAstNode>(literal_token->get_location(),
                                                literal_token->get_value());
       };
 
-  switch (token->get_token_type()) {
+  switch (token.get_token_type()) {
   case sc::Token::BOOL_LITERAL:
-    return to_literal.operator()<sc::TokenBool, sc::BoolLiteral>(token.get());
+    return to_atom.operator()<sc::TokenBool, sc::BoolLiteral>(advance().get());
   case sc::Token::INT_LITERAL:
-    return to_literal.operator()<sc::TokenInt, sc::IntLiteral>(token.get());
+    return to_atom.operator()<sc::TokenInt, sc::IntLiteral>(advance().get());
   case sc::Token::STRING_LITERAL:
-    return to_literal.operator()<sc::TokenString, sc::StringLiteral>(
-        token.get());
+    return to_atom.operator()<sc::TokenString, sc::StringLiteral>(
+        advance().get());
   case sc::Token::DOUBLE_LITERAL:
-    return to_literal.operator()<sc::TokenDouble, sc::DoubleLiteral>(
-        token.get());
+    return to_atom.operator()<sc::TokenDouble, sc::DoubleLiteral>(
+        advance().get());
+  case sc::Token::IDENTIFIER:
+    return to_atom.operator()<sc::TokenIdentifier, sc::Identifier>(
+        advance().get());
+  case sc::Token::RIGHT_PAREND:
+    on_error(token.get_location(),
+             "Unexpected Token of type: ", token.get_token_type());
   default:
-    on_error(token->get_location(),
-             "Unexpected Token of type: ", token->get_token_type());
+    on_error(token.get_location(),
+             "Unknown Token of type: ", token.get_token_type());
   }
 }
 
