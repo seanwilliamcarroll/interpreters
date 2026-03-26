@@ -32,7 +32,7 @@ if (APPLE AND ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
         ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS          "19"    )
 
    message(STATUS "Using the MacPorts clang-18 standard c++ library")
-   set(CMAKE_CXX_STANDARD_LIBRARIES  "/opt/local/libexec/llvm-18/lib/libc++.dylib"
+   set(CMAKE_CXX_STANDARD_LIBRARIES  "/opt/local/libexec/llvm-18/lib/libc++/libc++.dylib"
    CACHE STRING                      "The MacPorts clang-18 standard c++ library")
 
  endif()
