@@ -59,10 +59,8 @@ std::unique_ptr<sc::AstNode> Parser::parse_expression() {
         token.get());
   default:
     on_error(token->get_location(),
-             "Unexpected Token of type: ", peek().get_token_type());
+             "Unexpected Token of type: ", token->get_token_type());
   }
-
-  return {};
 }
 
 const sc::Token &Parser::peek() {
