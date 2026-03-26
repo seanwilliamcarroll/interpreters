@@ -81,6 +81,29 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
 
   while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
     switch (peek().get_token_type()) {
+    case BlipToken::IF: {
+      auto begin_source_location = peek().get_location();
+      // Skip IF
+      advance();
+      auto condition = parse_expression();
+      auto then_branch = parse_expression();
+      std::unique_ptr<sc::AstNode> else_branch = nullptr;
+      if (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+        else_branch = parse_expression();
+      }
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      return std::make_unique<IfNode>(
+          original_source_location, std::move(condition),
+          std::move(then_branch), std::move(else_branch));
+    }
+    case BlipToken::WHILE:
+      on_error(peek().get_location(), "Unexpected token in list: ",
+               token_type_to_string(peek().get_token_type()));
+
+    case BlipToken::SET:
+      on_error(peek().get_location(), "Unexpected token in list: ",
+               token_type_to_string(peek().get_token_type()));
+
     case BlipToken::BEGIN: {
       // Skip begin token
       auto begin_source_location = peek().get_location();
@@ -92,7 +115,6 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
       if (expressions.empty()) {
         on_error(begin_source_location, "BEGIN blocks cannot be empty!");
       }
-
       expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
       return std::make_unique<BeginNode>(begin_source_location,
                                          std::move(expressions));
@@ -105,6 +127,7 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
       return std::make_unique<PrintNode>(original_source_location,
                                          std::move(node_to_print));
     }
+    case BlipToken::DEFINE:
     default:
       on_error(peek().get_location(), "Unexpected token in list: ",
                token_type_to_string(peek().get_token_type()));
