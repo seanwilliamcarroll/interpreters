@@ -81,10 +81,21 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
 
   while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
     switch (peek().get_token_type()) {
-    case BlipToken::IDENTIFIER:
-      elements.push_back(
-          to_atom<TokenIdentifier, sc::Identifier>(advance().get()));
-      break;
+    case BlipToken::BEGIN: {
+      // Skip begin token
+      auto begin_source_location = peek().get_location();
+      advance();
+      std::vector<std::unique_ptr<sc::AstNode>> expressions;
+      while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+        expressions.push_back(parse_expression());
+      }
+      if (expressions.empty()) {
+        on_error(begin_source_location, "BEGIN blocks cannot be empty!");
+      }
+
+      return std::make_unique<BeginNode>(begin_source_location,
+                                         std::move(expressions));
+    }
     case BlipToken::PRINT: {
       // Skip print token
       advance();
@@ -100,6 +111,18 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
   }
 
   return {};
+}
+
+std::vector<std::unique_ptr<sc::AstNode>> Parser::parse_identifier_list() {
+
+  std::vector<std::unique_ptr<sc::AstNode>> identifiers;
+
+  while (peek().get_token_type() == BlipToken::IDENTIFIER) {
+    identifiers.push_back(
+        to_atom<TokenIdentifier, sc::Identifier>(advance().get()));
+  }
+
+  return identifiers;
 }
 
 const Token &Parser::peek() {
