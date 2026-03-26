@@ -33,12 +33,12 @@ TEST_SUITE("blip.parser") {
   static std::unique_ptr<sc::AstNode> parse_string(const std::string &source) {
     std::istringstream input(source);
     auto lexer = sc::make_lexer(input,
-                                {{"if", Blip::IF},
-                                 {"while", Blip::WHILE},
-                                 {"set", Blip::SET},
-                                 {"begin", Blip::BEGIN},
-                                 {"print", Blip::PRINT},
-                                 {"define", Blip::DEFINE}},
+                                {{"if", BlipToken::IF},
+                                 {"while", BlipToken::WHILE},
+                                 {"set", BlipToken::SET},
+                                 {"begin", BlipToken::BEGIN},
+                                 {"print", BlipToken::PRINT},
+                                 {"define", BlipToken::DEFINE}},
                                 "test");
     Parser parser(std::move(lexer));
     return parser.parse();
