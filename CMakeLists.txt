@@ -28,11 +28,11 @@ project(interpreters
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(CTest)
-include(Platform)
 
 find_package(DocTest       2.4.11 REQUIRED)
 find_package(RapidCheck           REQUIRED)
 
+# Currently RapidCheck does not support C++23
 set(CMAKE_CXX_STANDARD            20 )
 set(CMAKE_CXX_STANDARD_REQUIRED   ON )
 set(CMAKE_CXX_EXTENSIONS          OFF)
