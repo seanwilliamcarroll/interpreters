@@ -96,14 +96,34 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
           original_source_location, std::move(condition),
           std::move(then_branch), std::move(else_branch));
     }
-    case BlipToken::WHILE:
-      on_error(peek().get_location(), "Unexpected token in list: ",
-               token_type_to_string(peek().get_token_type()));
+    case BlipToken::WHILE: {
+      auto begin_source_location = peek().get_location();
+      // Skip WHILE
+      advance();
+      auto condition = parse_expression();
+      auto body = parse_expression();
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      return std::make_unique<WhileNode>(original_source_location,
+                                         std::move(condition), std::move(body));
+    }
+    case BlipToken::SET: {
+      auto begin_source_location = peek().get_location();
+      // Skip SET
+      advance();
+      // Expect an IDENTIFIER
+      if (peek().get_token_type() != BlipToken::IDENTIFIER) {
+        on_error(peek().get_location(),
+                 "Expected IDENTIFIER after SET, found: ",
+                 token_type_to_string(peek().get_token_type()));
+      }
+      auto identifier =
+          to_atom<TokenIdentifier, sc::Identifier>(advance().get());
 
-    case BlipToken::SET:
-      on_error(peek().get_location(), "Unexpected token in list: ",
-               token_type_to_string(peek().get_token_type()));
-
+      auto body = parse_expression();
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      return std::make_unique<SetNode>(original_source_location,
+                                       std::move(identifier), std::move(body));
+    }
     case BlipToken::BEGIN: {
       // Skip begin token
       auto begin_source_location = peek().get_location();
