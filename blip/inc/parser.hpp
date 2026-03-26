@@ -30,42 +30,23 @@ class Parser {
 public:
   // Reasonable to assume the parser should own its lexer
   Parser(std::unique_ptr<sc::LexerInterface> lexer)
-    : m_lexer(std::move(lexer)), m_current_token() {}
+      : m_lexer(std::move(lexer)), m_current_token() {}
 
   virtual ~Parser() = default;
 
-  std::unique_ptr<sc::AstNode> parse() {
-    return {};
-  }
-  
+  std::unique_ptr<sc::AstNode> parse();
+
 private:
-  const sc::Token &peek() {
-    if (m_current_token == nullptr) {
-      m_current_token = m_lexer->get_next_token();
-    }
-    return *m_current_token;
-  }
+  std::unique_ptr<sc::AstNode> parse_expression();
+  const sc::Token &peek();
 
-  std::unique_ptr<sc::Token> advance() {
-    if (m_current_token == nullptr) {
-      m_current_token = m_lexer->get_next_token();
-    }
-    auto output = std::move(m_current_token);
-    m_current_token = nullptr;
-    return output;
-  }
+  std::unique_ptr<sc::Token> advance();
 
-  std::unique_ptr<sc::Token> expect(sc::TokenType token_type) {
-    const auto &current_token = peek();
-    if (current_token.get_token_type() != token_type) {
-      on_error(current_token.get_location(),
-               "Unexpected Token of type: ", current_token.get_token_type());
-    }
-    return advance();
-  }
+  std::unique_ptr<sc::Token> expect(sc::TokenType);
 
   template <class... args>
-  [[noreturn]] void on_error(const sc::SourceLocation &location, args &&...a) const {
+  [[noreturn]] void on_error(const sc::SourceLocation &location,
+                             args &&...a) const {
 
     std::ostringstream o; // Local stringstream
 
