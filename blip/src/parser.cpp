@@ -93,6 +93,7 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
         on_error(begin_source_location, "BEGIN blocks cannot be empty!");
       }
 
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
       return std::make_unique<BeginNode>(begin_source_location,
                                          std::move(expressions));
     }
