@@ -20,6 +20,7 @@
 #include "sc/sc.hpp"              // For make_lexer function
 #include "sc/token.hpp"           // For Token class
 #include <doctest/doctest.h>      // For doctest
+#include <algorithm>              // For none_of
 #include <iostream>
 #include <rapidcheck.h> // For rapidcheck
 #include <sstream>      // For stringstream
