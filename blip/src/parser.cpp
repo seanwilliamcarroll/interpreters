@@ -79,107 +79,122 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
 
   std::vector<std::unique_ptr<sc::AstNode>> elements;
 
-  while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
-    switch (peek().get_token_type()) {
-    case BlipToken::IF: {
-      auto begin_source_location = peek().get_location();
-      // Skip IF
-      advance();
-      auto condition = parse_expression();
-      auto then_branch = parse_expression();
-      std::unique_ptr<sc::AstNode> else_branch = nullptr;
-      if (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
-        else_branch = parse_expression();
-      }
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<IfNode>(
-          original_source_location, std::move(condition),
-          std::move(then_branch), std::move(else_branch));
+  switch (peek().get_token_type()) {
+  case BlipToken::IF: {
+    auto begin_source_location = peek().get_location();
+    // Skip IF
+    advance();
+    auto condition = parse_expression();
+    auto then_branch = parse_expression();
+    std::unique_ptr<sc::AstNode> else_branch = nullptr;
+    if (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+      else_branch = parse_expression();
     }
-    case BlipToken::WHILE: {
-      auto begin_source_location = peek().get_location();
-      // Skip WHILE
-      advance();
-      auto condition = parse_expression();
-      auto body = parse_expression();
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<WhileNode>(original_source_location,
-                                         std::move(condition), std::move(body));
-    }
-    case BlipToken::SET: {
-      auto begin_source_location = peek().get_location();
-      // Skip SET
-      advance();
-      // Expect an IDENTIFIER
-      if (peek().get_token_type() != BlipToken::IDENTIFIER) {
-        on_error(peek().get_location(),
-                 "Expected IDENTIFIER after SET, found: ",
-                 token_type_to_string(peek().get_token_type()));
-      }
-      auto identifier =
-          to_atom<TokenIdentifier, sc::Identifier>(advance().get());
-
-      auto body = parse_expression();
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<SetNode>(original_source_location,
-                                       std::move(identifier), std::move(body));
-    }
-    case BlipToken::BEGIN: {
-      // Skip begin token
-      auto begin_source_location = peek().get_location();
-      advance();
-      std::vector<std::unique_ptr<sc::AstNode>> expressions;
-      while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
-        expressions.push_back(parse_expression());
-      }
-      if (expressions.empty()) {
-        on_error(begin_source_location, "BEGIN blocks cannot be empty!");
-      }
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<BeginNode>(begin_source_location,
-                                         std::move(expressions));
-    }
-    case BlipToken::PRINT: {
-      // Skip print token
-      advance();
-      auto node_to_print = parse_expression();
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<PrintNode>(original_source_location,
-                                         std::move(node_to_print));
-    }
-    case BlipToken::DEFINE: {
-      // Skip define token
-      advance();
-      // Are we defining a function or a variable?
-      if (peek().get_token_type() == BlipToken::LEFT_PAREND) {
-        // Function
-        // Need to parse identifier list, requires at least one, the function
-        // name
-        advance();
-        auto arguments = parse_identifier_list();
-        if (arguments.empty()) {
-          on_error(peek().get_location(),
-                   "Must have at least one identifier in function definition!");
-        }
-        auto name = std::move(arguments.front());
-        arguments.erase(arguments.begin());
-        expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-        auto body = parse_expression();
-        expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-        return std::make_unique<DefineFnNode>(
-            original_source_location, std::move(name), std::move(arguments),
-            std::move(body));
-      } else {
-        // Variable
-      }
-    }
-    default:
-      on_error(peek().get_location(), "Unexpected token in list: ",
+    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<IfNode>(
+        original_source_location, std::move(condition), std::move(then_branch),
+        std::move(else_branch));
+  }
+  case BlipToken::WHILE: {
+    auto begin_source_location = peek().get_location();
+    // Skip WHILE
+    advance();
+    auto condition = parse_expression();
+    auto body = parse_expression();
+    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<WhileNode>(original_source_location,
+                                       std::move(condition), std::move(body));
+  }
+  case BlipToken::SET: {
+    auto begin_source_location = peek().get_location();
+    // Skip SET
+    advance();
+    // Expect an IDENTIFIER
+    if (peek().get_token_type() != BlipToken::IDENTIFIER) {
+      on_error(peek().get_location(), "Expected IDENTIFIER after SET, found: ",
                token_type_to_string(peek().get_token_type()));
     }
+    auto identifier = to_atom<TokenIdentifier, sc::Identifier>(advance().get());
+    auto body = parse_expression();
+    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<SetNode>(original_source_location,
+                                     std::move(identifier), std::move(body));
+  }
+  case BlipToken::BEGIN: {
+    // Skip begin token
+    auto begin_source_location = peek().get_location();
+    advance();
+    std::vector<std::unique_ptr<sc::AstNode>> expressions;
+    while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+      expressions.push_back(parse_expression());
+    }
+    if (expressions.empty()) {
+      on_error(begin_source_location, "BEGIN blocks cannot be empty!");
+    }
+    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<BeginNode>(begin_source_location,
+                                       std::move(expressions));
+  }
+  case BlipToken::PRINT: {
+    // Skip print token
+    advance();
+    auto node_to_print = parse_expression();
+    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<PrintNode>(original_source_location,
+                                       std::move(node_to_print));
+  }
+  case BlipToken::DEFINE: {
+    // Skip define token
+    advance();
+    // Are we defining a function or a variable?
+    if (peek().get_token_type() == BlipToken::LEFT_PAREND) {
+      // Function
+      // Need to parse identifier list, requires at least one, the function
+      // name
+      advance();
+      auto arguments = parse_identifier_list();
+      if (arguments.empty()) {
+        on_error(peek().get_location(),
+                 "Must have at least one identifier in function definition!");
+      }
+      auto name = std::move(arguments.front());
+      arguments.erase(arguments.begin());
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      auto body = parse_expression();
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      return std::make_unique<DefineFnNode>(
+          original_source_location, std::move(name), std::move(arguments),
+          std::move(body));
+    } else {
+      // Variable
+      if (peek().get_token_type() != BlipToken::IDENTIFIER) {
+        on_error(peek().get_location(),
+                 "Expected IDENTIFIER after DEFINE token, not: ",
+                 token_type_to_string(peek().get_token_type()));
+      }
+      auto name = to_atom<TokenIdentifier, sc::Identifier>(advance().get());
+      auto body = parse_expression();
+      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      return std::make_unique<DefineVarNode>(original_source_location,
+                                             std::move(name), std::move(body));
+    }
+  }
+  case BlipToken::RIGHT_PAREND:
+    on_error(peek().get_location(), "List should have at least one element!");
   }
 
-  return {};
+  // Must be a function call then
+  auto callee = parse_expression();
+
+  std::vector<std::unique_ptr<sc::AstNode>> arguments;
+
+  while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+    arguments.push_back(parse_expression());
+  }
+
+  expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+  return std::make_unique<sc::CallNode>(
+      original_source_location, std::move(callee), std::move(arguments));
 }
 
 std::vector<std::unique_ptr<sc::Identifier>> Parser::parse_identifier_list() {
