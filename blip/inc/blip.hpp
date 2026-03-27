@@ -15,6 +15,7 @@
 #include <memory>
 
 #include <blip_tokens.hpp>
+#include <parser.hpp>
 #include <sc/lexer_interface.hpp>
 #include <sc/sc.hpp>
 #include <sc/token.hpp>
@@ -31,7 +32,7 @@ public:
   void rep();
 
 private:
-  std::unique_ptr<sc::LexerInterface> m_lexer;
+  std::unique_ptr<Parser> m_parser;
 };
 
 //****************************************************************************

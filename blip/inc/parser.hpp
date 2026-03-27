@@ -33,7 +33,9 @@ public:
 
   virtual ~Parser() = default;
 
-  std::unique_ptr<sc::AstNode> parse();
+  void reset() { m_current_token = nullptr; }
+
+  std::unique_ptr<sc::ProgramNode> parse();
 
 private:
   std::unique_ptr<sc::AstNode> parse_expression();

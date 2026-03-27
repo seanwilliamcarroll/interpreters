@@ -10,8 +10,10 @@
 //****************************************************************************
 
 #include "blip_tokens.hpp"
+#include "parser.hpp"
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -52,23 +54,24 @@ std::ostream &dump_token_type(std::ostream &out, const Token &token) {
 }
 
 Blip::Blip(std::istream &in_stream, const char *hint)
-    : m_lexer(make_lexer(in_stream,
-                         {{"if", BlipToken::IF},
-                          {"while", BlipToken::WHILE},
-                          {"set", BlipToken::SET},
-                          {"begin", BlipToken::BEGIN},
-                          {"print", BlipToken::PRINT},
-                          {"define", BlipToken::DEFINE}},
-                         hint)) {}
+    : m_parser(
+          std::make_unique<Parser>(make_lexer(in_stream,
+                                              {{"if", BlipToken::IF},
+                                               {"while", BlipToken::WHILE},
+                                               {"set", BlipToken::SET},
+                                               {"begin", BlipToken::BEGIN},
+                                               {"print", BlipToken::PRINT},
+                                               {"define", BlipToken::DEFINE}},
+                                              hint))) {}
 
 void Blip::rep() {
-  std::unique_ptr<Token> next_token = nullptr;
-  // For debug
-  while (next_token == nullptr ||
-         next_token->get_token_type() != BlipToken::EOF_TOKENTYPE) {
-    next_token = m_lexer->get_next_token();
-    std::cout << "Got next token: " << *next_token << " (";
-    dump_token_type(std::cout, *next_token) << ")" << std::endl;
+  m_parser->reset();
+  try {
+    auto ast = m_parser->parse();
+    std::cout << "Parsed program with " << ast->get_program().size()
+              << " top level expressions\n";
+  } catch (const std::runtime_error &exception) {
+    std::cerr << exception.what() << "\n";
   }
 }
 

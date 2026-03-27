@@ -23,7 +23,7 @@
 namespace blip {
 //****************************************************************************
 
-std::unique_ptr<sc::AstNode> Parser::parse() {
+std::unique_ptr<sc::ProgramNode> Parser::parse() {
   std::vector<std::unique_ptr<sc::AstNode>> expressions;
 
   // Need to parse a list of expressions effectively and return them as a
