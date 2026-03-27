@@ -147,7 +147,32 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
       return std::make_unique<PrintNode>(original_source_location,
                                          std::move(node_to_print));
     }
-    case BlipToken::DEFINE:
+    case BlipToken::DEFINE: {
+      // Skip define token
+      advance();
+      // Are we defining a function or a variable?
+      if (peek().get_token_type() == BlipToken::LEFT_PAREND) {
+        // Function
+        // Need to parse identifier list, requires at least one, the function
+        // name
+        advance();
+        auto arguments = parse_identifier_list();
+        if (arguments.empty()) {
+          on_error(peek().get_location(),
+                   "Must have at least one identifier in function definition!");
+        }
+        auto name = std::move(arguments.front());
+        arguments.erase(arguments.begin());
+        expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+        auto body = parse_expression();
+        expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+        return std::make_unique<DefineFnNode>(
+            original_source_location, std::move(name), std::move(arguments),
+            std::move(body));
+      } else {
+        // Variable
+      }
+    }
     default:
       on_error(peek().get_location(), "Unexpected token in list: ",
                token_type_to_string(peek().get_token_type()));
@@ -157,9 +182,9 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
   return {};
 }
 
-std::vector<std::unique_ptr<sc::AstNode>> Parser::parse_identifier_list() {
+std::vector<std::unique_ptr<sc::Identifier>> Parser::parse_identifier_list() {
 
-  std::vector<std::unique_ptr<sc::AstNode>> identifiers;
+  std::vector<std::unique_ptr<sc::Identifier>> identifiers;
 
   while (peek().get_token_type() == BlipToken::IDENTIFIER) {
     identifiers.push_back(

@@ -38,7 +38,7 @@ public:
 private:
   std::unique_ptr<sc::AstNode> parse_expression();
   std::unique_ptr<sc::AstNode> parse_list();
-  std::vector<std::unique_ptr<sc::AstNode>> parse_identifier_list();
+  std::vector<std::unique_ptr<sc::Identifier>> parse_identifier_list();
 
   const Token &peek();
 
