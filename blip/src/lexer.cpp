@@ -382,13 +382,13 @@ struct Lexer : LexerInterface {
   }
 
   bool peek(char &character) {
-    char temp_character = m_in_stream.peek();
+    auto result = m_in_stream.peek();
 
-    if (temp_character == EOF) {
+    if (result == std::char_traits<char>::eof()) {
       m_in_stream.get(character);
       return false;
     }
-    character = temp_character;
+    character = static_cast<char>(result);
     return true;
   }
 

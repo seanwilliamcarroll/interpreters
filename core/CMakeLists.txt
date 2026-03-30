@@ -21,4 +21,6 @@ add_library(core INTERFACE)
 
 target_include_directories(core INTERFACE inc)
 
+target_compile_options(core INTERFACE ${PROJECT_WARNINGS})
+
 #*****************************************************************************
