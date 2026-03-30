@@ -175,20 +175,20 @@ std::unique_ptr<AstNode> Parser::parse_list() {
   }
   case TokenType::RIGHT_PAREND:
     on_error(peek().get_location(), "List should have at least one element!");
+  default:
+    // Must be a function call then
+    auto callee = parse_expression();
+
+    std::vector<std::unique_ptr<AstNode>> arguments;
+
+    while (peek().get_token_type() != TokenType::RIGHT_PAREND) {
+      arguments.push_back(parse_expression());
+    }
+
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<CallNode>(original_source_location,
+                                      std::move(callee), std::move(arguments));
   }
-
-  // Must be a function call then
-  auto callee = parse_expression();
-
-  std::vector<std::unique_ptr<AstNode>> arguments;
-
-  while (peek().get_token_type() != TokenType::RIGHT_PAREND) {
-    arguments.push_back(parse_expression());
-  }
-
-  expect(TokenType::RIGHT_PAREND, __FUNCTION__);
-  return std::make_unique<CallNode>(original_source_location, std::move(callee),
-                                    std::move(arguments));
 }
 
 std::vector<std::unique_ptr<Identifier>> Parser::parse_identifier_list() {
