@@ -56,7 +56,7 @@ private:
 
     (o << ... << a); // Fold operator <<
 
-    throw sc::ParserException(o.str(), location);
+    throw sc::CompilerException("ParserException", o.str(), location);
   }
 
   const std::unique_ptr<sc::LexerInterface> m_lexer;

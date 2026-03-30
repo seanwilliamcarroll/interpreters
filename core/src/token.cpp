@@ -12,9 +12,8 @@
 #include <iostream>
 #include <string>
 
-#include "sc/exceptions.hpp" // For UnknownTokenTypeException classes
-#include "sc/sc.hpp"         // For forward decls
-#include "sc/token.hpp"      // For Token classes
+#include "sc/sc.hpp"    // For forward decls
+#include "sc/token.hpp" // For Token classes
 
 //****************************************************************************
 namespace sc {

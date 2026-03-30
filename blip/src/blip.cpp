@@ -18,7 +18,6 @@
 #include <unordered_map>
 
 #include <blip.hpp>               // For Blip
-#include <sc/exceptions.hpp>      // For UnknownTokenTypeException
 #include <sc/lexer_interface.hpp> // For LexerInterface
 #include <sc/sc.hpp>              // For TokenType
 #include <sc/token.hpp>           // For Token, CommonTokenEnum

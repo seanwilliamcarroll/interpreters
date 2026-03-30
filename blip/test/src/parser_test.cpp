@@ -344,7 +344,7 @@ TEST_SUITE("blip.parser") {
   // --- Error cases ----------------------------------------------------------
 
   TEST_CASE("begin with no expressions throws") {
-    CHECK_THROWS_AS(parse_string("(begin)"), sc::ParserException);
+    CHECK_THROWS_AS(parse_string("(begin)"), sc::CompilerException);
   }
 
   TEST_CASE("parse empty program") {
@@ -357,7 +357,7 @@ TEST_SUITE("blip.parser") {
   // --- Error cases ----------------------------------------------------------
 
   TEST_CASE("unexpected token throws") {
-    CHECK_THROWS_AS(parse_string(")"), sc::ParserException);
+    CHECK_THROWS_AS(parse_string(")"), sc::CompilerException);
   }
 
 } // TEST_SUITE
