@@ -13,12 +13,12 @@
 //*
 //****************************************************************************
 
-#include <ast_printer.hpp> // For AstPrinter
-#include <parser.hpp>      // For Parser
+#include <ast_printer.hpp>
+#include <parser.hpp>
 
-#include <blip.hpp>   // For blip token types
-#include <sc/ast.hpp> // For core AST nodes
-#include <sc/sc.hpp>  // For make_lexer
+#include <ast.hpp>
+#include <blip_tokens.hpp>
+#include <lexer.hpp>
 
 #include <doctest/doctest.h> // For doctest
 #include <sstream>           // For istringstream
@@ -29,16 +29,16 @@ namespace blip {
 TEST_SUITE("blip.ast_printer") {
 
   // Helper: parse a string into an AST
-  static std::unique_ptr<sc::AstNode> parse_string(const std::string &source) {
+  static std::unique_ptr<AstNode> parse_string(const std::string &source) {
     std::istringstream input(source);
-    auto lexer = sc::make_lexer(input,
-                                {{"if", BlipToken::IF},
-                                 {"while", BlipToken::WHILE},
-                                 {"set", BlipToken::SET},
-                                 {"begin", BlipToken::BEGIN},
-                                 {"print", BlipToken::PRINT},
-                                 {"define", BlipToken::DEFINE}},
-                                "test");
+    auto lexer = make_lexer(input,
+                            {{"if", TokenType::IF},
+                             {"while", TokenType::WHILE},
+                             {"set", TokenType::SET},
+                             {"begin", TokenType::BEGIN},
+                             {"print", TokenType::PRINT},
+                             {"define", TokenType::DEFINE}},
+                            "test");
     Parser parser(std::move(lexer));
     return parser.parse();
   }

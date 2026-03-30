@@ -11,15 +11,13 @@
 #pragma once
 //****************************************************************************
 
-#include "sc/ast.hpp"
-#include "sc/exceptions.hpp"
-#include "sc/source_location.hpp"
-#include <iosfwd>
 #include <memory>
 #include <sstream>
+#include <vector>
 
+#include <ast.hpp>
 #include <blip_tokens.hpp>
-#include <sc/lexer_interface.hpp>
+#include <exceptions.hpp>
 
 //****************************************************************************
 namespace blip {
@@ -27,39 +25,38 @@ namespace blip {
 
 class Parser {
 public:
-  // Reasonable to assume the parser should own its lexer
-  Parser(std::unique_ptr<sc::LexerInterface> lexer)
+  Parser(std::unique_ptr<LexerInterface> lexer)
       : m_lexer(std::move(lexer)), m_current_token() {}
 
   virtual ~Parser() = default;
 
   void reset() { m_current_token = nullptr; }
 
-  std::unique_ptr<sc::ProgramNode> parse();
+  std::unique_ptr<ProgramNode> parse();
 
 private:
-  std::unique_ptr<sc::AstNode> parse_expression();
-  std::unique_ptr<sc::AstNode> parse_list();
-  std::vector<std::unique_ptr<sc::Identifier>> parse_identifier_list();
+  std::unique_ptr<AstNode> parse_expression();
+  std::unique_ptr<AstNode> parse_list();
+  std::vector<std::unique_ptr<Identifier>> parse_identifier_list();
 
   const Token &peek();
 
   std::unique_ptr<Token> advance();
 
-  std::unique_ptr<Token> expect(BlipTokenType, const char *function_name);
+  std::unique_ptr<Token> expect(TokenType, const char *function_name);
 
   template <class... args>
-  [[noreturn]] void on_error(const sc::SourceLocation &location,
+  [[noreturn]] void on_error(const core::SourceLocation &location,
                              args &&...a) const {
 
     std::ostringstream o; // Local stringstream
 
     (o << ... << a); // Fold operator <<
 
-    throw sc::CompilerException("ParserException", o.str(), location);
+    throw core::CompilerException("ParserException", o.str(), location);
   }
 
-  const std::unique_ptr<sc::LexerInterface> m_lexer;
+  const std::unique_ptr<LexerInterface> m_lexer;
   std::unique_ptr<Token> m_current_token;
 };
 

@@ -22,6 +22,7 @@ set_target_properties(blip-exe PROPERTIES OUTPUT_NAME blip)
 add_library(blip-lib STATIC
   src/blip.cpp
   src/blip_tokens.cpp
+  src/lexer.cpp
   src/parser.cpp)
 
 set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
@@ -42,15 +43,20 @@ endif(APPLE)
 
 add_executable(blip-test
   test/src/main.cpp
+  test/src/token_test.cpp
+  test/src/lexer_test.cpp
   test/src/parser_test.cpp
   test/src/ast_printer_test.cpp)
 
 target_link_libraries(blip-test
   blip-lib
+  rapidcheck
   doctest::doctest)
 
 #*****************************************************************************
 
+add_test(NAME blip.token COMMAND blip-test -ts=blip.token)
+add_test(NAME blip.lexer COMMAND blip-test -ts=blip.lexer)
 add_test(NAME blip.parser COMMAND blip-test -ts=blip.parser)
 add_test(NAME blip.ast_printer COMMAND blip-test -ts=blip.ast_printer)
 

@@ -11,26 +11,22 @@
 #pragma once
 //****************************************************************************
 
-#include <functional>
-#include <iomanip>
-#include <ios>
 #include <sstream>
 #include <string>
 
 #include <ast.hpp>
 #include <ast_visitor.hpp>
-#include <sc/ast.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
-class AstPrinter : public BlipAstVisitor {
+class AstPrinter : public AstVisitor {
   static constexpr size_t INDENT_WIDTH = 2;
   static constexpr std::string UNIT_INDENT = std::string(INDENT_WIDTH, ' ');
 
 public:
-  std::string print(const sc::AstNode &node) {
+  std::string print(const AstNode &node) {
     m_out.str("");
     node.accept(*this);
     return m_out.str();
@@ -38,30 +34,28 @@ public:
 
   // --- Core nodes ---
 
-  void visit(const sc::IntLiteral &node) override { m_out << node.get_value(); }
+  void visit(const IntLiteral &node) override { m_out << node.get_value(); }
 
-  void visit(const sc::DoubleLiteral &node) override {
-    m_out << node.get_value();
-  }
+  void visit(const DoubleLiteral &node) override { m_out << node.get_value(); }
 
-  void visit(const sc::StringLiteral &node) override {
+  void visit(const StringLiteral &node) override {
     m_out << "\"" << node.get_value() << "\"";
   }
 
-  void visit(const sc::BoolLiteral &node) override {
+  void visit(const BoolLiteral &node) override {
     m_out << std::boolalpha << node.get_value();
   }
 
-  void visit(const sc::Identifier &node) override { m_out << node.get_name(); }
+  void visit(const Identifier &node) override { m_out << node.get_name(); }
 
-  void visit(const sc::ProgramNode &node) override {
+  void visit(const ProgramNode &node) override {
     for (const auto &expression : node.get_program()) {
       expression->accept(*this);
       m_out << "\n";
     }
   }
 
-  void visit(const sc::CallNode &node) override {
+  void visit(const CallNode &node) override {
     // Need to print parends
     m_out << "(";
 

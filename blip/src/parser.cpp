@@ -9,32 +9,26 @@
 //*
 //****************************************************************************
 
-#include "blip_tokens.hpp"
-#include "sc/sc.hpp"
 #include <memory>
+
+#include <blip_tokens.hpp>
 #include <parser.hpp>
-
-#include <sc/ast.hpp>
-#include <sc/token.hpp>
-
-#include <ast.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
-std::unique_ptr<sc::ProgramNode> Parser::parse() {
-  std::vector<std::unique_ptr<sc::AstNode>> expressions;
+std::unique_ptr<ProgramNode> Parser::parse() {
+  std::vector<std::unique_ptr<AstNode>> expressions;
 
   // Need to parse a list of expressions effectively and return them as a
   // program
   const auto initial_source = peek().get_location();
-  while (peek().get_token_type() != BlipToken::EOF_TOKENTYPE) {
+  while (peek().get_token_type() != TokenType::EOF_TOKEN) {
     expressions.push_back(parse_expression());
   }
 
-  return std::make_unique<sc::ProgramNode>(initial_source,
-                                           std::move(expressions));
+  return std::make_unique<ProgramNode>(initial_source, std::move(expressions));
 }
 
 template <typename InputToken, typename OutputAstNode>
@@ -44,23 +38,23 @@ std::unique_ptr<OutputAstNode> to_atom(Token *token) {
                                          literal_token->get_value());
 }
 
-std::unique_ptr<sc::AstNode> Parser::parse_expression() {
+std::unique_ptr<AstNode> Parser::parse_expression() {
   const auto &token = peek();
 
   switch (token.get_token_type()) {
-  case BlipToken::BOOL_LITERAL:
-    return to_atom<TokenBool, sc::BoolLiteral>(advance().get());
-  case BlipToken::INT_LITERAL:
-    return to_atom<TokenInt, sc::IntLiteral>(advance().get());
-  case BlipToken::STRING_LITERAL:
-    return to_atom<TokenString, sc::StringLiteral>(advance().get());
-  case BlipToken::DOUBLE_LITERAL:
-    return to_atom<TokenDouble, sc::DoubleLiteral>(advance().get());
-  case BlipToken::IDENTIFIER:
-    return to_atom<TokenIdentifier, sc::Identifier>(advance().get());
-  case BlipToken::LEFT_PAREND:
+  case TokenType::BOOL_LITERAL:
+    return to_atom<TokenBool, BoolLiteral>(advance().get());
+  case TokenType::INT_LITERAL:
+    return to_atom<TokenInt, IntLiteral>(advance().get());
+  case TokenType::STRING_LITERAL:
+    return to_atom<TokenString, StringLiteral>(advance().get());
+  case TokenType::DOUBLE_LITERAL:
+    return to_atom<TokenDouble, DoubleLiteral>(advance().get());
+  case TokenType::IDENTIFIER:
+    return to_atom<TokenIdentifier, Identifier>(advance().get());
+  case TokenType::LEFT_PAREND:
     return parse_list();
-  case BlipToken::RIGHT_PAREND:
+  case TokenType::RIGHT_PAREND:
     on_error(token.get_location(), "Unexpected token: ",
              token_type_to_string(token.get_token_type()));
   default:
@@ -69,85 +63,85 @@ std::unique_ptr<sc::AstNode> Parser::parse_expression() {
   }
 }
 
-std::unique_ptr<sc::AstNode> Parser::parse_list() {
+std::unique_ptr<AstNode> Parser::parse_list() {
   // When faced with a list, could be any number of things
   // - function call
   // - print/set/begin/if/while/defineVar/defineFn
   // Each having a particular style
   auto original_source_location = peek().get_location();
-  expect(BlipToken::LEFT_PAREND, __FUNCTION__);
+  expect(TokenType::LEFT_PAREND, __FUNCTION__);
 
-  std::vector<std::unique_ptr<sc::AstNode>> elements;
+  std::vector<std::unique_ptr<AstNode>> elements;
 
   switch (peek().get_token_type()) {
-  case BlipToken::IF: {
+  case TokenType::IF: {
     auto begin_source_location = peek().get_location();
     // Skip IF
     advance();
     auto condition = parse_expression();
     auto then_branch = parse_expression();
-    std::unique_ptr<sc::AstNode> else_branch = nullptr;
-    if (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+    std::unique_ptr<AstNode> else_branch = nullptr;
+    if (peek().get_token_type() != TokenType::RIGHT_PAREND) {
       else_branch = parse_expression();
     }
-    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
     return std::make_unique<IfNode>(
         original_source_location, std::move(condition), std::move(then_branch),
         std::move(else_branch));
   }
-  case BlipToken::WHILE: {
+  case TokenType::WHILE: {
     auto begin_source_location = peek().get_location();
     // Skip WHILE
     advance();
     auto condition = parse_expression();
     auto body = parse_expression();
-    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
     return std::make_unique<WhileNode>(original_source_location,
                                        std::move(condition), std::move(body));
   }
-  case BlipToken::SET: {
+  case TokenType::SET: {
     auto begin_source_location = peek().get_location();
     // Skip SET
     advance();
     // Expect an IDENTIFIER
-    if (peek().get_token_type() != BlipToken::IDENTIFIER) {
+    if (peek().get_token_type() != TokenType::IDENTIFIER) {
       on_error(peek().get_location(), "Expected IDENTIFIER after SET, found: ",
                token_type_to_string(peek().get_token_type()));
     }
-    auto identifier = to_atom<TokenIdentifier, sc::Identifier>(advance().get());
+    auto identifier = to_atom<TokenIdentifier, Identifier>(advance().get());
     auto body = parse_expression();
-    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
     return std::make_unique<SetNode>(original_source_location,
                                      std::move(identifier), std::move(body));
   }
-  case BlipToken::BEGIN: {
+  case TokenType::BEGIN: {
     // Skip begin token
     auto begin_source_location = peek().get_location();
     advance();
-    std::vector<std::unique_ptr<sc::AstNode>> expressions;
-    while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+    std::vector<std::unique_ptr<AstNode>> expressions;
+    while (peek().get_token_type() != TokenType::RIGHT_PAREND) {
       expressions.push_back(parse_expression());
     }
     if (expressions.empty()) {
       on_error(begin_source_location, "BEGIN blocks cannot be empty!");
     }
-    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
     return std::make_unique<BeginNode>(begin_source_location,
                                        std::move(expressions));
   }
-  case BlipToken::PRINT: {
+  case TokenType::PRINT: {
     // Skip print token
     advance();
     auto node_to_print = parse_expression();
-    expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
     return std::make_unique<PrintNode>(original_source_location,
                                        std::move(node_to_print));
   }
-  case BlipToken::DEFINE: {
+  case TokenType::DEFINE: {
     // Skip define token
     advance();
     // Are we defining a function or a variable?
-    if (peek().get_token_type() == BlipToken::LEFT_PAREND) {
+    if (peek().get_token_type() == TokenType::LEFT_PAREND) {
       // Function
       // Need to parse identifier list, requires at least one, the function
       // name
@@ -159,51 +153,51 @@ std::unique_ptr<sc::AstNode> Parser::parse_list() {
       }
       auto name = std::move(arguments.front());
       arguments.erase(arguments.begin());
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      expect(TokenType::RIGHT_PAREND, __FUNCTION__);
       auto body = parse_expression();
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      expect(TokenType::RIGHT_PAREND, __FUNCTION__);
       return std::make_unique<DefineFnNode>(
           original_source_location, std::move(name), std::move(arguments),
           std::move(body));
     } else {
       // Variable
-      if (peek().get_token_type() != BlipToken::IDENTIFIER) {
+      if (peek().get_token_type() != TokenType::IDENTIFIER) {
         on_error(peek().get_location(),
                  "Expected IDENTIFIER after DEFINE token, not: ",
                  token_type_to_string(peek().get_token_type()));
       }
-      auto name = to_atom<TokenIdentifier, sc::Identifier>(advance().get());
+      auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
       auto body = parse_expression();
-      expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
+      expect(TokenType::RIGHT_PAREND, __FUNCTION__);
       return std::make_unique<DefineVarNode>(original_source_location,
                                              std::move(name), std::move(body));
     }
   }
-  case BlipToken::RIGHT_PAREND:
+  case TokenType::RIGHT_PAREND:
     on_error(peek().get_location(), "List should have at least one element!");
   }
 
   // Must be a function call then
   auto callee = parse_expression();
 
-  std::vector<std::unique_ptr<sc::AstNode>> arguments;
+  std::vector<std::unique_ptr<AstNode>> arguments;
 
-  while (peek().get_token_type() != BlipToken::RIGHT_PAREND) {
+  while (peek().get_token_type() != TokenType::RIGHT_PAREND) {
     arguments.push_back(parse_expression());
   }
 
-  expect(BlipToken::RIGHT_PAREND, __FUNCTION__);
-  return std::make_unique<sc::CallNode>(
-      original_source_location, std::move(callee), std::move(arguments));
+  expect(TokenType::RIGHT_PAREND, __FUNCTION__);
+  return std::make_unique<CallNode>(original_source_location, std::move(callee),
+                                    std::move(arguments));
 }
 
-std::vector<std::unique_ptr<sc::Identifier>> Parser::parse_identifier_list() {
+std::vector<std::unique_ptr<Identifier>> Parser::parse_identifier_list() {
 
-  std::vector<std::unique_ptr<sc::Identifier>> identifiers;
+  std::vector<std::unique_ptr<Identifier>> identifiers;
 
-  while (peek().get_token_type() == BlipToken::IDENTIFIER) {
+  while (peek().get_token_type() == TokenType::IDENTIFIER) {
     identifiers.push_back(
-        to_atom<TokenIdentifier, sc::Identifier>(advance().get()));
+        to_atom<TokenIdentifier, Identifier>(advance().get()));
   }
 
   return identifiers;
@@ -225,7 +219,7 @@ std::unique_ptr<Token> Parser::advance() {
   return output;
 }
 
-std::unique_ptr<Token> Parser::expect(BlipTokenType token_type,
+std::unique_ptr<Token> Parser::expect(TokenType token_type,
                                       const char *function_name) {
   const auto &current_token = peek();
   if (current_token.get_token_type() != token_type) {

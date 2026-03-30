@@ -4,7 +4,7 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : CoreLexer class source file
+//*  Purpose : Lexer implementation for blip
 //*
 //*
 //****************************************************************************
@@ -18,20 +18,20 @@
 #include <string_view>
 #include <unordered_map>
 
-#include <sc/exceptions.hpp>      // For exceptions classes
-#include <sc/lexer_interface.hpp> // For forward decls
-#include <sc/sc.hpp>              // For forward decls
-#include <sc/token.hpp>           // For Token classes
+#include <blip_tokens.hpp>
+#include <exceptions.hpp>
 
 //****************************************************************************
-namespace sc {
+namespace blip {
 namespace {
 //****************************************************************************
 
-struct CoreLexer : LexerInterface {
+using core::SourceLocation;
 
-  CoreLexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
-            const char *hint)
+struct Lexer : LexerInterface {
+
+  Lexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
+        const char *hint)
       : m_in_stream(in_stream), m_keywords(keywords), m_line(1), m_column(0),
         m_hint(hint) {}
 
@@ -43,9 +43,9 @@ struct CoreLexer : LexerInterface {
     return std::make_unique<Token>(l, t);
   }
 
-  template <class value>
-  auto make_token(const SourceLocation &l, TokenType t, const value &v) const {
-    return std::make_unique<TokenOf<value>>(l, t, v);
+  template <class V>
+  auto make_token(const SourceLocation &l, TokenType t, const V &v) const {
+    return std::make_unique<core::TokenOf<TokenType, V>>(l, t, v);
   }
 
   template <class... args> [[noreturn]] void on_error(args &&...a) const {
@@ -54,7 +54,7 @@ struct CoreLexer : LexerInterface {
 
     (o << ... << a); // Fold operator <<
 
-    throw CompilerException("LexerException", o.str(), get_current_loc());
+    throw core::CompilerException("LexerException", o.str(), get_current_loc());
   }
 
   std::unique_ptr<Token> get_next_token() {
@@ -62,9 +62,9 @@ struct CoreLexer : LexerInterface {
     while (peek(character)) {
       switch (character) {
       case '(':
-        return single_char_token(Token::LEFT_PAREND);
+        return single_char_token(TokenType::LEFT_PAREND);
       case ')':
-        return single_char_token(Token::RIGHT_PAREND);
+        return single_char_token(TokenType::RIGHT_PAREND);
       case ';':
         // Start of end of line comment or block comment
         comment();
@@ -93,7 +93,7 @@ struct CoreLexer : LexerInterface {
     if (m_in_stream.eof()) {
       auto current_loc = get_current_loc();
       reset_eof();
-      return make_token(current_loc, Token::EOF_TOKENTYPE);
+      return make_token(current_loc, TokenType::EOF_TOKEN);
     } else {
       std::cerr << "Unexpected error!" << std::endl;
       return {};
@@ -176,17 +176,17 @@ struct CoreLexer : LexerInterface {
 
     // Create and return token
     if (is_double) {
-      return make_token(loc, Token::DOUBLE_LITERAL, std::stod(lexeme));
+      return make_token(loc, TokenType::DOUBLE_LITERAL, std::stod(lexeme));
     }
 
     if (has_minus) {
       if (lexeme.size() == 2 && lexeme.at(1) == '0') {
         // Very specific case that json.org supports but stoi doesn't
-        return make_token(loc, Token::INT_LITERAL, 0);
+        return make_token(loc, TokenType::INT_LITERAL, 0);
       }
     }
 
-    return make_token(loc, Token::INT_LITERAL, std::stoi(lexeme));
+    return make_token(loc, TokenType::INT_LITERAL, std::stoi(lexeme));
   }
 
   std::unique_ptr<Token> single_char_token(TokenType type) {
@@ -233,7 +233,7 @@ struct CoreLexer : LexerInterface {
                " final double quote (\")");
     }
 
-    return make_token(starting_loc, Token::STRING_LITERAL, value);
+    return make_token(starting_loc, TokenType::STRING_LITERAL, value);
   }
 
   std::string escaped_character() {
@@ -266,13 +266,13 @@ struct CoreLexer : LexerInterface {
           "characters to form the lexeme");
     }
     if (lexeme == "true") {
-      return make_token(starting_loc, Token::BOOL_LITERAL, true);
+      return make_token(starting_loc, TokenType::BOOL_LITERAL, true);
     }
     if (lexeme == "false") {
-      return make_token(starting_loc, Token::BOOL_LITERAL, false);
+      return make_token(starting_loc, TokenType::BOOL_LITERAL, false);
     }
     auto token_type = lookup_keyword(lexeme);
-    if (token_type == Token::IDENTIFIER) {
+    if (token_type == TokenType::IDENTIFIER) {
       return make_token(starting_loc, token_type, lexeme);
     } else {
       return make_token(starting_loc, token_type);
@@ -308,7 +308,7 @@ struct CoreLexer : LexerInterface {
     if (m_keywords.count(lexeme) == 1) {
       return m_keywords.at(lexeme);
     }
-    return Token::IDENTIFIER;
+    return TokenType::IDENTIFIER;
   }
 
   void comment() {
@@ -454,9 +454,9 @@ struct CoreLexer : LexerInterface {
 std::unique_ptr<LexerInterface>
 make_lexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
            const char *hint) {
-  return std::make_unique<CoreLexer>(in_stream, keywords, hint);
+  return std::make_unique<Lexer>(in_stream, keywords, hint);
 }
 
 //****************************************************************************
-} // namespace sc
+} // namespace blip
 //****************************************************************************
