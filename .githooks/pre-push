@@ -148,79 +148,92 @@ else
   exit 1
 fi
 
-# ── clang-tidy ───────────────────────────────────────────────────────────────
+# ── clang-tidy (INCREMENTAL + PARALLEL) ─────────────────────────────────────
 
 CLANG_TIDY=$(command -v clang-tidy || true)
+RUN_CLANG_TIDY=$(command -v run-clang-tidy || true)
 
-if [ -n "$CLANG_TIDY" ]; then
-  step "Running clang-tidy"
-  dim "Using: $CLANG_TIDY"
+if [ -n "$CLANG_TIDY" ] && [ -n "$RUN_CLANG_TIDY" ]; then
+  step "Running clang-tidy (incremental + parallel)"
+  dim "Using: $RUN_CLANG_TIDY"
 
-  # Curated checks — educational and useful for a learning project
-  CHECKS="\
-bugprone-*,\
--bugprone-easily-swappable-parameters,\
-performance-*,\
-modernize-use-override,\
-modernize-use-nullptr,\
-modernize-use-auto,\
-modernize-use-emplace,\
-modernize-loop-convert,\
-modernize-return-braced-init-list,\
-modernize-use-default-member-init,\
-readability-const-return-type,\
-readability-container-size-empty,\
-readability-duplicate-include,\
-readability-else-after-return,\
-readability-implicit-bool-conversion,\
-readability-misleading-indentation,\
-readability-redundant-smartptr-get,\
-readability-simplify-boolean-expr,\
-cppcoreguidelines-slicing,\
-cppcoreguidelines-virtual-class-destructor"
+  # Determine base branch (fallback to origin/main)
+  BASE_REF="origin/main"
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    BASE_REF="origin/main"
+  elif git show-ref --verify --quiet refs/remotes/origin/master; then
+    BASE_REF="origin/master"
+  fi
 
-  # Collect our source files (not build/ or third-party)
-  SOURCES=$(find blip/src blip/test/src -name '*.cpp' 2>/dev/null)
-  FILE_COUNT=$(echo "$SOURCES" | wc -l | tr -d ' ')
+  # Get changed C++ files
+  CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD \
+    | grep -E '\.(cpp|cc|cxx|hpp|h)$' || true)
 
-  dim "Checking ${FILE_COUNT} source files..."
+  if [ -z "$CHANGED_FILES" ]; then
+    dim "No changed C++ files — skipping clang-tidy"
+  else
+    FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
+    dim "Checking ${FILE_COUNT} changed files..."
 
-  WARNED=0
-  CHECKED=0
+    # Detect core count (portable-ish)
+    if command -v nproc >/dev/null 2>&1; then
+      JOBS=$(nproc)
+    else
+      JOBS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    fi
 
-  for src in $SOURCES; do
-    CHECKED=$((CHECKED + 1))
-    FILE_OUTPUT=$("$CLANG_TIDY" \
-      -p build \
-      --checks="-*,${CHECKS}" \
-      --quiet \
-      "$src" 2>&1 || true)
+    dim "Running with ${JOBS} parallel jobs..."
+
+    echo ""
+
+    # run-clang-tidy expects a file list via -files
+    # Convert newline list → comma-separated
+    FILES_ARG=$(echo "$CHANGED_FILES" | paste -sd "," -)
+
+    # Run and capture output
+    OUTPUT=$("$RUN_CLANG_TIDY" -p build -j "$JOBS" -files="$FILES_ARG" 2>&1 || true)
+
+    echo "$OUTPUT"
+
+    # Gate on warnings/errors
+    if echo "$OUTPUT" | grep -qE '(warning|error):'; then
+      echo ""
+      fail "clang-tidy reported issues"
+      exit 1
+    else
+      pass "clang-tidy clean"
+    fi
+  fi
+
+elif [ -n "$CLANG_TIDY" ]; then
+  step "clang-tidy"
+  warn "run-clang-tidy not found — falling back to serial mode"
+
+  # Fallback: incremental but serial
+  CHANGED_FILES=$(git diff --name-only origin/main...HEAD \
+    | grep -E '\.(cpp|cc|cxx|hpp|h)$' || true)
+
+  FAILURES=0
+
+  for src in $CHANGED_FILES; do
+    FILE_OUTPUT=$("$CLANG_TIDY" -p build "$src" 2>&1 || true)
 
     if echo "$FILE_OUTPUT" | grep -qE '(warning|error):'; then
-      WARNED=$((WARNED + 1))
-      echo ""
-      echo "$FILE_OUTPUT" | while IFS= read -r line; do
-        if echo "$line" | grep -qE 'error:'; then
-          echo -e "  ${RED}${line}${RESET}"
-        elif echo "$line" | grep -qE 'warning:'; then
-          echo -e "  ${YELLOW}${line}${RESET}"
-        elif [ -n "$line" ]; then
-          echo -e "  ${DIM}${line}${RESET}"
-        fi
-      done
+      FAILURES=$((FAILURES + 1))
+      echo "$FILE_OUTPUT"
     fi
   done
 
-  echo ""
-  if [ "$WARNED" -gt 0 ]; then
-    warn "${WARNED}/${CHECKED} files have clang-tidy findings"
-    warn "clang-tidy findings are advisory — push continues"
+  if [ "$FAILURES" -gt 0 ]; then
+    fail "clang-tidy failed on ${FAILURES} files"
+    exit 1
   else
-    pass "All ${CHECKED} files clean"
+    pass "clang-tidy clean"
   fi
+
 else
   step "clang-tidy"
-  dim "Not found on this system — skipping"
+  dim "Not found — skipping"
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────

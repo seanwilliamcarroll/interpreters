@@ -16,6 +16,7 @@
 .*
 !.githooks
 !.clang-format
+!.clang-tidy
 *~
 build/
 CMakeUserPresets.json
