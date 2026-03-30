@@ -165,7 +165,7 @@ struct Lexer : LexerInterface {
       lexeme += advance();
       expect_peek(character,
                   "Invalid usage of Lexer::number, did not expect EOF");
-      if (!(isdigit(character) || (character == '-') || (character == '+'))) {
+      if (!isdigit(character) && (character != '-') && (character != '+')) {
         unexpected_character(character, __FUNCTION__);
       }
       if (character == '-' || character == '+') {
@@ -255,11 +255,11 @@ struct Lexer : LexerInterface {
     case 't':
       return std::string({'\\', advance()});
       // case 'u': // Don't need hex value for the moment
+    default:
+      on_error("Invalid usage of Lexer::escaped_character, cannot escape "
+               "character ",
+               character, " (value: ", static_cast<int>(character), ")");
     }
-
-    on_error("Invalid usage of Lexer::escaped_character, cannot escape "
-             "character ",
-             character, " (value: ", static_cast<int>(character), ")");
   }
 
   std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
