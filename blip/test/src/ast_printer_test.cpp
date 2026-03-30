@@ -31,14 +31,7 @@ TEST_SUITE("blip.ast_printer") {
   // Helper: parse a string into an AST
   static std::unique_ptr<AstNode> parse_string(const std::string &source) {
     std::istringstream input(source);
-    auto lexer = make_lexer(input,
-                            {{"if", TokenType::IF},
-                             {"while", TokenType::WHILE},
-                             {"set", TokenType::SET},
-                             {"begin", TokenType::BEGIN},
-                             {"print", TokenType::PRINT},
-                             {"define", TokenType::DEFINE}},
-                            "test");
+    auto lexer = make_lexer(input, "test");
     Parser parser(std::move(lexer));
     return parser.parse();
   }

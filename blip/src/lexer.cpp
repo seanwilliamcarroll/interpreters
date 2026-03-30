@@ -10,7 +10,6 @@
 //****************************************************************************
 
 #include <cctype>
-#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -30,9 +29,13 @@ using core::SourceLocation;
 
 struct Lexer : LexerInterface {
 
-  Lexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
-        const char *hint)
-      : m_in_stream(in_stream), m_keywords(keywords), m_line(1), m_column(0),
+  Lexer(std::istream &in_stream, const char *hint)
+      : m_in_stream(in_stream), m_keywords({{"if", TokenType::IF},
+                                            {"while", TokenType::WHILE},
+                                            {"set", TokenType::SET},
+                                            {"begin", TokenType::BEGIN},
+                                            {"print", TokenType::PRINT},
+                                            {"define", TokenType::DEFINE}}),
         m_hint(hint) {}
 
   auto make_token(TokenType t) const {
@@ -57,7 +60,11 @@ struct Lexer : LexerInterface {
     throw core::CompilerException("LexerException", o.str(), get_current_loc());
   }
 
-  std::unique_ptr<Token> get_next_token() {
+  static bool isdigit(char character) { return std::isdigit(character) != 0; }
+
+  static bool isspace(char character) { return std::isspace(character) != 0; }
+
+  std::unique_ptr<Token> get_next_token() override {
     char character;
     while (peek(character)) {
       switch (character) {
@@ -84,7 +91,7 @@ struct Lexer : LexerInterface {
       case '"':
         return string();
       default:
-        if (std::isdigit(character)) {
+        if (isdigit(character)) {
           return number();
         }
         return identifier();
@@ -94,10 +101,9 @@ struct Lexer : LexerInterface {
       auto current_loc = get_current_loc();
       reset_eof();
       return make_token(current_loc, TokenType::EOF_TOKEN);
-    } else {
-      std::cerr << "Unexpected error!" << std::endl;
-      return {};
     }
+    std::cerr << "Unexpected error!\n";
+    return {};
   }
 
   std::unique_ptr<Token> number() {
@@ -111,22 +117,22 @@ struct Lexer : LexerInterface {
     char character;
     // First check for optional '-' character
     expect_peek(character,
-                "Invalid usage of CoreLexer::number, did not expect EOF");
+                "Invalid usage of Lexer::number, did not expect EOF");
     if (character == '-') {
       lexeme += advance();
       has_minus = true;
     }
 
     // If whitespace/EOF, just return the - as identifier
-    if (!peek(character) || std::isspace(character)) {
+    if (!peek(character) || isspace(character)) {
       return create_identifier(loc, lexeme);
     }
     // Next character determines if we can have multiple digits
-    if (std::isdigit(character)) {
+    if (isdigit(character)) {
       lexeme += advance();
       if (character != '0') {
         while (peek(character)) {
-          if (!std::isdigit(character)) {
+          if (!isdigit(character)) {
             break;
           }
           lexeme += advance();
@@ -141,12 +147,12 @@ struct Lexer : LexerInterface {
       is_double = true;
       lexeme += advance();
       expect_peek(character,
-                  "Invalid usage of CoreLexer::number, did not expect EOF");
-      if (!std::isdigit(character)) {
+                  "Invalid usage of Lexer::number, did not expect EOF");
+      if (!isdigit(character)) {
         unexpected_character(character, __FUNCTION__);
       }
       while (peek(character)) {
-        if (!std::isdigit(character)) {
+        if (!isdigit(character)) {
           break;
         }
         lexeme += advance();
@@ -158,16 +164,15 @@ struct Lexer : LexerInterface {
       is_double = true;
       lexeme += advance();
       expect_peek(character,
-                  "Invalid usage of CoreLexer::number, did not expect EOF");
-      if (!(std::isdigit(character) || (character == '-') ||
-            (character == '+'))) {
+                  "Invalid usage of Lexer::number, did not expect EOF");
+      if (!isdigit(character) && (character != '-') && (character != '+')) {
         unexpected_character(character, __FUNCTION__);
       }
       if (character == '-' || character == '+') {
         lexeme += advance();
       }
       while (peek(character)) {
-        if (!std::isdigit(character)) {
+        if (!isdigit(character)) {
           break;
         }
         lexeme += advance();
@@ -202,12 +207,11 @@ struct Lexer : LexerInterface {
     const SourceLocation starting_loc = get_current_loc();
 
     expect_peek(character,
-                "Invalid usage of CoreLexer::string, did not expect EOF");
+                "Invalid usage of Lexer::string, did not expect EOF");
 
     // Don't need the " character
     if (advance() != '"') {
-      on_error(
-          "Invalid usage of CoreLexer::string, first character must be '\"'");
+      on_error("Invalid usage of Lexer::string, first character must be '\"'");
     }
 
     bool last_char_double_quote = false;
@@ -229,7 +233,7 @@ struct Lexer : LexerInterface {
       }
     }
     if (!last_char_double_quote) {
-      on_error("Invalid usage of CoreLexer::string, did not expect EOF before"
+      on_error("Invalid usage of Lexer::string, did not expect EOF before"
                " final double quote (\")");
     }
 
@@ -238,7 +242,7 @@ struct Lexer : LexerInterface {
 
   std::string escaped_character() {
     char character;
-    expect_peek(character, "Invalid usage of CoreLexer::string, did not expect "
+    expect_peek(character, "Invalid usage of Lexer::string, did not expect "
                            "EOF before final double quote (\")");
     switch (character) {
     case '"':
@@ -251,19 +255,18 @@ struct Lexer : LexerInterface {
     case 't':
       return std::string({'\\', advance()});
       // case 'u': // Don't need hex value for the moment
+    default:
+      on_error("Invalid usage of Lexer::escaped_character, cannot escape "
+               "character ",
+               character, " (value: ", static_cast<int>(character), ")");
     }
-
-    on_error("Invalid usage of CoreLexer::escaped_character, cannot escape "
-             "character ",
-             character, " (value: ", static_cast<int>(character), ")");
   }
 
   std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
                                            const std::string &lexeme) {
     if (lexeme.empty()) {
-      on_error(
-          "Invalid usage of CoreLexer::create_identifier, did not find any "
-          "characters to form the lexeme");
+      on_error("Invalid usage of Lexer::create_identifier, did not find any "
+               "characters to form the lexeme");
     }
     if (lexeme == "true") {
       return make_token(starting_loc, TokenType::BOOL_LITERAL, true);
@@ -274,9 +277,8 @@ struct Lexer : LexerInterface {
     auto token_type = lookup_keyword(lexeme);
     if (token_type == TokenType::IDENTIFIER) {
       return make_token(starting_loc, token_type, lexeme);
-    } else {
-      return make_token(starting_loc, token_type);
     }
+    return make_token(starting_loc, token_type);
   }
 
   std::unique_ptr<Token> identifier() {
@@ -315,8 +317,7 @@ struct Lexer : LexerInterface {
     // Peek at next character, if whitespace, keep advancing until not.
     char character;
     if (advance() != ';') {
-      on_error(
-          "Invalid usage of CoreLexer::comment, first character must be ';'");
+      on_error("Invalid usage of Lexer::comment, first character must be ';'");
     }
 
     if (!peek(character)) {
@@ -382,19 +383,19 @@ struct Lexer : LexerInterface {
   }
 
   bool peek(char &character) {
-    char temp_character = m_in_stream.peek();
+    auto result = m_in_stream.peek();
 
-    if (temp_character == EOF) {
+    if (result == std::char_traits<char>::eof()) {
       m_in_stream.get(character);
       return false;
     }
-    character = temp_character;
+    character = static_cast<char>(result);
     return true;
   }
 
   void expect_peek(char &character, std::string_view additional_message) {
     if (!peek(character)) {
-      on_error("CoreLexer::expect_peek failed: ", additional_message);
+      on_error("Lexer::expect_peek failed: ", additional_message);
     }
   }
 
@@ -431,19 +432,19 @@ struct Lexer : LexerInterface {
 
   void unexpected_character(char character,
                             std::string_view function_name) const {
-    on_error("Invalid usage of CoreLexer::", function_name,
+    on_error("Invalid usage of Lexer::", function_name,
              ", did not expect character ", character,
              " (value: ", static_cast<int>(character), ")");
   }
 
   SourceLocation get_current_loc() const {
-    return SourceLocation(m_hint, m_line, m_column);
+    return {.file_name = m_hint, .line = m_line, .column = m_column};
   }
 
   std::istream &m_in_stream;
   const std::unordered_map<std::string_view, TokenType> m_keywords;
-  unsigned int m_line;
-  unsigned int m_column;
+  unsigned int m_line{1};
+  unsigned int m_column{0};
   const char *m_hint;
 };
 
@@ -451,10 +452,9 @@ struct Lexer : LexerInterface {
 } // namespace
 //****************************************************************************
 
-std::unique_ptr<LexerInterface>
-make_lexer(std::istream &in_stream, std::initializer_list<Keyword> keywords,
-           const char *hint) {
-  return std::make_unique<Lexer>(in_stream, keywords, hint);
+std::unique_ptr<LexerInterface> make_lexer(std::istream &in_stream,
+                                           const char *hint) {
+  return std::make_unique<Lexer>(in_stream, hint);
 }
 
 //****************************************************************************

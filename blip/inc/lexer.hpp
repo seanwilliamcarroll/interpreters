@@ -11,7 +11,6 @@
 #pragma once
 //****************************************************************************
 
-#include <initializer_list>
 #include <iosfwd>
 #include <memory>
 
@@ -21,9 +20,8 @@
 namespace blip {
 //****************************************************************************
 
-std::unique_ptr<LexerInterface>
-make_lexer(std::istream &, std::initializer_list<Keyword>,
-           const char *hint = "<input>");
+std::unique_ptr<LexerInterface> make_lexer(std::istream &,
+                                           const char *hint = "<input>");
 
 //****************************************************************************
 } // namespace blip

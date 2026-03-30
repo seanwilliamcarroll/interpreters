@@ -18,9 +18,11 @@
 
 include(FetchContent)
 
+# SYSTEM marks headers as system includes, suppressing our project warnings
 FetchContent_Declare(DocTest
   GIT_REPOSITORY  https://github.com/cambridgesemantics/doctest.git
   GIT_TAG         f9a654bb00de7bc0d49dc59863bee504bc4dd897 # v2.4.12.1
+  SYSTEM
 )
 
 FetchContent_MakeAvailable(DocTest)

@@ -18,9 +18,11 @@
 
 include(FetchContent)
 
+# SYSTEM marks headers as system includes, suppressing our project warnings
 FetchContent_Declare(RapidCheck
   GIT_REPOSITORY  https://github.com/cambridgesemantics/rapidcheck.git
   GIT_TAG         5f127bc5c05094496d62a6b58576c81c35c2f57c # v1.2.0
+  SYSTEM
 )
 
 FetchContent_MakeAvailable(RapidCheck)

@@ -24,15 +24,7 @@ namespace blip {
 //****************************************************************************
 
 Blip::Blip(std::istream &in_stream, const char *hint)
-    : m_parser(
-          std::make_unique<Parser>(make_lexer(in_stream,
-                                              {{"if", TokenType::IF},
-                                               {"while", TokenType::WHILE},
-                                               {"set", TokenType::SET},
-                                               {"begin", TokenType::BEGIN},
-                                               {"print", TokenType::PRINT},
-                                               {"define", TokenType::DEFINE}},
-                                              hint))) {}
+    : m_parser(std::make_unique<Parser>(make_lexer(in_stream, hint))) {}
 
 void Blip::rep() {
   m_parser->reset();

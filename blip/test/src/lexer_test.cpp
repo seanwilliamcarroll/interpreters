@@ -19,11 +19,10 @@
 
 #include <lexer.hpp>
 
-#include <doctest/doctest.h>      // For doctest
-#include <algorithm>              // For none_of
-#include <iostream>
-#include <rapidcheck.h> // For rapidcheck
-#include <sstream>      // For stringstream
+#include <algorithm>         // For none_of
+#include <doctest/doctest.h> // For doctest
+#include <rapidcheck.h>      // For rapidcheck
+#include <sstream>           // For stringstream
 
 //****************************************************************************
 namespace blip {
@@ -31,25 +30,27 @@ namespace blip {
 TEST_SUITE("blip.lexer") {
 
   auto any_char_but_generator(auto generator, char char_to_skip) {
-    return rc::gen::suchThat(generator, [char_to_skip](char input_char) {
-      return input_char != char_to_skip;
-    });
+    return rc::gen::suchThat(
+        std::move(generator),
+        [char_to_skip](char input_char) { return input_char != char_to_skip; });
   }
 
   auto any_char_but_generator(auto generator,
                               const std::vector<char> &chars_to_skip) {
-    return rc::gen::suchThat(generator, [&chars_to_skip](char input_char) {
-      return std::none_of(chars_to_skip.begin(), chars_to_skip.end(),
-                          [input_char](char inner_input_char) {
-                            return input_char == inner_input_char;
-                          });
-    });
+    return rc::gen::suchThat(
+        std::move(generator), [&chars_to_skip](char input_char) {
+          return std::none_of(chars_to_skip.begin(), chars_to_skip.end(),
+                              [input_char](char inner_input_char) {
+                                return input_char == inner_input_char;
+                              });
+        });
   }
 
   auto skip_range_generator(auto generator, char char_begin_inclusive,
                             char char_end_inclusive) {
     return rc::gen::suchThat(
-        generator, [char_begin_inclusive, char_end_inclusive](char input_char) {
+        std::move(generator),
+        [char_begin_inclusive, char_end_inclusive](char input_char) {
           return input_char >= char_begin_inclusive &&
                  input_char <= char_end_inclusive;
         });
@@ -65,7 +66,7 @@ TEST_SUITE("blip.lexer") {
         [](const std::vector<char> &char_vector) {
           return std::string(char_vector.begin(), char_vector.end());
         },
-        generator);
+        std::move(generator));
   }
 
   auto whitespace_generator() {
@@ -89,7 +90,7 @@ TEST_SUITE("blip.lexer") {
         rc::gen::suchThat(
             rc::gen::container<std::vector<char>>(random_digit_generator()),
             [](const std::vector<char> &char_vector) {
-              return char_vector.size() > 0 && char_vector.size() < 10;
+              return !char_vector.empty() && char_vector.size() < 10;
             }));
   }
 
@@ -98,7 +99,7 @@ TEST_SUITE("blip.lexer") {
         rc::gen::just<std::string>("0"),
         rc::gen::suchThat(
             random_digits_generator(), [](const std::string &input_string) {
-              return input_string.size() > 0 && input_string.at(0) != '0';
+              return !input_string.empty() && input_string.at(0) != '0';
             })));
   }
 
@@ -106,7 +107,7 @@ TEST_SUITE("blip.lexer") {
 
   auto optional_null_string(auto input_gen) {
     return rc::gen::join<std::string>(
-        rc::gen::element(input_gen, rc::gen::just<std::string>("")));
+        rc::gen::element(std::move(input_gen), rc::gen::just<std::string>("")));
   }
 
   auto optional_minus_generator() {
@@ -137,7 +138,7 @@ TEST_SUITE("blip.lexer") {
 
   TEST_CASE("core::lexer_empty") {
     std::istringstream in_stream;
-    auto lexer = make_lexer(in_stream, {});
+    auto lexer = make_lexer(in_stream);
     auto token = lexer->get_next_token();
     CHECK(token != nullptr);
     CHECK(token->get_token_type() == TokenType::EOF_TOKEN);
@@ -148,7 +149,7 @@ TEST_SUITE("blip.lexer") {
       std::stringstream in_stream;
       in_stream << *whitespace_generator();
 
-      auto lexer = make_lexer(in_stream, {});
+      auto lexer = make_lexer(in_stream);
 
       auto token = lexer->get_next_token();
       CHECK(token != nullptr);
@@ -166,7 +167,7 @@ TEST_SUITE("blip.lexer") {
       in_stream << *optional_minus_generator()
                 << *digits_before_decimal_generator();
 
-      auto lexer = make_lexer(in_stream, {});
+      auto lexer = make_lexer(in_stream);
 
       auto first_token = lexer->get_next_token();
       CHECK(first_token != nullptr);
@@ -179,63 +180,64 @@ TEST_SUITE("blip.lexer") {
   }
 
   TEST_CASE("core::lexer_doubles_fractional") {
-    rc::check("Test lexing of different double numbers: containing decimal",
-              [] {
-                // Combinator to test different forms of numbers based on json
-                // parsing spec
+    rc::check(
+        "Test lexing of different double numbers: containing decimal", [] {
+          // Combinator to test different forms of numbers based on json
+          // parsing spec
 
-                // Build up each branching point as generators
+          // Build up each branching point as generators
 
-                std::stringstream in_stream;
-                in_stream << *optional_minus_generator()
-                          << *digits_before_decimal_generator()
-                          << *fractional_generator()
-                          << *optional_null_string(exponential_generator());
+          std::stringstream in_stream;
+          in_stream << *optional_minus_generator()
+                    << *digits_before_decimal_generator()
+                    << *fractional_generator()
+                    << *optional_null_string(exponential_generator());
 
-                auto lexer = make_lexer(in_stream, {});
+          auto lexer = make_lexer(in_stream);
 
-                auto first_token = lexer->get_next_token();
-                CHECK(first_token != nullptr);
-                CHECK(first_token->get_token_type() == TokenType::DOUBLE_LITERAL);
+          auto first_token = lexer->get_next_token();
+          CHECK(first_token != nullptr);
+          CHECK(first_token->get_token_type() == TokenType::DOUBLE_LITERAL);
 
-                auto second_token = lexer->get_next_token();
-                CHECK(second_token != nullptr);
-                CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
-              });
+          auto second_token = lexer->get_next_token();
+          CHECK(second_token != nullptr);
+          CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
+        });
   }
 
   TEST_CASE("core::lexer_doubles_exponential") {
-    rc::check("Test lexing of different double numbers: containing exponential",
-              [] {
-                // Combinator to test different forms of numbers based on json
-                // parsing spec
+    rc::check(
+        "Test lexing of different double numbers: containing exponential", [] {
+          // Combinator to test different forms of numbers based on json
+          // parsing spec
 
-                // Build up each branching point as generators
+          // Build up each branching point as generators
 
-                std::stringstream in_stream;
-                in_stream << *optional_minus_generator()
-                          << *digits_before_decimal_generator()
-                          << *optional_null_string(fractional_generator())
-                          << *exponential_generator();
+          std::stringstream in_stream;
+          in_stream << *optional_minus_generator()
+                    << *digits_before_decimal_generator()
+                    << *optional_null_string(fractional_generator())
+                    << *exponential_generator();
 
-                auto lexer = make_lexer(in_stream, {});
+          auto lexer = make_lexer(in_stream);
 
-                auto first_token = lexer->get_next_token();
-                CHECK(first_token != nullptr);
-                CHECK(first_token->get_token_type() == TokenType::DOUBLE_LITERAL);
+          auto first_token = lexer->get_next_token();
+          CHECK(first_token != nullptr);
+          CHECK(first_token->get_token_type() == TokenType::DOUBLE_LITERAL);
 
-                auto second_token = lexer->get_next_token();
-                CHECK(second_token != nullptr);
-                CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
-              });
+          auto second_token = lexer->get_next_token();
+          CHECK(second_token != nullptr);
+          CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
+        });
   }
 
   TEST_CASE("core::lexer_parends") {
     std::stringstream in_stream;
     in_stream << "()";
-    auto lexer = make_lexer(in_stream, {});
+    auto lexer = make_lexer(in_stream);
     for (const auto &token_type :
-         {TokenType::LEFT_PAREND, TokenType::RIGHT_PAREND, TokenType::EOF_TOKEN}) {
+         {TokenType::LEFT_PAREND, TokenType::RIGHT_PAREND,
+          TokenType::EOF_TOKEN}) {
       auto token = lexer->get_next_token();
       CHECK(token != nullptr);
       CHECK(token->get_token_type() == token_type);
@@ -251,7 +253,7 @@ TEST_SUITE("blip.lexer") {
           any_char_but_generator(ascii_characters_generator(), ';')));
       in_stream << "-;";
 
-      auto lexer = make_lexer(in_stream, {});
+      auto lexer = make_lexer(in_stream);
 
       auto token = lexer->get_next_token();
       CHECK(token != nullptr);
@@ -272,7 +274,7 @@ TEST_SUITE("blip.lexer") {
                   ascii_characters_generator(), {'"', '\\'})));
           in_stream << "\"";
 
-          auto lexer = make_lexer(in_stream, {});
+          auto lexer = make_lexer(in_stream);
 
           auto first_token = lexer->get_next_token();
           CHECK(first_token != nullptr);

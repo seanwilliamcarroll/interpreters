@@ -29,15 +29,13 @@ set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
 
 target_include_directories(blip-lib PUBLIC inc)
 
+target_compile_options(blip-lib PRIVATE ${PROJECT_WARNINGS})
+
 target_link_libraries(blip-lib core)
 
-target_link_libraries(blip-exe blip-lib)
+target_compile_options(blip-exe PRIVATE ${PROJECT_WARNINGS})
 
-if (APPLE)
-  set_target_properties(blip-exe PROPERTIES
-    BUILD_RPATH "/opt/local/libexec/llvm-17/lib"
-  )
-endif(APPLE)
+target_link_libraries(blip-exe blip-lib)
 
 #*****************************************************************************
 
@@ -47,6 +45,8 @@ add_executable(blip-test
   test/src/lexer_test.cpp
   test/src/parser_test.cpp
   test/src/ast_printer_test.cpp)
+
+target_compile_options(blip-test PRIVATE ${PROJECT_WARNINGS})
 
 target_link_libraries(blip-test
   blip-lib

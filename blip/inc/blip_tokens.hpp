@@ -20,7 +20,7 @@
 namespace blip {
 //****************************************************************************
 
-enum class TokenType : unsigned int {
+enum class TokenType : uint8_t {
   // Structural
   EOF_TOKEN = 0,
   LEFT_PAREND,
@@ -49,8 +49,6 @@ using TokenDouble = core::TokenOf<TokenType, double>;
 using TokenBool = core::TokenOf<TokenType, bool>;
 using TokenIdentifier = core::TokenOf<TokenType, std::string>;
 using LexerInterface = core::LexerInterface<TokenType>;
-
-using Keyword = std::pair<const std::string_view, TokenType>;
 
 std::string token_type_to_string(TokenType type);
 

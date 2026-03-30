@@ -38,7 +38,7 @@ void repl(std::iostream &input_stream, blip::Blip &blip_lang) {
 
 int main(int argc, const char *argv[]) {
   if (argc > 2) {
-    std::cerr << "Usage: blip [script.bl]" << std::endl;
+    std::cerr << "Usage: blip [script.bl]\n";
     return 1;
   }
 
@@ -57,10 +57,10 @@ int main(int argc, const char *argv[]) {
       input_file.close();
     }
   } catch (std::runtime_error &run_err) {
-    std::cerr << "Runtime error: " << run_err.what() << std::endl;
+    std::cerr << "Runtime error: " << run_err.what() << "\n";
     return 1;
   } catch (std::exception &exc) {
-    std::cerr << "Exception: " << exc.what() << std::endl;
+    std::cerr << "Exception: " << exc.what() << "\n";
     return 1;
   }
 
