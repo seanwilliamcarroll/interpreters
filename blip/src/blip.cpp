@@ -9,6 +9,7 @@
 //*
 //****************************************************************************
 
+#include "ast_printer.hpp"
 #include "blip_tokens.hpp"
 #include "parser.hpp"
 #include <iostream>
@@ -70,6 +71,8 @@ void Blip::rep() {
     auto ast = m_parser->parse();
     std::cout << "Parsed program with " << ast->get_program().size()
               << " top level expressions\n";
+    AstPrinter printer(true);
+    std::cout << printer.print(*ast);
   } catch (const std::runtime_error &exception) {
     std::cerr << exception.what() << "\n";
   }
