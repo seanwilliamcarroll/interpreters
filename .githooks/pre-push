@@ -186,12 +186,10 @@ if [ -n "$CLANG_TIDY" ] && [ -n "$RUN_CLANG_TIDY" ]; then
 
     echo ""
 
-    # run-clang-tidy expects a file list via -files
-    # Convert newline list → comma-separated
-    FILES_ARG=$(echo "$CHANGED_FILES" | paste -sd "," -)
+    # Convert newline-separated → array (safe for spaces)
+    mapfile -t FILE_ARRAY <<< "$CHANGED_FILES"
 
-    # Run and capture output
-    OUTPUT=$("$RUN_CLANG_TIDY" -p build -j "$JOBS" -files="$FILES_ARG" 2>&1 || true)
+    OUTPUT=$("$RUN_CLANG_TIDY" -p build -j "$JOBS" "${FILE_ARRAY[@]}" 2>&1 || true)
 
     echo "$OUTPUT"
 
