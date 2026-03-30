@@ -438,13 +438,13 @@ struct Lexer : LexerInterface {
   }
 
   SourceLocation get_current_loc() const {
-    return SourceLocation(m_hint, m_line, m_column);
+    return {.file_name = m_hint, .line = m_line, .column = m_column};
   }
 
   std::istream &m_in_stream;
   const std::unordered_map<std::string_view, TokenType> m_keywords;
-  unsigned int m_line;
-  unsigned int m_column;
+  unsigned int m_line{1};
+  unsigned int m_column{0};
   const char *m_hint;
 };
 
