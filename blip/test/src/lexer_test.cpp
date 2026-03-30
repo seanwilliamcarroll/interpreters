@@ -21,9 +21,8 @@
 
 #include <algorithm>         // For none_of
 #include <doctest/doctest.h> // For doctest
-#include <iostream>
-#include <rapidcheck.h> // For rapidcheck
-#include <sstream>      // For stringstream
+#include <rapidcheck.h>      // For rapidcheck
+#include <sstream>           // For stringstream
 
 //****************************************************************************
 namespace blip {
@@ -31,25 +30,27 @@ namespace blip {
 TEST_SUITE("blip.lexer") {
 
   auto any_char_but_generator(auto generator, char char_to_skip) {
-    return rc::gen::suchThat(generator, [char_to_skip](char input_char) {
-      return input_char != char_to_skip;
-    });
+    return rc::gen::suchThat(
+        std::move(generator),
+        [char_to_skip](char input_char) { return input_char != char_to_skip; });
   }
 
   auto any_char_but_generator(auto generator,
                               const std::vector<char> &chars_to_skip) {
-    return rc::gen::suchThat(generator, [&chars_to_skip](char input_char) {
-      return std::none_of(chars_to_skip.begin(), chars_to_skip.end(),
-                          [input_char](char inner_input_char) {
-                            return input_char == inner_input_char;
-                          });
-    });
+    return rc::gen::suchThat(
+        std::move(generator), [&chars_to_skip](char input_char) {
+          return std::none_of(chars_to_skip.begin(), chars_to_skip.end(),
+                              [input_char](char inner_input_char) {
+                                return input_char == inner_input_char;
+                              });
+        });
   }
 
   auto skip_range_generator(auto generator, char char_begin_inclusive,
                             char char_end_inclusive) {
     return rc::gen::suchThat(
-        generator, [char_begin_inclusive, char_end_inclusive](char input_char) {
+        std::move(generator),
+        [char_begin_inclusive, char_end_inclusive](char input_char) {
           return input_char >= char_begin_inclusive &&
                  input_char <= char_end_inclusive;
         });
@@ -65,7 +66,7 @@ TEST_SUITE("blip.lexer") {
         [](const std::vector<char> &char_vector) {
           return std::string(char_vector.begin(), char_vector.end());
         },
-        generator);
+        std::move(generator));
   }
 
   auto whitespace_generator() {
