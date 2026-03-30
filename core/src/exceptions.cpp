@@ -22,16 +22,20 @@
 namespace sc {
 //****************************************************************************
 
-std::string construct_message(std::string_view message,
+std::string construct_message(const char* exception_type, std::string_view message,
                               const SourceLocation &loc) {
   std::stringstream s;
-  s << "CompilerException: " << loc << " " << message;
+  s << exception_type << ": " << loc << " " << message;
   return s.str();
 }
 
-CompilerException::CompilerException(std::string_view message,
+LexerException::LexerException(std::string_view message,
                                      const SourceLocation &loc)
-    : std::runtime_error(construct_message(message, loc)) {}
+  : std::runtime_error(construct_message("LexerException", message, loc)) {}
+
+ParserException::ParserException(std::string_view message,
+                                     const SourceLocation &loc)
+  : std::runtime_error(construct_message("ParserException", message, loc)) {}
 
 //****************************************************************************
 } // namespace sc

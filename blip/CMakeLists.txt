@@ -20,7 +20,9 @@ add_executable(blip-exe src/main.cpp)
 set_target_properties(blip-exe PROPERTIES OUTPUT_NAME blip)
 
 add_library(blip-lib STATIC
-  src/blip.cpp)
+  src/blip.cpp
+  src/blip_tokens.cpp
+  src/parser.cpp)
 
 set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
 
@@ -35,5 +37,19 @@ if (APPLE)
     BUILD_RPATH "/opt/local/libexec/llvm-17/lib"
   )
 endif(APPLE)
+
+#*****************************************************************************
+
+add_executable(blip-test
+  test/src/main.cpp
+  test/src/parser_test.cpp)
+
+target_link_libraries(blip-test
+  blip-lib
+  doctest::doctest)
+
+#*****************************************************************************
+
+add_test(NAME blip.parser COMMAND blip-test -ts=blip.parser)
 
 #****************************************************************************

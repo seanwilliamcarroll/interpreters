@@ -20,7 +20,7 @@
 namespace sc {
 //****************************************************************************
 
-struct CompilerException;
+struct LexerException;
 
 struct SourceLocation;
 

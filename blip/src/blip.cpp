@@ -9,8 +9,11 @@
 //*
 //****************************************************************************
 
+#include "blip_tokens.hpp"
+#include "parser.hpp"
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -28,20 +31,20 @@ using namespace sc;
 
 std::ostream &dump_token_type(std::ostream &out, const Token &token) {
   static const std::unordered_map<TokenType, const char *> token_type_strings =
-      {{Token::EOF_TOKENTYPE, "Common::EOF_TOKENTYPE"},
-       {Token::LEFT_PAREND, "Common::LEFT_PAREND"},
-       {Token::RIGHT_PAREND, "Common::RIGHT_PAREND"},
-       {Token::IDENTIFIER, "Common::IDENTIFIER"},
-       {Token::INT_LITERAL, "Common::INT_LITERAL"},
-       {Token::STRING_LITERAL, "Common::STRING_LITERAL"},
-       {Token::DOUBLE_LITERAL, "Common::DOUBLE_LITERAL"},
-       {Token::BOOL_LITERAL, "Common::BOOL_LITERAL"},
-       {Blip::IF, "Blip::IF"},
-       {Blip::WHILE, "Blip::WHILE"},
-       {Blip::SET, "Blip::SET"},
-       {Blip::BEGIN, "Blip::BEGIN"},
-       {Blip::PRINT, "Blip::PRINT"},
-       {Blip::DEFINE, "Blip::DEFINE"}};
+      {{BlipToken::EOF_TOKENTYPE, "Common::EOF_TOKENTYPE"},
+       {BlipToken::LEFT_PAREND, "Common::LEFT_PAREND"},
+       {BlipToken::RIGHT_PAREND, "Common::RIGHT_PAREND"},
+       {BlipToken::IDENTIFIER, "Common::IDENTIFIER"},
+       {BlipToken::INT_LITERAL, "Common::INT_LITERAL"},
+       {BlipToken::STRING_LITERAL, "Common::STRING_LITERAL"},
+       {BlipToken::DOUBLE_LITERAL, "Common::DOUBLE_LITERAL"},
+       {BlipToken::BOOL_LITERAL, "Common::BOOL_LITERAL"},
+       {BlipToken::IF, "Blip::IF"},
+       {BlipToken::WHILE, "Blip::WHILE"},
+       {BlipToken::SET, "Blip::SET"},
+       {BlipToken::BEGIN, "Blip::BEGIN"},
+       {BlipToken::PRINT, "Blip::PRINT"},
+       {BlipToken::DEFINE, "Blip::DEFINE"}};
   const auto &string_iter = token_type_strings.find(token.get_token_type());
   if (string_iter == token_type_strings.end()) {
     return out << "TokenType{"
@@ -51,23 +54,24 @@ std::ostream &dump_token_type(std::ostream &out, const Token &token) {
 }
 
 Blip::Blip(std::istream &in_stream, const char *hint)
-    : m_lexer(make_lexer(in_stream,
-                         {{"if", IF},
-                          {"while", WHILE},
-                          {"set", SET},
-                          {"begin", BEGIN},
-                          {"print", PRINT},
-                          {"define", DEFINE}},
-                         hint)) {}
+    : m_parser(
+          std::make_unique<Parser>(make_lexer(in_stream,
+                                              {{"if", BlipToken::IF},
+                                               {"while", BlipToken::WHILE},
+                                               {"set", BlipToken::SET},
+                                               {"begin", BlipToken::BEGIN},
+                                               {"print", BlipToken::PRINT},
+                                               {"define", BlipToken::DEFINE}},
+                                              hint))) {}
 
 void Blip::rep() {
-  std::unique_ptr<Token> next_token = nullptr;
-  // For debug
-  while (next_token == nullptr ||
-         next_token->get_token_type() != Token::EOF_TOKENTYPE) {
-    next_token = m_lexer->get_next_token();
-    std::cout << "Got next token: " << *next_token << " (";
-    dump_token_type(std::cout, *next_token) << ")" << std::endl;
+  m_parser->reset();
+  try {
+    auto ast = m_parser->parse();
+    std::cout << "Parsed program with " << ast->get_program().size()
+              << " top level expressions\n";
+  } catch (const std::runtime_error &exception) {
+    std::cerr << exception.what() << "\n";
   }
 }
 

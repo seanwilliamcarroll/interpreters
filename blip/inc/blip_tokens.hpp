@@ -4,18 +4,13 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : blip::Blip
+//*  Purpose : blip::BlipTokenType, blip::BlipToken
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <iosfwd>
-#include <memory>
-
-#include <blip_tokens.hpp>
-#include <parser.hpp>
 #include <sc/lexer_interface.hpp>
 #include <sc/sc.hpp>
 #include <sc/token.hpp>
@@ -24,16 +19,31 @@
 namespace blip {
 //****************************************************************************
 
-class Blip {
+using BlipTokenType = sc::TokenType;
+
+class BlipToken : public sc::Token {
 public:
-  Blip(std::istream &, const char *hint = "<input>");
+  enum CommonBlipTokenType : BlipTokenType {
+    IF = sc::Token::END_TOKEN + 1,
+    WHILE,
+    SET,
+    BEGIN,
+    PRINT,
+    DEFINE,
 
-  // Read Eval Print
-  void rep();
-
-private:
-  std::unique_ptr<Parser> m_parser;
+    START_TOKEN = IF,
+    END_TOKEN = DEFINE
+  };
 };
+
+using sc::Token;
+using sc::TokenBool;
+using sc::TokenDouble;
+using sc::TokenIdentifier;
+using sc::TokenInt;
+using sc::TokenString;
+
+std::string token_type_to_string(BlipTokenType type);
 
 //****************************************************************************
 } // namespace blip

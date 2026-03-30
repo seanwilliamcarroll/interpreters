@@ -72,6 +72,8 @@ using TokenBool = TokenOf<bool>;
 
 std::ostream &operator<<(std::ostream &, const Token &);
 
+std::string token_type_to_string(TokenType type);
+
 //****************************************************************************
 } // namespace sc
 //****************************************************************************

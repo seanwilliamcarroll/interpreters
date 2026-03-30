@@ -54,7 +54,7 @@ struct CoreLexer : LexerInterface {
 
     (o << ... << a); // Fold operator <<
 
-    throw CompilerException(o.str(), get_current_loc());
+    throw LexerException(o.str(), get_current_loc());
   }
 
   std::unique_ptr<Token> get_next_token() {
