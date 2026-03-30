@@ -60,7 +60,11 @@ struct Lexer : LexerInterface {
     throw core::CompilerException("LexerException", o.str(), get_current_loc());
   }
 
-  std::unique_ptr<Token> get_next_token() {
+  static bool isdigit(char character) { return std::isdigit(character) != 0; }
+
+  static bool isspace(char character) { return std::isspace(character) != 0; }
+
+  std::unique_ptr<Token> get_next_token() override {
     char character;
     while (peek(character)) {
       switch (character) {
@@ -87,7 +91,7 @@ struct Lexer : LexerInterface {
       case '"':
         return string();
       default:
-        if (std::isdigit(character)) {
+        if (isdigit(character)) {
           return number();
         }
         return identifier();
@@ -97,10 +101,9 @@ struct Lexer : LexerInterface {
       auto current_loc = get_current_loc();
       reset_eof();
       return make_token(current_loc, TokenType::EOF_TOKEN);
-    } else {
-      std::cerr << "Unexpected error!" << std::endl;
-      return {};
     }
+    std::cerr << "Unexpected error!\n";
+    return {};
   }
 
   std::unique_ptr<Token> number() {
@@ -121,15 +124,15 @@ struct Lexer : LexerInterface {
     }
 
     // If whitespace/EOF, just return the - as identifier
-    if (!peek(character) || std::isspace(character)) {
+    if (!peek(character) || isspace(character)) {
       return create_identifier(loc, lexeme);
     }
     // Next character determines if we can have multiple digits
-    if (std::isdigit(character)) {
+    if (isdigit(character)) {
       lexeme += advance();
       if (character != '0') {
         while (peek(character)) {
-          if (!std::isdigit(character)) {
+          if (!isdigit(character)) {
             break;
           }
           lexeme += advance();
@@ -145,11 +148,11 @@ struct Lexer : LexerInterface {
       lexeme += advance();
       expect_peek(character,
                   "Invalid usage of Lexer::number, did not expect EOF");
-      if (!std::isdigit(character)) {
+      if (!isdigit(character)) {
         unexpected_character(character, __FUNCTION__);
       }
       while (peek(character)) {
-        if (!std::isdigit(character)) {
+        if (!isdigit(character)) {
           break;
         }
         lexeme += advance();
@@ -162,15 +165,14 @@ struct Lexer : LexerInterface {
       lexeme += advance();
       expect_peek(character,
                   "Invalid usage of Lexer::number, did not expect EOF");
-      if (!(std::isdigit(character) || (character == '-') ||
-            (character == '+'))) {
+      if (!(isdigit(character) || (character == '-') || (character == '+'))) {
         unexpected_character(character, __FUNCTION__);
       }
       if (character == '-' || character == '+') {
         lexeme += advance();
       }
       while (peek(character)) {
-        if (!std::isdigit(character)) {
+        if (!isdigit(character)) {
           break;
         }
         lexeme += advance();
