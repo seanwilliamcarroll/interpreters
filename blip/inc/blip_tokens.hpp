@@ -50,8 +50,6 @@ using TokenBool = core::TokenOf<TokenType, bool>;
 using TokenIdentifier = core::TokenOf<TokenType, std::string>;
 using LexerInterface = core::LexerInterface<TokenType>;
 
-using Keyword = std::pair<const std::string_view, TokenType>;
-
 std::string token_type_to_string(TokenType type);
 
 //****************************************************************************

@@ -33,12 +33,6 @@ target_link_libraries(blip-lib core)
 
 target_link_libraries(blip-exe blip-lib)
 
-if (APPLE)
-  set_target_properties(blip-exe PROPERTIES
-    BUILD_RPATH "/opt/local/libexec/llvm-17/lib"
-  )
-endif(APPLE)
-
 #*****************************************************************************
 
 add_executable(blip-test

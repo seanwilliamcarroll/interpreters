@@ -75,7 +75,6 @@ std::unique_ptr<AstNode> Parser::parse_list() {
 
   switch (peek().get_token_type()) {
   case TokenType::IF: {
-    auto begin_source_location = peek().get_location();
     // Skip IF
     advance();
     auto condition = parse_expression();
@@ -90,7 +89,6 @@ std::unique_ptr<AstNode> Parser::parse_list() {
         std::move(else_branch));
   }
   case TokenType::WHILE: {
-    auto begin_source_location = peek().get_location();
     // Skip WHILE
     advance();
     auto condition = parse_expression();
@@ -100,7 +98,6 @@ std::unique_ptr<AstNode> Parser::parse_list() {
                                        std::move(condition), std::move(body));
   }
   case TokenType::SET: {
-    auto begin_source_location = peek().get_location();
     // Skip SET
     advance();
     // Expect an IDENTIFIER

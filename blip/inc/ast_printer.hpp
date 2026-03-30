@@ -22,9 +22,6 @@ namespace blip {
 //****************************************************************************
 
 class AstPrinter : public AstVisitor {
-  static constexpr size_t INDENT_WIDTH = 2;
-  static constexpr std::string UNIT_INDENT = std::string(INDENT_WIDTH, ' ');
-
 public:
   std::string print(const AstNode &node) {
     m_out.str("");
