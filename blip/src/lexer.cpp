@@ -36,7 +36,7 @@ struct Lexer : LexerInterface {
                                             {"begin", TokenType::BEGIN},
                                             {"print", TokenType::PRINT},
                                             {"define", TokenType::DEFINE}}),
-        m_line(1), m_column(0), m_hint(hint) {}
+        m_hint(hint) {}
 
   auto make_token(TokenType t) const {
     return std::make_unique<Token>(get_current_loc(), t);
