@@ -156,19 +156,18 @@ std::unique_ptr<AstNode> Parser::parse_list() {
       return std::make_unique<DefineFnNode>(
           original_source_location, std::move(name), std::move(arguments),
           std::move(body));
-    } else {
-      // Variable
-      if (peek().get_token_type() != TokenType::IDENTIFIER) {
-        on_error(peek().get_location(),
-                 "Expected IDENTIFIER after DEFINE token, not: ",
-                 token_type_to_string(peek().get_token_type()));
-      }
-      auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
-      auto body = parse_expression();
-      expect(TokenType::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<DefineVarNode>(original_source_location,
-                                             std::move(name), std::move(body));
     }
+    // Variable
+    if (peek().get_token_type() != TokenType::IDENTIFIER) {
+      on_error(peek().get_location(),
+               "Expected IDENTIFIER after DEFINE token, not: ",
+               token_type_to_string(peek().get_token_type()));
+    }
+    auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
+    auto body = parse_expression();
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
+    return std::make_unique<DefineVarNode>(original_source_location,
+                                           std::move(name), std::move(body));
   }
   case TokenType::RIGHT_PAREND:
     on_error(peek().get_location(), "List should have at least one element!");

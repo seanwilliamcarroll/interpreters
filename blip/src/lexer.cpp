@@ -277,9 +277,8 @@ struct Lexer : LexerInterface {
     auto token_type = lookup_keyword(lexeme);
     if (token_type == TokenType::IDENTIFIER) {
       return make_token(starting_loc, token_type, lexeme);
-    } else {
-      return make_token(starting_loc, token_type);
     }
+    return make_token(starting_loc, token_type);
   }
 
   std::unique_ptr<Token> identifier() {
