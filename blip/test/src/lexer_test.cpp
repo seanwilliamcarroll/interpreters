@@ -90,7 +90,7 @@ TEST_SUITE("blip.lexer") {
         rc::gen::suchThat(
             rc::gen::container<std::vector<char>>(random_digit_generator()),
             [](const std::vector<char> &char_vector) {
-              return char_vector.size() > 0 && char_vector.size() < 10;
+              return !char_vector.empty() && char_vector.size() < 10;
             }));
   }
 
@@ -99,7 +99,7 @@ TEST_SUITE("blip.lexer") {
         rc::gen::just<std::string>("0"),
         rc::gen::suchThat(
             random_digits_generator(), [](const std::string &input_string) {
-              return input_string.size() > 0 && input_string.at(0) != '0';
+              return !input_string.empty() && input_string.at(0) != '0';
             })));
   }
 
@@ -107,7 +107,7 @@ TEST_SUITE("blip.lexer") {
 
   auto optional_null_string(auto input_gen) {
     return rc::gen::join<std::string>(
-        rc::gen::element(input_gen, rc::gen::just<std::string>("")));
+        rc::gen::element(std::move(input_gen), rc::gen::just<std::string>("")));
   }
 
   auto optional_minus_generator() {
