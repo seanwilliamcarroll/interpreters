@@ -193,6 +193,15 @@ if [ -n "$CLANG_TIDY" ] && [ -n "$RUN_CLANG_TIDY" ]; then
 
     echo "$OUTPUT"
 
+    echo ""
+    step "Unique issues"
+
+    echo "$OUTPUT" | awk '
+      /warning:|error:/ {
+        if (!seen[$0]++) print
+      }
+    '
+
     # Gate on warnings/errors
     if echo "$OUTPUT" | grep -qE '(warning|error):'; then
       echo ""
