@@ -4,40 +4,26 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Forward declarations of major classes and types
+//*  Purpose : LexerInterface<TT> abstract interface
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <initializer_list>
-#include <iosfwd>
 #include <memory>
-#include <string_view>
+
+#include <token.hpp>
 
 //****************************************************************************
-namespace sc {
+namespace core {
 //****************************************************************************
 
-struct CompilerException;
-
-struct SourceLocation;
-
-using TokenType = unsigned int;
-
-class Token;
-
-template <typename> class TokenOf;
-
-struct LexerInterface;
-
-using Keyword = std::pair<const std::string_view, TokenType>;
-
-std::unique_ptr<LexerInterface> make_lexer(std::istream &,
-                                           std::initializer_list<Keyword>,
-                                           const char *hint = "<input>");
+template <typename TT> struct LexerInterface {
+  virtual ~LexerInterface() = default;
+  virtual std::unique_ptr<Token<TT>> get_next_token() = 0;
+};
 
 //****************************************************************************
-} // namespace sc
+} // namespace core
 //****************************************************************************

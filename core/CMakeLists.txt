@@ -4,7 +4,7 @@
 #**  Version : $Header:$
 #**
 #**
-#**  Purpose : CMake build script for the 'core' library.
+#**  Purpose : CMake build script for the 'core' header-only library.
 #**
 #**
 #**  See Also: https://cmake.org/cmake/help/latest/
@@ -17,31 +17,8 @@ project(core VERSION 0.1.0)
 
 #*****************************************************************************
 
-add_library(core STATIC
-  src/exceptions.cpp
-  src/source_location.cpp
-  src/token.cpp
-  src/core_lexer.cpp)
+add_library(core INTERFACE)
 
-target_include_directories(core PUBLIC inc)
-
-#*****************************************************************************
-
-add_executable(core-test
-  test/src/main.cpp
-  test/src/token_test.cpp
-  test/src/core_lexer_test.cpp)
-
-target_include_directories(core-test PUBLIC test/inc)
-
-target_link_libraries(core-test
-  core
-  rapidcheck
-  doctest::doctest)
-
-#*****************************************************************************
-
-add_test(NAME core.token COMMAND core-test -ts=core.token)
-add_test(NAME core.lexer COMMAND core-test -ts=core.lexer)
+target_include_directories(core INTERFACE inc)
 
 #*****************************************************************************

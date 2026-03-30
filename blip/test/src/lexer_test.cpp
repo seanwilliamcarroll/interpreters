@@ -15,10 +15,10 @@
 //*
 //****************************************************************************
 
-#include "core_test_lib.hpp"      // For arbitraries
-#include "sc/lexer_interface.hpp" // For LexerInterface
-#include "sc/sc.hpp"              // For make_lexer function
-#include "sc/token.hpp"           // For Token class
+#include <blip_tokens.hpp>
+
+#include <lexer.hpp>
+
 #include <doctest/doctest.h>      // For doctest
 #include <algorithm>              // For none_of
 #include <iostream>
@@ -26,9 +26,9 @@
 #include <sstream>      // For stringstream
 
 //****************************************************************************
-namespace sc {
+namespace blip {
 //****************************************************************************
-TEST_SUITE("core.lexer") {
+TEST_SUITE("blip.lexer") {
 
   auto any_char_but_generator(auto generator, char char_to_skip) {
     return rc::gen::suchThat(generator, [char_to_skip](char input_char) {
@@ -135,15 +135,15 @@ TEST_SUITE("core.lexer") {
 
   // Test Cases
 
-  TEST_CASE("sc::lexer_empty") {
+  TEST_CASE("core::lexer_empty") {
     std::istringstream in_stream;
     auto lexer = make_lexer(in_stream, {});
     auto token = lexer->get_next_token();
     CHECK(token != nullptr);
-    CHECK(token->get_token_type() == Token::EOF_TOKENTYPE);
+    CHECK(token->get_token_type() == TokenType::EOF_TOKEN);
   }
 
-  TEST_CASE("sc::lexer_whitespace") {
+  TEST_CASE("core::lexer_whitespace") {
     rc::check("Given stream of whitespace, return only 1 token", [] {
       std::stringstream in_stream;
       in_stream << *whitespace_generator();
@@ -152,11 +152,11 @@ TEST_SUITE("core.lexer") {
 
       auto token = lexer->get_next_token();
       CHECK(token != nullptr);
-      CHECK(token->get_token_type() == Token::EOF_TOKENTYPE);
+      CHECK(token->get_token_type() == TokenType::EOF_TOKEN);
     });
   }
 
-  TEST_CASE("sc::lexer_integers") {
+  TEST_CASE("core::lexer_integers") {
     rc::check("Test lexing of different integer numbers", [] {
       // Combinator to test different forms of numbers based on json parsing
       // spec
@@ -170,15 +170,15 @@ TEST_SUITE("core.lexer") {
 
       auto first_token = lexer->get_next_token();
       CHECK(first_token != nullptr);
-      CHECK(first_token->get_token_type() == Token::INT_LITERAL);
+      CHECK(first_token->get_token_type() == TokenType::INT_LITERAL);
 
       auto second_token = lexer->get_next_token();
       CHECK(second_token != nullptr);
-      CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+      CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
     });
   }
 
-  TEST_CASE("sc::lexer_doubles_fractional") {
+  TEST_CASE("core::lexer_doubles_fractional") {
     rc::check("Test lexing of different double numbers: containing decimal",
               [] {
                 // Combinator to test different forms of numbers based on json
@@ -196,15 +196,15 @@ TEST_SUITE("core.lexer") {
 
                 auto first_token = lexer->get_next_token();
                 CHECK(first_token != nullptr);
-                CHECK(first_token->get_token_type() == Token::DOUBLE_LITERAL);
+                CHECK(first_token->get_token_type() == TokenType::DOUBLE_LITERAL);
 
                 auto second_token = lexer->get_next_token();
                 CHECK(second_token != nullptr);
-                CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+                CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
               });
   }
 
-  TEST_CASE("sc::lexer_doubles_exponential") {
+  TEST_CASE("core::lexer_doubles_exponential") {
     rc::check("Test lexing of different double numbers: containing exponential",
               [] {
                 // Combinator to test different forms of numbers based on json
@@ -222,27 +222,27 @@ TEST_SUITE("core.lexer") {
 
                 auto first_token = lexer->get_next_token();
                 CHECK(first_token != nullptr);
-                CHECK(first_token->get_token_type() == Token::DOUBLE_LITERAL);
+                CHECK(first_token->get_token_type() == TokenType::DOUBLE_LITERAL);
 
                 auto second_token = lexer->get_next_token();
                 CHECK(second_token != nullptr);
-                CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+                CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
               });
   }
 
-  TEST_CASE("sc::lexer_parends") {
+  TEST_CASE("core::lexer_parends") {
     std::stringstream in_stream;
     in_stream << "()";
     auto lexer = make_lexer(in_stream, {});
     for (const auto &token_type :
-         {Token::LEFT_PAREND, Token::RIGHT_PAREND, Token::EOF_TOKENTYPE}) {
+         {TokenType::LEFT_PAREND, TokenType::RIGHT_PAREND, TokenType::EOF_TOKEN}) {
       auto token = lexer->get_next_token();
       CHECK(token != nullptr);
       CHECK(token->get_token_type() == token_type);
     }
   }
 
-  TEST_CASE("sc::block_commnet") {
+  TEST_CASE("core::block_commnet") {
     rc::check("Given stream of valid block_commnet, return only 1 token", [] {
       std::stringstream in_stream;
       in_stream << ";-";
@@ -255,11 +255,11 @@ TEST_SUITE("core.lexer") {
 
       auto token = lexer->get_next_token();
       CHECK(token != nullptr);
-      CHECK(token->get_token_type() == Token::EOF_TOKENTYPE);
+      CHECK(token->get_token_type() == TokenType::EOF_TOKEN);
     });
   }
 
-  TEST_CASE("sc::string") {
+  TEST_CASE("core::string") {
     rc::check(
         "Given stream of valid string, return only 2 tokens, STRING_LITERAL "
         "and EOF_TOKENTYPE, without escape characters",
@@ -276,14 +276,14 @@ TEST_SUITE("core.lexer") {
 
           auto first_token = lexer->get_next_token();
           CHECK(first_token != nullptr);
-          CHECK(first_token->get_token_type() == Token::STRING_LITERAL);
+          CHECK(first_token->get_token_type() == TokenType::STRING_LITERAL);
 
           auto second_token = lexer->get_next_token();
           CHECK(second_token != nullptr);
-          CHECK(second_token->get_token_type() == Token::EOF_TOKENTYPE);
+          CHECK(second_token->get_token_type() == TokenType::EOF_TOKEN);
         });
   }
 }
 //****************************************************************************
-} // namespace sc
+} // namespace blip
 //****************************************************************************

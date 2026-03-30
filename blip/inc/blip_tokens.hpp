@@ -4,46 +4,55 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : blip::BlipTokenType, blip::BlipToken
+//*  Purpose : blip::TokenType enum and token type aliases
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <sc/lexer_interface.hpp>
-#include <sc/sc.hpp>
-#include <sc/token.hpp>
+#include <string>
+
+#include <lexer_interface.hpp>
+#include <token.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
-using BlipTokenType = sc::TokenType;
-
-class BlipToken : public sc::Token {
-public:
-  enum CommonBlipTokenType : BlipTokenType {
-    IF = sc::Token::END_TOKEN + 1,
-    WHILE,
-    SET,
-    BEGIN,
-    PRINT,
-    DEFINE,
-
-    START_TOKEN = IF,
-    END_TOKEN = DEFINE
-  };
+enum class TokenType : unsigned int {
+  // Structural
+  EOF_TOKEN = 0,
+  LEFT_PAREND,
+  RIGHT_PAREND,
+  // Literals
+  IDENTIFIER,
+  INT_LITERAL,
+  STRING_LITERAL,
+  DOUBLE_LITERAL,
+  BOOL_LITERAL,
+  // Keywords
+  IF,
+  WHILE,
+  SET,
+  BEGIN,
+  PRINT,
+  DEFINE,
 };
 
-using sc::Token;
-using sc::TokenBool;
-using sc::TokenDouble;
-using sc::TokenIdentifier;
-using sc::TokenInt;
-using sc::TokenString;
+// Type aliases
+using Token = core::Token<TokenType>;
+using TokenOf = core::TokenOf<TokenType, std::string>; // generic, rarely used
+using TokenString = core::TokenOf<TokenType, std::string>;
+using TokenInt = core::TokenOf<TokenType, int>;
+using TokenDouble = core::TokenOf<TokenType, double>;
+using TokenBool = core::TokenOf<TokenType, bool>;
+using TokenIdentifier = core::TokenOf<TokenType, std::string>;
+using LexerInterface = core::LexerInterface<TokenType>;
 
-std::string token_type_to_string(BlipTokenType type);
+using Keyword = std::pair<const std::string_view, TokenType>;
+
+std::string token_type_to_string(TokenType type);
 
 //****************************************************************************
 } // namespace blip

@@ -14,11 +14,7 @@
 #include <iosfwd>
 #include <memory>
 
-#include <blip_tokens.hpp>
 #include <parser.hpp>
-#include <sc/lexer_interface.hpp>
-#include <sc/sc.hpp>
-#include <sc/token.hpp>
 
 //****************************************************************************
 namespace blip {

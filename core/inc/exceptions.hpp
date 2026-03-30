@@ -11,20 +11,26 @@
 #pragma once
 //****************************************************************************
 
+#include <sstream>
 #include <stdexcept>
 #include <string_view>
 
-#include <sc/sc.hpp>
+#include <source_location.hpp>
 
 //****************************************************************************
-namespace sc {
+namespace core {
 //****************************************************************************
 
 struct CompilerException : std::runtime_error {
   CompilerException(const char *phase, std::string_view message,
-                    const SourceLocation &);
+                    const SourceLocation &loc)
+      : std::runtime_error([&] {
+          std::stringstream s;
+          s << phase << ": " << loc << " " << message;
+          return s.str();
+        }()) {}
 };
 
 //****************************************************************************
-} // namespace sc
+} // namespace core
 //****************************************************************************
