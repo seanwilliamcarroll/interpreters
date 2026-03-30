@@ -20,7 +20,7 @@
 namespace blip {
 //****************************************************************************
 
-enum class TokenType : unsigned int {
+enum class TokenType : uint8_t {
   // Structural
   EOF_TOKEN = 0,
   LEFT_PAREND,
