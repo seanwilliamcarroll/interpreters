@@ -13,7 +13,7 @@ ctest --preset mp                  # run all tests
 ctest --preset mp -R core.lexer    # run a single test suite by name
 ```
 
-Test suite names: `core.example`, `core.token`, `core.lexer`.
+Test suite names: `core.token`, `core.lexer`.
 
 To run the blip REPL directly after building:
 
