@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include <sc/ast_visitor.hpp>
 #include <sc/source_location.hpp>
 
 //****************************************************************************
@@ -31,6 +32,8 @@ public:
 
   virtual ~AstNode() = default;
 
+  virtual void accept(AstVisitor &v) const = 0;
+
   const SourceLocation &get_location() const { return m_location; }
 
 private:
@@ -42,11 +45,10 @@ private:
 // Each leaf wraps a single value. These correspond to the `atom` rule
 // in the grammar. IntLiteral is filled in as an example.
 
-template <typename LiteralType>
-class AbstractLiteral : public AstNode {
+template <typename LiteralType> class AbstractLiteral : public AstNode {
 public:
   AbstractLiteral(const SourceLocation &loc, LiteralType value)
-    : AstNode(loc), m_value(std::move(value)) {}
+      : AstNode(loc), m_value(std::move(value)) {}
 
   LiteralType get_value() const { return m_value; }
 
@@ -54,25 +56,42 @@ private:
   const LiteralType m_value;
 };
 
-using IntLiteral = AbstractLiteral<int>;
+class IntLiteral : public AbstractLiteral<int> {
+public:
+  using AbstractLiteral::AbstractLiteral;
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+};
 
-using DoubleLiteral = AbstractLiteral<double>;
+class DoubleLiteral : public AbstractLiteral<double> {
+public:
+  using AbstractLiteral::AbstractLiteral;
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+};
 
-using StringLiteral = AbstractLiteral<std::string>;
+class StringLiteral : public AbstractLiteral<std::string> {
+public:
+  using AbstractLiteral::AbstractLiteral;
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+};
 
-using BoolLiteral = AbstractLiteral<bool>;
+class BoolLiteral : public AbstractLiteral<bool> {
+public:
+  using AbstractLiteral::AbstractLiteral;
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+};
 
 class Identifier : public AstNode {
 public:
   Identifier(const SourceLocation &location, std::string name)
       : AstNode(location), m_name(std::move(name)) {}
 
-  const std::string& get_name() const { return m_name; }
-  
+  const std::string &get_name() const { return m_name; }
+
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+
 private:
   const std::string m_name;
 };
-
 
 // --- Interior nodes (generic) ---------------------------------------------
 //
@@ -81,9 +100,15 @@ private:
 
 class ProgramNode : public AstNode {
 public:
-  ProgramNode(const SourceLocation &location, std::vector<std::unique_ptr<AstNode>> program) : AstNode(location), m_program(std::move(program)) {}
+  ProgramNode(const SourceLocation &location,
+              std::vector<std::unique_ptr<AstNode>> program)
+      : AstNode(location), m_program(std::move(program)) {}
 
-  const std::vector<std::unique_ptr<AstNode>>& get_program() const {return m_program;}
+  const std::vector<std::unique_ptr<AstNode>> &get_program() const {
+    return m_program;
+  }
+
+  void accept(AstVisitor &v) const override { v.visit(*this); }
 
 private:
   std::vector<std::unique_ptr<AstNode>> m_program;
@@ -93,12 +118,17 @@ class CallNode : public AstNode {
 public:
   CallNode(const SourceLocation &location, std::unique_ptr<AstNode> callee,
            std::vector<std::unique_ptr<AstNode>> arguments)
-    : AstNode(location), m_callee(std::move(callee)), m_arguments(std::move(arguments)) {}
+      : AstNode(location), m_callee(std::move(callee)),
+        m_arguments(std::move(arguments)) {}
 
-  const AstNode& get_callee() const {return *m_callee;}
+  const AstNode &get_callee() const { return *m_callee; }
 
-  const std::vector<std::unique_ptr<AstNode>>& get_arguments() const {return m_arguments;}
-  
+  const std::vector<std::unique_ptr<AstNode>> &get_arguments() const {
+    return m_arguments;
+  }
+
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+
 private:
   std::unique_ptr<AstNode> m_callee;
   std::vector<std::unique_ptr<AstNode>> m_arguments;

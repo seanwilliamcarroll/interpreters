@@ -42,7 +42,8 @@ endif(APPLE)
 
 add_executable(blip-test
   test/src/main.cpp
-  test/src/parser_test.cpp)
+  test/src/parser_test.cpp
+  test/src/ast_printer_test.cpp)
 
 target_link_libraries(blip-test
   blip-lib
@@ -51,5 +52,6 @@ target_link_libraries(blip-test
 #*****************************************************************************
 
 add_test(NAME blip.parser COMMAND blip-test -ts=blip.parser)
+add_test(NAME blip.ast_printer COMMAND blip-test -ts=blip.ast_printer)
 
 #****************************************************************************
