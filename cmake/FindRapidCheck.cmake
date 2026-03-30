@@ -19,8 +19,8 @@
 include(FetchContent)
 
 FetchContent_Declare(RapidCheck
-  GIT_REPOSITORY  git@github.com:emil-e/rapidcheck.git
-  GIT_TAG         a5724ea5b0b00147109b0605c377f1e54c353ba2 # 04/16/2023
+  GIT_REPOSITORY  https://github.com/cambridgesemantics/rapidcheck.git
+  GIT_TAG         5f127bc5c05094496d62a6b58576c81c35c2f57c # v1.2.0
 )
 
 FetchContent_MakeAvailable(RapidCheck)
