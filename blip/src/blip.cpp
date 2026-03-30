@@ -71,7 +71,7 @@ void Blip::rep() {
     auto ast = m_parser->parse();
     std::cout << "Parsed program with " << ast->get_program().size()
               << " top level expressions\n";
-    AstPrinter printer(true);
+    AstPrinter printer;
     std::cout << printer.print(*ast);
   } catch (const std::runtime_error &exception) {
     std::cerr << exception.what() << "\n";
