@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace blip {
@@ -27,6 +28,7 @@ struct Unit {};
 
 struct Function {
   Identifier *m_name;
+  std::vector<Identifier *> m_arguments;
   std::shared_ptr<Environment> m_environment;
   AstNode *m_body;
 };
