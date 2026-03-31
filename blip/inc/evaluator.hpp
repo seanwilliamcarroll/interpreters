@@ -25,7 +25,7 @@ namespace blip {
 
 class Evaluator : public AstVisitor {
 public:
-  explicit Evaluator(std::shared_ptr<Environment>, std::ostream &);
+  explicit Evaluator(std::shared_ptr<ValueEnvironment>, std::ostream &);
 
   Value evaluate(const AstNode &);
 
@@ -55,7 +55,7 @@ private:
   void evaluate_builtinfunction(const CallNode &, BuiltInFunction);
 
   Value m_result;
-  std::shared_ptr<Environment> m_env;
+  std::shared_ptr<ValueEnvironment> m_env;
   std::ostream &m_out;
 };
 

@@ -23,14 +23,14 @@ namespace blip {
 //****************************************************************************
 
 // Forward declaration to break dependency
-class Environment;
+class ValueEnvironment;
 
 struct Unit {};
 
 struct Function {
   std::string m_name;
   std::vector<const Identifier *> m_arguments;
-  std::shared_ptr<Environment> m_environment;
+  std::shared_ptr<ValueEnvironment> m_environment;
   const AstNode *m_body;
 };
 
