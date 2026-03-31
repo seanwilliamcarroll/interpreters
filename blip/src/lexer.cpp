@@ -72,6 +72,8 @@ struct Lexer : LexerInterface {
         return single_char_token(TokenType::LEFT_PAREND);
       case ')':
         return single_char_token(TokenType::RIGHT_PAREND);
+      case ':':
+        return single_char_token(TokenType::COLON);
       case ';':
         // Start of end of line comment or block comment
         comment();
@@ -291,6 +293,7 @@ struct Lexer : LexerInterface {
       switch (character) {
       case '(':
       case ')':
+      case ':':
       case ';':
       case ' ':
       case '\t':
