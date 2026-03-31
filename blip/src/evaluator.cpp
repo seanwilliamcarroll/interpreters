@@ -63,8 +63,7 @@ void Evaluator::visit(const ProgramNode &node) {
   }
 }
 
-void Evaluator::evaluate_function(const CallNode &node,
-                                  const Function &function) {
+void Evaluator::evaluate_function(const CallNode &node, Function function) {
   if (node.get_arguments().size() != function.m_arguments.size()) {
     throw core::CompilerException(
         "RuntimeError",
@@ -96,7 +95,7 @@ void Evaluator::evaluate_function(const CallNode &node,
 }
 
 void Evaluator::evaluate_builtinfunction(const CallNode &node,
-                                         const BuiltInFunction &function) {
+                                         BuiltInFunction function) {
 
   if (function.m_expected_arguments != node.get_arguments().size()) {
     throw core::CompilerException(

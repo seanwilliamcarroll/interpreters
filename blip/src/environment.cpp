@@ -9,6 +9,7 @@
 //*
 //****************************************************************************
 
+#include "value.hpp"
 #include <environment.hpp>
 #include <exceptions.hpp>
 #include <memory>
@@ -31,8 +32,18 @@ double as_number(const Value &v) {
                            value_to_string(v));
 }
 
-bool both_int(const Value &a, const Value &b) {
-  return std::holds_alternative<int>(a) && std::holds_alternative<int>(b);
+template <typename InnerType>
+bool both_are_type(const Value &a, const Value &b) {
+  return std::holds_alternative<InnerType>(a) &&
+         std::holds_alternative<InnerType>(b);
+}
+
+template <typename InnerType> bool is_type(const Value &value) {
+  return std::holds_alternative<InnerType>(value);
+}
+
+bool is_numeric(const Value &value) {
+  return is_type<int>(value) || is_type<double>(value);
 }
 
 //****************************************************************************
@@ -87,16 +98,104 @@ void Environment::set(const std::string &name, Value value) {
 std::shared_ptr<Environment> default_global_environment() {
   auto env = std::make_shared<Environment>();
 
+  // Expect arity and typing to be handled earlier than here
+  // Permissive for now
+
   env->define("+",
               BuiltInFunction{
                   .m_name = "+",
                   .m_expected_arguments = 2,
                   .m_native_function = [](std::vector<Value> args) -> Value {
-                    if (both_int(args[0], args[1])) {
+                    if (both_are_type<int>(args[0], args[1])) {
                       return std::get<int>(args[0]) + std::get<int>(args[1]);
                     }
                     return as_number(args[0]) + as_number(args[1]);
                   }});
+
+  env->define("-",
+              BuiltInFunction{
+                  .m_name = "-",
+                  .m_expected_arguments = 2,
+                  .m_native_function = [](std::vector<Value> args) -> Value {
+                    if (both_are_type<int>(args[0], args[1])) {
+                      return std::get<int>(args[0]) - std::get<int>(args[1]);
+                    }
+                    return as_number(args[0]) - as_number(args[1]);
+                  }});
+
+  env->define("*",
+              BuiltInFunction{
+                  .m_name = "*",
+                  .m_expected_arguments = 2,
+                  .m_native_function = [](std::vector<Value> args) -> Value {
+                    if (both_are_type<int>(args[0], args[1])) {
+                      return std::get<int>(args[0]) * std::get<int>(args[1]);
+                    }
+                    return as_number(args[0]) * as_number(args[1]);
+                  }});
+
+  env->define("/",
+              BuiltInFunction{
+                  .m_name = "/",
+                  .m_expected_arguments = 2,
+                  .m_native_function = [](std::vector<Value> args) -> Value {
+                    if (both_are_type<int>(args[0], args[1])) {
+                      auto divisor = std::get<int>(args[1]);
+                      if (divisor == 0) {
+                        throw std::runtime_error("Cannot divide by 0!");
+                      }
+                      return std::get<int>(args[0]) / divisor;
+                    }
+                    return as_number(args[0]) / as_number(args[1]);
+                  }});
+
+  env->define(">",
+              BuiltInFunction{
+                  .m_name = ">",
+                  .m_expected_arguments = 2,
+                  .m_native_function = [](std::vector<Value> args) -> Value {
+                    if (is_numeric(args[0]) && is_numeric(args[1])) {
+                      return as_number(args[0]) > as_number(args[1]);
+                    }
+                    throw std::runtime_error(
+                        "Can only compare numeric types, not: " +
+                        value_to_string(args[0]) + " and " +
+                        value_to_string(args[1]));
+                  }});
+
+  env->define("<",
+              BuiltInFunction{
+                  .m_name = "<",
+                  .m_expected_arguments = 2,
+                  .m_native_function = [](std::vector<Value> args) -> Value {
+                    if (is_numeric(args[0]) && is_numeric(args[1])) {
+                      return as_number(args[0]) < as_number(args[1]);
+                    }
+                    throw std::runtime_error(
+                        "Can only compare numeric types, not: " +
+                        value_to_string(args[0]) + " and " +
+                        value_to_string(args[1]));
+                  }});
+
+  env->define(
+      "=", BuiltInFunction{
+               .m_name = "=",
+               .m_expected_arguments = 2,
+               .m_native_function = [](std::vector<Value> args) -> Value {
+                 if (is_numeric(args[0]) && is_numeric(args[1])) {
+                   return as_number(args[0]) == as_number(args[1]);
+                 }
+                 if (both_are_type<bool>(args[0], args[1])) {
+                   return std::get<bool>(args[0]) == std::get<bool>(args[1]);
+                 }
+                 if (both_are_type<std::string>(args[0], args[1])) {
+                   return std::get<std::string>(args[0]) ==
+                          std::get<std::string>(args[1]);
+                 }
+                 throw std::runtime_error("Equality expects same types, not: " +
+                                          value_to_string(args[0]) + " and " +
+                                          value_to_string(args[1]));
+               }});
 
   return env;
 }

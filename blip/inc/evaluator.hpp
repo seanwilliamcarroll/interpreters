@@ -50,8 +50,8 @@ public:
   void visit(const DefineFnNode &) override;
 
 private:
-  void evaluate_function(const CallNode &, const Function &);
-  void evaluate_builtinfunction(const CallNode &, const BuiltInFunction &);
+  void evaluate_function(const CallNode &, Function);
+  void evaluate_builtinfunction(const CallNode &, BuiltInFunction);
 
   Value m_result;
   std::shared_ptr<Environment> m_env;
