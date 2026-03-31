@@ -166,10 +166,25 @@ std::unique_ptr<AstNode> Parser::parse_list() {
                token_type_to_string(peek().get_token_type()));
     }
     auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
+
+    std::unique_ptr<TypeNode> type_node{};
+
+    if (peek().get_token_type() == TokenType::COLON) {
+      advance();
+      if (peek().get_token_type() != TokenType::IDENTIFIER) {
+        on_error(
+            peek().get_location(),
+            "Expected IDENTIFIER after COLON token for type annotation, not: ",
+            token_type_to_string(peek().get_token_type()));
+      }
+      type_node = to_atom<TokenIdentifier, TypeNode>(advance().get());
+    }
+
     auto body = parse_expression();
     expect(TokenType::RIGHT_PAREND, __FUNCTION__);
     return std::make_unique<DefineVarNode>(original_source_location,
-                                           std::move(name), std::move(body));
+                                           std::move(name), std::move(body),
+                                           std::move(type_node));
   }
   case TokenType::RIGHT_PAREND:
     on_error(peek().get_location(), "List should have at least one element!");
