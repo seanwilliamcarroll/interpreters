@@ -257,7 +257,7 @@ public:
   DefineFnNode(const SourceLocation &location, std::unique_ptr<Identifier> name,
                std::vector<std::unique_ptr<Identifier>> arguments,
                std::unique_ptr<AstNode> body,
-               std::unique_ptr<TypeNode> return_type = nullptr)
+               std::unique_ptr<TypeNode> return_type)
       : AstNode(location), m_name(std::move(name)),
         m_arguments(std::move(arguments)), m_body(std::move(body)),
         m_return_type(std::move(return_type)) {}
@@ -270,7 +270,7 @@ public:
 
   const AstNode &get_body() const { return *m_body; }
 
-  const TypeNode *get_return_type() const { return m_return_type.get(); }
+  const TypeNode &get_return_type() const { return *m_return_type; }
 
   void accept(AstVisitor &v) const override { v.visit(*this); }
 
