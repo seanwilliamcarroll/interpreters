@@ -9,7 +9,9 @@
 //*
 //****************************************************************************
 
+#include "type.hpp"
 #include <exceptions.hpp>
+#include <stdexcept>
 #include <type_checker.hpp>
 
 //****************************************************************************
@@ -26,43 +28,35 @@ Type TypeChecker::check(const AstNode &node) {
 
 // --- Literals --------------------------------------------------------------
 
-void TypeChecker::visit(const IntLiteral &node) {
-  // TODO: set m_result to the type of an int literal
-  (void)node;
-}
+void TypeChecker::visit(const IntLiteral &) { m_result = Type::Int; }
 
-void TypeChecker::visit(const DoubleLiteral &node) {
-  // TODO: set m_result to the type of a double literal
-  (void)node;
-}
+void TypeChecker::visit(const DoubleLiteral &) { m_result = Type::Double; }
 
-void TypeChecker::visit(const StringLiteral &node) {
-  // TODO: set m_result to the type of a string literal
-  (void)node;
-}
+void TypeChecker::visit(const StringLiteral &) { m_result = Type::String; }
 
-void TypeChecker::visit(const BoolLiteral &node) {
-  // TODO: set m_result to the type of a bool literal
-  (void)node;
-}
+void TypeChecker::visit(const BoolLiteral &) { m_result = Type::Bool; }
 
 void TypeChecker::visit(const Identifier &node) {
-  // TODO: look up the identifier's type in m_env
-  // Wrap errors with CompilerException and node.get_location()
-  (void)node;
+  try {
+    m_result = m_env->lookup(node.get_name());
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException("TypeChecker", error.what(),
+                                  node.get_location());
+  }
 }
 
 // --- Structure -------------------------------------------------------------
 
 void TypeChecker::visit(const TypeNode &node) {
-  // TypeNode isn't visited during checking — types are read directly
-  // from the AST via get_type() / get_return_type()
-  (void)node;
+  throw core::CompilerException("TypeChecker",
+                                "We should never type check the TypeNode!",
+                                node.get_location());
 }
 
 void TypeChecker::visit(const ProgramNode &node) {
-  // TODO: check each expression in sequence, m_result is the last one's type
-  (void)node;
+  for (const auto &expression : node.get_program()) {
+    expression->accept(*this);
+  }
 }
 
 void TypeChecker::visit(const CallNode &node) {
@@ -75,15 +69,57 @@ void TypeChecker::visit(const CallNode &node) {
 // --- Special forms ---------------------------------------------------------
 
 void TypeChecker::visit(const IfNode &node) {
-  // TODO: condition must be Bool
-  // If else branch exists, both branches must have the same type
-  // If no else branch, result is Unit
-  (void)node;
+  node.get_condition().accept(*this);
+
+  if (m_result != Type::Bool) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "If statement must have a boolean condition, not: " +
+            type_to_string(m_result),
+        node.get_location());
+  }
+
+  node.get_then_branch().accept(*this);
+  if (node.get_else_branch() == nullptr) {
+    if (m_result != Type::Unit) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "If without else branch requires body to have Unit type! Not: " +
+              type_to_string(m_result),
+          node.get_location());
+    }
+    return;
+  }
+  auto then_type = m_result;
+
+  node.get_else_branch()->accept(*this);
+  auto else_type = m_result;
+
+  if (then_type != else_type) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Mismatched types in if branches! Then type: " +
+            type_to_string(then_type) +
+            " vs. Else type: " + type_to_string(else_type),
+        node.get_location());
+  }
 }
 
 void TypeChecker::visit(const WhileNode &node) {
-  // TODO: condition must be Bool, result is Unit
-  (void)node;
+  node.get_condition().accept(*this);
+
+  if (m_result != Type::Bool) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "while loop must have a boolean condition, not: " +
+            type_to_string(m_result),
+        node.get_location());
+  }
+
+  // Make sure we check inside here
+  node.get_body().accept(*this);
+
+  m_result = Type::Unit;
 }
 
 void TypeChecker::visit(const SetNode &node) {
@@ -93,13 +129,16 @@ void TypeChecker::visit(const SetNode &node) {
 }
 
 void TypeChecker::visit(const BeginNode &node) {
-  // TODO: check each expression in sequence, m_result is the last one's type
-  (void)node;
+  for (const auto &expression : node.get_expressions()) {
+    expression->accept(*this);
+  }
 }
 
 void TypeChecker::visit(const PrintNode &node) {
-  // TODO: check the expression (any type is printable), result is Unit
-  (void)node;
+  // Need to do this in case there is a type error deep in the expression being
+  // printed
+  node.get_expression().accept(*this);
+  m_result = Type::Unit;
 }
 
 void TypeChecker::visit(const DefineVarNode &node) {
