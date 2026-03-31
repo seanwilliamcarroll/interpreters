@@ -51,7 +51,8 @@ add_executable(blip-test
   test/src/parser_test.cpp
   test/src/ast_printer_test.cpp
   test/src/environment_test.cpp
-  test/src/evaluator_test.cpp)
+  test/src/evaluator_test.cpp
+  test/src/type_checker_test.cpp)
 
 target_compile_options(blip-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -69,5 +70,6 @@ add_test(NAME blip.ast_printer COMMAND blip-test -ts=blip.ast_printer)
 add_test(NAME blip.environment COMMAND blip-test -ts=blip.environment)
 add_test(NAME blip.evaluator COMMAND blip-test -ts=blip.evaluator)
 add_test(NAME blip.builtins COMMAND blip-test -ts=blip.builtins)
+add_test(NAME blip.type_checker COMMAND blip-test -ts=blip.type_checker)
 
 #****************************************************************************
