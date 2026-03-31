@@ -66,5 +66,6 @@ add_test(NAME blip.parser COMMAND blip-test -ts=blip.parser)
 add_test(NAME blip.ast_printer COMMAND blip-test -ts=blip.ast_printer)
 add_test(NAME blip.environment COMMAND blip-test -ts=blip.environment)
 add_test(NAME blip.evaluator COMMAND blip-test -ts=blip.evaluator)
+add_test(NAME blip.builtins COMMAND blip-test -ts=blip.builtins)
 
 #****************************************************************************

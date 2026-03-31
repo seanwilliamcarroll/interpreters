@@ -413,5 +413,214 @@ TEST_SUITE("blip.evaluator") {
 }
 
 //****************************************************************************
+TEST_SUITE("blip.builtins") {
+
+  // Helper that uses the default global environment (with built-ins)
+  static Value eval_with_builtins(const std::string &source,
+                                  std::ostream &out = std::cout) {
+    auto env = default_global_environment();
+    std::istringstream input(source);
+    auto lexer = make_lexer(input, "test");
+    Parser parser(std::move(lexer));
+    auto ast = parser.parse();
+    Evaluator evaluator(env, out);
+    return evaluator.evaluate(*ast);
+  }
+
+  // --- Addition (+) --------------------------------------------------------
+
+  TEST_CASE("add two ints") {
+    auto result = eval_with_builtins("(+ 1 2)");
+    CHECK(std::get<int>(result) == 3);
+  }
+
+  TEST_CASE("add two doubles") {
+    auto result = eval_with_builtins("(+ 1.5 2.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(4.0));
+  }
+
+  TEST_CASE("add int and double promotes to double") {
+    auto result = eval_with_builtins("(+ 1 2.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  }
+
+  TEST_CASE("add double and int promotes to double") {
+    auto result = eval_with_builtins("(+ 2.5 1)");
+    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  }
+
+  TEST_CASE("add non-numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(+ 1 true)"));
+    CHECK_THROWS(eval_with_builtins("(+ \"a\" 1)"));
+  }
+
+  TEST_CASE("add nested expressions") {
+    auto result = eval_with_builtins("(+ (+ 1 2) (+ 3 4))");
+    CHECK(std::get<int>(result) == 10);
+  }
+
+  // --- Subtraction (-) -----------------------------------------------------
+
+  TEST_CASE("subtract two ints") {
+    auto result = eval_with_builtins("(- 10 3)");
+    CHECK(std::get<int>(result) == 7);
+  }
+
+  TEST_CASE("subtract int and double promotes to double") {
+    auto result = eval_with_builtins("(- 10 2.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(7.5));
+  }
+
+  TEST_CASE("subtract non-numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(- true 1)"));
+  }
+
+  // --- Multiplication (*) --------------------------------------------------
+
+  TEST_CASE("multiply two ints") {
+    auto result = eval_with_builtins("(* 3 4)");
+    CHECK(std::get<int>(result) == 12);
+  }
+
+  TEST_CASE("multiply int and double promotes to double") {
+    auto result = eval_with_builtins("(* 3 1.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(4.5));
+  }
+
+  TEST_CASE("multiply non-numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(* \"a\" 2)"));
+  }
+
+  // --- Division (/) --------------------------------------------------------
+
+  TEST_CASE("divide two ints") {
+    auto result = eval_with_builtins("(/ 10 3)");
+    CHECK(std::get<int>(result) == 3);
+  }
+
+  TEST_CASE("divide int and double promotes to double") {
+    auto result = eval_with_builtins("(/ 7 2.0)");
+    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  }
+
+  TEST_CASE("divide by zero int throws") {
+    CHECK_THROWS(eval_with_builtins("(/ 1 0)"));
+  }
+
+  TEST_CASE("divide non-numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(/ true 2)"));
+  }
+
+  // --- Less than (<) -------------------------------------------------------
+
+  TEST_CASE("less than ints") {
+    CHECK(std::get<bool>(eval_with_builtins("(< 1 2)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(< 2 1)")) == false);
+    CHECK(std::get<bool>(eval_with_builtins("(< 1 1)")) == false);
+  }
+
+  TEST_CASE("less than with double promotion") {
+    CHECK(std::get<bool>(eval_with_builtins("(< 1 1.5)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(< 1.5 1)")) == false);
+  }
+
+  TEST_CASE("less than non-numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(< true 1)"));
+  }
+
+  // --- Greater than (>) ----------------------------------------------------
+
+  TEST_CASE("greater than ints") {
+    CHECK(std::get<bool>(eval_with_builtins("(> 2 1)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(> 1 2)")) == false);
+    CHECK(std::get<bool>(eval_with_builtins("(> 1 1)")) == false);
+  }
+
+  TEST_CASE("greater than with double promotion") {
+    CHECK(std::get<bool>(eval_with_builtins("(> 1.5 1)")) == true);
+  }
+
+  TEST_CASE("greater than non-numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(> \"a\" 1)"));
+  }
+
+  // --- Equality (=) --------------------------------------------------------
+
+  TEST_CASE("equal ints") {
+    CHECK(std::get<bool>(eval_with_builtins("(= 1 1)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(= 1 2)")) == false);
+  }
+
+  TEST_CASE("equal doubles") {
+    CHECK(std::get<bool>(eval_with_builtins("(= 1.5 1.5)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(= 1.5 2.5)")) == false);
+  }
+
+  TEST_CASE("equal with mixed numeric promotion") {
+    CHECK(std::get<bool>(eval_with_builtins("(= 1 1.0)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(= 1 1.5)")) == false);
+  }
+
+  TEST_CASE("equal bools") {
+    CHECK(std::get<bool>(eval_with_builtins("(= true true)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(= true false)")) == false);
+  }
+
+  TEST_CASE("equal strings") {
+    CHECK(std::get<bool>(eval_with_builtins("(= \"a\" \"a\")")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(= \"a\" \"b\")")) == false);
+  }
+
+  TEST_CASE("equal different types throws") {
+    CHECK_THROWS(eval_with_builtins("(= 1 true)"));
+    CHECK_THROWS(eval_with_builtins("(= \"a\" 1)"));
+  }
+
+  // --- Wrong arity on builtins ---------------------------------------------
+
+  TEST_CASE("builtin wrong arity throws") {
+    CHECK_THROWS(eval_with_builtins("(+ 1)"));
+    CHECK_THROWS(eval_with_builtins("(+ 1 2 3)"));
+  }
+
+  // --- Integration with user-defined functions -----------------------------
+
+  TEST_CASE("builtin used inside user function") {
+    auto result = eval_with_builtins("(begin"
+                                     "  (define (add-one x) (+ x 1))"
+                                     "  (add-one 5))");
+    CHECK(std::get<int>(result) == 6);
+  }
+
+  TEST_CASE("recursive countdown with arithmetic") {
+    std::ostringstream out;
+    auto env = default_global_environment();
+    std::istringstream input("(begin"
+                             "  (define (countdown n)"
+                             "    (if (> n 0)"
+                             "      (begin"
+                             "        (print n)"
+                             "        (countdown (- n 1)))))"
+                             "  (countdown 3))");
+    auto lexer = make_lexer(input, "test");
+    Parser parser(std::move(lexer));
+    auto ast = parser.parse();
+    Evaluator evaluator(env, out);
+    evaluator.evaluate(*ast);
+    CHECK(out.str() == "3\n2\n1\n");
+  }
+
+  TEST_CASE("factorial") {
+    auto result = eval_with_builtins("(begin"
+                                     "  (define (factorial n)"
+                                     "    (if (= n 0)"
+                                     "      1"
+                                     "      (* n (factorial (- n 1)))))"
+                                     "  (factorial 5))");
+    CHECK(std::get<int>(result) == 120);
+  }
+}
+
+//****************************************************************************
 } // namespace blip
 //****************************************************************************
