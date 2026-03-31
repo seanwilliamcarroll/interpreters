@@ -365,7 +365,10 @@ TEST_SUITE("blip.evaluator") {
   TEST_CASE("separate calls get independent local scopes") {
     std::ostringstream out;
     eval("(begin"
-         "  (define (make-val v) (define (get) v) get)"
+         "  (define (make-val v)"
+         "    (begin"
+         "      (define (get) v)"
+         "      get))"
          "  (define get-a (make-val 1))"
          "  (define get-b (make-val 2))"
          "  (print (get-a))"
