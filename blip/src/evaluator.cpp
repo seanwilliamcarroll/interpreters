@@ -63,17 +63,8 @@ void Evaluator::visit(const ProgramNode &node) {
   }
 }
 
-void Evaluator::visit(const CallNode &node) {
-  node.get_callee().accept(*this);
-  if (!std::holds_alternative<Function>(m_result)) {
-    throw core::CompilerException("RuntimeError",
-                                  "Cannot call non-function value: " +
-                                      value_to_string(m_result),
-                                  node.get_location());
-  }
-
-  auto function = std::get<Function>(m_result);
-
+void Evaluator::evaluate_function(const CallNode &node,
+                                  const Function &function) {
   if (node.get_arguments().size() != function.m_arguments.size()) {
     throw core::CompilerException(
         "RuntimeError",
@@ -102,6 +93,43 @@ void Evaluator::visit(const CallNode &node) {
   function.m_body->accept(*this);
 
   std::swap(function_env, m_env);
+}
+
+void Evaluator::evaluate_builtinfunction(const CallNode &node,
+                                         const BuiltInFunction &function) {
+
+  if (function.m_expected_arguments != node.get_arguments().size()) {
+    throw core::CompilerException(
+        "RuntimeError",
+        "BuiltInFunction: " + value_to_string(function) + " expects " +
+            std::to_string(function.m_expected_arguments) +
+            " arguments, but provided " +
+            std::to_string(node.get_arguments().size()),
+
+        node.get_location());
+  }
+
+  std::vector<Value> evaluated_arguments;
+  for (const auto &argument : node.get_arguments()) {
+    argument->accept(*this);
+    evaluated_arguments.push_back(m_result);
+  }
+
+  m_result = function.m_native_function(std::move(evaluated_arguments));
+}
+
+void Evaluator::visit(const CallNode &node) {
+  node.get_callee().accept(*this);
+  if (std::holds_alternative<Function>(m_result)) {
+    evaluate_function(node, std::get<Function>(m_result));
+  } else if (std::holds_alternative<BuiltInFunction>(m_result)) {
+    evaluate_builtinfunction(node, std::get<BuiltInFunction>(m_result));
+  } else {
+    throw core::CompilerException("RuntimeError",
+                                  "Cannot call non-function value: " +
+                                      value_to_string(m_result),
+                                  node.get_location());
+  }
 }
 
 // --- Special forms ---------------------------------------------------------

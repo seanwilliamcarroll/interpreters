@@ -29,6 +29,8 @@ std::string value_to_string(const Value &value) {
           return "<unit>";
         } else if constexpr (std::is_same_v<T, Function>) {
           return "<function " + v.m_name->get_name() + ">";
+        } else if constexpr (std::is_same_v<T, BuiltInFunction>) {
+          return "<builtinfunction " + v.m_name + ">";
         }
       },
       value);

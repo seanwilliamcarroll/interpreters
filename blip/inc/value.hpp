@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include "ast.hpp"
+#include <functional>
 #include <memory>
 #include <string>
 #include <variant>
@@ -33,7 +34,16 @@ struct Function {
   const AstNode *m_body;
 };
 
-using Value = std::variant<int, double, bool, std::string, Unit, Function>;
+struct BuiltInFunction;
+
+using Value = std::variant<int, double, bool, std::string, Unit, Function,
+                           BuiltInFunction>;
+
+struct BuiltInFunction {
+  std::string m_name;
+  size_t m_expected_arguments;
+  std::function<Value(std::vector<Value>)> m_native_function;
+};
 
 std::string value_to_string(const Value &value);
 

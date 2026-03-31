@@ -11,6 +11,8 @@
 
 #include <environment.hpp>
 #include <exceptions.hpp>
+#include <memory>
+#include <variant>
 
 //****************************************************************************
 namespace blip {
@@ -59,6 +61,12 @@ void Environment::set(const std::string &name, Value value) {
     return;
   }
   throw std::runtime_error("Cannot set: \"" + name + "\"");
+}
+
+std::shared_ptr<Environment> default_global_environment() {
+  auto env = std::make_shared<Environment>();
+
+  return env;
 }
 
 //****************************************************************************

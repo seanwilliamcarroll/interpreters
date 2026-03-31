@@ -36,6 +36,8 @@ private:
   std::shared_ptr<Environment> m_parent;
 };
 
+std::shared_ptr<Environment> default_global_environment();
+
 //****************************************************************************
 } // namespace blip
 //****************************************************************************
