@@ -12,55 +12,53 @@ Goal: Build a type checker visitor that validates types before evaluation, catch
 
 ## Type representation
 
-Need an internal type enum (not strings) for the checker to work with:
-
 ```
-enum class Type { Int, Double, Bool, String, Unit, Function }
+enum class Type { Int, Double, Bool, String, Unit, Fn }
 ```
 
-Function types need param types + return type. Could be a struct wrapping the enum plus a vector of param types and a return type for the Function case. Or start simple — just the base types, and handle function types as a stretch goal.
+- `Fn` is an **opaque** function type — the checker knows it's callable but doesn't know the signature
+- Calls to `Fn`-typed values are unchecked (argument types and return type are trusted)
+- Calls to *known* functions (defined with full signatures in scope) are fully checked
+- Later, `Fn` can be upgraded to carry signature info (e.g. `(fn (int int) int)`) to close this hole
+
+## Design decisions
+
+- **Strict typing, no implicit promotion** — `(+ 1 2.0)` is a type error. Both operands must be the same numeric type. A cast operation can be added later.
+- **If/else branches must have the same type** — `(if true 1 2.0)` is a type error.
+- **`set` cannot change a variable's type** — the checker enforces this.
+- **Type checker is a separate pass** — runs after parsing, before evaluation. Another `AstVisitor`.
+- **The checker computes types, not values** — stores `Type m_result` instead of `Value m_result`.
+- **Variable type annotations are checked assertions** — `(define x : int 5)` verifies the initializer is `int`. Without annotation, the type is inferred from the initializer.
 
 ## Steps
 
 ### Step 1: Type enum and type environment
-- [ ] Create a `Type` enum for base types: `Int`, `Double`, `Bool`, `String`, `Unit`
-- [ ] Create a string-to-Type mapping (to convert `TypeNode` names to the enum)
-- [ ] Create a `TypeEnvironment` class — same scope chain pattern as `Environment`, but maps names to `Type` instead of `Value`
+- [ ] Create a `Type` enum: `Int`, `Double`, `Bool`, `String`, `Unit`, `Fn`
+- [ ] Create `type_to_string` for error messages
+- [ ] Create a string-to-Type mapping (to convert `TypeNode` string names to the enum)
+- [ ] Create a `TypeEnvironment` class — same scope chain as `Environment`, but maps names to `Type`
 - [ ] Register built-in function types in a default type environment
 
 ### Step 2: Type checker visitor (literals + variables)
 - [ ] Create `TypeChecker` class implementing `AstVisitor`
 - [ ] Literals return their obvious type (IntLiteral → Int, etc.)
-- [ ] `DefineVarNode`: infer type from the initializer expression, bind name → type
+- [ ] `DefineVarNode`: infer type from initializer, bind name → type. If annotation present, verify it matches.
 - [ ] `Identifier`: look up type in the type environment
-- [ ] `SetNode`: check that the new value's type matches the variable's existing type
-- [ ] `ProgramNode` / `BeginNode`: check children sequentially, result is last child's type
+- [ ] `SetNode`: check that the new value's type matches the variable's existing type (no type changes)
+- [ ] `ProgramNode` / `BeginNode`: check children sequentially, result type is last child's type
 
 ### Step 3: Type checker (control flow)
-- [ ] `IfNode`: condition must be Bool, then/else branches must have compatible types
-- [ ] `WhileNode`: condition must be Bool, body type doesn't matter (result is Unit)
-- [ ] `PrintNode`: any type is printable, result is Unit
+- [ ] `IfNode`: condition must be `Bool`, then/else branches must have identical types (if else exists). If no else, result is `Unit`.
+- [ ] `WhileNode`: condition must be `Bool`, result is `Unit`
+- [ ] `PrintNode`: any type is printable, result is `Unit`
 
 ### Step 4: Type checker (functions)
-- [ ] `DefineFnNode`: create a child type environment, bind param names to their declared types, check body type matches declared return type
-- [ ] `CallNode`: look up callee's type, verify it's a function, check argument types match parameter types, result type is the function's return type
-- [ ] Handle built-in function calls (known signatures)
+- [ ] `DefineFnNode`: create child type environment, bind param names to declared types, check body type matches declared return type, bind function name to `Fn` in parent env
+- [ ] `CallNode` for known functions: look up callee type, if it has a known signature (built-ins), check argument count and types, result is the known return type
+- [ ] `CallNode` for `Fn`-typed values: callee is `Fn`, skip argument/return type checking (opaque)
 
-### Step 5: Integration
+### Step 5: Integration and testing
 - [ ] Wire the type checker into the pipeline: parse → **check** → evaluate
-- [ ] Type errors should produce `CompilerException` with location info
-- [ ] All existing tests should still pass (they are well-typed programs)
-- [ ] Add tests for type errors that should be caught
-
-## Design decisions
-
-- **Type checker is a separate pass** — runs after parsing, before evaluation. It's another `AstVisitor`, structurally similar to the evaluator.
-- **The checker computes types, not values** — where the evaluator stores `Value m_result`, the checker stores `Type m_result` (or similar).
-- **`set` cannot change a variable's type** — the checker enforces this, which is a new restriction vs the current evaluator.
-- **Function types are a stretch goal** — for now, higher-order functions (passing functions as arguments) won't be fully type-checked. We can represent them as an opaque `Function` type or defer this.
-- **Numeric promotion** — need to decide: does `(+ 1 2.0)` type-check? If so, the checker needs the same int/double promotion rules as the evaluator. Suggestion: yes, and the result type is `Double` when either operand is `Double`.
-
-## Open questions
-
-- If/else branch types: must they be identical? Or is it OK for one to be Int and the other Double (with promotion)?
-- Should we support optional type annotations on `define` variables as a checked assertion? e.g., `(define x : int 5)` — the checker verifies 5 is int. Already parsed, just needs checking.
+- [ ] Type errors produce `CompilerException` with source location
+- [ ] All existing tests still pass (they are well-typed programs)
+- [ ] Add tests for type errors: wrong types in arithmetic, if branches don't match, set changes type, wrong argument types to known functions, etc.
