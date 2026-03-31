@@ -140,8 +140,12 @@ TEST_SUITE("blip.type_checker") {
     CHECK_THROWS(check("(if true 1 \"hello\")"));
   }
 
-  TEST_CASE("if without else is unit") {
-    CHECK(check("(if true 1)") == Type::Unit);
+  TEST_CASE("if without else requires unit then-branch") {
+    CHECK(check("(if true (print 1))") == Type::Unit);
+  }
+
+  TEST_CASE("if without else with non-unit then-branch throws") {
+    CHECK_THROWS(check("(if true 1)"));
   }
 
   // --- While ---------------------------------------------------------------
