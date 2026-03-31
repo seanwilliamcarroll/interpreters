@@ -29,10 +29,10 @@ TEST_SUITE("blip.evaluator") {
 
   // Helper: parse and evaluate a program, return the final value
   static Value eval(const std::string &source,
-                    std::shared_ptr<Environment> env = nullptr,
+                    std::shared_ptr<ValueEnvironment> env = nullptr,
                     std::ostream &out = std::cout) {
     if (!env) {
-      env = std::make_shared<Environment>();
+      env = std::make_shared<ValueEnvironment>();
     }
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
@@ -84,7 +84,7 @@ TEST_SUITE("blip.evaluator") {
   // --- Identifiers ---------------------------------------------------------
 
   TEST_CASE("evaluate identifier") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("x", 42);
     auto result = eval("x", env);
     CHECK(std::get<int>(result) == 42);
@@ -95,13 +95,13 @@ TEST_SUITE("blip.evaluator") {
   // --- define (variable) ---------------------------------------------------
 
   TEST_CASE("define binds variable") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 10)", env);
     CHECK(std::get<int>(env->lookup("x")) == 10);
   }
 
   TEST_CASE("define evaluates value expression") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x (if true 1 2))", env);
     CHECK(std::get<int>(env->lookup("x")) == 1);
   }
@@ -114,14 +114,14 @@ TEST_SUITE("blip.evaluator") {
   // --- set -----------------------------------------------------------------
 
   TEST_CASE("set mutates existing variable") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 1)", env);
     eval("(set x 99)", env);
     CHECK(std::get<int>(env->lookup("x")) == 99);
   }
 
   TEST_CASE("set evaluates value expression") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 0)", env);
     eval("(set x (if false 1 2))", env);
     CHECK(std::get<int>(env->lookup("x")) == 2);
@@ -132,7 +132,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("set returns unit") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 0)", env);
     auto result = eval("(set x 1)", env);
     CHECK(std::holds_alternative<Unit>(result));
@@ -146,7 +146,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("begin evaluates all expressions") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(begin (define x 1) (define y 2))", env);
     CHECK(std::get<int>(env->lookup("x")) == 1);
     CHECK(std::get<int>(env->lookup("y")) == 2);
@@ -202,7 +202,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("if evaluates condition") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("flag", true);
     auto result = eval("(if flag 10 20)", env);
     CHECK(std::get<int>(result) == 10);
@@ -222,7 +222,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("while loops until condition is false") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     std::ostringstream out;
     eval("(begin (define x true) (while x (begin (print 1) (set x false))))",
          env, out);
@@ -230,7 +230,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("while body executes multiple times") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     // Count down: define x = 3, loop printing and decrementing
     // This test depends on built-in arithmetic — skip until Step 6
     // For now, test that a false condition means zero iterations
@@ -256,13 +256,13 @@ TEST_SUITE("blip.evaluator") {
   // --- Integration: define + set + if + begin ------------------------------
 
   TEST_CASE("define and use variable in if") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     auto result = eval("(begin (define x true) (if x 10 20))", env);
     CHECK(std::get<int>(result) == 10);
   }
 
   TEST_CASE("set variable and read back") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     auto result = eval("(begin (define x 1) (set x 42) x)", env);
     CHECK(std::get<int>(result) == 42);
   }
@@ -274,7 +274,7 @@ TEST_SUITE("blip.evaluator") {
 
   TEST_CASE("print expression result then return it") {
     std::ostringstream out;
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     auto result = eval("(begin (define x 42) (print x) x)", env, out);
     CHECK(out.str() == "42\n");
     CHECK(std::get<int>(result) == 42);
@@ -283,7 +283,7 @@ TEST_SUITE("blip.evaluator") {
   // --- define (function) ---------------------------------------------------
 
   TEST_CASE("define function creates binding") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define (f (x : int)) : int x)", env);
     CHECK(std::holds_alternative<Function>(env->lookup("f")));
   }
@@ -326,7 +326,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("calling non-function throws") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("x", 42);
     CHECK_THROWS(eval("(x)", env));
   }

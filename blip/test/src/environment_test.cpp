@@ -25,13 +25,13 @@ TEST_SUITE("blip.environment") {
   // --- Define and lookup ----------------------------------------------------
 
   TEST_CASE("define and lookup in single scope") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("x", 42);
     CHECK(std::get<int>(env->lookup("x")) == 42);
   }
 
   TEST_CASE("define multiple bindings") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("a", 1);
     env->define("b", std::string("hello"));
     env->define("c", true);
@@ -43,29 +43,29 @@ TEST_SUITE("blip.environment") {
   // --- Parent chain ---------------------------------------------------------
 
   TEST_CASE("lookup walks parent chain") {
-    auto parent = std::make_shared<Environment>();
+    auto parent = std::make_shared<ValueEnvironment>();
     parent->define("x", 10);
 
-    auto child = std::make_shared<Environment>(parent);
+    auto child = std::make_shared<ValueEnvironment>(parent);
     CHECK(std::get<int>(child->lookup("x")) == 10);
   }
 
   TEST_CASE("lookup walks multiple parents") {
-    auto grandparent = std::make_shared<Environment>();
+    auto grandparent = std::make_shared<ValueEnvironment>();
     grandparent->define("x", 1);
 
-    auto parent = std::make_shared<Environment>(grandparent);
-    auto child = std::make_shared<Environment>(parent);
+    auto parent = std::make_shared<ValueEnvironment>(grandparent);
+    auto child = std::make_shared<ValueEnvironment>(parent);
     CHECK(std::get<int>(child->lookup("x")) == 1);
   }
 
   // --- Shadowing ------------------------------------------------------------
 
   TEST_CASE("child shadows parent binding") {
-    auto parent = std::make_shared<Environment>();
+    auto parent = std::make_shared<ValueEnvironment>();
     parent->define("x", 1);
 
-    auto child = std::make_shared<Environment>(parent);
+    auto child = std::make_shared<ValueEnvironment>(parent);
     child->define("x", 2);
 
     CHECK(std::get<int>(child->lookup("x")) == 2);
@@ -75,17 +75,17 @@ TEST_SUITE("blip.environment") {
   // --- Set ------------------------------------------------------------------
 
   TEST_CASE("set mutates binding in current scope") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("x", 1);
     env->set("x", 99);
     CHECK(std::get<int>(env->lookup("x")) == 99);
   }
 
   TEST_CASE("set mutates binding in parent scope") {
-    auto parent = std::make_shared<Environment>();
+    auto parent = std::make_shared<ValueEnvironment>();
     parent->define("x", 1);
 
-    auto child = std::make_shared<Environment>(parent);
+    auto child = std::make_shared<ValueEnvironment>(parent);
     child->set("x", 99);
 
     CHECK(std::get<int>(parent->lookup("x")) == 99);
@@ -93,10 +93,10 @@ TEST_SUITE("blip.environment") {
   }
 
   TEST_CASE("set targets nearest binding when shadowed") {
-    auto parent = std::make_shared<Environment>();
+    auto parent = std::make_shared<ValueEnvironment>();
     parent->define("x", 1);
 
-    auto child = std::make_shared<Environment>(parent);
+    auto child = std::make_shared<ValueEnvironment>(parent);
     child->define("x", 2);
 
     child->set("x", 99);
@@ -107,18 +107,18 @@ TEST_SUITE("blip.environment") {
   // --- Error cases ----------------------------------------------------------
 
   TEST_CASE("lookup throws on unbound variable") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     CHECK_THROWS(env->lookup("nope"));
   }
 
   TEST_CASE("set throws on unbound variable") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     CHECK_THROWS(env->set("nope", 1));
   }
 
   TEST_CASE("lookup throws when not in any parent") {
-    auto parent = std::make_shared<Environment>();
-    auto child = std::make_shared<Environment>(parent);
+    auto parent = std::make_shared<ValueEnvironment>();
+    auto child = std::make_shared<ValueEnvironment>(parent);
     CHECK_THROWS(child->lookup("nope"));
   }
 }
