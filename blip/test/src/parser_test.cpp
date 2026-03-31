@@ -239,10 +239,64 @@ TEST_SUITE("blip.parser") {
     auto *def = dynamic_cast<DefineVarNode *>(program->get_program()[0].get());
     REQUIRE(def != nullptr);
     CHECK(def->get_name().get_name() == "x");
+    CHECK(def->get_type() == nullptr);
 
     auto *val = dynamic_cast<const IntLiteral *>(&def->get_value());
     REQUIRE(val != nullptr);
     CHECK(val->get_value() == 5);
+  }
+
+  TEST_CASE("parse define variable with type annotation") {
+    auto ast = parse_string("(define x : int 5)");
+    auto *program = dynamic_cast<ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineVarNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "x");
+
+    REQUIRE(def->get_type() != nullptr);
+    CHECK(def->get_type()->get_type_name() == "int");
+
+    auto *val = dynamic_cast<const IntLiteral *>(&def->get_value());
+    REQUIRE(val != nullptr);
+    CHECK(val->get_value() == 5);
+  }
+
+  TEST_CASE("parse define variable with string type annotation") {
+    auto ast = parse_string("(define greeting : string \"hello\")");
+    auto *program = dynamic_cast<ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineVarNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "greeting");
+
+    REQUIRE(def->get_type() != nullptr);
+    CHECK(def->get_type()->get_type_name() == "string");
+
+    auto *val = dynamic_cast<const StringLiteral *>(&def->get_value());
+    REQUIRE(val != nullptr);
+    CHECK(val->get_value() == "hello");
+  }
+
+  TEST_CASE("parse define variable with expression value and type") {
+    auto ast = parse_string("(define result : int (+ 1 2))");
+    auto *program = dynamic_cast<ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineVarNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "result");
+
+    REQUIRE(def->get_type() != nullptr);
+    CHECK(def->get_type()->get_type_name() == "int");
+
+    auto *call = dynamic_cast<const CallNode *>(&def->get_value());
+    REQUIRE(call != nullptr);
   }
 
   TEST_CASE("parse define function with type annotations") {
