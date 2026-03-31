@@ -28,8 +28,7 @@ void Environment::define(const std::string &name, Value value) {
   auto iter = m_bindings.find(name);
   if (iter != m_bindings.end()) {
     // Not sure how to do location here, seems out of place?
-    throw core::CompilerException("RuntimeError",
-                                  "Already defined: \"" + name + "\"", {});
+    throw std::runtime_error("Already defined: \"" + name + "\"");
   }
   m_bindings[name] = std::move(value);
 }
@@ -44,8 +43,7 @@ Value Environment::lookup(const std::string &name) const {
   if (m_parent != nullptr) {
     return m_parent->lookup(name);
   }
-  throw core::CompilerException("RuntimeError",
-                                "Couldn't find: \"" + name + "\"", {});
+  throw std::runtime_error("Couldn't find: \"" + name + "\"");
 }
 
 void Environment::set(const std::string &name, Value value) {
@@ -60,8 +58,7 @@ void Environment::set(const std::string &name, Value value) {
     m_parent->set(name, std::move(value));
     return;
   }
-  throw core::CompilerException("RuntimeError", "Cannot set: \"" + name + "\"",
-                                {});
+  throw std::runtime_error("Cannot set: \"" + name + "\"");
 }
 
 //****************************************************************************
