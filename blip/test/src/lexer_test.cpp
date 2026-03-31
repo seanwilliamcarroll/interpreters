@@ -244,6 +244,89 @@ TEST_SUITE("blip.lexer") {
     }
   }
 
+  TEST_CASE("core::lexer_colon") {
+    std::stringstream in_stream;
+    in_stream << ":";
+    auto lexer = make_lexer(in_stream);
+
+    auto token = lexer->get_next_token();
+    CHECK(token != nullptr);
+    CHECK(token->get_token_type() == TokenType::COLON);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof != nullptr);
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_colon_in_typed_param") {
+    // Simulates what the parser will see for (x : int)
+    std::stringstream in_stream;
+    in_stream << "(x : int)";
+    auto lexer = make_lexer(in_stream);
+
+    auto lparen = lexer->get_next_token();
+    CHECK(lparen->get_token_type() == TokenType::LEFT_PAREND);
+
+    auto name = lexer->get_next_token();
+    CHECK(name->get_token_type() == TokenType::IDENTIFIER);
+
+    auto colon = lexer->get_next_token();
+    CHECK(colon->get_token_type() == TokenType::COLON);
+
+    auto type_name = lexer->get_next_token();
+    CHECK(type_name->get_token_type() == TokenType::IDENTIFIER);
+
+    auto rparen = lexer->get_next_token();
+    CHECK(rparen->get_token_type() == TokenType::RIGHT_PAREND);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_colon_in_return_type") {
+    // Simulates: ) : int (body)
+    std::stringstream in_stream;
+    in_stream << ") : int";
+    auto lexer = make_lexer(in_stream);
+
+    auto rparen = lexer->get_next_token();
+    CHECK(rparen->get_token_type() == TokenType::RIGHT_PAREND);
+
+    auto colon = lexer->get_next_token();
+    CHECK(colon->get_token_type() == TokenType::COLON);
+
+    auto type_name = lexer->get_next_token();
+    CHECK(type_name->get_token_type() == TokenType::IDENTIFIER);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_colon_no_spaces") {
+    // Colon without surrounding spaces — should still tokenize
+    std::stringstream in_stream;
+    in_stream << "(x:int)";
+    auto lexer = make_lexer(in_stream);
+
+    auto lparen = lexer->get_next_token();
+    CHECK(lparen->get_token_type() == TokenType::LEFT_PAREND);
+
+    auto name = lexer->get_next_token();
+    CHECK(name->get_token_type() == TokenType::IDENTIFIER);
+
+    auto colon = lexer->get_next_token();
+    CHECK(colon->get_token_type() == TokenType::COLON);
+
+    auto type_name = lexer->get_next_token();
+    CHECK(type_name->get_token_type() == TokenType::IDENTIFIER);
+
+    auto rparen = lexer->get_next_token();
+    CHECK(rparen->get_token_type() == TokenType::RIGHT_PAREND);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
   TEST_CASE("core::block_commnet") {
     rc::check("Given stream of valid block_commnet, return only 1 token", [] {
       std::stringstream in_stream;
