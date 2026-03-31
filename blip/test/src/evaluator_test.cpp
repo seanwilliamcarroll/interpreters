@@ -223,9 +223,9 @@ TEST_SUITE("blip.evaluator") {
   TEST_CASE("while loops until condition is false") {
     auto env = std::make_shared<Environment>();
     std::ostringstream out;
-    eval("(begin (define x 3) (while x (begin (print x) (set x false))))", env,
-         out);
-    CHECK(out.str() == "3\n");
+    eval("(begin (define x true) (while x (begin (print 1) (set x false))))",
+         env, out);
+    CHECK(out.str() == "1\n");
   }
 
   TEST_CASE("while body executes multiple times") {
@@ -236,6 +236,20 @@ TEST_SUITE("blip.evaluator") {
     eval("(define count 0)", env);
     eval("(while false (set count 1))", env);
     CHECK(std::get<int>(env->lookup("count")) == 0);
+  }
+
+  // --- Strict truthiness ----------------------------------------------------
+
+  TEST_CASE("if with int condition throws") {
+    CHECK_THROWS(eval("(if 1 2 3)"));
+  }
+
+  TEST_CASE("if with string condition throws") {
+    CHECK_THROWS(eval("(if \"yes\" 2 3)"));
+  }
+
+  TEST_CASE("while with int condition throws") {
+    CHECK_THROWS(eval("(while 0 1)"));
   }
 
   // --- Integration: define + set + if + begin ------------------------------
