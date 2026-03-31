@@ -266,8 +266,7 @@ TEST_SUITE("blip.parser") {
     CHECK(def->get_arguments()[1]->get_type()->get_type_name() == "int");
 
     // Check return type annotation
-    REQUIRE(def->get_return_type() != nullptr);
-    CHECK(def->get_return_type()->get_type_name() == "int");
+    CHECK(def->get_return_type().get_type_name() == "int");
 
     auto *body = dynamic_cast<const PrintNode *>(&def->get_body());
     REQUIRE(body != nullptr);
@@ -284,8 +283,7 @@ TEST_SUITE("blip.parser") {
     CHECK(def->get_name().get_name() == "f");
     CHECK(def->get_arguments().size() == 0);
 
-    REQUIRE(def->get_return_type() != nullptr);
-    CHECK(def->get_return_type()->get_type_name() == "unit");
+    CHECK(def->get_return_type().get_type_name() == "unit");
 
     auto *body = dynamic_cast<const IntLiteral *>(&def->get_body());
     REQUIRE(body != nullptr);
@@ -310,8 +308,7 @@ TEST_SUITE("blip.parser") {
     CHECK(def->get_arguments()[1]->get_name() == "loud");
     CHECK(def->get_arguments()[1]->get_type()->get_type_name() == "bool");
 
-    REQUIRE(def->get_return_type() != nullptr);
-    CHECK(def->get_return_type()->get_type_name() == "string");
+    CHECK(def->get_return_type().get_type_name() == "string");
   }
 
   TEST_CASE("parse define function missing param type throws") {

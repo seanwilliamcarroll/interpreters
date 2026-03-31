@@ -163,9 +163,7 @@ public:
 
     m_out << ")";
 
-    if (node.get_return_type() != nullptr) {
-      node.get_return_type()->accept(*this);
-    }
+    node.get_return_type().accept(*this);
 
     m_out << " ";
 
