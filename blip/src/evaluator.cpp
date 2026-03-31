@@ -9,10 +9,13 @@
 //*
 //****************************************************************************
 
+#include "ast.hpp"
 #include "value.hpp"
 #include <evaluator.hpp>
 #include <exceptions.hpp>
+#include <memory>
 #include <stdexcept>
+#include <string>
 #include <variant>
 
 //****************************************************************************
@@ -61,9 +64,44 @@ void Evaluator::visit(const ProgramNode &node) {
 }
 
 void Evaluator::visit(const CallNode &node) {
-  // TODO (Step 5): evaluate callee, evaluate arguments,
-  // create new environment, bind params, evaluate body
-  (void)node;
+  node.get_callee().accept(*this);
+  if (!std::holds_alternative<Function>(m_result)) {
+    throw core::CompilerException("RuntimeError",
+                                  "Cannot call non-function value: " +
+                                      value_to_string(m_result),
+                                  node.get_location());
+  }
+
+  auto function = std::get<Function>(m_result);
+
+  if (node.get_arguments().size() != function.m_arguments.size()) {
+    throw core::CompilerException(
+        "RuntimeError",
+        "Function: " + value_to_string(function) + " expects " +
+            std::to_string(function.m_arguments.size()) +
+            " arguments, but provided " +
+            std::to_string(node.get_arguments().size()),
+        node.get_location());
+  }
+
+  std::vector<Value> evaluated_arguments;
+  for (const auto &argument : node.get_arguments()) {
+    argument->accept(*this);
+    evaluated_arguments.push_back(m_result);
+  }
+
+  auto function_env = std::make_shared<Environment>(function.m_environment);
+
+  for (size_t index = 0; index < function.m_arguments.size(); ++index) {
+    function_env->define(function.m_arguments[index]->get_name(),
+                         evaluated_arguments[index]);
+  }
+
+  std::swap(function_env, m_env);
+
+  function.m_body->accept(*this);
+
+  std::swap(function_env, m_env);
 }
 
 // --- Special forms ---------------------------------------------------------
@@ -142,10 +180,19 @@ void Evaluator::visit(const DefineVarNode &node) {
 }
 
 void Evaluator::visit(const DefineFnNode &node) {
-  // TODO (Step 5): create a Function value capturing m_env,
-  // define it in m_env
-  // result is Unit
-  (void)node;
+  std::vector<const Identifier *> argument_list;
+  for (const auto &argument : node.get_arguments()) {
+    argument_list.push_back(argument.get());
+  }
+
+  Function closure{.m_name = &node.get_name(),
+                   .m_arguments = argument_list,
+                   .m_environment = m_env,
+                   .m_body = &node.get_body()};
+
+  m_env->define(node.get_name().get_name(), closure);
+
+  m_result = Unit{};
 }
 
 //****************************************************************************

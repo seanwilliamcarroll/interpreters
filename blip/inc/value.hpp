@@ -27,10 +27,10 @@ class Environment;
 struct Unit {};
 
 struct Function {
-  Identifier *m_name;
-  std::vector<Identifier *> m_arguments;
+  const Identifier *m_name;
+  std::vector<const Identifier *> m_arguments;
   std::shared_ptr<Environment> m_environment;
-  AstNode *m_body;
+  const AstNode *m_body;
 };
 
 using Value = std::variant<int, double, bool, std::string, Unit, Function>;
