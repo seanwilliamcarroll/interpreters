@@ -23,7 +23,8 @@ add_library(blip-lib STATIC
   src/blip.cpp
   src/blip_tokens.cpp
   src/lexer.cpp
-  src/parser.cpp)
+  src/parser.cpp
+  src/value.cpp)
 
 set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
 
