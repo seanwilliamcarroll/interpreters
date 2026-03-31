@@ -11,7 +11,7 @@
 #pragma once
 //****************************************************************************
 
-#include <iostream>
+#include <iosfwd>
 #include <memory>
 
 #include <ast.hpp>
@@ -25,8 +25,7 @@ namespace blip {
 
 class Evaluator : public AstVisitor {
 public:
-  explicit Evaluator(std::shared_ptr<Environment> env,
-                     std::ostream &out = std::cout);
+  explicit Evaluator(std::shared_ptr<Environment> env, std::ostream &out);
 
   Value evaluate(const AstNode &node);
 

@@ -18,6 +18,7 @@
 #include <parser.hpp>
 
 #include <doctest/doctest.h>
+#include <iostream>
 #include <sstream>
 
 //****************************************************************************
