@@ -43,9 +43,17 @@ public:
     m_out << std::boolalpha << node.get_value();
   }
 
-  void visit(const Identifier &node) override { m_out << node.get_name(); }
+  void visit(const Identifier &node) override {
+    m_out << node.get_name();
+    if (node.get_type() != nullptr) {
+      node.get_type()->accept(*this);
+    }
+  }
 
-  void visit(const TypeNode &) override {}
+  void visit(const TypeNode &node) override {
+    m_out << " : ";
+    m_out << node.get_type_name();
+  }
 
   void visit(const ProgramNode &node) override {
     for (const auto &expression : node.get_program()) {
@@ -148,11 +156,16 @@ public:
     node.get_name().accept(*this);
 
     for (const auto &argument : node.get_arguments()) {
-      m_out << " ";
+      m_out << " (";
       argument->accept(*this);
+      m_out << ")";
     }
 
     m_out << ")";
+
+    if (node.get_return_type() != nullptr) {
+      node.get_return_type()->accept(*this);
+    }
 
     m_out << " ";
 
