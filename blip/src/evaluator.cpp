@@ -212,7 +212,7 @@ void Evaluator::visit(const DefineFnNode &node) {
     argument_list.push_back(argument.get());
   }
 
-  Function closure{.m_name = &node.get_name(),
+  Function closure{.m_name = node.get_name().get_name(),
                    .m_arguments = argument_list,
                    .m_environment = m_env,
                    .m_body = &node.get_body()};
