@@ -123,9 +123,24 @@ void TypeChecker::visit(const WhileNode &node) {
 }
 
 void TypeChecker::visit(const SetNode &node) {
-  // TODO: look up existing type of variable, check new value matches
-  // Result is Unit
-  (void)node;
+  try {
+    m_result = m_env->lookup(node.get_name().get_name());
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException("TypeChecker", error.what(),
+                                  node.get_location());
+  }
+  auto defined_type = m_result;
+  node.get_value().accept(*this);
+
+  if (m_result != defined_type) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Mismatched types in set expression! Defined type: " +
+            type_to_string(defined_type) +
+            " vs. assigned type: " + type_to_string(m_result),
+        node.get_location());
+  }
+  m_result = Type::Unit;
 }
 
 void TypeChecker::visit(const BeginNode &node) {
@@ -142,11 +157,21 @@ void TypeChecker::visit(const PrintNode &node) {
 }
 
 void TypeChecker::visit(const DefineVarNode &node) {
-  // TODO: check the initializer, infer type from it
-  // If type annotation present, verify it matches
-  // Bind name → type in m_env
-  // Result is Unit
-  (void)node;
+  node.get_value().accept(*this);
+
+  if (node.get_type() != nullptr &&
+      string_to_type(node.get_type()->get_type_name()) != m_result) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Mismatched types in define expression! Annotated type: " +
+            node.get_type()->get_type_name() +
+            " vs. inferred expression type: " + type_to_string(m_result),
+        node.get_location());
+  }
+
+  m_env->define(node.get_name().get_name(), m_result);
+
+  m_result = Type::Unit;
 }
 
 void TypeChecker::visit(const DefineFnNode &node) {
