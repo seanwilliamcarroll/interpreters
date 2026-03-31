@@ -117,24 +117,18 @@ rm -rf build/
 pass "build/ removed"
 
 step "Configuring (cmake --preset mp)"
-if cmake --preset mp > /tmp/pre-push-configure.log 2>&1; then
+if cmake --preset mp; then
   pass "Configuration succeeded"
 else
   fail "Configuration failed"
-  echo ""
-  dim "Last 20 lines of output:"
-  tail -20 /tmp/pre-push-configure.log | while IFS= read -r line; do dim "  $line"; done
   exit 1
 fi
 
 step "Building (cmake --build --preset mp)"
-if cmake --build --preset mp > /tmp/pre-push-build.log 2>&1; then
+if cmake --build --preset mp; then
   pass "Build succeeded"
 else
   fail "Build failed"
-  echo ""
-  dim "Last 30 lines of output:"
-  tail -30 /tmp/pre-push-build.log | while IFS= read -r line; do dim "  $line"; done
   exit 1
 fi
 
