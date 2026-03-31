@@ -165,25 +165,26 @@ TEST_SUITE("blip.ast_printer") {
   // --- Special forms: define function ---------------------------------------
 
   TEST_CASE("round-trip define function no params") {
-    check_round_trip("(define (f) 42)");
+    check_round_trip("(define (f) : int 42)");
   }
 
   TEST_CASE("round-trip define function one param") {
-    check_round_trip("(define (f x) x)");
+    check_round_trip("(define (f (x : int)) : int x)");
   }
 
   TEST_CASE("round-trip define function multiple params") {
-    check_round_trip("(define (f x y z) (add x (add y z)))");
+    check_round_trip(
+        "(define (f (x : int) (y : int) (z : int)) : int (add x (add y z)))");
   }
 
   // --- Compound programs ----------------------------------------------------
 
   TEST_CASE("round-trip define then call") {
-    check_round_trip("(define (square x) (mul x x)) (square 5)");
+    check_round_trip("(define (square (x : int)) : int (mul x x)) (square 5)");
   }
 
   TEST_CASE("round-trip complex program") {
-    check_round_trip("(define (factorial n) "
+    check_round_trip("(define (factorial (n : int)) : int "
                      "  (if (eq n 0) "
                      "    1 "
                      "    (mul n (factorial (sub n 1)))))");
@@ -191,7 +192,7 @@ TEST_SUITE("blip.ast_printer") {
 
   TEST_CASE("round-trip program with multiple defines and calls") {
     check_round_trip("(define x 10) "
-                     "(define (double n) (add n n)) "
+                     "(define (double (n : int)) : int (add n n)) "
                      "(print (double x))");
   }
 

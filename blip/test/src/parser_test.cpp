@@ -245,8 +245,9 @@ TEST_SUITE("blip.parser") {
     CHECK(val->get_value() == 5);
   }
 
-  TEST_CASE("parse define function") {
-    auto ast = parse_string("(define (add a b) (print a))");
+  TEST_CASE("parse define function with type annotations") {
+    auto ast =
+        parse_string("(define (add (a : int) (b : int)) : int (print a))");
     auto *program = dynamic_cast<ProgramNode *>(ast.get());
     REQUIRE(program != nullptr);
     REQUIRE(program->get_program().size() == 1);
@@ -258,8 +259,71 @@ TEST_SUITE("blip.parser") {
     CHECK(def->get_arguments()[0]->get_name() == "a");
     CHECK(def->get_arguments()[1]->get_name() == "b");
 
+    // Check parameter type annotations
+    REQUIRE(def->get_arguments()[0]->get_type() != nullptr);
+    CHECK(def->get_arguments()[0]->get_type()->get_type_name() == "int");
+    REQUIRE(def->get_arguments()[1]->get_type() != nullptr);
+    CHECK(def->get_arguments()[1]->get_type()->get_type_name() == "int");
+
+    // Check return type annotation
+    REQUIRE(def->get_return_type() != nullptr);
+    CHECK(def->get_return_type()->get_type_name() == "int");
+
     auto *body = dynamic_cast<const PrintNode *>(&def->get_body());
     REQUIRE(body != nullptr);
+  }
+
+  TEST_CASE("parse define function zero params") {
+    auto ast = parse_string("(define (f) : unit 42)");
+    auto *program = dynamic_cast<ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineFnNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "f");
+    CHECK(def->get_arguments().size() == 0);
+
+    REQUIRE(def->get_return_type() != nullptr);
+    CHECK(def->get_return_type()->get_type_name() == "unit");
+
+    auto *body = dynamic_cast<const IntLiteral *>(&def->get_body());
+    REQUIRE(body != nullptr);
+    CHECK(body->get_value() == 42);
+  }
+
+  TEST_CASE("parse define function with different type names") {
+    auto ast = parse_string(
+        "(define (greet (name : string) (loud : bool)) : string (print name))");
+    auto *program = dynamic_cast<ProgramNode *>(ast.get());
+    REQUIRE(program != nullptr);
+    REQUIRE(program->get_program().size() == 1);
+
+    auto *def = dynamic_cast<DefineFnNode *>(program->get_program()[0].get());
+    REQUIRE(def != nullptr);
+    CHECK(def->get_name().get_name() == "greet");
+    REQUIRE(def->get_arguments().size() == 2);
+
+    CHECK(def->get_arguments()[0]->get_name() == "name");
+    CHECK(def->get_arguments()[0]->get_type()->get_type_name() == "string");
+
+    CHECK(def->get_arguments()[1]->get_name() == "loud");
+    CHECK(def->get_arguments()[1]->get_type()->get_type_name() == "bool");
+
+    REQUIRE(def->get_return_type() != nullptr);
+    CHECK(def->get_return_type()->get_type_name() == "string");
+  }
+
+  TEST_CASE("parse define function missing param type throws") {
+    // Bare identifier without (name : type) should fail
+    CHECK_THROWS_AS(parse_string("(define (f x) : int 42)"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("parse define function missing return type throws") {
+    // No : type after param list closing paren
+    CHECK_THROWS_AS(parse_string("(define (f (x : int)) 42)"),
+                    core::CompilerException);
   }
 
   // --- Function calls -------------------------------------------------------
