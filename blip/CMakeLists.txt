@@ -23,7 +23,10 @@ add_library(blip-lib STATIC
   src/blip.cpp
   src/blip_tokens.cpp
   src/lexer.cpp
-  src/parser.cpp)
+  src/parser.cpp
+  src/value.cpp
+  src/environment.cpp
+  src/evaluator.cpp)
 
 set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
 
@@ -44,7 +47,9 @@ add_executable(blip-test
   test/src/token_test.cpp
   test/src/lexer_test.cpp
   test/src/parser_test.cpp
-  test/src/ast_printer_test.cpp)
+  test/src/ast_printer_test.cpp
+  test/src/environment_test.cpp
+  test/src/evaluator_test.cpp)
 
 target_compile_options(blip-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -59,5 +64,8 @@ add_test(NAME blip.token COMMAND blip-test -ts=blip.token)
 add_test(NAME blip.lexer COMMAND blip-test -ts=blip.lexer)
 add_test(NAME blip.parser COMMAND blip-test -ts=blip.parser)
 add_test(NAME blip.ast_printer COMMAND blip-test -ts=blip.ast_printer)
+add_test(NAME blip.environment COMMAND blip-test -ts=blip.environment)
+add_test(NAME blip.evaluator COMMAND blip-test -ts=blip.evaluator)
+add_test(NAME blip.builtins COMMAND blip-test -ts=blip.builtins)
 
 #****************************************************************************
