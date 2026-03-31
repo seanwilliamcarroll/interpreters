@@ -12,10 +12,31 @@
 #include <environment.hpp>
 #include <exceptions.hpp>
 #include <memory>
+#include <stdexcept>
 #include <variant>
 
 //****************************************************************************
 namespace blip {
+namespace {
+//****************************************************************************
+
+double as_number(const Value &v) {
+  if (std::holds_alternative<int>(v)) {
+    return std::get<int>(v);
+  }
+  if (std::holds_alternative<double>(v)) {
+    return std::get<double>(v);
+  }
+  throw std::runtime_error("Expected numeric value, got: " +
+                           value_to_string(v));
+}
+
+bool both_int(const Value &a, const Value &b) {
+  return std::holds_alternative<int>(a) && std::holds_alternative<int>(b);
+}
+
+//****************************************************************************
+} // namespace
 //****************************************************************************
 
 Environment::Environment(std::shared_ptr<Environment> parent)
@@ -65,6 +86,17 @@ void Environment::set(const std::string &name, Value value) {
 
 std::shared_ptr<Environment> default_global_environment() {
   auto env = std::make_shared<Environment>();
+
+  env->define("+",
+              BuiltInFunction{
+                  .m_name = "+",
+                  .m_expected_arguments = 2,
+                  .m_native_function = [](std::vector<Value> args) -> Value {
+                    if (both_int(args[0], args[1])) {
+                      return std::get<int>(args[0]) + std::get<int>(args[1]);
+                    }
+                    return as_number(args[0]) + as_number(args[1]);
+                  }});
 
   return env;
 }
