@@ -37,6 +37,7 @@ public:
   void visit(const Identifier &) override;
 
   // --- Structure ---
+  void visit(const TypeNode &) override;
   void visit(const ProgramNode &) override;
   void visit(const CallNode &) override;
 

@@ -77,20 +77,37 @@ public:
   void accept(AstVisitor &v) const override { v.visit(*this); }
 };
 
+// --- Interior nodes -------------------------------------------------------
+
+class TypeNode : public AstNode {
+public:
+  TypeNode(const SourceLocation &location, std::string type_name)
+      : AstNode(location), m_type_name(std::move(type_name)) {}
+
+  const std::string &get_type_name() const { return m_type_name; }
+
+  void accept(AstVisitor &v) const override { v.visit(*this); }
+
+private:
+  const std::string m_type_name;
+};
+
 class Identifier : public AstNode {
 public:
-  Identifier(const SourceLocation &location, std::string name)
-      : AstNode(location), m_name(std::move(name)) {}
+  Identifier(const SourceLocation &location, std::string name,
+             std::unique_ptr<TypeNode> type = nullptr)
+      : AstNode(location), m_name(std::move(name)), m_type(std::move(type)) {}
 
   const std::string &get_name() const { return m_name; }
+
+  const TypeNode *get_type() const { return m_type.get(); }
 
   void accept(AstVisitor &v) const override { v.visit(*this); }
 
 private:
   const std::string m_name;
+  const std::unique_ptr<TypeNode> m_type;
 };
-
-// --- Interior nodes -------------------------------------------------------
 
 class ProgramNode : public AstNode {
 public:
@@ -217,26 +234,33 @@ class DefineVarNode : public AstNode {
 public:
   DefineVarNode(const SourceLocation &location,
                 std::unique_ptr<Identifier> name,
-                std::unique_ptr<AstNode> value)
-      : AstNode(location), m_name(std::move(name)), m_value(std::move(value)) {}
+                std::unique_ptr<AstNode> value,
+                std::unique_ptr<TypeNode> type = nullptr)
+      : AstNode(location), m_name(std::move(name)), m_value(std::move(value)),
+        m_type(std::move(type)) {}
 
   const Identifier &get_name() const { return *m_name; }
   const AstNode &get_value() const { return *m_value; }
+
+  const TypeNode *get_type() const { return m_type.get(); }
 
   void accept(AstVisitor &v) const override { v.visit(*this); }
 
 private:
   const std::unique_ptr<Identifier> m_name;
   const std::unique_ptr<AstNode> m_value;
+  const std::unique_ptr<TypeNode> m_type;
 };
 
 class DefineFnNode : public AstNode {
 public:
   DefineFnNode(const SourceLocation &location, std::unique_ptr<Identifier> name,
                std::vector<std::unique_ptr<Identifier>> arguments,
-               std::unique_ptr<AstNode> body)
+               std::unique_ptr<AstNode> body,
+               std::unique_ptr<TypeNode> return_type = nullptr)
       : AstNode(location), m_name(std::move(name)),
-        m_arguments(std::move(arguments)), m_body(std::move(body)) {}
+        m_arguments(std::move(arguments)), m_body(std::move(body)),
+        m_return_type(std::move(return_type)) {}
 
   const Identifier &get_name() const { return *m_name; }
 
@@ -246,12 +270,15 @@ public:
 
   const AstNode &get_body() const { return *m_body; }
 
+  const TypeNode *get_return_type() const { return m_return_type.get(); }
+
   void accept(AstVisitor &v) const override { v.visit(*this); }
 
 private:
   const std::unique_ptr<Identifier> m_name;
   const std::vector<std::unique_ptr<Identifier>> m_arguments;
   const std::unique_ptr<AstNode> m_body;
+  const std::unique_ptr<TypeNode> m_return_type;
 };
 
 //****************************************************************************

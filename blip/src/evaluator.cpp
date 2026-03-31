@@ -57,6 +57,8 @@ void Evaluator::visit(const Identifier &node) {
 
 // --- Structure -------------------------------------------------------------
 
+void Evaluator::visit(const TypeNode &node) { (void)node; }
+
 void Evaluator::visit(const ProgramNode &node) {
   for (const auto &expression : node.get_program()) {
     expression->accept(*this);

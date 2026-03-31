@@ -45,6 +45,8 @@ public:
 
   void visit(const Identifier &node) override { m_out << node.get_name(); }
 
+  void visit(const TypeNode &) override {}
+
   void visit(const ProgramNode &node) override {
     for (const auto &expression : node.get_program()) {
       expression->accept(*this);
