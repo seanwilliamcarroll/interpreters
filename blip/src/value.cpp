@@ -27,6 +27,8 @@ std::string value_to_string(const Value &value) {
           return v;
         } else if constexpr (std::is_same_v<T, Unit>) {
           return "<unit>";
+        } else if constexpr (std::is_same_v<T, Function>) {
+          return "<function " + v.m_name->get_name() + ">";
         }
       },
       value);
