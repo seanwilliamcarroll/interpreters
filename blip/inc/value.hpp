@@ -28,7 +28,7 @@ class Environment;
 struct Unit {};
 
 struct Function {
-  const Identifier *m_name;
+  std::string m_name;
   std::vector<const Identifier *> m_arguments;
   std::shared_ptr<Environment> m_environment;
   const AstNode *m_body;
