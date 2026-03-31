@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include "environment.hpp"
 #include <iosfwd>
 #include <memory>
 
@@ -29,6 +30,7 @@ public:
 
 private:
   std::unique_ptr<Parser> m_parser;
+  std::shared_ptr<Environment> m_top_env;
 };
 
 //****************************************************************************
