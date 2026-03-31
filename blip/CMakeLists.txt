@@ -27,7 +27,8 @@ add_library(blip-lib STATIC
   src/value.cpp
   src/environment.cpp
   src/evaluator.cpp
-  src/type.cpp)
+  src/type.cpp
+  src/type_checker.cpp)
 
 set_target_properties(blip-lib PROPERTIES OUTPUT_NAME blip)
 

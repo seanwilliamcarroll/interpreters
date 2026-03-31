@@ -27,7 +27,7 @@ namespace blip {
 
 Blip::Blip(std::istream &in_stream, const char *hint)
     : m_parser(std::make_unique<Parser>(make_lexer(in_stream, hint))),
-      m_top_env(default_global_environment()) {}
+      m_top_env(default_value_environment()) {}
 
 void Blip::rep() {
   m_parser->reset();

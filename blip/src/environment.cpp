@@ -50,7 +50,7 @@ bool is_numeric(const Value &value) {
 } // namespace
 //****************************************************************************
 
-std::shared_ptr<ValueEnvironment> default_global_environment() {
+std::shared_ptr<ValueEnvironment> default_value_environment() {
   auto env = std::make_shared<ValueEnvironment>();
 
   // Expect arity and typing to be handled earlier than here
@@ -151,6 +151,21 @@ std::shared_ptr<ValueEnvironment> default_global_environment() {
                                           value_to_string(args[0]) + " and " +
                                           value_to_string(args[1]));
                }});
+
+  return env;
+}
+
+std::shared_ptr<TypeEnvironment> default_type_environment() {
+  auto env = std::make_shared<TypeEnvironment>();
+
+  // Built-in functions: all typed as opaque Fn for now
+  env->define("+", Type::Fn);
+  env->define("-", Type::Fn);
+  env->define("*", Type::Fn);
+  env->define("/", Type::Fn);
+  env->define(">", Type::Fn);
+  env->define("<", Type::Fn);
+  env->define("=", Type::Fn);
 
   return env;
 }

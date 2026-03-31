@@ -82,7 +82,9 @@ public:
       : Environment<Type>(std::move(parent)) {}
 };
 
-std::shared_ptr<ValueEnvironment> default_global_environment();
+std::shared_ptr<ValueEnvironment> default_value_environment();
+
+std::shared_ptr<TypeEnvironment> default_type_environment();
 
 //****************************************************************************
 } // namespace blip

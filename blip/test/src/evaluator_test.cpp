@@ -417,7 +417,7 @@ TEST_SUITE("blip.builtins") {
   // Helper that uses the default global environment (with built-ins)
   static Value eval_with_builtins(const std::string &source,
                                   std::ostream &out = std::cout) {
-    auto env = default_global_environment();
+    auto env = default_value_environment();
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
     Parser parser(std::move(lexer));
@@ -594,7 +594,7 @@ TEST_SUITE("blip.builtins") {
 
   TEST_CASE("recursive countdown with arithmetic") {
     std::ostringstream out;
-    auto env = default_global_environment();
+    auto env = default_value_environment();
     std::istringstream input("(begin"
                              "  (define (countdown (n : int)) : unit"
                              "    (if (> n 0)"
