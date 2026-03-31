@@ -16,6 +16,7 @@
 #include <evaluator.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
+#include <value.hpp>
 
 #include <doctest/doctest.h>
 #include <iostream>
@@ -277,6 +278,134 @@ TEST_SUITE("blip.evaluator") {
     auto result = eval("(begin (define x 42) (print x) x)", env, out);
     CHECK(out.str() == "42\n");
     CHECK(std::get<int>(result) == 42);
+  }
+
+  // --- define (function) ---------------------------------------------------
+
+  TEST_CASE("define function creates binding") {
+    auto env = std::make_shared<Environment>();
+    eval("(define (f x) x)", env);
+    CHECK(std::holds_alternative<Function>(env->lookup("f")));
+  }
+
+  TEST_CASE("define function returns unit") {
+    auto result = eval("(define (f x) x)");
+    CHECK(std::holds_alternative<Unit>(result));
+  }
+
+  // --- Function calls ------------------------------------------------------
+
+  TEST_CASE("call zero-arg function") {
+    auto result = eval("(begin (define (f) 42) (f))");
+    CHECK(std::get<int>(result) == 42);
+  }
+
+  TEST_CASE("call function with one arg") {
+    auto result = eval("(begin (define (identity x) x) (identity 7))");
+    CHECK(std::get<int>(result) == 7);
+  }
+
+  TEST_CASE("call function with multiple args") {
+    // Without builtins we can't do arithmetic, but we can return one arg
+    auto result = eval("(begin (define (second a b) b) (second 1 2))");
+    CHECK(std::get<int>(result) == 2);
+  }
+
+  TEST_CASE("function body sees its own parameters") {
+    std::ostringstream out;
+    eval("(begin (define (greet name) (print name)) (greet \"world\"))",
+         nullptr, out);
+    CHECK(out.str() == "world\n");
+  }
+
+  TEST_CASE("wrong arity throws") {
+    CHECK_THROWS(eval("(begin (define (f x) x) (f))"));
+    CHECK_THROWS(eval("(begin (define (f x) x) (f 1 2))"));
+  }
+
+  TEST_CASE("calling non-function throws") {
+    auto env = std::make_shared<Environment>();
+    env->define("x", 42);
+    CHECK_THROWS(eval("(x)", env));
+  }
+
+  // --- Closures ------------------------------------------------------------
+
+  TEST_CASE("function captures defining environment") {
+    auto result = eval("(begin"
+                       "  (define x 10)"
+                       "  (define (get-x) x)"
+                       "  (get-x))");
+    CHECK(std::get<int>(result) == 10);
+  }
+
+  TEST_CASE("closure sees mutations to captured environment") {
+    auto result = eval("(begin"
+                       "  (define x 1)"
+                       "  (define (get-x) x)"
+                       "  (set x 99)"
+                       "  (get-x))");
+    CHECK(std::get<int>(result) == 99);
+  }
+
+  TEST_CASE("closure captures enclosing scope not caller scope") {
+    // f returns a function that reads y from f's scope, not the caller's
+    auto result = eval("(begin"
+                       "  (define y 0)"
+                       "  (define (f)"
+                       "    (begin"
+                       "      (define y 42)"
+                       "      (define (inner) y)"
+                       "      inner))"
+                       "  (define g (f))"
+                       "  (g))");
+    CHECK(std::get<int>(result) == 42);
+  }
+
+  TEST_CASE("separate calls get independent local scopes") {
+    std::ostringstream out;
+    eval("(begin"
+         "  (define (make-val v) (define (get) v) get)"
+         "  (define get-a (make-val 1))"
+         "  (define get-b (make-val 2))"
+         "  (print (get-a))"
+         "  (print (get-b)))",
+         nullptr, out);
+    CHECK(out.str() == "1\n2\n");
+  }
+
+  TEST_CASE("recursive function") {
+    // Recursion without arithmetic: count down bools
+    // f checks if flag is true, if so sets it false and calls itself
+    std::ostringstream out;
+    eval("(begin"
+         "  (define flag true)"
+         "  (define (f)"
+         "    (if flag"
+         "      (begin"
+         "        (print 1)"
+         "        (set flag false)"
+         "        (f))))"
+         "  (f))",
+         nullptr, out);
+    CHECK(out.str() == "1\n");
+  }
+
+  TEST_CASE("function as argument") {
+    auto result = eval("(begin"
+                       "  (define (apply-fn f) (f))"
+                       "  (define (give-42) 42)"
+                       "  (apply-fn give-42))");
+    CHECK(std::get<int>(result) == 42);
+  }
+
+  TEST_CASE("function stored in variable via set") {
+    auto result = eval("(begin"
+                       "  (define holder 0)"
+                       "  (define (give-7) 7)"
+                       "  (set holder give-7)"
+                       "  (holder))");
+    CHECK(std::get<int>(result) == 7);
   }
 }
 
