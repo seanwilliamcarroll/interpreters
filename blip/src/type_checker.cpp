@@ -92,7 +92,7 @@ void TypeChecker::visit(const CallNode &node) {
     if (m_result != function_type.m_parameter_types[index]) {
       throw core::CompilerException(
           "TypeChecker",
-          "Function of type: " + type_to_string(m_result) + ": Argument " +
+          "Function of type: " + type_to_string(function_type) + ": Argument " +
               std::to_string(index) + " expects type " +
               type_to_string(function_type.m_parameter_types[index]) +
               " but was provided: " + type_to_string(m_result),
