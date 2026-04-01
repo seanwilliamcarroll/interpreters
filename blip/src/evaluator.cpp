@@ -23,9 +23,7 @@ namespace blip {
 //****************************************************************************
 
 Evaluator::Evaluator(std::shared_ptr<ValueEnvironment> env, std::ostream &out)
-    : m_result(Unit{}), m_env(std::move(env)), m_out(out) {
-  (void)m_out;
-}
+    : m_result(Unit{}), m_env(std::move(env)), m_out(out) {}
 
 Value Evaluator::evaluate(const AstNode &node) {
   node.accept(*this);
@@ -47,12 +45,9 @@ void Evaluator::visit(const StringLiteral &node) {
 void Evaluator::visit(const BoolLiteral &node) { m_result = node.get_value(); }
 
 void Evaluator::visit(const Identifier &node) {
-  try {
-    m_result = m_env->lookup(node.get_name());
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("RuntimeError", error.what(),
-                                  node.get_location());
-  }
+  m_result = core::promote_to_compiler_exception(
+      "RuntimeError", node.get_location(),
+      [&] { return m_env->lookup(node.get_name()); });
 }
 
 // --- Structure -------------------------------------------------------------
@@ -63,22 +58,32 @@ void Evaluator::visit(const ProgramNode &node) {
   }
 }
 
-void Evaluator::evaluate_function(const CallNode &node, Function function) {
-  if (node.get_arguments().size() != function.m_arguments.size()) {
+void check_arity(const CallNode &node, size_t expected_argument_count,
+                 const std::string &function_name) {
+  if (expected_argument_count != node.get_arguments().size()) {
     throw core::CompilerException(
         "RuntimeError",
-        "Function: " + value_to_string(function) + " expects " +
-            std::to_string(function.m_arguments.size()) +
+        "Function: " + function_name + " expects " +
+            std::to_string(expected_argument_count) +
             " arguments, but provided " +
             std::to_string(node.get_arguments().size()),
         node.get_location());
   }
+}
 
+std::vector<Value> Evaluator::evaluate_arguments(const CallNode &node) {
   std::vector<Value> evaluated_arguments;
   for (const auto &argument : node.get_arguments()) {
     argument->accept(*this);
     evaluated_arguments.push_back(m_result);
   }
+  return evaluated_arguments;
+}
+
+void Evaluator::evaluate_function(const CallNode &node, Function function) {
+  check_arity(node, function.m_arguments.size(), value_to_string(function));
+
+  std::vector<Value> evaluated_arguments = evaluate_arguments(node);
 
   auto function_env =
       std::make_shared<ValueEnvironment>(function.m_environment);
@@ -97,23 +102,9 @@ void Evaluator::evaluate_function(const CallNode &node, Function function) {
 
 void Evaluator::evaluate_builtinfunction(const CallNode &node,
                                          BuiltInFunction function) {
+  check_arity(node, function.m_expected_arguments, value_to_string(function));
 
-  if (function.m_expected_arguments != node.get_arguments().size()) {
-    throw core::CompilerException(
-        "RuntimeError",
-        "BuiltInFunction: " + value_to_string(function) + " expects " +
-            std::to_string(function.m_expected_arguments) +
-            " arguments, but provided " +
-            std::to_string(node.get_arguments().size()),
-
-        node.get_location());
-  }
-
-  std::vector<Value> evaluated_arguments;
-  for (const auto &argument : node.get_arguments()) {
-    argument->accept(*this);
-    evaluated_arguments.push_back(m_result);
-  }
+  std::vector<Value> evaluated_arguments = evaluate_arguments(node);
 
   m_result = function.m_native_function(std::move(evaluated_arguments));
 }
@@ -154,8 +145,6 @@ void Evaluator::visit(const IfNode &node) {
 }
 
 void Evaluator::visit(const WhileNode &node) {
-  // TODO: loop while condition is truthy, evaluate body each iteration
-  // result is Unit
   while (true) {
     node.get_condition().accept(*this);
     if (!std::holds_alternative<bool>(m_result)) {
@@ -175,12 +164,10 @@ void Evaluator::visit(const WhileNode &node) {
 
 void Evaluator::visit(const SetNode &node) {
   node.get_value().accept(*this);
-  try {
+  core::promote_to_compiler_exception("RuntimeError", node.get_location(), [&] {
     m_env->set(node.get_name().get_name(), m_result);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("RuntimeError", error.what(),
-                                  node.get_location());
-  }
+  });
+
   m_result = Unit{};
 }
 
@@ -198,12 +185,9 @@ void Evaluator::visit(const PrintNode &node) {
 
 void Evaluator::visit(const DefineVarNode &node) {
   node.get_value().accept(*this);
-  try {
+  core::promote_to_compiler_exception("RuntimeError", node.get_location(), [&] {
     m_env->define(node.get_name().get_name(), m_result);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("RuntimeError", error.what(),
-                                  node.get_location());
-  }
+  });
   m_result = Unit{};
 }
 

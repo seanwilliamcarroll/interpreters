@@ -44,7 +44,6 @@ enum class TokenType : uint8_t {
 
 // Type aliases
 using Token = core::Token<TokenType>;
-using TokenOf = core::TokenOf<TokenType, std::string>; // generic, rarely used
 using TokenString = core::TokenOf<TokenType, std::string>;
 using TokenInt = core::TokenOf<TokenType, int>;
 using TokenDouble = core::TokenOf<TokenType, double>;

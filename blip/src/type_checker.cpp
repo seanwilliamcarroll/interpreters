@@ -41,12 +41,9 @@ void TypeChecker::visit(const StringLiteral &) { m_result = BaseType::String; }
 void TypeChecker::visit(const BoolLiteral &) { m_result = BaseType::Bool; }
 
 void TypeChecker::visit(const Identifier &node) {
-  try {
-    m_result = m_env->lookup(node.get_name());
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("TypeChecker", error.what(),
-                                  node.get_location());
-  }
+  m_result = core::promote_to_compiler_exception(
+      "TypeChecker", node.get_location(),
+      [&] { return m_env->lookup(node.get_name()); });
 }
 
 // --- Structure -------------------------------------------------------------
@@ -168,12 +165,9 @@ void TypeChecker::visit(const WhileNode &node) {
 }
 
 void TypeChecker::visit(const SetNode &node) {
-  try {
-    m_result = m_env->lookup(node.get_name().get_name());
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("TypeChecker", error.what(),
-                                  node.get_location());
-  }
+  m_result = core::promote_to_compiler_exception(
+      "TypeChecker", node.get_location(),
+      [&] { return m_env->lookup(node.get_name().get_name()); });
   auto defined_type = m_result;
   node.get_value().accept(*this);
 

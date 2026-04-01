@@ -433,19 +433,16 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<int>(result) == 3);
   }
 
-  TEST_CASE("add two doubles") {
-    auto result = eval_with_builtins("(+ 1.5 2.5)");
-    CHECK(std::get<double>(result) == doctest::Approx(4.0));
+  TEST_CASE("add two doubles throws") {
+    CHECK_THROWS(eval_with_builtins("(+ 1.5 2.5)"));
   }
 
-  TEST_CASE("add int and double promotes to double") {
-    auto result = eval_with_builtins("(+ 1 2.5)");
-    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  TEST_CASE("add int and double throws") {
+    CHECK_THROWS(eval_with_builtins("(+ 1 2.5)"));
   }
 
-  TEST_CASE("add double and int promotes to double") {
-    auto result = eval_with_builtins("(+ 2.5 1)");
-    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  TEST_CASE("add double and int throws") {
+    CHECK_THROWS(eval_with_builtins("(+ 2.5 1)"));
   }
 
   TEST_CASE("add non-numeric throws") {
@@ -465,9 +462,8 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<int>(result) == 7);
   }
 
-  TEST_CASE("subtract int and double promotes to double") {
-    auto result = eval_with_builtins("(- 10 2.5)");
-    CHECK(std::get<double>(result) == doctest::Approx(7.5));
+  TEST_CASE("subtract int and double throws") {
+    CHECK_THROWS(eval_with_builtins("(- 10 2.5)"));
   }
 
   TEST_CASE("subtract non-numeric throws") {
@@ -481,9 +477,8 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<int>(result) == 12);
   }
 
-  TEST_CASE("multiply int and double promotes to double") {
-    auto result = eval_with_builtins("(* 3 1.5)");
-    CHECK(std::get<double>(result) == doctest::Approx(4.5));
+  TEST_CASE("multiply int and double throws") {
+    CHECK_THROWS(eval_with_builtins("(* 3 1.5)"));
   }
 
   TEST_CASE("multiply non-numeric throws") {
@@ -497,9 +492,8 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<int>(result) == 3);
   }
 
-  TEST_CASE("divide int and double promotes to double") {
-    auto result = eval_with_builtins("(/ 7 2.0)");
-    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  TEST_CASE("divide int and double throws") {
+    CHECK_THROWS(eval_with_builtins("(/ 7 2.0)"));
   }
 
   TEST_CASE("divide by zero int throws") {
@@ -518,9 +512,9 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<bool>(eval_with_builtins("(< 1 1)")) == false);
   }
 
-  TEST_CASE("less than with double promotion") {
-    CHECK(std::get<bool>(eval_with_builtins("(< 1 1.5)")) == true);
-    CHECK(std::get<bool>(eval_with_builtins("(< 1.5 1)")) == false);
+  TEST_CASE("less than with double throws") {
+    CHECK_THROWS(eval_with_builtins("(< 1 1.5)"));
+    CHECK_THROWS(eval_with_builtins("(< 1.5 1)"));
   }
 
   TEST_CASE("less than non-numeric throws") {
@@ -535,8 +529,8 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<bool>(eval_with_builtins("(> 1 1)")) == false);
   }
 
-  TEST_CASE("greater than with double promotion") {
-    CHECK(std::get<bool>(eval_with_builtins("(> 1.5 1)")) == true);
+  TEST_CASE("greater than with double throws") {
+    CHECK_THROWS(eval_with_builtins("(> 1.5 1)"));
   }
 
   TEST_CASE("greater than non-numeric throws") {
@@ -550,24 +544,20 @@ TEST_SUITE("blip.builtins") {
     CHECK(std::get<bool>(eval_with_builtins("(= 1 2)")) == false);
   }
 
-  TEST_CASE("equal doubles") {
-    CHECK(std::get<bool>(eval_with_builtins("(= 1.5 1.5)")) == true);
-    CHECK(std::get<bool>(eval_with_builtins("(= 1.5 2.5)")) == false);
+  TEST_CASE("equal doubles throws") {
+    CHECK_THROWS(eval_with_builtins("(= 1.5 1.5)"));
   }
 
-  TEST_CASE("equal with mixed numeric promotion") {
-    CHECK(std::get<bool>(eval_with_builtins("(= 1 1.0)")) == true);
-    CHECK(std::get<bool>(eval_with_builtins("(= 1 1.5)")) == false);
+  TEST_CASE("equal mixed numeric throws") {
+    CHECK_THROWS(eval_with_builtins("(= 1 1.0)"));
   }
 
-  TEST_CASE("equal bools") {
-    CHECK(std::get<bool>(eval_with_builtins("(= true true)")) == true);
-    CHECK(std::get<bool>(eval_with_builtins("(= true false)")) == false);
+  TEST_CASE("equal bools throws") {
+    CHECK_THROWS(eval_with_builtins("(= true true)"));
   }
 
-  TEST_CASE("equal strings") {
-    CHECK(std::get<bool>(eval_with_builtins("(= \"a\" \"a\")")) == true);
-    CHECK(std::get<bool>(eval_with_builtins("(= \"a\" \"b\")")) == false);
+  TEST_CASE("equal strings throws") {
+    CHECK_THROWS(eval_with_builtins("(= \"a\" \"a\")"));
   }
 
   TEST_CASE("equal different types throws") {
@@ -580,6 +570,78 @@ TEST_SUITE("blip.builtins") {
   TEST_CASE("builtin wrong arity throws") {
     CHECK_THROWS(eval_with_builtins("(+ 1)"));
     CHECK_THROWS(eval_with_builtins("(+ 1 2 3)"));
+  }
+
+  // --- Double builtins (+. -. *. /. >. <. =.) ------------------------------
+
+  TEST_CASE("fadd two doubles") {
+    auto result = eval_with_builtins("(fadd 1.5 2.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(4.0));
+  }
+
+  TEST_CASE("fadd with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(fadd 1 2.5)"));
+    CHECK_THROWS(eval_with_builtins("(fadd 1.5 1)"));
+  }
+
+  TEST_CASE("fsub two doubles") {
+    auto result = eval_with_builtins("(fsub 10.0 2.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(7.5));
+  }
+
+  TEST_CASE("fsub with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(fsub 10 2.5)"));
+  }
+
+  TEST_CASE("fmul two doubles") {
+    auto result = eval_with_builtins("(fmul 3.0 1.5)");
+    CHECK(std::get<double>(result) == doctest::Approx(4.5));
+  }
+
+  TEST_CASE("fmul with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(fmul 3 1.5)"));
+  }
+
+  TEST_CASE("fdiv two doubles") {
+    auto result = eval_with_builtins("(fdiv 7.0 2.0)");
+    CHECK(std::get<double>(result) == doctest::Approx(3.5));
+  }
+
+  TEST_CASE("fdiv by zero throws") {
+    CHECK_THROWS(eval_with_builtins("(fdiv 1.0 0.0)"));
+  }
+
+  TEST_CASE("fdiv with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(fdiv 7 2.0)"));
+  }
+
+  TEST_CASE("greater than doubles") {
+    CHECK(std::get<bool>(eval_with_builtins("(>. 2.0 1.0)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(>. 1.0 2.0)")) == false);
+    CHECK(std::get<bool>(eval_with_builtins("(>. 1.0 1.0)")) == false);
+  }
+
+  TEST_CASE("greater than doubles with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(>. 1 2.0)"));
+  }
+
+  TEST_CASE("less than doubles") {
+    CHECK(std::get<bool>(eval_with_builtins("(<. 1.0 2.0)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(<. 2.0 1.0)")) == false);
+    CHECK(std::get<bool>(eval_with_builtins("(<. 1.0 1.0)")) == false);
+  }
+
+  TEST_CASE("less than doubles with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(<. 1 2.0)"));
+  }
+
+  TEST_CASE("equal doubles") {
+    CHECK(std::get<bool>(eval_with_builtins("(=. 1.5 1.5)")) == true);
+    CHECK(std::get<bool>(eval_with_builtins("(=. 1.5 2.5)")) == false);
+  }
+
+  TEST_CASE("equal doubles with non-double throws") {
+    CHECK_THROWS(eval_with_builtins("(=. 1 1.5)"));
   }
 
   // --- Integration with user-defined functions -----------------------------

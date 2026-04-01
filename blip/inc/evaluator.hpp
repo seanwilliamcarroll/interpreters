@@ -55,6 +55,7 @@ public:
 private:
   void evaluate_function(const CallNode &, Function);
   void evaluate_builtinfunction(const CallNode &, BuiltInFunction);
+  std::vector<Value> evaluate_arguments(const CallNode &);
 
   Value m_result;
   std::shared_ptr<ValueEnvironment> m_env;
