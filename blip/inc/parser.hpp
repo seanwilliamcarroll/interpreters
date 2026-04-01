@@ -37,7 +37,14 @@ public:
 private:
   std::unique_ptr<AstNode> parse_expression();
   std::unique_ptr<AstNode> parse_list();
-  std::vector<std::unique_ptr<Identifier>> parse_identifier_list();
+  std::pair<std::unique_ptr<Identifier>,
+            std::vector<std::unique_ptr<Identifier>>>
+  parse_function_declaration();
+  std::unique_ptr<DefineFnNode>
+  parse_function_definition(const SourceLocation &);
+  std::unique_ptr<DefineVarNode>
+  parse_variable_definition(const SourceLocation &);
+  std::unique_ptr<BaseTypeNode> parse_type_node();
 
   const Token &peek();
 

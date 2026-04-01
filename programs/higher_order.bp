@@ -1,0 +1,11 @@
+(define (apply-twice (f : (int -> int)) (x : int)) : int
+  (f (f x)))
+
+(define (add-three (x : int)) : int
+  (+ x 3))
+
+(define (double (x : int)) : int
+  (* x 2))
+
+(print (apply-twice add-three 10))
+(print (apply-twice double 5))

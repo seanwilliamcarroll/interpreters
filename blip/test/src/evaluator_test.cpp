@@ -29,10 +29,10 @@ TEST_SUITE("blip.evaluator") {
 
   // Helper: parse and evaluate a program, return the final value
   static Value eval(const std::string &source,
-                    std::shared_ptr<Environment> env = nullptr,
+                    std::shared_ptr<ValueEnvironment> env = nullptr,
                     std::ostream &out = std::cout) {
     if (!env) {
-      env = std::make_shared<Environment>();
+      env = std::make_shared<ValueEnvironment>();
     }
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
@@ -84,7 +84,7 @@ TEST_SUITE("blip.evaluator") {
   // --- Identifiers ---------------------------------------------------------
 
   TEST_CASE("evaluate identifier") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("x", 42);
     auto result = eval("x", env);
     CHECK(std::get<int>(result) == 42);
@@ -95,13 +95,13 @@ TEST_SUITE("blip.evaluator") {
   // --- define (variable) ---------------------------------------------------
 
   TEST_CASE("define binds variable") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 10)", env);
     CHECK(std::get<int>(env->lookup("x")) == 10);
   }
 
   TEST_CASE("define evaluates value expression") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x (if true 1 2))", env);
     CHECK(std::get<int>(env->lookup("x")) == 1);
   }
@@ -114,14 +114,14 @@ TEST_SUITE("blip.evaluator") {
   // --- set -----------------------------------------------------------------
 
   TEST_CASE("set mutates existing variable") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 1)", env);
     eval("(set x 99)", env);
     CHECK(std::get<int>(env->lookup("x")) == 99);
   }
 
   TEST_CASE("set evaluates value expression") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 0)", env);
     eval("(set x (if false 1 2))", env);
     CHECK(std::get<int>(env->lookup("x")) == 2);
@@ -132,7 +132,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("set returns unit") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(define x 0)", env);
     auto result = eval("(set x 1)", env);
     CHECK(std::holds_alternative<Unit>(result));
@@ -146,7 +146,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("begin evaluates all expressions") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     eval("(begin (define x 1) (define y 2))", env);
     CHECK(std::get<int>(env->lookup("x")) == 1);
     CHECK(std::get<int>(env->lookup("y")) == 2);
@@ -202,7 +202,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("if evaluates condition") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("flag", true);
     auto result = eval("(if flag 10 20)", env);
     CHECK(std::get<int>(result) == 10);
@@ -222,7 +222,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("while loops until condition is false") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     std::ostringstream out;
     eval("(begin (define x true) (while x (begin (print 1) (set x false))))",
          env, out);
@@ -230,7 +230,7 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("while body executes multiple times") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     // Count down: define x = 3, loop printing and decrementing
     // This test depends on built-in arithmetic — skip until Step 6
     // For now, test that a false condition means zero iterations
@@ -256,13 +256,13 @@ TEST_SUITE("blip.evaluator") {
   // --- Integration: define + set + if + begin ------------------------------
 
   TEST_CASE("define and use variable in if") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     auto result = eval("(begin (define x true) (if x 10 20))", env);
     CHECK(std::get<int>(result) == 10);
   }
 
   TEST_CASE("set variable and read back") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     auto result = eval("(begin (define x 1) (set x 42) x)", env);
     CHECK(std::get<int>(result) == 42);
   }
@@ -274,7 +274,7 @@ TEST_SUITE("blip.evaluator") {
 
   TEST_CASE("print expression result then return it") {
     std::ostringstream out;
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     auto result = eval("(begin (define x 42) (print x) x)", env, out);
     CHECK(out.str() == "42\n");
     CHECK(std::get<int>(result) == 42);
@@ -283,48 +283,50 @@ TEST_SUITE("blip.evaluator") {
   // --- define (function) ---------------------------------------------------
 
   TEST_CASE("define function creates binding") {
-    auto env = std::make_shared<Environment>();
-    eval("(define (f x) x)", env);
+    auto env = std::make_shared<ValueEnvironment>();
+    eval("(define (f (x : int)) : int x)", env);
     CHECK(std::holds_alternative<Function>(env->lookup("f")));
   }
 
   TEST_CASE("define function returns unit") {
-    auto result = eval("(define (f x) x)");
+    auto result = eval("(define (f (x : int)) : int x)");
     CHECK(std::holds_alternative<Unit>(result));
   }
 
   // --- Function calls ------------------------------------------------------
 
   TEST_CASE("call zero-arg function") {
-    auto result = eval("(begin (define (f) 42) (f))");
+    auto result = eval("(begin (define (f) : int 42) (f))");
     CHECK(std::get<int>(result) == 42);
   }
 
   TEST_CASE("call function with one arg") {
-    auto result = eval("(begin (define (identity x) x) (identity 7))");
+    auto result =
+        eval("(begin (define (identity (x : int)) : int x) (identity 7))");
     CHECK(std::get<int>(result) == 7);
   }
 
   TEST_CASE("call function with multiple args") {
-    // Without builtins we can't do arithmetic, but we can return one arg
-    auto result = eval("(begin (define (second a b) b) (second 1 2))");
+    auto result = eval(
+        "(begin (define (second (a : int) (b : int)) : int b) (second 1 2))");
     CHECK(std::get<int>(result) == 2);
   }
 
   TEST_CASE("function body sees its own parameters") {
     std::ostringstream out;
-    eval("(begin (define (greet name) (print name)) (greet \"world\"))",
+    eval("(begin (define (greet (name : string)) : unit (print name)) (greet "
+         "\"world\"))",
          nullptr, out);
     CHECK(out.str() == "world\n");
   }
 
   TEST_CASE("wrong arity throws") {
-    CHECK_THROWS(eval("(begin (define (f x) x) (f))"));
-    CHECK_THROWS(eval("(begin (define (f x) x) (f 1 2))"));
+    CHECK_THROWS(eval("(begin (define (f (x : int)) : int x) (f))"));
+    CHECK_THROWS(eval("(begin (define (f (x : int)) : int x) (f 1 2))"));
   }
 
   TEST_CASE("calling non-function throws") {
-    auto env = std::make_shared<Environment>();
+    auto env = std::make_shared<ValueEnvironment>();
     env->define("x", 42);
     CHECK_THROWS(eval("(x)", env));
   }
@@ -334,7 +336,7 @@ TEST_SUITE("blip.evaluator") {
   TEST_CASE("function captures defining environment") {
     auto result = eval("(begin"
                        "  (define x 10)"
-                       "  (define (get-x) x)"
+                       "  (define (get-x) : int x)"
                        "  (get-x))");
     CHECK(std::get<int>(result) == 10);
   }
@@ -342,20 +344,19 @@ TEST_SUITE("blip.evaluator") {
   TEST_CASE("closure sees mutations to captured environment") {
     auto result = eval("(begin"
                        "  (define x 1)"
-                       "  (define (get-x) x)"
+                       "  (define (get-x) : int x)"
                        "  (set x 99)"
                        "  (get-x))");
     CHECK(std::get<int>(result) == 99);
   }
 
   TEST_CASE("closure captures enclosing scope not caller scope") {
-    // f returns a function that reads y from f's scope, not the caller's
     auto result = eval("(begin"
                        "  (define y 0)"
-                       "  (define (f)"
+                       "  (define (f) : int"
                        "    (begin"
                        "      (define y 42)"
-                       "      (define (inner) y)"
+                       "      (define (inner) : int y)"
                        "      inner))"
                        "  (define g (f))"
                        "  (g))");
@@ -365,9 +366,9 @@ TEST_SUITE("blip.evaluator") {
   TEST_CASE("separate calls get independent local scopes") {
     std::ostringstream out;
     eval("(begin"
-         "  (define (make-val v)"
+         "  (define (make-val (v : int)) : int"
          "    (begin"
-         "      (define (get) v)"
+         "      (define (get) : int v)"
          "      get))"
          "  (define get-a (make-val 1))"
          "  (define get-b (make-val 2))"
@@ -378,12 +379,10 @@ TEST_SUITE("blip.evaluator") {
   }
 
   TEST_CASE("recursive function") {
-    // Recursion without arithmetic: count down bools
-    // f checks if flag is true, if so sets it false and calls itself
     std::ostringstream out;
     eval("(begin"
          "  (define flag true)"
-         "  (define (f)"
+         "  (define (f) : unit"
          "    (if flag"
          "      (begin"
          "        (print 1)"
@@ -396,8 +395,8 @@ TEST_SUITE("blip.evaluator") {
 
   TEST_CASE("function as argument") {
     auto result = eval("(begin"
-                       "  (define (apply-fn f) (f))"
-                       "  (define (give-42) 42)"
+                       "  (define (apply-fn (f : int)) : int (f))"
+                       "  (define (give-42) : int 42)"
                        "  (apply-fn give-42))");
     CHECK(std::get<int>(result) == 42);
   }
@@ -405,7 +404,7 @@ TEST_SUITE("blip.evaluator") {
   TEST_CASE("function stored in variable via set") {
     auto result = eval("(begin"
                        "  (define holder 0)"
-                       "  (define (give-7) 7)"
+                       "  (define (give-7) : int 7)"
                        "  (set holder give-7)"
                        "  (holder))");
     CHECK(std::get<int>(result) == 7);
@@ -418,7 +417,7 @@ TEST_SUITE("blip.builtins") {
   // Helper that uses the default global environment (with built-ins)
   static Value eval_with_builtins(const std::string &source,
                                   std::ostream &out = std::cout) {
-    auto env = default_global_environment();
+    auto env = default_value_environment();
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
     Parser parser(std::move(lexer));
@@ -587,16 +586,17 @@ TEST_SUITE("blip.builtins") {
 
   TEST_CASE("builtin used inside user function") {
     auto result = eval_with_builtins("(begin"
-                                     "  (define (add-one x) (+ x 1))"
+                                     "  (define (add-one (x : int)) : int"
+                                     "    (+ x 1))"
                                      "  (add-one 5))");
     CHECK(std::get<int>(result) == 6);
   }
 
   TEST_CASE("recursive countdown with arithmetic") {
     std::ostringstream out;
-    auto env = default_global_environment();
+    auto env = default_value_environment();
     std::istringstream input("(begin"
-                             "  (define (countdown n)"
+                             "  (define (countdown (n : int)) : unit"
                              "    (if (> n 0)"
                              "      (begin"
                              "        (print n)"
@@ -612,7 +612,7 @@ TEST_SUITE("blip.builtins") {
 
   TEST_CASE("factorial") {
     auto result = eval_with_builtins("(begin"
-                                     "  (define (factorial n)"
+                                     "  (define (factorial (n : int)) : int"
                                      "    (if (= n 0)"
                                      "      1"
                                      "      (* n (factorial (- n 1)))))"

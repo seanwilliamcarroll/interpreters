@@ -25,6 +25,8 @@ enum class TokenType : uint8_t {
   EOF_TOKEN = 0,
   LEFT_PAREND,
   RIGHT_PAREND,
+  COLON,
+  RIGHT_ARROW,
   // Literals
   IDENTIFIER,
   INT_LITERAL,

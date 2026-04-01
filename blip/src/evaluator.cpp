@@ -22,7 +22,7 @@
 namespace blip {
 //****************************************************************************
 
-Evaluator::Evaluator(std::shared_ptr<Environment> env, std::ostream &out)
+Evaluator::Evaluator(std::shared_ptr<ValueEnvironment> env, std::ostream &out)
     : m_result(Unit{}), m_env(std::move(env)), m_out(out) {
   (void)m_out;
 }
@@ -80,7 +80,8 @@ void Evaluator::evaluate_function(const CallNode &node, Function function) {
     evaluated_arguments.push_back(m_result);
   }
 
-  auto function_env = std::make_shared<Environment>(function.m_environment);
+  auto function_env =
+      std::make_shared<ValueEnvironment>(function.m_environment);
 
   for (size_t index = 0; index < function.m_arguments.size(); ++index) {
     function_env->define(function.m_arguments[index]->get_name(),

@@ -21,6 +21,8 @@ class DoubleLiteral;
 class StringLiteral;
 class BoolLiteral;
 class Identifier;
+class TypeNode;
+class FunctionTypeNode;
 class ProgramNode;
 class CallNode;
 class IfNode;
@@ -43,6 +45,8 @@ public:
   virtual void visit(const Identifier &) = 0;
 
   // Structure
+  virtual void visit(const TypeNode &) = 0;
+  virtual void visit(const FunctionTypeNode &) = 0;
   virtual void visit(const ProgramNode &) = 0;
   virtual void visit(const CallNode &) = 0;
 

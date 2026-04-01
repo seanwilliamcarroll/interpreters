@@ -4,30 +4,29 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Tree-walking evaluator for blip AST
+//*  Purpose : Type checker visitor for blip AST
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <iosfwd>
 #include <memory>
 
 #include <ast.hpp>
 #include <ast_visitor.hpp>
 #include <environment.hpp>
-#include <value.hpp>
+#include <type.hpp>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
-class Evaluator : public AstVisitor {
+class TypeChecker : public AstVisitor {
 public:
-  explicit Evaluator(std::shared_ptr<ValueEnvironment>, std::ostream &);
+  explicit TypeChecker(std::shared_ptr<TypeEnvironment> env);
 
-  Value evaluate(const AstNode &);
+  Type check(const AstNode &node);
 
   // --- Literals ---
   void visit(const IntLiteral &) override;
@@ -37,9 +36,8 @@ public:
   void visit(const Identifier &) override;
 
   // --- Structure ---
-  // Evaluator does not care about types
-  void visit(const TypeNode &) override {}
-  void visit(const FunctionTypeNode &) override {}
+  void visit(const TypeNode &) override;
+  void visit(const FunctionTypeNode &) override;
   void visit(const ProgramNode &) override;
   void visit(const CallNode &) override;
 
@@ -53,12 +51,8 @@ public:
   void visit(const DefineFnNode &) override;
 
 private:
-  void evaluate_function(const CallNode &, Function);
-  void evaluate_builtinfunction(const CallNode &, BuiltInFunction);
-
-  Value m_result;
-  std::shared_ptr<ValueEnvironment> m_env;
-  std::ostream &m_out;
+  Type m_result;
+  std::shared_ptr<TypeEnvironment> m_env;
 };
 
 //****************************************************************************

@@ -25,6 +25,8 @@ std::string token_type_to_string(TokenType type) {
     return "LEFT_PAREND";
   case TokenType::RIGHT_PAREND:
     return "RIGHT_PAREND";
+  case TokenType::COLON:
+    return "COLON";
   case TokenType::IDENTIFIER:
     return "IDENTIFIER";
   case TokenType::INT_LITERAL:
@@ -47,6 +49,8 @@ std::string token_type_to_string(TokenType type) {
     return "PRINT";
   case TokenType::DEFINE:
     return "DEFINE";
+  case TokenType::RIGHT_ARROW:
+    return "RIGHT_ARROW";
   }
   return "UNKNOWN(" + std::to_string(static_cast<unsigned int>(type)) + ")";
 }

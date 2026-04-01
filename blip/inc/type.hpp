@@ -4,7 +4,7 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Runtime value type for blip evaluation
+//*  Purpose : Type representation for the blip type checker
 //*
 //*
 //****************************************************************************
@@ -12,7 +12,6 @@
 //****************************************************************************
 
 #include "ast.hpp"
-#include <functional>
 #include <memory>
 #include <string>
 #include <variant>
@@ -22,30 +21,33 @@
 namespace blip {
 //****************************************************************************
 
-// Forward declaration to break dependency
-class ValueEnvironment;
+struct FunctionType;
 
-struct Unit {};
-
-struct Function {
-  std::string m_name;
-  std::vector<const Identifier *> m_arguments;
-  std::shared_ptr<ValueEnvironment> m_environment;
-  const AstNode *m_body;
+enum class BaseType : uint8_t {
+  Int,
+  Double,
+  Bool,
+  String,
+  Unit,
 };
 
-struct BuiltInFunction;
+using Type = std::variant<BaseType, std::shared_ptr<FunctionType>>;
 
-using Value = std::variant<int, double, bool, std::string, Unit, Function,
-                           BuiltInFunction>;
-
-struct BuiltInFunction {
-  std::string m_name;
-  size_t m_expected_arguments;
-  std::function<Value(std::vector<Value>)> m_native_function;
+struct FunctionType {
+  std::vector<Type> m_parameter_types;
+  Type m_return_type;
 };
 
-std::string value_to_string(const Value &value);
+bool operator==(const Type &, const Type &);
+bool operator==(const FunctionType &, const FunctionType &);
+
+std::string type_to_string(const Type &type);
+std::string type_to_string(BaseType type);
+std::string type_to_string(const FunctionType &type);
+
+// Type string_to_type(const std::string &name);
+
+Type node_to_type(const BaseTypeNode &);
 
 //****************************************************************************
 } // namespace blip

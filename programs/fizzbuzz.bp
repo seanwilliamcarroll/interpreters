@@ -1,0 +1,16 @@
+(define (mod (a : int) (b : int)) : int
+  (- a (* (/ a b) b)))
+
+(define (fizzbuzz (n : int) (i : int)) : unit
+  (if (< i n)
+    (begin
+      (if (= (mod i 15) 0)
+        (print "fizzbuzz")
+        (if (= (mod i 3) 0)
+          (print "fizz")
+          (if (= (mod i 5) 0)
+            (print "buzz")
+            (print i))))
+      (fizzbuzz n (+ i 1)))))
+
+(fizzbuzz 20 1)
