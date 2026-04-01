@@ -327,6 +327,99 @@ TEST_SUITE("blip.lexer") {
     CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
   }
 
+  // --- Right arrow (->)  ---------------------------------------------------
+
+  TEST_CASE("core::lexer_right_arrow") {
+    std::stringstream in_stream;
+    in_stream << "->";
+    auto lexer = make_lexer(in_stream);
+
+    auto token = lexer->get_next_token();
+    CHECK(token != nullptr);
+    CHECK(token->get_token_type() == TokenType::RIGHT_ARROW);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof != nullptr);
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_right_arrow_with_spaces") {
+    std::stringstream in_stream;
+    in_stream << "int -> int";
+    auto lexer = make_lexer(in_stream);
+
+    auto first = lexer->get_next_token();
+    CHECK(first->get_token_type() == TokenType::IDENTIFIER);
+
+    auto arrow = lexer->get_next_token();
+    CHECK(arrow->get_token_type() == TokenType::RIGHT_ARROW);
+
+    auto second = lexer->get_next_token();
+    CHECK(second->get_token_type() == TokenType::IDENTIFIER);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_right_arrow_no_leading_space") {
+    // ->int is RIGHT_ARROW followed by IDENTIFIER("int")
+    std::stringstream in_stream;
+    in_stream << "->int";
+    auto lexer = make_lexer(in_stream);
+
+    auto arrow = lexer->get_next_token();
+    CHECK(arrow->get_token_type() == TokenType::RIGHT_ARROW);
+
+    auto ident = lexer->get_next_token();
+    CHECK(ident->get_token_type() == TokenType::IDENTIFIER);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_right_arrow_embedded_in_identifier") {
+    // int-> is a single identifier since - and > are valid identifier chars
+    std::stringstream in_stream;
+    in_stream << "int->";
+    auto lexer = make_lexer(in_stream);
+
+    auto ident = lexer->get_next_token();
+    CHECK(ident->get_token_type() == TokenType::IDENTIFIER);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  TEST_CASE("core::lexer_right_arrow_in_type_annotation") {
+    // Simulates: (int int -> int)
+    std::stringstream in_stream;
+    in_stream << "(int int -> int)";
+    auto lexer = make_lexer(in_stream);
+
+    auto lparen = lexer->get_next_token();
+    CHECK(lparen->get_token_type() == TokenType::LEFT_PAREND);
+
+    auto first = lexer->get_next_token();
+    CHECK(first->get_token_type() == TokenType::IDENTIFIER);
+
+    auto second = lexer->get_next_token();
+    CHECK(second->get_token_type() == TokenType::IDENTIFIER);
+
+    auto arrow = lexer->get_next_token();
+    CHECK(arrow->get_token_type() == TokenType::RIGHT_ARROW);
+
+    auto ret = lexer->get_next_token();
+    CHECK(ret->get_token_type() == TokenType::IDENTIFIER);
+
+    auto rparen = lexer->get_next_token();
+    CHECK(rparen->get_token_type() == TokenType::RIGHT_PAREND);
+
+    auto eof = lexer->get_next_token();
+    CHECK(eof->get_token_type() == TokenType::EOF_TOKEN);
+  }
+
+  // --- Comments ------------------------------------------------------------
+
   TEST_CASE("core::block_commnet") {
     rc::check("Given stream of valid block_commnet, return only 1 token", [] {
       std::stringstream in_stream;
