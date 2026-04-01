@@ -61,22 +61,32 @@ void Evaluator::visit(const ProgramNode &node) {
   }
 }
 
-void Evaluator::evaluate_function(const CallNode &node, Function function) {
-  if (node.get_arguments().size() != function.m_arguments.size()) {
+void check_arity(const CallNode &node, size_t expected_argument_count,
+                 const std::string &function_name) {
+  if (expected_argument_count != node.get_arguments().size()) {
     throw core::CompilerException(
         "RuntimeError",
-        "Function: " + value_to_string(function) + " expects " +
-            std::to_string(function.m_arguments.size()) +
+        "Function: " + function_name + " expects " +
+            std::to_string(expected_argument_count) +
             " arguments, but provided " +
             std::to_string(node.get_arguments().size()),
         node.get_location());
   }
+}
 
+std::vector<Value> Evaluator::evaluate_arguments(const CallNode &node) {
   std::vector<Value> evaluated_arguments;
   for (const auto &argument : node.get_arguments()) {
     argument->accept(*this);
     evaluated_arguments.push_back(m_result);
   }
+  return evaluated_arguments;
+}
+
+void Evaluator::evaluate_function(const CallNode &node, Function function) {
+  check_arity(node, function.m_arguments.size(), value_to_string(function));
+
+  std::vector<Value> evaluated_arguments = evaluate_arguments(node);
 
   auto function_env =
       std::make_shared<ValueEnvironment>(function.m_environment);
@@ -95,23 +105,9 @@ void Evaluator::evaluate_function(const CallNode &node, Function function) {
 
 void Evaluator::evaluate_builtinfunction(const CallNode &node,
                                          BuiltInFunction function) {
+  check_arity(node, function.m_expected_arguments, value_to_string(function));
 
-  if (function.m_expected_arguments != node.get_arguments().size()) {
-    throw core::CompilerException(
-        "RuntimeError",
-        "BuiltInFunction: " + value_to_string(function) + " expects " +
-            std::to_string(function.m_expected_arguments) +
-            " arguments, but provided " +
-            std::to_string(node.get_arguments().size()),
-
-        node.get_location());
-  }
-
-  std::vector<Value> evaluated_arguments;
-  for (const auto &argument : node.get_arguments()) {
-    argument->accept(*this);
-    evaluated_arguments.push_back(m_result);
-  }
+  std::vector<Value> evaluated_arguments = evaluate_arguments(node);
 
   m_result = function.m_native_function(std::move(evaluated_arguments));
 }
