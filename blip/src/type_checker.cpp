@@ -235,24 +235,35 @@ void TypeChecker::visit(const DefineFnNode &node) {
   function_type->m_return_type =
       string_to_type(node.get_return_type().get_type_name());
 
-  // Put it in the current env so the child type env can find it in case of
-  // recursion
-  m_env->define(node.get_name().get_name(), function_type);
+  // Snapshot type environment in case we fail during body evaluation
 
-  std::swap(function_env, m_env);
+  // Put it in the function env so the child type env can find it in case of
+  // recursion, but doesn't pollute current env if exception occurs
+  function_env->define(node.get_name().get_name(), function_type);
 
-  node.get_body().accept(*this);
-  if (m_result != string_to_type(node.get_return_type().get_type_name())) {
-    throw core::CompilerException(
-        "TypeChecker",
-        "Annotated return type of function: " + node.get_name().get_name() +
-            " does not match evaluated type! Annotated: " +
-            node.get_return_type().get_type_name() +
-            " vs. Evaluated: " + type_to_string(m_result),
-        node.get_location());
+  try {
+    std::swap(function_env, m_env);
+
+    node.get_body().accept(*this);
+    if (m_result != string_to_type(node.get_return_type().get_type_name())) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Annotated return type of function: " + node.get_name().get_name() +
+              " does not match evaluated type! Annotated: " +
+              node.get_return_type().get_type_name() +
+              " vs. Evaluated: " + type_to_string(m_result),
+          node.get_location());
+    }
+  } catch (...) {
+    // Need to put the snapshotted type env back
+    std::swap(function_env, m_env);
+    throw;
   }
 
   std::swap(function_env, m_env);
+
+  // Define it for good in the existing type env
+  m_env->define(node.get_name().get_name(), function_type);
 
   m_result = BaseType::Unit;
 }
