@@ -1,0 +1,13 @@
+(define (make-counter) : int
+  (begin
+    (define count 0)
+    (define (increment) : int
+      (begin
+        (set count (+ count 1))
+        count))
+    increment))
+
+(define counter (make-counter))
+(print (counter))
+(print (counter))
+(print (counter))
