@@ -9,6 +9,7 @@
 //*
 //****************************************************************************
 
+#include "ast.hpp"
 #include "exceptions.hpp"
 #include <memory>
 #include <sstream>
@@ -114,6 +115,38 @@ Type string_to_type(const std::string &name) {
     return BaseType::Unit;
   }
   throw std::runtime_error("Unknown type name: \"" + name + "\"");
+}
+
+Type node_to_type(const FunctionTypeNode &node) {
+  auto function_type = std::make_shared<FunctionType>();
+
+  for (const auto &parameter : node.get_parameter_type_names()) {
+    function_type->m_parameter_types.push_back(node_to_type(*parameter));
+  }
+  function_type->m_return_type = node_to_type(node.get_return_type_name());
+
+  return function_type;
+}
+
+Type node_to_type(const TypeNode &node) {
+  return string_to_type(node.get_type_name());
+}
+
+Type node_to_type(const BaseTypeNode &node) {
+  const auto *type_node_ptr = dynamic_cast<const TypeNode *>(&node);
+
+  if (type_node_ptr != nullptr) {
+    return node_to_type(*type_node_ptr);
+  }
+
+  // Could be a function type
+  const auto *function_node_ptr = dynamic_cast<const FunctionTypeNode *>(&node);
+  if (function_node_ptr != nullptr) {
+    return node_to_type(*function_node_ptr);
+  }
+
+  throw std::runtime_error("Unknown type node: \"" + node.get_type_name() +
+                           "\"");
 }
 
 //****************************************************************************

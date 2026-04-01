@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include "ast.hpp"
 #include <memory>
 #include <string>
 #include <variant>
@@ -44,7 +45,9 @@ std::string type_to_string(const Type &type);
 std::string type_to_string(BaseType type);
 std::string type_to_string(const FunctionType &type);
 
-Type string_to_type(const std::string &name);
+// Type string_to_type(const std::string &name);
+
+Type node_to_type(const BaseTypeNode &);
 
 //****************************************************************************
 } // namespace blip

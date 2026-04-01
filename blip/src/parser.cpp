@@ -222,17 +222,11 @@ std::unique_ptr<DefineVarNode> Parser::parse_variable_definition(
   }
   auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
 
-  std::unique_ptr<TypeNode> type_node{};
+  std::unique_ptr<BaseTypeNode> type_node{};
 
   if (peek().get_token_type() == TokenType::COLON) {
     advance();
-    if (peek().get_token_type() != TokenType::IDENTIFIER) {
-      on_error(
-          peek().get_location(),
-          "Expected IDENTIFIER after COLON token for type annotation, not: ",
-          token_type_to_string(peek().get_token_type()));
-    }
-    type_node = to_atom<TokenIdentifier, TypeNode>(advance().get());
+    type_node = parse_type_node();
   }
 
   auto body = parse_expression();

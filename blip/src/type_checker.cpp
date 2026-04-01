@@ -205,7 +205,7 @@ void TypeChecker::visit(const DefineVarNode &node) {
   node.get_value().accept(*this);
 
   if (node.get_type() != nullptr &&
-      string_to_type(node.get_type()->get_type_name()) != m_result) {
+      node_to_type(*node.get_type()) != m_result) {
     throw core::CompilerException(
         "TypeChecker",
         "Mismatched types in define expression! Annotated type: " +
@@ -233,13 +233,12 @@ void TypeChecker::visit(const DefineFnNode &node) {
     }
 
     function_env->define(argument->get_name(),
-                         string_to_type(argument->get_type()->get_type_name()));
+                         node_to_type(*argument->get_type()));
     function_type->m_parameter_types.push_back(
-        string_to_type(argument->get_type()->get_type_name()));
+        node_to_type(*argument->get_type()));
   }
 
-  function_type->m_return_type =
-      string_to_type(node.get_return_type().get_type_name());
+  function_type->m_return_type = node_to_type(node.get_return_type());
 
   // Snapshot type environment in case we fail during body evaluation
 
@@ -251,7 +250,7 @@ void TypeChecker::visit(const DefineFnNode &node) {
     std::swap(function_env, m_env);
 
     node.get_body().accept(*this);
-    if (m_result != string_to_type(node.get_return_type().get_type_name())) {
+    if (m_result != node_to_type(node.get_return_type())) {
       throw core::CompilerException(
           "TypeChecker",
           "Annotated return type of function: " + node.get_name().get_name() +
