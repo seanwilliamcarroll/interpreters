@@ -295,7 +295,6 @@ private:
   const std::unique_ptr<BaseTypeNode> m_type;
 };
 
-// TODO: May be able to remove completely in future
 class DefineFnNode : public AstNode {
 public:
   DefineFnNode(const SourceLocation &location, std::unique_ptr<Identifier> name,
@@ -304,9 +303,7 @@ public:
                std::unique_ptr<BaseTypeNode> return_type)
       : AstNode(location), m_name(std::move(name)),
         m_arguments(std::move(arguments)), m_body(std::move(body)),
-        m_return_type(
-            std::move(return_type)) // , m_type(create_function_type_node())
-  {}
+        m_return_type(std::move(return_type)) {}
 
   const Identifier &get_name() const { return *m_name; }
 
@@ -317,21 +314,14 @@ public:
   const AstNode &get_body() const { return *m_body; }
 
   const BaseTypeNode &get_return_type() const { return *m_return_type; }
-  // const FunctionTypeNode &get_type() const { return *m_type; }
 
   void accept(AstVisitor &v) const override { v.visit(*this); }
 
 private:
-  // std::unique_ptr<FunctionTypeNode> create_function_type_node() {
-  //   std::vector<std::unique_ptr<BaseTypeNode>> argument_types;
-  //   return {};
-  // }
-
   const std::unique_ptr<Identifier> m_name;
   const std::vector<std::unique_ptr<Identifier>> m_arguments;
   const std::unique_ptr<AstNode> m_body;
   const std::unique_ptr<BaseTypeNode> m_return_type;
-  // const std::unique_ptr<FunctionTypeNode> m_type;
 };
 
 //****************************************************************************

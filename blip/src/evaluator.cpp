@@ -154,8 +154,6 @@ void Evaluator::visit(const IfNode &node) {
 }
 
 void Evaluator::visit(const WhileNode &node) {
-  // TODO: loop while condition is truthy, evaluate body each iteration
-  // result is Unit
   while (true) {
     node.get_condition().accept(*this);
     if (!std::holds_alternative<bool>(m_result)) {
