@@ -341,7 +341,7 @@ TEST_SUITE("blip.type_checker") {
                             "  (define (inc (x : int)) : int (+ x 1))"
                             "  (define (wrap) : (int -> int) inc)"
                             "  (define (get-wrap) : (-> (int -> int)) wrap)"
-                            "))"));
+                            ")"));
   }
 
   TEST_CASE("calling result of function that returns function") {
