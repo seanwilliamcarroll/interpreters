@@ -12,17 +12,18 @@
 #include "ast.hpp"
 #include "environment.hpp"
 #include "type.hpp"
-#include "value.hpp"
 #include <exceptions.hpp>
 #include <stdexcept>
+#include <string>
 #include <type_checker.hpp>
+#include <variant>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
 TypeChecker::TypeChecker(std::shared_ptr<TypeEnvironment> env)
-    : m_result(Type::Unit), m_env(std::move(env)) {}
+    : m_result(BaseType::Unit), m_env(std::move(env)) {}
 
 Type TypeChecker::check(const AstNode &node) {
   node.accept(*this);
@@ -31,13 +32,13 @@ Type TypeChecker::check(const AstNode &node) {
 
 // --- Literals --------------------------------------------------------------
 
-void TypeChecker::visit(const IntLiteral &) { m_result = Type::Int; }
+void TypeChecker::visit(const IntLiteral &) { m_result = BaseType::Int; }
 
-void TypeChecker::visit(const DoubleLiteral &) { m_result = Type::Double; }
+void TypeChecker::visit(const DoubleLiteral &) { m_result = BaseType::Double; }
 
-void TypeChecker::visit(const StringLiteral &) { m_result = Type::String; }
+void TypeChecker::visit(const StringLiteral &) { m_result = BaseType::String; }
 
-void TypeChecker::visit(const BoolLiteral &) { m_result = Type::Bool; }
+void TypeChecker::visit(const BoolLiteral &) { m_result = BaseType::Bool; }
 
 void TypeChecker::visit(const Identifier &node) {
   try {
@@ -64,7 +65,7 @@ void TypeChecker::visit(const ProgramNode &node) {
 
 void TypeChecker::visit(const CallNode &node) {
   node.get_callee().accept(*this);
-  if (m_result != Type::Fn) {
+  if (!std::holds_alternative<std::shared_ptr<FunctionType>>(m_result)) {
     throw core::CompilerException(
         "TypeChecker",
         "Cannot call expression of type: " + type_to_string(m_result) +
@@ -72,28 +73,36 @@ void TypeChecker::visit(const CallNode &node) {
         node.get_location());
   }
 
-  for (const auto &argument : node.get_arguments()) {
-    // Need to type check argument expressions
+  const FunctionType &function_type =
+      *std::get<std::shared_ptr<FunctionType>>(m_result);
+
+  if (node.get_arguments().size() != function_type.m_parameter_types.size()) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Function of type: " + type_to_string(m_result) + " requires: " +
+            std::to_string(function_type.m_parameter_types.size()) +
+            " argument(s), was provided: " +
+            std::to_string(node.get_arguments().size()) + " argument(s)",
+        node.get_location());
+  }
+
+  for (size_t index = 0; index < node.get_arguments().size(); ++index) {
+    const auto &argument = node.get_arguments()[index];
     argument->accept(*this);
+    if (m_result != function_type.m_parameter_types[index]) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Function of type: " + type_to_string(m_result) + ": Argument " +
+              std::to_string(index) + " expects type " +
+              type_to_string(function_type.m_parameter_types[index]) +
+              " but was provided: " + type_to_string(m_result),
+          argument->get_location());
+    }
   }
 
-  // If our callee is an identifier, we can try to type check things
-  auto function_identifier =
-      dynamic_cast<const Identifier *>(&node.get_callee());
-  if (function_identifier == nullptr) {
-    // Unnamed function, shouldn't be possible yet?
-    m_result = Type::Fn;
-    return;
-  }
+  // Our function call is valid, now we return the return type?
 
-  try {
-    m_result = m_env->lookup(function_identifier->get_name());
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("TypeChecker", error.what(),
-                                  node.get_location());
-  }
-
-  // No way to check on arguments or return type at the moment?
+  m_result = function_type.m_return_type;
 }
 
 // --- Special forms ---------------------------------------------------------
@@ -101,7 +110,7 @@ void TypeChecker::visit(const CallNode &node) {
 void TypeChecker::visit(const IfNode &node) {
   node.get_condition().accept(*this);
 
-  if (m_result != Type::Bool) {
+  if (m_result != BaseType::Bool) {
     throw core::CompilerException(
         "TypeChecker",
         "If statement must have a boolean condition, not: " +
@@ -111,7 +120,7 @@ void TypeChecker::visit(const IfNode &node) {
 
   node.get_then_branch().accept(*this);
   if (node.get_else_branch() == nullptr) {
-    if (m_result != Type::Unit) {
+    if (m_result != BaseType::Unit) {
       throw core::CompilerException(
           "TypeChecker",
           "If without else branch requires body to have Unit type! Not: " +
@@ -138,7 +147,7 @@ void TypeChecker::visit(const IfNode &node) {
 void TypeChecker::visit(const WhileNode &node) {
   node.get_condition().accept(*this);
 
-  if (m_result != Type::Bool) {
+  if (m_result != BaseType::Bool) {
     throw core::CompilerException(
         "TypeChecker",
         "while loop must have a boolean condition, not: " +
@@ -149,7 +158,7 @@ void TypeChecker::visit(const WhileNode &node) {
   // Make sure we check inside here
   node.get_body().accept(*this);
 
-  m_result = Type::Unit;
+  m_result = BaseType::Unit;
 }
 
 void TypeChecker::visit(const SetNode &node) {
@@ -170,7 +179,7 @@ void TypeChecker::visit(const SetNode &node) {
             " vs. assigned type: " + type_to_string(m_result),
         node.get_location());
   }
-  m_result = Type::Unit;
+  m_result = BaseType::Unit;
 }
 
 void TypeChecker::visit(const BeginNode &node) {
@@ -183,7 +192,7 @@ void TypeChecker::visit(const PrintNode &node) {
   // Need to do this in case there is a type error deep in the expression being
   // printed
   node.get_expression().accept(*this);
-  m_result = Type::Unit;
+  m_result = BaseType::Unit;
 }
 
 void TypeChecker::visit(const DefineVarNode &node) {
@@ -201,11 +210,13 @@ void TypeChecker::visit(const DefineVarNode &node) {
 
   m_env->define(node.get_name().get_name(), m_result);
 
-  m_result = Type::Unit;
+  m_result = BaseType::Unit;
 }
 
 void TypeChecker::visit(const DefineFnNode &node) {
   auto function_env = std::make_shared<TypeEnvironment>(m_env);
+
+  auto function_type = std::make_shared<FunctionType>();
 
   for (const auto &argument : node.get_arguments()) {
     if (argument->get_type() == nullptr) {
@@ -217,9 +228,19 @@ void TypeChecker::visit(const DefineFnNode &node) {
 
     function_env->define(argument->get_name(),
                          string_to_type(argument->get_type()->get_type_name()));
+    function_type->m_parameter_types.push_back(
+        string_to_type(argument->get_type()->get_type_name()));
   }
 
+  function_type->m_return_type =
+      string_to_type(node.get_return_type().get_type_name());
+
+  // Put it in the current env so the child type env can find it in case of
+  // recursion
+  m_env->define(node.get_name().get_name(), function_type);
+
   std::swap(function_env, m_env);
+
   node.get_body().accept(*this);
   if (m_result != string_to_type(node.get_return_type().get_type_name())) {
     throw core::CompilerException(
@@ -233,10 +254,7 @@ void TypeChecker::visit(const DefineFnNode &node) {
 
   std::swap(function_env, m_env);
 
-  // TODO: Do better than this
-  m_env->define(node.get_name().get_name(), Type::Fn);
-
-  m_result = Type::Unit;
+  m_result = BaseType::Unit;
 }
 
 //****************************************************************************
