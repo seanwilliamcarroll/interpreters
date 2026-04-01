@@ -55,6 +55,11 @@ public:
     m_out << node.get_type_name();
   }
 
+  void visit(const FunctionTypeNode &node) override {
+    m_out << " : ";
+    m_out << node.get_type_name();
+  }
+
   void visit(const ProgramNode &node) override {
     for (const auto &expression : node.get_program()) {
       expression->accept(*this);

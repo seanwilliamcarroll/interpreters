@@ -57,6 +57,12 @@ void TypeChecker::visit(const TypeNode &node) {
                                 node.get_location());
 }
 
+void TypeChecker::visit(const FunctionTypeNode &node) {
+  throw core::CompilerException(
+      "TypeChecker", "We should never type check the FunctionTypeNode!",
+      node.get_location());
+}
+
 void TypeChecker::visit(const ProgramNode &node) {
   for (const auto &expression : node.get_program()) {
     expression->accept(*this);

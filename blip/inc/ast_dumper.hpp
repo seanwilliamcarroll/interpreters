@@ -59,6 +59,10 @@ public:
     line("TypeNode(\"" + node.get_type_name() + "\")");
   }
 
+  void visit(const FunctionTypeNode &node) override {
+    line("FunctionTypeNode(\"" + node.get_type_name() + "\")");
+  }
+
   void visit(const ProgramNode &node) override {
     line("ProgramNode");
     indent([&] {

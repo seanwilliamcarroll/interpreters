@@ -37,7 +37,9 @@ public:
   void visit(const Identifier &) override;
 
   // --- Structure ---
-  void visit(const TypeNode &) override;
+  // Evaluator does not care about types
+  void visit(const TypeNode &) override {}
+  void visit(const FunctionTypeNode &) override {}
   void visit(const ProgramNode &) override;
   void visit(const CallNode &) override;
 

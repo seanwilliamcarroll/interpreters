@@ -9,9 +9,11 @@
 //*
 //****************************************************************************
 
+#include "ast.hpp"
 #include <memory>
 
 #include <blip_tokens.hpp>
+#include <numeric>
 #include <parser.hpp>
 
 //****************************************************************************
@@ -138,53 +140,15 @@ std::unique_ptr<AstNode> Parser::parse_list() {
     // Skip define token
     advance();
     // Are we defining a function or a variable?
+    std::unique_ptr<AstNode> defined_node = nullptr;
     if (peek().get_token_type() == TokenType::LEFT_PAREND) {
-      // Function
-      advance();
-      auto [name, arguments] = parse_function_declaration();
-      expect(TokenType::RIGHT_PAREND, __FUNCTION__);
-
-      // Get type of this function
-      expect(TokenType::COLON, __FUNCTION__);
-      if (peek().get_token_type() != TokenType::IDENTIFIER) {
-        on_error(peek().get_location(),
-                 "Expect identifier as type annotation, not:",
-                 token_type_to_string(peek().get_token_type()));
-      }
-      auto type_node = to_atom<TokenIdentifier, TypeNode>(advance().get());
-
-      auto body = parse_expression();
-      expect(TokenType::RIGHT_PAREND, __FUNCTION__);
-      return std::make_unique<DefineFnNode>(
-          original_source_location, std::move(name), std::move(arguments),
-          std::move(body), std::move(type_node));
+      defined_node = parse_function_definition(original_source_location);
+    } else {
+      // Could only be a variable then
+      defined_node = parse_variable_definition(original_source_location);
     }
-    // Variable
-    if (peek().get_token_type() != TokenType::IDENTIFIER) {
-      on_error(peek().get_location(),
-               "Expected IDENTIFIER after DEFINE token, not: ",
-               token_type_to_string(peek().get_token_type()));
-    }
-    auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
-
-    std::unique_ptr<TypeNode> type_node{};
-
-    if (peek().get_token_type() == TokenType::COLON) {
-      advance();
-      if (peek().get_token_type() != TokenType::IDENTIFIER) {
-        on_error(
-            peek().get_location(),
-            "Expected IDENTIFIER after COLON token for type annotation, not: ",
-            token_type_to_string(peek().get_token_type()));
-      }
-      type_node = to_atom<TokenIdentifier, TypeNode>(advance().get());
-    }
-
-    auto body = parse_expression();
     expect(TokenType::RIGHT_PAREND, __FUNCTION__);
-    return std::make_unique<DefineVarNode>(original_source_location,
-                                           std::move(name), std::move(body),
-                                           std::move(type_node));
+    return defined_node;
   }
   case TokenType::RIGHT_PAREND:
     on_error(peek().get_location(), "List should have at least one element!");
@@ -202,6 +166,79 @@ std::unique_ptr<AstNode> Parser::parse_list() {
     return std::make_unique<CallNode>(original_source_location,
                                       std::move(callee), std::move(arguments));
   }
+}
+
+std::unique_ptr<BaseTypeNode> Parser::parse_type_node() {
+  auto location = peek().get_location();
+  switch (peek().get_token_type()) {
+  case TokenType::IDENTIFIER:
+    return to_atom<TokenIdentifier, TypeNode>(advance().get());
+  case TokenType::LEFT_PAREND: {
+    // Consume the parend
+    advance();
+    std::vector<std::unique_ptr<BaseTypeNode>> arguments;
+    while (peek().get_token_type() != TokenType::RIGHT_ARROW) {
+      arguments.push_back(parse_type_node());
+    }
+
+    expect(TokenType::RIGHT_ARROW, __FUNCTION__);
+
+    auto return_type = parse_type_node();
+    expect(TokenType::RIGHT_PAREND, __FUNCTION__);
+
+    return std::make_unique<FunctionTypeNode>(location, std::move(arguments),
+                                              std::move(return_type));
+  }
+  default:
+    on_error(peek().get_location(),
+             "Expect either IDENTIFIER or LEFT_PAREND as type signature, not:",
+             token_type_to_string(peek().get_token_type()));
+  }
+}
+
+std::unique_ptr<DefineFnNode> Parser::parse_function_definition(
+    const SourceLocation &original_source_location) {
+  // Function
+  advance();
+  auto [name, arguments] = parse_function_declaration();
+  expect(TokenType::RIGHT_PAREND, __FUNCTION__);
+
+  // Get type of this function
+  expect(TokenType::COLON, __FUNCTION__);
+  auto return_type_node = parse_type_node();
+
+  auto body = parse_expression();
+  return std::make_unique<DefineFnNode>(
+      original_source_location, std::move(name), std::move(arguments),
+      std::move(body), std::move(return_type_node));
+}
+
+std::unique_ptr<DefineVarNode> Parser::parse_variable_definition(
+    const SourceLocation &original_source_location) {
+  if (peek().get_token_type() != TokenType::IDENTIFIER) {
+    on_error(peek().get_location(),
+             "Expected IDENTIFIER after DEFINE token, not: ",
+             token_type_to_string(peek().get_token_type()));
+  }
+  auto name = to_atom<TokenIdentifier, Identifier>(advance().get());
+
+  std::unique_ptr<TypeNode> type_node{};
+
+  if (peek().get_token_type() == TokenType::COLON) {
+    advance();
+    if (peek().get_token_type() != TokenType::IDENTIFIER) {
+      on_error(
+          peek().get_location(),
+          "Expected IDENTIFIER after COLON token for type annotation, not: ",
+          token_type_to_string(peek().get_token_type()));
+    }
+    type_node = to_atom<TokenIdentifier, TypeNode>(advance().get());
+  }
+
+  auto body = parse_expression();
+  return std::make_unique<DefineVarNode>(original_source_location,
+                                         std::move(name), std::move(body),
+                                         std::move(type_node));
 }
 
 std::pair<std::unique_ptr<Identifier>, std::vector<std::unique_ptr<Identifier>>>
@@ -224,12 +261,7 @@ Parser::parse_function_declaration() {
     }
     auto parameter_token = advance();
     expect(TokenType::COLON, __FUNCTION__);
-    if (peek().get_token_type() != TokenType::IDENTIFIER) {
-      on_error(peek().get_location(),
-               "Expect identifier as type annotation, not:",
-               token_type_to_string(peek().get_token_type()));
-    }
-    auto type_node = to_atom<TokenIdentifier, TypeNode>(advance().get());
+    auto type_node = parse_type_node();
     auto literal_token = dynamic_cast<TokenIdentifier *>(parameter_token.get());
     identifiers.push_back(std::make_unique<Identifier>(
         literal_token->get_location(), literal_token->get_value(),
