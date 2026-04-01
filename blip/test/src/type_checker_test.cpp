@@ -246,6 +246,135 @@ TEST_SUITE("blip.type_checker") {
     CHECK(check_with_builtins("(= 1 2)") == BaseType::Bool);
   }
 
+  // --- Function type annotations -------------------------------------------
+
+  TEST_CASE("function with function-typed param accepts matching function") {
+    // apply takes (int -> int) and an int, calls f on x
+    CHECK_NOTHROW(check_with_builtins(
+        "(begin"
+        "  (define (inc (x : int)) : int (+ x 1))"
+        "  (define (apply (f : (int -> int)) (x : int)) : int (f x))"
+        "  (apply inc 5))"));
+  }
+
+  TEST_CASE("function with function-typed param returns correct type") {
+    CHECK(check_with_builtins(
+              "(begin"
+              "  (define (inc (x : int)) : int (+ x 1))"
+              "  (define (apply (f : (int -> int)) (x : int)) : int (f x))"
+              "  (apply inc 5))") == BaseType::Int);
+  }
+
+  TEST_CASE("passing wrong function type throws") {
+    // inc is (int -> int), but apply expects (int -> bool)
+    CHECK_THROWS(check_with_builtins(
+        "(begin"
+        "  (define (inc (x : int)) : int (+ x 1))"
+        "  (define (apply (f : (int -> bool)) (x : int)) : bool (f x))"
+        "  (apply inc 5))"));
+  }
+
+  TEST_CASE("passing non-function where function type expected throws") {
+    CHECK_THROWS(check_with_builtins(
+        "(begin"
+        "  (define (apply (f : (int -> int)) (x : int)) : int (f x))"
+        "  (apply 42 5))"));
+  }
+
+  TEST_CASE("passing function with wrong arity throws") {
+    // add takes two ints, but apply expects (int -> int) — one param
+    CHECK_THROWS(check_with_builtins(
+        "(begin"
+        "  (define (add (a : int) (b : int)) : int (+ a b))"
+        "  (define (apply (f : (int -> int)) (x : int)) : int (f x))"
+        "  (apply add 5))"));
+  }
+
+  TEST_CASE("function returning function type") {
+    // make-inc returns a function, we can call the result
+    CHECK(check_with_builtins("(begin"
+                              "  (define (inc (x : int)) : int (+ x 1))"
+                              "  (define (make-inc) : (int -> int) inc)"
+                              "  ((make-inc) 5))") == BaseType::Int);
+  }
+
+  TEST_CASE(
+      "function returning wrong type for function return annotation throws") {
+    // Declares return type (int -> int) but body returns an int
+    CHECK_THROWS(check_with_builtins("(begin"
+                                     "  (define (bad) : (int -> int) 42))"));
+  }
+
+  TEST_CASE("apply-twice higher-order pattern") {
+    CHECK(check_with_builtins(
+              "(begin"
+              "  (define (inc (x : int)) : int (+ x 1))"
+              "  (define (apply-twice (f : (int -> int)) (x : int)) : int"
+              "    (f (f x)))"
+              "  (apply-twice inc 5))") == BaseType::Int);
+  }
+
+  TEST_CASE("multi-param function type annotation") {
+    // f takes a two-argument function (int int -> int)
+    CHECK(
+        check_with_builtins("(begin"
+                            "  (define (add (a : int) (b : int)) : int (+ a b))"
+                            "  (define (apply-binop (f : (int int -> int))"
+                            "                       (a : int) (b : int)) : int"
+                            "    (f a b))"
+                            "  (apply-binop add 3 4))") == BaseType::Int);
+  }
+
+  TEST_CASE("nested function type in parameter: ((int -> int) -> int)") {
+    CHECK_NOTHROW(check_with_builtins(
+        "(begin"
+        "  (define (inc (x : int)) : int (+ x 1))"
+        "  (define (apply-to-zero (f : (int -> int))) : int (f 0))"
+        "  (define (meta (g : ((int -> int) -> int))) : int (g inc))"
+        "  (meta apply-to-zero))"));
+  }
+
+  TEST_CASE("function with return type (int -> (int -> int))") {
+    // Return type is itself a function that returns a function
+    CHECK_NOTHROW(
+        check_with_builtins("(begin"
+                            "  (define (inc (x : int)) : int (+ x 1))"
+                            "  (define (wrap) : (int -> int) inc)"
+                            "  (define (get-wrap) : (-> (int -> int)) wrap)"
+                            "))"));
+  }
+
+  TEST_CASE("calling result of function that returns function") {
+    CHECK(check_with_builtins("(begin"
+                              "  (define (inc (x : int)) : int (+ x 1))"
+                              "  (define (get-inc) : (int -> int) inc)"
+                              "  ((get-inc) 10))") == BaseType::Int);
+  }
+
+  TEST_CASE(
+      "function type mismatch in body — calls param with wrong arg type") {
+    // f is (int -> int) but we call it with a bool
+    CHECK_THROWS(check_with_builtins("(begin"
+                                     "  (define (bad (f : (int -> int))) : int"
+                                     "    (f true)))"));
+  }
+
+  TEST_CASE("function type annotation on param allows calling param") {
+    // Type checker must know f is callable with the right types
+    CHECK_NOTHROW(check_with_builtins(
+        "(begin"
+        "  (define (apply (f : (int -> int)) (x : int)) : int"
+        "    (f x)))"));
+  }
+
+  TEST_CASE("define variable with function type annotation") {
+    // Define a variable whose type annotation is a function type
+    CHECK_NOTHROW(check_with_builtins("(begin"
+                                      "  (define (inc (x : int)) : int (+ x 1))"
+                                      "  (define f : (int -> int) inc)"
+                                      "  (f 5))"));
+  }
+
   // --- Integration ---------------------------------------------------------
 
   TEST_CASE("well-typed program with function and builtins") {
