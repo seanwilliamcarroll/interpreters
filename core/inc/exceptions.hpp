@@ -31,6 +31,16 @@ struct CompilerException : std::runtime_error {
         }()) {}
 };
 
+template <typename Fn>
+auto promote_to_compiler_exception(const char *phase,
+                                   const SourceLocation &location, Fn &&func) {
+  try {
+    return func();
+  } catch (std::runtime_error &error) {
+    throw CompilerException(phase, error.what(), location);
+  }
+}
+
 //****************************************************************************
 } // namespace core
 //****************************************************************************

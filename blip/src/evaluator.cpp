@@ -45,12 +45,9 @@ void Evaluator::visit(const StringLiteral &node) {
 void Evaluator::visit(const BoolLiteral &node) { m_result = node.get_value(); }
 
 void Evaluator::visit(const Identifier &node) {
-  try {
-    m_result = m_env->lookup(node.get_name());
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("RuntimeError", error.what(),
-                                  node.get_location());
-  }
+  m_result = core::promote_to_compiler_exception(
+      "RuntimeError", node.get_location(),
+      [&] { return m_env->lookup(node.get_name()); });
 }
 
 // --- Structure -------------------------------------------------------------
@@ -167,12 +164,10 @@ void Evaluator::visit(const WhileNode &node) {
 
 void Evaluator::visit(const SetNode &node) {
   node.get_value().accept(*this);
-  try {
+  core::promote_to_compiler_exception("RuntimeError", node.get_location(), [&] {
     m_env->set(node.get_name().get_name(), m_result);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("RuntimeError", error.what(),
-                                  node.get_location());
-  }
+  });
+
   m_result = Unit{};
 }
 
@@ -190,12 +185,9 @@ void Evaluator::visit(const PrintNode &node) {
 
 void Evaluator::visit(const DefineVarNode &node) {
   node.get_value().accept(*this);
-  try {
+  core::promote_to_compiler_exception("RuntimeError", node.get_location(), [&] {
     m_env->define(node.get_name().get_name(), m_result);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException("RuntimeError", error.what(),
-                                  node.get_location());
-  }
+  });
   m_result = Unit{};
 }
 
