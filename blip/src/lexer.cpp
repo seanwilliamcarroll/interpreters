@@ -89,12 +89,12 @@ struct Lexer : LexerInterface {
         line_break();
         continue;
       case '-':
-        return number();
+        return number_or_arrow();
       case '"':
         return string();
       default:
         if (isdigit(character)) {
-          return number();
+          return number_or_arrow();
         }
         return identifier();
       }
@@ -108,7 +108,7 @@ struct Lexer : LexerInterface {
     return {};
   }
 
-  std::unique_ptr<Token> number() {
+  std::unique_ptr<Token> number_or_arrow() {
     // https://www.json.org/json-en.html
     const SourceLocation loc = get_current_loc();
     std::string lexeme;
@@ -119,10 +119,20 @@ struct Lexer : LexerInterface {
     char character;
     // First check for optional '-' character
     expect_peek(character,
-                "Invalid usage of Lexer::number, did not expect EOF");
+                "Invalid usage of Lexer::number_or_arrow, did not expect EOF");
     if (character == '-') {
       lexeme += advance();
       has_minus = true;
+
+      // Could be an arrow though
+
+      expect_peek(
+          character,
+          "Invalid usage of Lexer::number_or_arrow, did not expect EOF");
+      if (character == '>') {
+        lexeme += advance();
+        return create_identifier(loc, lexeme);
+      }
     }
 
     // If whitespace/EOF, just return the - as identifier
@@ -148,8 +158,9 @@ struct Lexer : LexerInterface {
     if (peek(character) && character == '.') {
       is_double = true;
       lexeme += advance();
-      expect_peek(character,
-                  "Invalid usage of Lexer::number, did not expect EOF");
+      expect_peek(
+          character,
+          "Invalid usage of Lexer::number_or_arrow, did not expect EOF");
       if (!isdigit(character)) {
         unexpected_character(character, __FUNCTION__);
       }
@@ -165,8 +176,9 @@ struct Lexer : LexerInterface {
     if (peek(character) && (character == 'e' || character == 'E')) {
       is_double = true;
       lexeme += advance();
-      expect_peek(character,
-                  "Invalid usage of Lexer::number, did not expect EOF");
+      expect_peek(
+          character,
+          "Invalid usage of Lexer::number_or_arrow, did not expect EOF");
       if (!isdigit(character) && (character != '-') && (character != '+')) {
         unexpected_character(character, __FUNCTION__);
       }
@@ -275,6 +287,9 @@ struct Lexer : LexerInterface {
     }
     if (lexeme == "false") {
       return make_token(starting_loc, TokenType::BOOL_LITERAL, false);
+    }
+    if (lexeme == "->") {
+      return make_token(starting_loc, TokenType::RIGHT_ARROW);
     }
     auto token_type = lookup_keyword(lexeme);
     if (token_type == TokenType::IDENTIFIER) {
