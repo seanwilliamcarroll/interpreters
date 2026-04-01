@@ -23,9 +23,7 @@ namespace blip {
 //****************************************************************************
 
 Evaluator::Evaluator(std::shared_ptr<ValueEnvironment> env, std::ostream &out)
-    : m_result(Unit{}), m_env(std::move(env)), m_out(out) {
-  (void)m_out;
-}
+    : m_result(Unit{}), m_env(std::move(env)), m_out(out) {}
 
 Value Evaluator::evaluate(const AstNode &node) {
   node.accept(*this);
