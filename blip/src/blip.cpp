@@ -9,6 +9,8 @@
 //*
 //****************************************************************************
 
+#include "ast.hpp"
+#include "ast_dumper.hpp"
 #include "environment.hpp"
 #include "evaluator.hpp"
 #include "type_checker.hpp"
@@ -33,17 +35,33 @@ Blip::Blip(std::istream &in_stream, const char *hint)
 
 void Blip::rep() {
   m_parser->reset();
-  try {
-    auto ast = m_parser->parse();
 
+  std::unique_ptr<ProgramNode> ast{};
+
+  try {
+    ast = m_parser->parse();
+  } catch (const std::runtime_error &exception) {
+    std::cerr << "Error during parsing\n\n";
+    std::cerr << exception.what() << "\n";
+    return;
+  }
+
+  try {
     TypeChecker type_checker(m_top_type_env);
     type_checker.check(*ast);
 
     Evaluator evaluator(m_top_value_env, std::cout);
     evaluator.evaluate(*ast);
   } catch (const std::runtime_error &exception) {
+    std::cerr
+        << "Dumping AST on successful parse, but type or evaluator error!\n\n";
+    AstDumper dumper;
+    std::cerr << dumper.dump(*ast);
     std::cerr << exception.what() << "\n";
   }
+
+  // Keep it around
+  m_past_programs.push_back(std::move(ast));
 }
 
 //****************************************************************************
