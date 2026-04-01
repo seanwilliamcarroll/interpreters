@@ -11,6 +11,7 @@
 
 #include "environment.hpp"
 #include "evaluator.hpp"
+#include "type_checker.hpp"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -27,14 +28,18 @@ namespace blip {
 
 Blip::Blip(std::istream &in_stream, const char *hint)
     : m_parser(std::make_unique<Parser>(make_lexer(in_stream, hint))),
-      m_top_env(default_value_environment()) {}
+      m_top_value_env(default_value_environment()),
+      m_top_type_env(default_type_environment()) {}
 
 void Blip::rep() {
   m_parser->reset();
   try {
     auto ast = m_parser->parse();
 
-    Evaluator evaluator(m_top_env, std::cout);
+    TypeChecker type_checker(m_top_type_env);
+    type_checker.check(*ast);
+
+    Evaluator evaluator(m_top_value_env, std::cout);
     evaluator.evaluate(*ast);
   } catch (const std::runtime_error &exception) {
     std::cerr << exception.what() << "\n";

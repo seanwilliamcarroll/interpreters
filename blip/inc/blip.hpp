@@ -30,7 +30,8 @@ public:
 
 private:
   std::unique_ptr<Parser> m_parser;
-  std::shared_ptr<ValueEnvironment> m_top_env;
+  std::shared_ptr<ValueEnvironment> m_top_value_env;
+  std::shared_ptr<TypeEnvironment> m_top_type_env;
 };
 
 //****************************************************************************
