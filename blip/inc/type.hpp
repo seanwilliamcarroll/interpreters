@@ -11,22 +11,38 @@
 #pragma once
 //****************************************************************************
 
+#include <memory>
 #include <string>
+#include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace blip {
 //****************************************************************************
 
-enum class Type : uint8_t {
+struct FunctionType;
+
+enum class BaseType : uint8_t {
   Int,
   Double,
   Bool,
   String,
   Unit,
-  Fn,
 };
 
-std::string type_to_string(Type type);
+using Type = std::variant<BaseType, std::shared_ptr<FunctionType>>;
+
+struct FunctionType {
+  std::vector<Type> m_parameter_types;
+  Type m_return_type;
+};
+
+bool operator==(const Type &, const Type &);
+bool operator==(const FunctionType &, const FunctionType &);
+
+std::string type_to_string(const Type &type);
+std::string type_to_string(BaseType type);
+std::string type_to_string(const FunctionType &type);
 
 Type string_to_type(const std::string &name);
 
