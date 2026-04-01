@@ -47,49 +47,49 @@ TEST_SUITE("blip.type_checker") {
 
   // --- Literals ------------------------------------------------------------
 
-  TEST_CASE("int literal has type Int") { CHECK(check("42") == Type::Int); }
+  TEST_CASE("int literal has type Int") { CHECK(check("42") == BaseType::Int); }
 
   TEST_CASE("double literal has type Double") {
-    CHECK(check("3.14") == Type::Double);
+    CHECK(check("3.14") == BaseType::Double);
   }
 
   TEST_CASE("string literal has type String") {
-    CHECK(check("\"hello\"") == Type::String);
+    CHECK(check("\"hello\"") == BaseType::String);
   }
 
   TEST_CASE("bool literal has type Bool") {
-    CHECK(check("true") == Type::Bool);
-    CHECK(check("false") == Type::Bool);
+    CHECK(check("true") == BaseType::Bool);
+    CHECK(check("false") == BaseType::Bool);
   }
 
   // --- Program and begin ---------------------------------------------------
 
   TEST_CASE("program result is last expression type") {
-    CHECK(check("1 \"hello\" true") == Type::Bool);
+    CHECK(check("1 \"hello\" true") == BaseType::Bool);
   }
 
   TEST_CASE("begin result is last expression type") {
-    CHECK(check("(begin 1 2 true)") == Type::Bool);
+    CHECK(check("(begin 1 2 true)") == BaseType::Bool);
   }
 
   // --- Define variable (inferred) ------------------------------------------
 
   TEST_CASE("define variable infers type from initializer") {
-    CHECK(check("(begin (define x 5) x)") == Type::Int);
+    CHECK(check("(begin (define x 5) x)") == BaseType::Int);
   }
 
   TEST_CASE("define variable infers string type") {
-    CHECK(check("(begin (define x \"hi\") x)") == Type::String);
+    CHECK(check("(begin (define x \"hi\") x)") == BaseType::String);
   }
 
   TEST_CASE("define variable result is unit") {
-    CHECK(check("(define x 5)") == Type::Unit);
+    CHECK(check("(define x 5)") == BaseType::Unit);
   }
 
   // --- Define variable (annotated) -----------------------------------------
 
   TEST_CASE("define variable with matching annotation") {
-    CHECK(check("(begin (define x : int 5) x)") == Type::Int);
+    CHECK(check("(begin (define x : int 5) x)") == BaseType::Int);
   }
 
   TEST_CASE("define variable with wrong annotation throws") {
@@ -100,8 +100,8 @@ TEST_SUITE("blip.type_checker") {
 
   TEST_CASE("identifier looks up type") {
     auto env = std::make_shared<TypeEnvironment>();
-    env->define("x", Type::Int);
-    CHECK(check("x", env) == Type::Int);
+    env->define("x", BaseType::Int);
+    CHECK(check("x", env) == BaseType::Int);
   }
 
   TEST_CASE("undefined identifier throws") { CHECK_THROWS(check("x")); }
@@ -109,7 +109,7 @@ TEST_SUITE("blip.type_checker") {
   // --- Set -----------------------------------------------------------------
 
   TEST_CASE("set with same type is ok") {
-    CHECK(check("(begin (define x 5) (set x 10))") == Type::Unit);
+    CHECK(check("(begin (define x 5) (set x 10))") == BaseType::Unit);
   }
 
   TEST_CASE("set with different type throws") {
@@ -117,15 +117,15 @@ TEST_SUITE("blip.type_checker") {
   }
 
   TEST_CASE("set result is unit") {
-    CHECK(check("(begin (define x 5) (set x 10))") == Type::Unit);
+    CHECK(check("(begin (define x 5) (set x 10))") == BaseType::Unit);
   }
 
   // --- Print ---------------------------------------------------------------
 
   TEST_CASE("print accepts any type") {
-    CHECK(check("(print 42)") == Type::Unit);
-    CHECK(check("(print \"hello\")") == Type::Unit);
-    CHECK(check("(print true)") == Type::Unit);
+    CHECK(check("(print 42)") == BaseType::Unit);
+    CHECK(check("(print \"hello\")") == BaseType::Unit);
+    CHECK(check("(print true)") == BaseType::Unit);
   }
 
   // --- If ------------------------------------------------------------------
@@ -133,7 +133,7 @@ TEST_SUITE("blip.type_checker") {
   TEST_CASE("if condition must be bool") { CHECK_THROWS(check("(if 1 2 3)")); }
 
   TEST_CASE("if branches must have same type") {
-    CHECK(check("(if true 1 2)") == Type::Int);
+    CHECK(check("(if true 1 2)") == BaseType::Int);
   }
 
   TEST_CASE("if branches with mismatched types throws") {
@@ -141,7 +141,7 @@ TEST_SUITE("blip.type_checker") {
   }
 
   TEST_CASE("if without else requires unit then-branch") {
-    CHECK(check("(if true (print 1))") == Type::Unit);
+    CHECK(check("(if true (print 1))") == BaseType::Unit);
   }
 
   TEST_CASE("if without else with non-unit then-branch throws") {
@@ -155,19 +155,20 @@ TEST_SUITE("blip.type_checker") {
   }
 
   TEST_CASE("while result is unit") {
-    CHECK(check("(while false 1)") == Type::Unit);
+    CHECK(check("(while false 1)") == BaseType::Unit);
   }
 
   // --- Define function -----------------------------------------------------
 
   TEST_CASE("define function result is unit") {
-    CHECK(check("(define (f) : int 42)") == Type::Unit);
+    CHECK(check("(define (f) : int 42)") == BaseType::Unit);
   }
 
-  TEST_CASE("define function binds name as Fn") {
+  TEST_CASE("define function binds name as function type") {
     auto env = std::make_shared<TypeEnvironment>();
     check("(define (f) : int 42)", env);
-    CHECK(env->lookup("f") == Type::Fn);
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("f")));
   }
 
   TEST_CASE("function body must match return type") {
@@ -187,41 +188,70 @@ TEST_SUITE("blip.type_checker") {
     CHECK_THROWS(check("(define (f (x : string)) : int x)"));
   }
 
-  // --- Function calls (opaque Fn) ------------------------------------------
+  // --- Function calls -------------------------------------------------------
 
-  TEST_CASE("calling Fn-typed value does not throw") {
-    // Fn is opaque — no argument or return type checking
-    CHECK_NOTHROW(check("(begin (define (f) : int 42) (f))"));
+  TEST_CASE("call returns declared return type") {
+    CHECK(check("(begin (define (f) : int 42) (f))") == BaseType::Int);
+  }
+
+  TEST_CASE("call with correct arg types does not throw") {
+    CHECK_NOTHROW(check("(begin (define (f (x : int)) : int x) (f 5))"));
+  }
+
+  TEST_CASE("call with wrong arg type throws") {
+    CHECK_THROWS(check("(begin (define (f (x : int)) : int x) (f true))"));
+  }
+
+  TEST_CASE("call with wrong arity throws") {
+    CHECK_THROWS(check("(begin (define (f (x : int)) : int x) (f 1 2))"));
+    CHECK_THROWS(check("(begin (define (f (x : int)) : int x) (f))"));
   }
 
   TEST_CASE("calling non-function throws") {
     CHECK_THROWS(check("(begin (define x 5) (x))"));
   }
 
-  // --- Built-ins (opaque Fn) -----------------------------------------------
+  // --- Built-ins -------------------------------------------------------------
 
-  TEST_CASE("built-in functions are Fn typed") {
+  TEST_CASE("built-in functions are function typed") {
     auto env = default_type_environment();
-    CHECK(env->lookup("+") == Type::Fn);
-    CHECK(env->lookup("-") == Type::Fn);
-    CHECK(env->lookup("*") == Type::Fn);
-    CHECK(env->lookup("/") == Type::Fn);
-    CHECK(env->lookup(">") == Type::Fn);
-    CHECK(env->lookup("<") == Type::Fn);
-    CHECK(env->lookup("=") == Type::Fn);
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("+")));
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("-")));
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("*")));
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("/")));
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup(">")));
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("<")));
+    CHECK(std::holds_alternative<std::shared_ptr<FunctionType>>(
+        env->lookup("=")));
   }
 
-  TEST_CASE("calling built-in does not throw") {
-    CHECK_NOTHROW(check_with_builtins("(+ 1 2)"));
+  TEST_CASE("calling built-in returns correct type") {
+    CHECK(check_with_builtins("(+ 1 2)") == BaseType::Int);
+  }
+
+  TEST_CASE("calling built-in with wrong arg types throws") {
+    CHECK_THROWS(check_with_builtins("(+ true 2)"));
+    CHECK_THROWS(check_with_builtins("(+ 1 \"hello\")"));
+  }
+
+  TEST_CASE("comparison built-in returns bool") {
+    CHECK(check_with_builtins("(> 1 2)") == BaseType::Bool);
+    CHECK(check_with_builtins("(< 1 2)") == BaseType::Bool);
+    CHECK(check_with_builtins("(= 1 2)") == BaseType::Bool);
   }
 
   // --- Integration ---------------------------------------------------------
 
   TEST_CASE("well-typed program with function and builtins") {
-    CHECK_NOTHROW(
-        check_with_builtins("(begin"
-                            "  (define (add-one (x : int)) : int (+ x 1))"
-                            "  (add-one 5))"));
+    CHECK(check_with_builtins("(begin"
+                              "  (define (add-one (x : int)) : int (+ x 1))"
+                              "  (add-one 5))") == BaseType::Int);
   }
 
   TEST_CASE("well-typed factorial") {

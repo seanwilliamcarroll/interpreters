@@ -158,14 +158,21 @@ std::shared_ptr<ValueEnvironment> default_value_environment() {
 std::shared_ptr<TypeEnvironment> default_type_environment() {
   auto env = std::make_shared<TypeEnvironment>();
 
-  // Built-in functions: all typed as opaque Fn for now
-  env->define("+", Type::Fn);
-  env->define("-", Type::Fn);
-  env->define("*", Type::Fn);
-  env->define("/", Type::Fn);
-  env->define(">", Type::Fn);
-  env->define("<", Type::Fn);
-  env->define("=", Type::Fn);
+  // (int, int) -> int
+  auto int_binop = std::make_shared<FunctionType>(
+      FunctionType{{BaseType::Int, BaseType::Int}, BaseType::Int});
+
+  // (int, int) -> bool
+  auto int_cmp = std::make_shared<FunctionType>(
+      FunctionType{{BaseType::Int, BaseType::Int}, BaseType::Bool});
+
+  env->define("+", int_binop);
+  env->define("-", int_binop);
+  env->define("*", int_binop);
+  env->define("/", int_binop);
+  env->define(">", int_cmp);
+  env->define("<", int_cmp);
+  env->define("=", int_cmp);
 
   return env;
 }
