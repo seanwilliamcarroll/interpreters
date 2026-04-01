@@ -1,0 +1,24 @@
+; Newton's method for square root approximation
+; sqrt(x): repeatedly improve guess via guess = (guess + x/guess) / 2
+
+(define (abs (x : double)) : double
+  (if (>. x 0.0) x (fsub 0.0 x)))
+
+(define (good-enough (guess : double) (x : double)) : bool
+  (<. (abs (fsub (fmul guess guess) x)) 0.001))
+
+(define (improve (guess : double) (x : double)) : double
+  (fdiv (fadd guess (fdiv x guess)) 2.0))
+
+(define (sqrt-iter (guess : double) (x : double)) : double
+  (if (good-enough guess x)
+    guess
+    (sqrt-iter (improve guess x) x)))
+
+(define (sqrt (x : double)) : double
+  (sqrt-iter 1.0 x))
+
+(print (sqrt 2.0))
+(print (sqrt 9.0))
+(print (sqrt 100.0))
+(print (sqrt 0.01))

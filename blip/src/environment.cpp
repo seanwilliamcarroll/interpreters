@@ -41,7 +41,8 @@ BuiltInFunction make_builtin(const std::string &name, auto int_operator) {
   return BuiltInFunction{
       .m_name = name,
       .m_expected_arguments = 2,
-      .m_native_function = [=](std::vector<Value> args) -> Value {
+      .m_native_function = // NOLINTNEXTLINE(bugprone-exception-escape)
+      [=](std::vector<Value> args) -> Value {
         if (both_are_type<InnerType>(args[0], args[1])) {
           return int_operator(std::get<InnerType>(args[0]),
                               std::get<InnerType>(args[1]));
