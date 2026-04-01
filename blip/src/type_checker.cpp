@@ -9,7 +9,10 @@
 //*
 //****************************************************************************
 
+#include "ast.hpp"
+#include "environment.hpp"
 #include "type.hpp"
+#include "value.hpp"
 #include <exceptions.hpp>
 #include <stdexcept>
 #include <type_checker.hpp>
@@ -60,10 +63,37 @@ void TypeChecker::visit(const ProgramNode &node) {
 }
 
 void TypeChecker::visit(const CallNode &node) {
-  // TODO: check callee type
-  // If callee is Fn (opaque), skip argument checking, result is unknown
-  // If callee is a known built-in, check argument count and types
-  (void)node;
+  node.get_callee().accept(*this);
+  if (m_result != Type::Fn) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Cannot call expression of type: " + type_to_string(m_result) +
+            " as function!",
+        node.get_location());
+  }
+
+  for (const auto &argument : node.get_arguments()) {
+    // Need to type check argument expressions
+    argument->accept(*this);
+  }
+
+  // If our callee is an identifier, we can try to type check things
+  auto function_identifier =
+      dynamic_cast<const Identifier *>(&node.get_callee());
+  if (function_identifier == nullptr) {
+    // Unnamed function, shouldn't be possible yet?
+    m_result = Type::Fn;
+    return;
+  }
+
+  try {
+    m_result = m_env->lookup(function_identifier->get_name());
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException("TypeChecker", error.what(),
+                                  node.get_location());
+  }
+
+  // No way to check on arguments or return type at the moment?
 }
 
 // --- Special forms ---------------------------------------------------------
@@ -175,12 +205,38 @@ void TypeChecker::visit(const DefineVarNode &node) {
 }
 
 void TypeChecker::visit(const DefineFnNode &node) {
-  // TODO: create child type environment
-  // Bind each param name → its declared type (from TypeNode annotation)
-  // Check body type matches declared return type
-  // Bind function name → Fn in parent m_env
-  // Result is Unit
-  (void)node;
+  auto function_env = std::make_shared<TypeEnvironment>(m_env);
+
+  for (const auto &argument : node.get_arguments()) {
+    if (argument->get_type() == nullptr) {
+      throw core::CompilerException("TypeChecker",
+                                    "Argument: " + argument->get_name() +
+                                        " is missing required type annotation!",
+                                    argument->get_location());
+    }
+
+    function_env->define(argument->get_name(),
+                         string_to_type(argument->get_type()->get_type_name()));
+  }
+
+  std::swap(function_env, m_env);
+  node.get_body().accept(*this);
+  if (m_result != string_to_type(node.get_return_type().get_type_name())) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Annotated return type of function: " + node.get_name().get_name() +
+            " does not match evaluated type! Annotated: " +
+            node.get_return_type().get_type_name() +
+            " vs. Evaluated: " + type_to_string(m_result),
+        node.get_location());
+  }
+
+  std::swap(function_env, m_env);
+
+  // TODO: Do better than this
+  m_env->define(node.get_name().get_name(), Type::Fn);
+
+  m_result = Type::Unit;
 }
 
 //****************************************************************************
