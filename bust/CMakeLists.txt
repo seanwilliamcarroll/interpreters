@@ -41,7 +41,8 @@ target_link_libraries(bust-exe bust-lib)
 
 add_executable(bust-test
   test/src/main.cpp
-  test/src/lexer_test.cpp)
+  test/src/lexer_test.cpp
+  test/src/parser_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -53,5 +54,6 @@ target_link_libraries(bust-test
 #*****************************************************************************
 
 add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
+add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 
 #*****************************************************************************

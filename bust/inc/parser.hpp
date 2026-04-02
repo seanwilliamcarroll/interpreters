@@ -31,7 +31,34 @@ public:
 
   void reset() { m_current_token = nullptr; }
 
+  Program parse();
+
 private:
+  Program parse_program();
+  TopItem parse_top_item();
+  FunctionDef parse_func_def();
+  LetBinding parse_let_binding();
+  std::vector<Identifier> parse_param_list();
+  TypeAnnotation parse_type();
+
+  Block parse_block();
+
+  Expression parse_expression();
+  Expression parse_logic_or();
+  Expression parse_logic_and();
+  Expression parse_equality();
+  Expression parse_comparison();
+  Expression parse_add_sub();
+  Expression parse_mult_div_mod();
+  Expression parse_unary_pre();
+  Expression parse_postfix();
+  Expression parse_primary();
+
+  Expression parse_if_expr();
+  Expression parse_return_expr();
+  Expression parse_lambda_expr();
+  Expression parse_literal();
+
   const Token &peek();
 
   std::unique_ptr<Token> advance();
