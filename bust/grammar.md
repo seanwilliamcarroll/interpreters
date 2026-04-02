@@ -53,6 +53,10 @@ AND_AND     = `&&`
 OR_OR       = `||`
 BANG        = `!`
 
+// Comments (consumed by lexer, not passed to parser)
+LINE_COMMENT  = `//` (any char except newline)* newline
+BLOCK_COMMENT = `/*` (any char, including newlines)* `*/`  // nesting allowed
+
 // Literals and identifiers
 NONZERO_DIGIT = '1' | ... | '9'
 DIGIT         = '0' | NONZERO_DIGIT
