@@ -39,6 +39,8 @@ std::string token_type_to_string(TokenType type) {
     return "=";
   case TokenType::PIPE:
     return "|";
+  case TokenType::AND:
+    return "&";
   case TokenType::PLUS:
     return "+";
   case TokenType::MINUS:

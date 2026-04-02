@@ -34,6 +34,7 @@ enum class TokenType : uint8_t {
   COMMA,
   EQUALS,
   PIPE,
+  AND,
 
   // Arithmetic operators
   PLUS,
@@ -78,8 +79,8 @@ enum class TokenType : uint8_t {
 
 // Type aliases
 using Token = core::Token<TokenType>;
-using TokenInt64 = core::TokenOf<TokenType, int64_t>;
 using TokenIdentifier = core::TokenOf<TokenType, std::string>;
+using TokenNumber = core::TokenOf<TokenType, std::string>;
 using LexerInterface = core::LexerInterface<TokenType>;
 
 std::string token_type_to_string(TokenType type);
