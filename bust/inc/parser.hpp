@@ -14,6 +14,7 @@
 #include <memory>
 #include <sstream>
 
+#include <ast.hpp>
 #include <bust_tokens.hpp>
 #include <exceptions.hpp>
 
