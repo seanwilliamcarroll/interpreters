@@ -100,6 +100,10 @@ std::string token_type_to_string(TokenType type) {
   }
 }
 
+std::ostream &operator<<(std::ostream &out, const TokenType &token_type) {
+  return out << token_type_to_string(token_type);
+}
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************

@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include <ostream>
 #include <string>
 
 #include <lexer_interface.hpp>
@@ -41,6 +42,8 @@ enum class TokenType : uint8_t {
   PRINT,
   DEFINE,
 };
+
+std::ostream &operator<<(std::ostream &, const TokenType &);
 
 // Type aliases
 using Token = core::Token<TokenType>;

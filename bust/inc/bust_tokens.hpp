@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include <cstdint>
+#include <iosfwd>
 #include <string>
 
 #include <lexer_interface.hpp>
@@ -76,6 +77,8 @@ enum class TokenType : uint8_t {
   BOOL,
   UNIT,
 };
+
+std::ostream &operator<<(std::ostream &, const TokenType &);
 
 // Type aliases
 using Token = core::Token<TokenType>;
