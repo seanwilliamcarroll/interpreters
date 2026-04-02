@@ -51,5 +51,6 @@ set(PROJECT_WARNINGS
 
 add_subdirectory(core)
 add_subdirectory(blip)
+add_subdirectory(bust)
 
 #*****************************************************************************
