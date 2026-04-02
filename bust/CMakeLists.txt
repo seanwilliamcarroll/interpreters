@@ -22,7 +22,8 @@ set_target_properties(bust-exe PROPERTIES OUTPUT_NAME bust)
 add_library(bust-lib STATIC
   src/bust.cpp
   src/bust_tokens.cpp
-  src/lexer.cpp)
+  src/lexer.cpp
+  src/parser.cpp)
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 
