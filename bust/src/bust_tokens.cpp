@@ -19,84 +19,88 @@ std::string token_type_to_string(TokenType type) {
   switch (type) {
   case TokenType::EOF_TOKEN:
     return "EOF";
+  // Single-char structural/operators
   case TokenType::LPAREN:
-    return "(";
+    return "LPAREN '('";
   case TokenType::RPAREN:
-    return ")";
+    return "RPAREN ')'";
   case TokenType::LBRACE:
-    return "{";
+    return "LBRACE '{'";
   case TokenType::RBRACE:
-    return "}";
-  case TokenType::ARROW:
-    return "->";
+    return "RBRACE '}'";
   case TokenType::COLON:
-    return ":";
+    return "COLON ':'";
   case TokenType::SEMICOLON:
-    return ";";
+    return "SEMICOLON ';'";
   case TokenType::COMMA:
-    return ",";
+    return "COMMA ','";
   case TokenType::EQUALS:
-    return "=";
+    return "EQUALS '='";
   case TokenType::PIPE:
-    return "|";
+    return "PIPE '|'";
   case TokenType::AND:
-    return "&";
+    return "AND '&'";
   case TokenType::PLUS:
-    return "+";
+    return "PLUS '+'";
   case TokenType::MINUS:
-    return "-";
+    return "MINUS '-'";
   case TokenType::STAR:
-    return "*";
+    return "STAR '*'";
   case TokenType::SLASH:
-    return "/";
+    return "SLASH '/'";
   case TokenType::PERCENT:
-    return "%";
-  case TokenType::EQ_EQ:
-    return "==";
-  case TokenType::BANG_EQ:
-    return "!=";
+    return "PERCENT '%'";
   case TokenType::LESS:
-    return "<";
+    return "LESS '<'";
   case TokenType::GREATER:
-    return ">";
-  case TokenType::LESS_EQ:
-    return "<=";
-  case TokenType::GREATER_EQ:
-    return ">=";
-  case TokenType::AND_AND:
-    return "&&";
-  case TokenType::OR_OR:
-    return "||";
+    return "GREATER '>'";
   case TokenType::BANG:
-    return "!";
+    return "BANG '!'";
+  // Multi-char structural/operators
+  case TokenType::ARROW:
+    return "ARROW \"->\"";
+  case TokenType::EQ_EQ:
+    return "EQ_EQ \"==\"";
+  case TokenType::BANG_EQ:
+    return "BANG_EQ \"!=\"";
+  case TokenType::LESS_EQ:
+    return "LESS_EQ \"<=\"";
+  case TokenType::GREATER_EQ:
+    return "GREATER_EQ \">=\"";
+  case TokenType::AND_AND:
+    return "AND_AND \"&&\"";
+  case TokenType::OR_OR:
+    return "OR_OR \"||\"";
+  case TokenType::UNIT:
+    return "UNIT \"()\"";
+  // Literals (lexeme carried in token value)
   case TokenType::IDENTIFIER:
     return "IDENTIFIER";
   case TokenType::INT_LITERAL:
     return "INT_LITERAL";
+  // Keywords
   case TokenType::FN:
-    return "fn";
+    return "FN \"fn\"";
   case TokenType::LET:
-    return "let";
+    return "LET \"let\"";
   case TokenType::RETURN:
-    return "return";
+    return "RETURN \"return\"";
   case TokenType::IF:
-    return "if";
+    return "IF \"if\"";
   case TokenType::ELSE:
-    return "else";
+    return "ELSE \"else\"";
   case TokenType::WHILE:
-    return "while";
+    return "WHILE \"while\"";
   case TokenType::FOR:
-    return "for";
+    return "FOR \"for\"";
   case TokenType::TRUE:
-    return "true";
+    return "TRUE \"true\"";
   case TokenType::FALSE:
-    return "false";
+    return "FALSE \"false\"";
   case TokenType::I64:
-    return "i64";
+    return "I64 \"i64\"";
   case TokenType::BOOL:
-    return "bool";
-  case TokenType::UNIT:
-    return "()";
+    return "BOOL \"bool\"";
   }
 }
 
