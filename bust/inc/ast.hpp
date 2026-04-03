@@ -59,7 +59,7 @@ struct FunctionDef;
 struct LetBinding;
 
 struct Identifier;
-struct TypeAnnotation;
+struct TypeIdentifierTemp;
 
 struct CallExpr;
 struct BinaryExpr;
@@ -95,13 +95,25 @@ using TopItem =
 
 using Statement = std::variant<std::unique_ptr<LetBinding>, Expression>;
 
-struct TypeAnnotation : public HasLocation {
-  std::string m_type_string;
+enum class PrimitiveType : uint8_t {
+  UNIT,
+  BOOL,
+  INT64,
 };
+
+struct PrimitiveTypeIdentifier : public HasLocation {
+  PrimitiveType m_type;
+};
+
+struct DefinedType : public HasLocation {
+  std::string m_type;
+};
+
+using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType>;
 
 struct Identifier : public HasLocation {
   std::string m_name;
-  std::optional<TypeAnnotation> m_type;
+  std::optional<TypeIdentifier> m_type;
 };
 
 struct Block : public HasLocation {
@@ -117,13 +129,13 @@ struct LetBinding : public HasLocation {
 struct FunctionDef : public HasLocation {
   Identifier m_id;
   std::vector<Identifier> m_parameters;
-  std::optional<TypeAnnotation> m_return_type;
+  TypeIdentifier m_return_type;
   Block m_body;
 };
 
 struct LambdaExpr : public HasLocation {
   std::vector<Identifier> m_parameters;
-  std::optional<TypeAnnotation> m_return_type;
+  std::optional<TypeIdentifier> m_return_type;
   Block m_body;
 };
 
