@@ -53,6 +53,17 @@ target_link_libraries(bust-test
 
 #*****************************************************************************
 
+if(ENABLE_ASAN)
+  target_compile_options(bust-lib  PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(bust-lib     PRIVATE -fsanitize=address)
+  target_compile_options(bust-exe  PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(bust-exe     PRIVATE -fsanitize=address)
+  target_compile_options(bust-test PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(bust-test    PRIVATE -fsanitize=address)
+endif()
+
+#*****************************************************************************
+
 add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
 add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 
