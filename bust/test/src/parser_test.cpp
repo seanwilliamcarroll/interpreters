@@ -510,6 +510,41 @@ TEST_SUITE("bust.parser") {
     CHECK(std::holds_alternative<LiteralInt64>(ret.m_return_expression));
   }
 
+  TEST_CASE("bust::parse_return_as_only_statement") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  return 42;\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
+    const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(stmt_expr));
+    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr);
+    CHECK(std::holds_alternative<LiteralInt64>(ret.m_return_expression));
+    CHECK_FALSE(func.m_body.m_final_expression.has_value());
+  }
+
+  TEST_CASE("bust::parse_return_as_statement") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  return 42;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    // return 42; is a statement (expression followed by semicolon)
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
+    const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(stmt_expr));
+    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr);
+    CHECK(std::holds_alternative<LiteralInt64>(ret.m_return_expression));
+    // Final expression: 0
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(
+        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+  }
+
   TEST_CASE("bust::parse_early_return_in_if") {
     auto program = parse_string("fn main() -> i64 {\n"
                                 "  if true { return 1; }\n"
@@ -520,6 +555,61 @@ TEST_SUITE("bust.parser") {
     // First statement: if with return inside
     REQUIRE(func.m_body.m_statements.size() == 1);
     // Final expression: 0
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(
+        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+  }
+
+  // === Block-like statements without semicolons ============================
+
+  TEST_CASE("bust::parse_if_else_as_statement_no_semicolon") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  if true { 1; } else { 2; }\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
+    CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
+        std::get<Expression>(func.m_body.m_statements[0])));
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(
+        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+  }
+
+  TEST_CASE("bust::parse_bare_block_as_statement_no_semicolon") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  { let x: i64 = 1; }\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
+    CHECK(std::holds_alternative<std::unique_ptr<Block>>(
+        std::get<Expression>(func.m_body.m_statements[0])));
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(
+        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+  }
+
+  TEST_CASE("bust::parse_multiple_block_like_no_semicolons") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  if true { 1; }\n"
+                                "  { 2; }\n"
+                                "  if false { 3; } else { 4; }\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 3);
+    CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
+        std::get<Expression>(func.m_body.m_statements[0])));
+    CHECK(std::holds_alternative<std::unique_ptr<Block>>(
+        std::get<Expression>(func.m_body.m_statements[1])));
+    CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
+        std::get<Expression>(func.m_body.m_statements[2])));
     REQUIRE(func.m_body.m_final_expression.has_value());
     CHECK(
         std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));

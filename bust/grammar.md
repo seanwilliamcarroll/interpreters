@@ -87,8 +87,17 @@ type                = I64
 block               = LBRACE expression_or_binding* expression? RBRACE
 
 expression_or_binding
-                    = expression SEMICOLON
+                    = expression_no_semicolon
+                    | expression SEMICOLON
                     | let_binding
+
+// These expressions end with a block, so they don't need a trailing semicolon
+// to be used as statements. A semicolon is still allowed but not required.
+expression_no_semicolon
+                    = if_expr
+                    | block
+                    | while_expr
+                    | for_expr
 
 let_binding         = LET IDENTIFIER (COLON type)? EQUALS expression SEMICOLON
 
