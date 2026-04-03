@@ -13,6 +13,7 @@
 
 #include <optional>
 #include <source_location.hpp>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -110,6 +111,26 @@ struct DefinedType : public HasLocation {
 };
 
 using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType>;
+
+inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
+  return std::visit(
+      [](const auto &v) -> std::string {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, PrimitiveTypeIdentifier>) {
+          switch (v.m_type) {
+          case PrimitiveType::UNIT:
+            return "()";
+          case PrimitiveType::BOOL:
+            return "bool";
+          case PrimitiveType::INT64:
+            return "i64";
+          }
+        } else {
+          return v.m_type;
+        }
+      },
+      tid);
+}
 
 struct Identifier : public HasLocation {
   std::string m_name;

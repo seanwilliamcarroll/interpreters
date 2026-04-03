@@ -15,6 +15,7 @@
 #include <iostream>
 #include <parser.hpp>
 #include <pipeline.hpp>
+#include <type_checker.hpp>
 #include <validate_main.hpp>
 
 //****************************************************************************
@@ -29,7 +30,8 @@ void Bust::rep() {
   Parser parser(std::move(lexer));
   auto program = parser.parse();
 
-  auto validated = run_pipeline(std::move(program), ValidateMain{});
+  auto validated =
+      run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
 
   // TODO: evaluate
   std::cout << AstDumper::dump(validated);
