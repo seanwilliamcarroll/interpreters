@@ -15,7 +15,7 @@
 #include <memory>
 #include <sstream>
 
-#include <ast.hpp>
+#include <ast/nodes.hpp>
 #include <bust_tokens.hpp>
 #include <exceptions.hpp>
 #include <unordered_map>
@@ -23,6 +23,7 @@
 //****************************************************************************
 namespace bust {
 //****************************************************************************
+using namespace ast;
 
 class Parser {
 public:

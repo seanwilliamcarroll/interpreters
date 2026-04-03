@@ -11,7 +11,7 @@
 
 #include "bust_tokens.hpp"
 #include "source_location.hpp"
-#include <ast.hpp>
+#include <ast/nodes.hpp>
 #include <memory>
 #include <optional>
 #include <parser.hpp>
@@ -22,6 +22,7 @@
 
 //****************************************************************************
 namespace bust {
+using namespace ast;
 //****************************************************************************
 
 // --- Public ----------------------------------------------------------------

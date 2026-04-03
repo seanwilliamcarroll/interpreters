@@ -13,7 +13,7 @@
 //*
 //****************************************************************************
 
-#include <ast.hpp>
+#include <ast/nodes.hpp>
 #include <exceptions.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
@@ -24,6 +24,7 @@
 
 //****************************************************************************
 namespace bust {
+using namespace ast;
 //****************************************************************************
 TEST_SUITE("bust.semantic_analysis") {
 

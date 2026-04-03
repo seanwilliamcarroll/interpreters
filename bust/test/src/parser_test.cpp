@@ -13,8 +13,8 @@
 //*
 //****************************************************************************
 
-#include <ast.hpp>
-#include <ast_dump.hpp>
+#include <ast/dump.hpp>
+#include <ast/nodes.hpp>
 #include <bust_tokens.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
@@ -24,6 +24,7 @@
 
 //****************************************************************************
 namespace bust {
+using namespace ast;
 //****************************************************************************
 TEST_SUITE("bust.parser") {
 
@@ -38,7 +39,7 @@ TEST_SUITE("bust.parser") {
 
   // Use after parse_string: DUMP_AST(program);
   // Prints the AST tree only when a CHECK/REQUIRE fails in the same scope.
-#define DUMP_AST(prog) INFO(AstDumper::dump(prog))
+#define DUMP_AST(prog) INFO(Dumper::dump(prog))
 
   // Extract the single top-level FunctionDef from a program
   static const FunctionDef &get_single_func(const Program &program) {

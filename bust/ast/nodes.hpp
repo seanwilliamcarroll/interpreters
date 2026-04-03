@@ -11,50 +11,14 @@
 #pragma once
 //****************************************************************************
 
+#include <ast/operators.hpp>
+#include <ast/types.hpp>
 #include <optional>
-#include <source_location.hpp>
-#include <string>
-#include <variant>
 #include <vector>
 
 //****************************************************************************
-namespace bust {
+namespace bust::ast {
 //****************************************************************************
-
-enum class UnaryOperator : uint8_t {
-  // Logic/Bits
-  NOT,
-  // Arithmetic
-  MINUS,
-};
-
-enum class BinaryOperator : uint8_t {
-  // Logic/Bits
-  LOGICAL_AND,
-  LOGICAL_OR,
-  // BITWISE_AND, // Maybe
-  // BITWISE_OR, // maybe
-  // Arithmetic
-  PLUS,
-  MINUS,
-  MULTIPLIES,
-  DIVIDES,
-  MODULUS,
-  // Assignment
-  // ASSIGNS, // Maybe at some point?
-  // Comparison
-  EQ,
-  LT,
-  LT_EQ,
-  GT,
-  GT_EQ,
-  NOT_EQ,
-  // DOT, // TODO
-};
-
-struct HasLocation {
-  core::SourceLocation m_location;
-};
 
 struct FunctionDef;
 struct LetBinding;
@@ -95,42 +59,6 @@ using TopItem =
     std::variant<std::unique_ptr<FunctionDef>, std::unique_ptr<LetBinding>>;
 
 using Statement = std::variant<std::unique_ptr<LetBinding>, Expression>;
-
-enum class PrimitiveType : uint8_t {
-  UNIT,
-  BOOL,
-  INT64,
-};
-
-struct PrimitiveTypeIdentifier : public HasLocation {
-  PrimitiveType m_type;
-};
-
-struct DefinedType : public HasLocation {
-  std::string m_type;
-};
-
-using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType>;
-
-inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
-  return std::visit(
-      [](const auto &v) -> std::string {
-        using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, PrimitiveTypeIdentifier>) {
-          switch (v.m_type) {
-          case PrimitiveType::UNIT:
-            return "()";
-          case PrimitiveType::BOOL:
-            return "bool";
-          case PrimitiveType::INT64:
-            return "i64";
-          }
-        } else {
-          return v.m_type;
-        }
-      },
-      tid);
-}
 
 struct Identifier : public HasLocation {
   std::string m_name;
@@ -192,5 +120,5 @@ struct UnaryExpr : public HasLocation {
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::ast
 //****************************************************************************

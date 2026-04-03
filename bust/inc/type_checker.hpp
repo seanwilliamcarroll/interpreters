@@ -11,8 +11,8 @@
 #pragma once
 //****************************************************************************
 
-#include <ast.hpp>
-#include <hir.hpp>
+#include <ast/nodes.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust {
@@ -21,7 +21,7 @@ namespace bust {
 /// Type checking pass. Validates that all expressions have consistent types.
 /// Currently a pass-through — will eventually produce a typed AST.
 struct TypeChecker {
-  Program operator()(Program program) const;
+  ast::Program operator()(ast::Program program) const;
 };
 
 //****************************************************************************

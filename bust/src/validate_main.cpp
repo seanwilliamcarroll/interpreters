@@ -9,13 +9,14 @@
 //*
 //****************************************************************************
 
-#include <ast.hpp>
+#include <ast/nodes.hpp>
 #include <exceptions.hpp>
 #include <validate_main.hpp>
 #include <variant>
 
 //****************************************************************************
 namespace bust {
+using namespace ast;
 //****************************************************************************
 
 bool try_validate_main(const FunctionDef &function_def) {

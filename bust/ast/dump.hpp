@@ -11,18 +11,18 @@
 #pragma once
 //****************************************************************************
 
-#include <ast.hpp>
+#include <ast/nodes.hpp>
 #include <sstream>
 #include <string>
 
 //****************************************************************************
-namespace bust {
+namespace bust::ast {
 //****************************************************************************
 
-class AstDumper {
+class Dumper {
 public:
   static std::string dump(const Program &program) {
-    AstDumper d;
+    Dumper d;
     d.dump_program(program);
     return d.m_out.str();
   }
@@ -43,8 +43,8 @@ private:
   }
 
   struct IndentGuard {
-    AstDumper &d;
-    IndentGuard(AstDumper &d) : d(d) { ++d.m_indent; }
+    Dumper &d;
+    IndentGuard(Dumper &d) : d(d) { ++d.m_indent; }
     ~IndentGuard() { --d.m_indent; }
   };
 
@@ -308,5 +308,5 @@ private:
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::ast
 //****************************************************************************

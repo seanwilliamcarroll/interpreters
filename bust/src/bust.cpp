@@ -10,7 +10,7 @@
 //****************************************************************************
 
 #include "lexer.hpp"
-#include <ast_dump.hpp>
+#include <ast/dump.hpp>
 #include <bust.hpp>
 #include <iostream>
 #include <parser.hpp>
@@ -34,7 +34,7 @@ void Bust::rep() {
       run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
 
   // TODO: evaluate
-  std::cout << AstDumper::dump(validated);
+  std::cout << ast::Dumper::dump(validated);
 }
 
 } // namespace bust

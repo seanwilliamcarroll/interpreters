@@ -4,26 +4,50 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Semantic pass to validate the presence and signature of main.
+//*  Purpose : Operator enum definitions for bust AST.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <ast/nodes.hpp>
+#include <cstdint>
 
 //****************************************************************************
-namespace bust {
+namespace bust::ast {
 //****************************************************************************
 
-/// Read-only pass: validates that the program contains exactly one `main`
-/// function with return type `i64`. Passes the Program through unchanged,
-/// or throws a CompilerException on failure.
-struct ValidateMain {
-  ast::Program operator()(ast::Program program) const;
+enum class UnaryOperator : uint8_t {
+  // Logic/Bits
+  NOT,
+  // Arithmetic
+  MINUS,
+};
+
+enum class BinaryOperator : uint8_t {
+  // Logic/Bits
+  LOGICAL_AND,
+  LOGICAL_OR,
+  // BITWISE_AND, // Maybe
+  // BITWISE_OR, // maybe
+  // Arithmetic
+  PLUS,
+  MINUS,
+  MULTIPLIES,
+  DIVIDES,
+  MODULUS,
+  // Assignment
+  // ASSIGNS, // Maybe at some point?
+  // Comparison
+  EQ,
+  LT,
+  LT_EQ,
+  GT,
+  GT_EQ,
+  NOT_EQ,
+  // DOT, // TODO
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::ast
 //****************************************************************************

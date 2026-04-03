@@ -15,7 +15,7 @@
 namespace bust {
 //****************************************************************************
 
-Program TypeChecker::operator()(Program program) const {
+ast::Program TypeChecker::operator()(ast::Program program) const {
   // TODO: type check all top-level items
   return program;
 }
