@@ -4,7 +4,7 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Type checking pass for bust programs.
+//*  Purpose : Typed AST node definitions for bust.
 //*
 //*
 //****************************************************************************
@@ -12,17 +12,12 @@
 //****************************************************************************
 
 #include <ast.hpp>
-#include <typed_ast.hpp>
 
 //****************************************************************************
 namespace bust {
 //****************************************************************************
 
-/// Type checking pass. Validates that all expressions have consistent types.
-/// Currently a pass-through — will eventually produce a typed AST.
-struct TypeChecker {
-  Program operator()(Program program) const;
-};
+// TODO: Define typed AST nodes here.
 
 //****************************************************************************
 } // namespace bust
