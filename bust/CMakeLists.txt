@@ -29,7 +29,7 @@ add_library(bust-lib STATIC
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 
-target_include_directories(bust-lib PUBLIC inc)
+target_include_directories(bust-lib PUBLIC inc ast/inc hir/inc)
 
 target_compile_options(bust-lib PRIVATE ${PROJECT_WARNINGS})
 
