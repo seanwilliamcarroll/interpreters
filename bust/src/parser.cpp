@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 //****************************************************************************
 namespace bust {
@@ -201,12 +202,12 @@ std::vector<Identifier> Parser::parse_param_list() {
 
 std::vector<Identifier> Parser::parse_lambda_param_list() {
   std::vector<Identifier> parameters;
-  while (peek().get_token_type() != TokenType::RPAREN) {
+  while (peek().get_token_type() != TokenType::PIPE) {
     // Could force all or nothing, either they all have an annotation or none of
     // them
     // Flexible for now
     parameters.push_back(parse_possibly_annotated_identifier());
-    if (peek().get_token_type() != TokenType::RPAREN) {
+    if (peek().get_token_type() != TokenType::PIPE) {
       expect(TokenType::COMMA, __FUNCTION__);
     }
   }
@@ -214,6 +215,13 @@ std::vector<Identifier> Parser::parse_lambda_param_list() {
 }
 
 // --- Blocks ----------------------------------------------------------------
+
+bool is_expression_no_semicolon(const Expression &expression) {
+  return std::holds_alternative<std::unique_ptr<IfExpr>>(expression) ||
+         std::holds_alternative<std::unique_ptr<Block>>(expression) ||
+         std::holds_alternative<std::unique_ptr<WhileExpr>>(expression) ||
+         std::holds_alternative<std::unique_ptr<ForExpr>>(expression);
+}
 
 Block Parser::parse_block() {
   auto original_location = peek().get_location();
@@ -228,7 +236,13 @@ Block Parser::parse_block() {
     }
     auto next_expression = parse_expression();
     if (peek().get_token_type() == TokenType::SEMICOLON) {
-      advance();
+      expect(TokenType::SEMICOLON, __FUNCTION__);
+      statements.emplace_back(std::move(next_expression));
+      continue;
+    }
+    if (is_expression_no_semicolon(next_expression) &&
+        peek().get_token_type() != TokenType::RBRACE) {
+      // Still more statements to come then
       statements.emplace_back(std::move(next_expression));
       continue;
     }
@@ -396,6 +410,7 @@ Expression Parser::parse_primary() {
   case TokenType::IF:
     return parse_if_expr();
   case TokenType::PIPE:
+  case TokenType::OR_OR:
     return parse_lambda_expr();
   case TokenType::RETURN:
     return parse_return_expr();
@@ -419,12 +434,13 @@ Expression Parser::parse_if_expr() {
   auto then_branch = parse_block();
 
   if (peek().get_token_type() == TokenType::ELSE) {
-    advance();
-    return std::make_unique<IfExpr>(
-        IfExpr{{original_location},
-               std::move(condition),
-               std::move(then_branch),
-               std::optional<Block>(parse_block())});
+    expect(TokenType::ELSE, __FUNCTION__);
+    auto else_branch = std::optional<Block>(parse_block());
+
+    return std::make_unique<IfExpr>(IfExpr{{original_location},
+                                           std::move(condition),
+                                           std::move(then_branch),
+                                           std::move(else_branch)});
   }
 
   return std::make_unique<IfExpr>(IfExpr{{original_location},
@@ -441,8 +457,31 @@ Expression Parser::parse_return_expr() {
 }
 
 Expression Parser::parse_lambda_expr() {
-  // TODO
-  on_error(peek().get_location(), "parse_lambda_expr not implemented");
+  auto original_location = peek().get_location();
+  std::vector<Identifier> arguments;
+  if (peek().get_token_type() == TokenType::PIPE) {
+    // May have arguments
+    expect(TokenType::PIPE, __FUNCTION__);
+    arguments = parse_lambda_param_list();
+    expect(TokenType::PIPE, __FUNCTION__);
+  } else if (peek().get_token_type() == TokenType::OR_OR) {
+    // Definitely no arguments
+    expect(TokenType::OR_OR, __FUNCTION__);
+  } else {
+    on_error(peek().get_location(),
+             "parse_lambda_expr did not expect TokenType: ",
+             peek().get_token_type());
+  }
+
+  auto function_type =
+      (peek().get_token_type() == TokenType::ARROW)
+          ? std::optional<TypeIdentifier>(parse_function_type_annotation())
+          : std::nullopt;
+
+  auto body = parse_block();
+
+  return std::make_unique<LambdaExpr>(LambdaExpr{
+      {original_location}, arguments, function_type, std::move(body)});
 }
 
 Expression Parser::parse_literal() {
