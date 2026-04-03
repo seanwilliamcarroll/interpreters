@@ -23,7 +23,8 @@ add_library(bust-lib STATIC
   src/bust.cpp
   src/bust_tokens.cpp
   src/lexer.cpp
-  src/parser.cpp)
+  src/parser.cpp
+  src/validate_main.cpp)
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 

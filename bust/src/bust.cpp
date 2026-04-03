@@ -9,10 +9,13 @@
 //*
 //****************************************************************************
 
-#include "bust_tokens.hpp"
 #include "lexer.hpp"
+#include <ast_dump.hpp>
 #include <bust.hpp>
 #include <iostream>
+#include <parser.hpp>
+#include <pipeline.hpp>
+#include <validate_main.hpp>
 
 //****************************************************************************
 
@@ -22,18 +25,14 @@ Bust::Bust(std::istream &input, const char *filename)
     : m_input(input), m_filename(filename) {}
 
 void Bust::rep() {
-  // TODO: lex, parse, evaluate
-  (void)m_input;
-  (void)m_filename;
-
   auto lexer = make_lexer(m_input, m_filename);
-  while (auto next_token = lexer->get_next_token()) {
-    std::cout << *next_token << "\n";
+  Parser parser(std::move(lexer));
+  auto program = parser.parse();
 
-    if (next_token->get_token_type() == TokenType::EOF_TOKEN) {
-      break;
-    }
-  }
+  auto validated = run_pipeline(std::move(program), ValidateMain{});
+
+  // TODO: evaluate
+  std::cout << AstDumper::dump(validated);
 }
 
 } // namespace bust
