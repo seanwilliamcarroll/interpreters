@@ -19,9 +19,7 @@
 namespace bust::ast {
 //****************************************************************************
 
-struct HasLocation {
-  core::SourceLocation m_location;
-};
+using core::HasLocation;
 
 enum class PrimitiveType : uint8_t {
   UNIT,

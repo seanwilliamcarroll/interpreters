@@ -32,6 +32,10 @@ inline std::ostream &operator<<(std::ostream &out, const SourceLocation &loc) {
              << loc.column;
 }
 
+struct HasLocation {
+  SourceLocation m_location;
+};
+
 //****************************************************************************
 } // namespace core
 //****************************************************************************
