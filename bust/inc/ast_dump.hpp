@@ -32,8 +32,9 @@ private:
   int m_indent = 0;
 
   void indent() {
-    for (int i = 0; i < m_indent; ++i)
+    for (int i = 0; i < m_indent; ++i) {
       m_out << "  ";
+    }
   }
 
   void line(const std::string &text) {
@@ -50,18 +51,20 @@ private:
   void dump_program(const Program &p) {
     line("Program");
     IndentGuard g(*this);
-    for (const auto &item : p.m_items)
+    for (const auto &item : p.m_items) {
       dump_top_item(item);
+    }
   }
 
   void dump_top_item(const TopItem &item) {
     std::visit(
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::unique_ptr<FunctionDef>>)
+          if constexpr (std::is_same_v<T, std::unique_ptr<FunctionDef>>) {
             dump_func_def(*v);
-          else if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>)
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>) {
             dump_let_binding(*v);
+          }
         },
         item);
   }
@@ -101,8 +104,9 @@ private:
     indent();
     m_out << "FunctionDef " << f.m_id.m_name << "(";
     for (size_t i = 0; i < f.m_parameters.size(); ++i) {
-      if (i > 0)
+      if (i > 0) {
         m_out << ", ";
+      }
       dump_identifier(f.m_parameters[i]);
     }
     m_out << ") -> ";
@@ -124,8 +128,9 @@ private:
   void dump_block(const Block &b) {
     line("Block");
     IndentGuard g(*this);
-    for (const auto &stmt : b.m_statements)
+    for (const auto &stmt : b.m_statements) {
       dump_statement(stmt);
+    }
     if (b.m_final_expression.has_value()) {
       line("=> (final)");
       IndentGuard g2(*this);
@@ -137,10 +142,11 @@ private:
     std::visit(
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>)
+          if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>) {
             dump_let_binding(*v);
-          else if constexpr (std::is_same_v<T, Expression>)
+          } else if constexpr (std::is_same_v<T, Expression>) {
             dump_expression(v);
+          }
         },
         s);
   }
@@ -249,8 +255,9 @@ private:
     if (!c.m_arguments.empty()) {
       line("args:");
       IndentGuard g2(*this);
-      for (const auto &arg : c.m_arguments)
+      for (const auto &arg : c.m_arguments) {
         dump_expression(arg);
+      }
     }
   }
 
@@ -284,8 +291,9 @@ private:
     indent();
     m_out << "Lambda(";
     for (size_t i = 0; i < l.m_parameters.size(); ++i) {
-      if (i > 0)
+      if (i > 0) {
         m_out << ", ";
+      }
       dump_identifier(l.m_parameters[i]);
     }
     m_out << ")";
