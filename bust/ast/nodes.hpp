@@ -11,13 +11,15 @@
 #pragma once
 //****************************************************************************
 
-#include <ast/operators.hpp>
 #include <ast/types.hpp>
+#include <operators.hpp>
 #include <optional>
 #include <vector>
 
 //****************************************************************************
 namespace bust::ast {
+using bust::BinaryOperator;
+using bust::UnaryOperator;
 using core::HasLocation;
 //****************************************************************************
 

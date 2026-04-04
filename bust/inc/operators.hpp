@@ -4,7 +4,7 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Operator enum definitions for bust AST.
+//*  Purpose : Operator enum definitions for bust.
 //*
 //*
 //****************************************************************************
@@ -14,7 +14,7 @@
 #include <cstdint>
 
 //****************************************************************************
-namespace bust::ast {
+namespace bust {
 //****************************************************************************
 
 enum class UnaryOperator : uint8_t {
@@ -49,5 +49,5 @@ enum class BinaryOperator : uint8_t {
 };
 
 //****************************************************************************
-} // namespace bust::ast
+} // namespace bust
 //****************************************************************************
