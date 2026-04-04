@@ -59,10 +59,9 @@ using Expression =
                  std::unique_ptr<WhileExpr>, std::unique_ptr<ForExpr>,
                  LiteralInt64, LiteralBool, LiteralUnit>;
 
-using Statement = std::variant<std::unique_ptr<LetBinding>, Expression>;
+using Statement = std::variant<LetBinding, Expression>;
 
-using TopItem =
-    std::variant<std::unique_ptr<FunctionDef>, std::unique_ptr<LetBinding>>;
+using TopItem = std::variant<FunctionDef, LetBinding>;
 
 // --- Leaf nodes ------------------------------------------------------------
 

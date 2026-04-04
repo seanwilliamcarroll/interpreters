@@ -54,11 +54,11 @@ Program ValidateMain::operator()(Program program) const {
 
   bool found_main = false;
   for (const auto &top_level_item : program.m_items) {
-    if (!std::holds_alternative<std::unique_ptr<FunctionDef>>(top_level_item)) {
+    if (!std::holds_alternative<FunctionDef>(top_level_item)) {
       continue;
     }
-    bool is_valid_main = try_validate_main(
-        *std::get<std::unique_ptr<FunctionDef>>(top_level_item));
+    bool is_valid_main =
+        try_validate_main(std::get<FunctionDef>(top_level_item));
 
     if (is_valid_main) {
       if (found_main) {

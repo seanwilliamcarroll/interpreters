@@ -44,9 +44,8 @@ TEST_SUITE("bust.parser") {
   // Extract the single top-level FunctionDef from a program
   static const FunctionDef &get_single_func(const Program &program) {
     REQUIRE(program.m_items.size() == 1);
-    REQUIRE(std::holds_alternative<std::unique_ptr<FunctionDef>>(
-        program.m_items[0]));
-    return *std::get<std::unique_ptr<FunctionDef>>(program.m_items[0]);
+    REQUIRE(std::holds_alternative<FunctionDef>(program.m_items[0]));
+    return std::get<FunctionDef>(program.m_items[0]);
   }
 
   // Extract the final expression from a block
@@ -168,10 +167,8 @@ TEST_SUITE("bust.parser") {
                                 "fn main() -> i64 { x }");
     DUMP_AST(program);
     REQUIRE(program.m_items.size() == 2);
-    REQUIRE(std::holds_alternative<std::unique_ptr<LetBinding>>(
-        program.m_items[0]));
-    const auto &binding =
-        *std::get<std::unique_ptr<LetBinding>>(program.m_items[0]);
+    REQUIRE(std::holds_alternative<LetBinding>(program.m_items[0]));
+    const auto &binding = std::get<LetBinding>(program.m_items[0]);
     CHECK(binding.m_variable.m_name == "x");
     REQUIRE(binding.m_variable.m_type.has_value());
     check_primitive_type(*binding.m_variable.m_type, PrimitiveType::INT64);
@@ -183,8 +180,7 @@ TEST_SUITE("bust.parser") {
                                 "fn main() -> i64 { x }");
     DUMP_AST(program);
     REQUIRE(program.m_items.size() == 2);
-    const auto &binding =
-        *std::get<std::unique_ptr<LetBinding>>(program.m_items[0]);
+    const auto &binding = std::get<LetBinding>(program.m_items[0]);
     CHECK(binding.m_variable.m_name == "x");
     CHECK_FALSE(binding.m_variable.m_type.has_value());
   }
@@ -197,10 +193,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_body.m_statements.size() == 1);
-    REQUIRE(std::holds_alternative<std::unique_ptr<LetBinding>>(
-        func.m_body.m_statements[0]));
-    const auto &binding =
-        *std::get<std::unique_ptr<LetBinding>>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
     CHECK(binding.m_variable.m_name == "x");
     // Final expression is x
     const auto &expr = get_final_expr(func.m_body);
@@ -663,10 +657,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_body.m_statements.size() == 1);
-    REQUIRE(std::holds_alternative<std::unique_ptr<LetBinding>>(
-        func.m_body.m_statements[0]));
-    const auto &binding =
-        *std::get<std::unique_ptr<LetBinding>>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(binding.m_expression));
   }
 
@@ -717,10 +709,8 @@ TEST_SUITE("bust.parser") {
                                 "fn main() -> i64 { helper() }");
     DUMP_AST(program);
     REQUIRE(program.m_items.size() == 2);
-    CHECK(std::holds_alternative<std::unique_ptr<FunctionDef>>(
-        program.m_items[0]));
-    CHECK(std::holds_alternative<std::unique_ptr<FunctionDef>>(
-        program.m_items[1]));
+    CHECK(std::holds_alternative<FunctionDef>(program.m_items[0]));
+    CHECK(std::holds_alternative<FunctionDef>(program.m_items[1]));
   }
 
   // === Fibonacci — integration test ========================================
@@ -738,8 +728,7 @@ TEST_SUITE("bust.parser") {
     REQUIRE(program.m_items.size() == 2);
 
     // First function is fib
-    const auto &fib =
-        *std::get<std::unique_ptr<FunctionDef>>(program.m_items[0]);
+    const auto &fib = std::get<FunctionDef>(program.m_items[0]);
     CHECK(fib.m_id.m_name == "fib");
     REQUIRE(fib.m_parameters.size() == 1);
     CHECK(fib.m_parameters[0].m_name == "n");
