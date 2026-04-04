@@ -48,6 +48,19 @@ struct FunctionType : public HasLocation {
   Type m_return_type;
 };
 
+inline core::SourceLocation type_location(const Type &type) {
+  return std::visit(
+      [](const auto &t) -> core::SourceLocation {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
+          return t->m_location;
+        } else {
+          return t.m_location;
+        }
+      },
+      type);
+}
+
 inline bool types_equal(const Type &lhs, const Type &rhs);
 
 inline bool operator==(const Type &lhs, const Type &rhs) {
