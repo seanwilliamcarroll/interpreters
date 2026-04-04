@@ -12,7 +12,9 @@
 //****************************************************************************
 
 #include <memory>
+#include <ostream>
 #include <source_location.hpp>
+#include <string>
 #include <types.hpp>
 #include <variant>
 #include <vector>
@@ -97,6 +99,43 @@ inline Type clone_type(const Type &type) {
         }
       },
       type);
+}
+
+inline std::string type_to_string(const Type &type) {
+  return std::visit(
+      [](const auto &t) -> std::string {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
+          switch (t.m_type) {
+          case PrimitiveType::UNIT:
+            return "()";
+          case PrimitiveType::BOOL:
+            return "bool";
+          case PrimitiveType::I64:
+            return "i64";
+          }
+        } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
+          std::string result = "fn(";
+          for (size_t i = 0; i < t->m_argument_types.size(); ++i) {
+            if (i > 0) {
+              result += ", ";
+            }
+            result += type_to_string(t->m_argument_types[i]);
+          }
+          result += ") -> ";
+          result += type_to_string(t->m_return_type);
+          return result;
+        } else if constexpr (std::is_same_v<T, NeverType>) {
+          return "!";
+        } else {
+          return "?";
+        }
+      },
+      type);
+}
+
+inline std::ostream &operator<<(std::ostream &out, const Type &type) {
+  return out << type_to_string(type);
 }
 
 //****************************************************************************
