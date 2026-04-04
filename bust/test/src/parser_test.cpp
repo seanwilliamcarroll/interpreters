@@ -126,7 +126,7 @@ TEST_SUITE("bust.parser") {
     const auto &func = get_single_func(program);
     CHECK(func.m_id.m_name == "main");
     CHECK(func.m_parameters.empty());
-    check_primitive_type(func.m_return_type, PrimitiveType::INT64);
+    check_primitive_type(func.m_return_type, PrimitiveType::I64);
   }
 
   TEST_CASE("bust::parse_function_no_return_type") {
@@ -146,10 +146,10 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_parameters.size() == 2);
     CHECK(func.m_parameters[0].m_name == "a");
     REQUIRE(func.m_parameters[0].m_type.has_value());
-    check_primitive_type(*func.m_parameters[0].m_type, PrimitiveType::INT64);
+    check_primitive_type(*func.m_parameters[0].m_type, PrimitiveType::I64);
     CHECK(func.m_parameters[1].m_name == "b");
     REQUIRE(func.m_parameters[1].m_type.has_value());
-    check_primitive_type(*func.m_parameters[1].m_type, PrimitiveType::INT64);
+    check_primitive_type(*func.m_parameters[1].m_type, PrimitiveType::I64);
   }
 
   TEST_CASE("bust::parse_function_single_param") {
@@ -171,7 +171,7 @@ TEST_SUITE("bust.parser") {
     const auto &binding = std::get<LetBinding>(program.m_items[0]);
     CHECK(binding.m_variable.m_name == "x");
     REQUIRE(binding.m_variable.m_type.has_value());
-    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::INT64);
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
     REQUIRE(std::holds_alternative<LiteralInt64>(binding.m_expression));
   }
 
@@ -687,7 +687,7 @@ TEST_SUITE("bust.parser") {
     CHECK(lambda.m_parameters[0].m_name == "x");
     CHECK(lambda.m_parameters[1].m_name == "y");
     REQUIRE(lambda.m_return_type.has_value());
-    check_primitive_type(*lambda.m_return_type, PrimitiveType::INT64);
+    check_primitive_type(*lambda.m_return_type, PrimitiveType::I64);
   }
 
   TEST_CASE("bust::parse_lambda_inferred_param_types") {

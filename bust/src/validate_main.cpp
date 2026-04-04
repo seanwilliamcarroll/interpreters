@@ -35,7 +35,7 @@ bool try_validate_main(const FunctionDef &function_def) {
 
   auto primitive_type =
       std::get<PrimitiveTypeIdentifier>(function_def.m_return_type);
-  if (primitive_type.m_type != PrimitiveType::INT64) {
+  if (primitive_type.m_type != PrimitiveType::I64) {
     throw core::CompilerException(
         "ValidateMain",
         "main function can only return i64 type, not" +

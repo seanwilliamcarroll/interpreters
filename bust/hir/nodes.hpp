@@ -47,23 +47,23 @@ struct Identifier : public HasLocation {
 
 // --- Literals --------------------------------------------------------------
 
-template <PrimitiveTypeEnum InternalType> struct Literal : public HasLocation {
-  static constexpr PrimitiveTypeEnum m_type = InternalType;
+template <PrimitiveType InternalType> struct Literal : public HasLocation {
+  static constexpr PrimitiveType m_type = InternalType;
 };
 
-template <> struct Literal<PrimitiveTypeEnum::BOOL> : public HasLocation {
-  static constexpr PrimitiveTypeEnum m_type = PrimitiveTypeEnum::BOOL;
+template <> struct Literal<PrimitiveType::BOOL> : public HasLocation {
+  static constexpr PrimitiveType m_type = PrimitiveType::BOOL;
   bool m_value;
 };
 
-template <> struct Literal<PrimitiveTypeEnum::I64> : public HasLocation {
-  static constexpr PrimitiveTypeEnum m_type = PrimitiveTypeEnum::I64;
+template <> struct Literal<PrimitiveType::I64> : public HasLocation {
+  static constexpr PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
 
-using LiteralI64 = Literal<PrimitiveTypeEnum::I64>;
-using LiteralBool = Literal<PrimitiveTypeEnum::BOOL>;
-using LiteralUnit = Literal<PrimitiveTypeEnum::UNIT>;
+using LiteralI64 = Literal<PrimitiveType::I64>;
+using LiteralBool = Literal<PrimitiveType::BOOL>;
+using LiteralUnit = Literal<PrimitiveType::UNIT>;
 
 // --- Core type aliases -----------------------------------------------------
 

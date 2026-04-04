@@ -87,7 +87,7 @@ TypeIdentifier Parser::parse_type_identifier() {
                                    PrimitiveType::BOOL};
   case TokenType::I64:
     return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::INT64};
+                                   PrimitiveType::I64};
   default:
     const auto [location, identifier_name] =
         parse_location_name_from_identifier("Malformed type annotation");

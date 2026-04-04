@@ -13,19 +13,15 @@
 
 #include <source_location.hpp>
 #include <string>
+#include <types.hpp>
 #include <variant>
 
 //****************************************************************************
 namespace bust::ast {
 //****************************************************************************
 
+using bust::PrimitiveType;
 using core::HasLocation;
-
-enum class PrimitiveType : uint8_t {
-  UNIT,
-  BOOL,
-  INT64,
-};
 
 struct PrimitiveTypeIdentifier : public HasLocation {
   PrimitiveType m_type;
@@ -47,7 +43,7 @@ inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
             return "()";
           case PrimitiveType::BOOL:
             return "bool";
-          case PrimitiveType::INT64:
+          case PrimitiveType::I64:
             return "i64";
           }
         } else {

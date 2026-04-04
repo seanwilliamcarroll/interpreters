@@ -81,7 +81,7 @@ private:
             case PrimitiveType::BOOL:
               m_out << "bool";
               break;
-            case PrimitiveType::INT64:
+            case PrimitiveType::I64:
               m_out << "i64";
               break;
             }
