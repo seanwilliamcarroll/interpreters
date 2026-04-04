@@ -1,61 +1,93 @@
-//**** Copyright © 2023-2024 Sean Carroll, Jonathon Bell. All rights reserved.
+//**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : blip::TokenType enum and token type aliases
+//*  Purpose : bust::TokenType enum and token type aliases
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <ostream>
+#include <cstdint>
+#include <iosfwd>
 #include <string>
 
 #include <lexer_interface.hpp>
 #include <token.hpp>
 
 //****************************************************************************
-namespace blip {
+namespace bust {
 //****************************************************************************
 
 enum class TokenType : uint8_t {
   // Structural
   EOF_TOKEN = 0,
-  LEFT_PAREND,
-  RIGHT_PAREND,
+  LPAREN,
+  RPAREN,
+  LBRACE,
+  RBRACE,
+  ARROW,
   COLON,
-  RIGHT_ARROW,
+  SEMICOLON,
+  COMMA,
+  EQUALS,
+  PIPE,
+  AND,
+
+  // Arithmetic operators
+  PLUS,
+  MINUS,
+  STAR,
+  SLASH,
+  PERCENT,
+
+  // Comparison operators
+  EQ_EQ,
+  BANG_EQ,
+  LESS,
+  GREATER,
+  LESS_EQ,
+  GREATER_EQ,
+
+  // Logical operators
+  AND_AND,
+  OR_OR,
+  BANG,
+
   // Literals
   IDENTIFIER,
   INT_LITERAL,
-  STRING_LITERAL,
-  DOUBLE_LITERAL,
-  BOOL_LITERAL,
+
   // Keywords
+  FN,
+  LET,
+  RETURN,
   IF,
+  ELSE,
   WHILE,
-  SET,
-  BEGIN,
-  PRINT,
-  DEFINE,
+  FOR,
+  TRUE,
+  FALSE,
+
+  // Type keywords
+  I64,
+  BOOL,
+  UNIT,
 };
 
 std::ostream &operator<<(std::ostream &, const TokenType &);
 
 // Type aliases
 using Token = core::Token<TokenType>;
-using TokenString = core::TokenOf<TokenType, std::string>;
-using TokenInt = core::TokenOf<TokenType, int>;
-using TokenDouble = core::TokenOf<TokenType, double>;
-using TokenBool = core::TokenOf<TokenType, bool>;
 using TokenIdentifier = core::TokenOf<TokenType, std::string>;
+using TokenNumber = core::TokenOf<TokenType, std::string>;
 using LexerInterface = core::LexerInterface<TokenType>;
 
 std::string token_type_to_string(TokenType type);
 
 //****************************************************************************
-} // namespace blip
+} // namespace bust
 //****************************************************************************

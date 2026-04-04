@@ -1,0 +1,70 @@
+#********** Copyright © 2023-2026 Sean Carroll. All rights reserved.
+#**
+#**
+#**  Version : $Header:$
+#**
+#**
+#**  Purpose : CMake build script for the 'bust' executable.
+#**
+#**
+#**  See Also: https://cmake.org/cmake/help/latest/
+#**            for more on the CMake language.
+#**
+#**
+#*****************************************************************************
+
+project(bust VERSION 0.1.0)
+
+add_executable(bust-exe src/main.cpp)
+
+set_target_properties(bust-exe PROPERTIES OUTPUT_NAME bust)
+
+add_library(bust-lib STATIC
+  src/bust.cpp
+  src/bust_tokens.cpp
+  src/lexer.cpp
+  src/parser.cpp)
+
+set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
+
+target_include_directories(bust-lib PUBLIC inc)
+
+target_compile_options(bust-lib PRIVATE ${PROJECT_WARNINGS})
+
+target_link_libraries(bust-lib core)
+
+target_compile_options(bust-exe PRIVATE ${PROJECT_WARNINGS})
+
+target_link_libraries(bust-exe bust-lib)
+
+#*****************************************************************************
+
+add_executable(bust-test
+  test/src/main.cpp
+  test/src/lexer_test.cpp
+  test/src/parser_test.cpp)
+
+target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
+
+target_link_libraries(bust-test
+  bust-lib
+  rapidcheck
+  doctest::doctest)
+
+#*****************************************************************************
+
+if(ENABLE_ASAN)
+  target_compile_options(bust-lib  PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(bust-lib     PRIVATE -fsanitize=address)
+  target_compile_options(bust-exe  PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(bust-exe     PRIVATE -fsanitize=address)
+  target_compile_options(bust-test PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(bust-test    PRIVATE -fsanitize=address)
+endif()
+
+#*****************************************************************************
+
+add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
+add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
+
+#*****************************************************************************

@@ -27,8 +27,7 @@ public:
   virtual ~Token() = default;
 
   virtual std::ostream &dump(std::ostream &out) const {
-    out << get_location()
-        << " TokenType: " << static_cast<unsigned int>(get_token_type());
+    out << get_location() << " TokenType: " << get_token_type();
     return out;
   }
 

@@ -22,7 +22,7 @@ struct SourceLocation {
 
   bool operator==(const SourceLocation &) const = default;
 
-  const std::string file_name{};
+  const char *const file_name{};
   const unsigned int line{1};
   const unsigned int column{0};
 };

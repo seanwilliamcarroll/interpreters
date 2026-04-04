@@ -49,7 +49,10 @@ set(PROJECT_WARNINGS
   -Woverloaded-virtual
 )
 
+option(ENABLE_ASAN "Enable AddressSanitizer for debug builds" OFF)
+
 add_subdirectory(core)
 add_subdirectory(blip)
+add_subdirectory(bust)
 
 #*****************************************************************************
