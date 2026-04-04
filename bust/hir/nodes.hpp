@@ -108,6 +108,7 @@ struct ReturnExpr : public HasLocation {
 // --- Control flow ----------------------------------------------------------
 
 struct Block : public HasLocation {
+  Type m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
 };
@@ -132,7 +133,7 @@ struct LambdaExpr : public HasLocation {
 
 struct FunctionDef : public HasLocation {
   std::string m_function_id;
-  FunctionType m_type;
+  std::unique_ptr<FunctionType> m_type;
   std::vector<Identifier> m_parameters;
   Block m_body;
 };

@@ -78,9 +78,9 @@ private:
     indent();
     m_out << "FunctionDef " << f.m_function_id << ": "
           << type_to_string(Type(std::make_unique<FunctionType>(
-                 FunctionType{{f.m_type.m_location},
-                              clone_types(f.m_type.m_argument_types),
-                              clone_type(f.m_type.m_return_type)})))
+                 FunctionType{{f.m_type->m_location},
+                              clone_types(f.m_type->m_argument_types),
+                              clone_type(f.m_type->m_return_type)})))
           << "\n";
     IndentGuard g(*this);
     indent();

@@ -153,8 +153,8 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(hir.m_top_items.size() == 1);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     CHECK(func.m_function_id == "main");
-    CHECK(func.m_type.m_argument_types.empty());
-    auto &ret = std::get<hir::PrimitiveTypeValue>(func.m_type.m_return_type);
+    CHECK(func.m_type->m_argument_types.empty());
+    auto &ret = std::get<hir::PrimitiveTypeValue>(func.m_type->m_return_type);
     CHECK(ret.m_type == PrimitiveType::I64);
   }
 
@@ -171,7 +171,7 @@ TEST_SUITE("bust.type_checker") {
         std::get<hir::PrimitiveTypeValue>(func.m_parameters[0].m_type);
     CHECK(a_type.m_type == PrimitiveType::I64);
     CHECK(func.m_parameters[1].m_name == "b");
-    REQUIRE(func.m_type.m_argument_types.size() == 2);
+    REQUIRE(func.m_type->m_argument_types.size() == 2);
   }
 
   TEST_CASE("function body type must match return type") {

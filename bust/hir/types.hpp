@@ -151,6 +151,14 @@ inline std::ostream &operator<<(std::ostream &out, const Type &type) {
   return out << type_to_string(type);
 }
 
+inline std::string operator+(const std::string &lhs, const Type &type) {
+  return lhs + type_to_string(type);
+}
+
+inline std::string operator+(const Type &type, const std::string &rhs) {
+  return type_to_string(type) + rhs;
+}
+
 //****************************************************************************
 } // namespace bust::hir
 //****************************************************************************

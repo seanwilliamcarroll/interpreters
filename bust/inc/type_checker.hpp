@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/type_environment.hpp"
 #include <ast/nodes.hpp>
 #include <hir/nodes.hpp>
 
@@ -21,7 +22,10 @@ namespace bust {
 /// Type checking pass. Validates that all expressions have consistent types.
 /// Currently a pass-through — will eventually produce a typed AST.
 struct TypeChecker {
-  ast::Program operator()(ast::Program program) const;
+  hir::Program operator()(const ast::Program &program);
+
+private:
+  hir::Environment m_env;
 };
 
 //****************************************************************************
