@@ -575,7 +575,15 @@ struct UnifiedChecker {
 
   hir::TopItem operator()(const ast::FunctionDef &function_def) {
     // Should throw, this would be an error of the type checker itself
-    auto function_type = m_env.lookup(function_def.m_id.m_name).value();
+    auto maybe_function_type = m_env.lookup(function_def.m_id.m_name);
+    if (!maybe_function_type.has_value()) {
+      throw core::CompilerException("TypeChecker",
+                                    "Compiler error: should have defined " +
+                                        function_def.m_id.m_name +
+                                        " in first pass!",
+                                    function_def.m_location);
+    }
+    auto function_type = hir::clone_type(maybe_function_type.value());
 
     auto [parameters, _] = convert_parameters(function_def.m_parameters);
 
