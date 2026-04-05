@@ -9,6 +9,7 @@
 //*
 //****************************************************************************
 
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -36,18 +37,37 @@ void repl() {
 }
 
 int main(int argc, const char *argv[]) {
-  if (argc > 2) {
-    std::cerr << "Usage: bust [script.bu]\n";
-    return 1;
+  bust::Mode mode = bust::Mode::RUN;
+  const char *filename = nullptr;
+
+  for (int i = 1; i < argc; ++i) {
+    if (std::strcmp(argv[i], "--dump-ast") == 0) {
+      mode = bust::Mode::DUMP_AST;
+    } else if (std::strcmp(argv[i], "--dump-hir") == 0) {
+      mode = bust::Mode::DUMP_HIR;
+    } else if (std::strcmp(argv[i], "--eval") == 0) {
+      mode = bust::Mode::EVAL;
+    } else if (std::strcmp(argv[i], "--llvm-ir") == 0) {
+      mode = bust::Mode::LLVM_IR;
+    } else if (argv[i][0] == '-') {
+      std::cerr << "Unknown option: " << argv[i] << "\n";
+      return 1;
+    } else if (filename == nullptr) {
+      filename = argv[i];
+    } else {
+      std::cerr << "Usage: bust [--dump-ast|--dump-hir|--eval|--llvm-ir] "
+                   "[script.bu]\n";
+      return 1;
+    }
   }
 
   try {
-    if (argc == 1) {
+    if (filename == nullptr) {
       repl();
-    } else if (argc == 2) {
+    } else {
       std::fstream input_file;
-      input_file.open(argv[1], std::fstream::in);
-      bust::Bust bust_lang(input_file, argv[1]);
+      input_file.open(filename, std::fstream::in);
+      bust::Bust bust_lang(input_file, filename, mode);
       bust_lang.rep();
       input_file.close();
     }

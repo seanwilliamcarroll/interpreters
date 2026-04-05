@@ -12,6 +12,7 @@
 #include "lexer.hpp"
 #include <ast/dump.hpp>
 #include <bust.hpp>
+#include <hir/dump.hpp>
 #include <iostream>
 #include <parser.hpp>
 #include <pipeline.hpp>
@@ -22,19 +23,33 @@
 
 namespace bust {
 
-Bust::Bust(std::istream &input, const char *filename)
-    : m_input(input), m_filename(filename) {}
+Bust::Bust(std::istream &input, const char *filename, Mode mode)
+    : m_input(input), m_filename(filename), m_mode(mode) {}
 
 void Bust::rep() {
   auto lexer = make_lexer(m_input, m_filename);
   Parser parser(std::move(lexer));
   auto program = parser.parse();
 
-  auto validated =
-      run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
+  if (m_mode == Mode::DUMP_AST) {
+    std::cout << ast::Dumper::dump(program);
+    return;
+  }
 
-  // TODO: evaluate
-  // std::cout << ast::Dumper::dump(validated);
+  auto typed = run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
+
+  switch (m_mode) {
+  case Mode::RUN:
+  case Mode::DUMP_HIR:
+    std::cout << hir::Dumper::dump(typed);
+    return;
+  case Mode::EVAL:
+    throw std::runtime_error("--eval not yet implemented");
+  case Mode::LLVM_IR:
+    throw std::runtime_error("--llvm-ir not yet implemented");
+  case Mode::DUMP_AST:
+    std::unreachable();
+  }
 }
 
 } // namespace bust

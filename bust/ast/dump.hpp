@@ -60,10 +60,10 @@ private:
     std::visit(
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::unique_ptr<FunctionDef>>) {
-            dump_func_def(*v);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>) {
-            dump_let_binding(*v);
+          if constexpr (std::is_same_v<T, FunctionDef>) {
+            dump_func_def(v);
+          } else if constexpr (std::is_same_v<T, LetBinding>) {
+            dump_let_binding(v);
           }
         },
         item);
@@ -142,8 +142,8 @@ private:
     std::visit(
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>) {
-            dump_let_binding(*v);
+          if constexpr (std::is_same_v<T, LetBinding>) {
+            dump_let_binding(v);
           } else if constexpr (std::is_same_v<T, Expression>) {
             dump_expression(v);
           }
