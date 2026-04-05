@@ -9,9 +9,9 @@
 //*
 //****************************************************************************
 
-#include "ast.hpp"
 #include "bust_tokens.hpp"
 #include "source_location.hpp"
+#include <ast/nodes.hpp>
 #include <memory>
 #include <optional>
 #include <parser.hpp>
@@ -22,6 +22,7 @@
 
 //****************************************************************************
 namespace bust {
+using namespace ast;
 //****************************************************************************
 
 // --- Public ----------------------------------------------------------------
@@ -45,10 +46,10 @@ Program Parser::parse_program() {
 
 TopItem Parser::parse_top_item() {
   if (peek().get_token_type() == TokenType::FN) {
-    return std::make_unique<FunctionDef>(parse_func_def());
+    return parse_func_def();
   }
   if (peek().get_token_type() == TokenType::LET) {
-    return std::make_unique<LetBinding>(parse_let_binding());
+    return parse_let_binding();
   }
 
   on_error(peek().get_location(),
@@ -86,7 +87,7 @@ TypeIdentifier Parser::parse_type_identifier() {
                                    PrimitiveType::BOOL};
   case TokenType::I64:
     return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::INT64};
+                                   PrimitiveType::I64};
   default:
     const auto [location, identifier_name] =
         parse_location_name_from_identifier("Malformed type annotation");
@@ -230,7 +231,7 @@ Block Parser::parse_block() {
   std::vector<Statement> statements;
   while (peek().get_token_type() != TokenType::RBRACE) {
     if (peek().get_token_type() == TokenType::LET) {
-      auto let_binding = std::make_unique<LetBinding>(parse_let_binding());
+      auto let_binding = parse_let_binding();
       statements.emplace_back(std::move(let_binding));
       continue;
     }

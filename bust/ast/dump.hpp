@@ -11,18 +11,18 @@
 #pragma once
 //****************************************************************************
 
-#include <ast.hpp>
+#include <ast/nodes.hpp>
 #include <sstream>
 #include <string>
 
 //****************************************************************************
-namespace bust {
+namespace bust::ast {
 //****************************************************************************
 
-class AstDumper {
+class Dumper {
 public:
   static std::string dump(const Program &program) {
-    AstDumper d;
+    Dumper d;
     d.dump_program(program);
     return d.m_out.str();
   }
@@ -43,8 +43,8 @@ private:
   }
 
   struct IndentGuard {
-    AstDumper &d;
-    IndentGuard(AstDumper &d) : d(d) { ++d.m_indent; }
+    Dumper &d;
+    IndentGuard(Dumper &d) : d(d) { ++d.m_indent; }
     ~IndentGuard() { --d.m_indent; }
   };
 
@@ -60,10 +60,10 @@ private:
     std::visit(
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::unique_ptr<FunctionDef>>) {
-            dump_func_def(*v);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>) {
-            dump_let_binding(*v);
+          if constexpr (std::is_same_v<T, FunctionDef>) {
+            dump_func_def(v);
+          } else if constexpr (std::is_same_v<T, LetBinding>) {
+            dump_let_binding(v);
           }
         },
         item);
@@ -81,7 +81,7 @@ private:
             case PrimitiveType::BOOL:
               m_out << "bool";
               break;
-            case PrimitiveType::INT64:
+            case PrimitiveType::I64:
               m_out << "i64";
               break;
             }
@@ -142,8 +142,8 @@ private:
     std::visit(
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, std::unique_ptr<LetBinding>>) {
-            dump_let_binding(*v);
+          if constexpr (std::is_same_v<T, LetBinding>) {
+            dump_let_binding(v);
           } else if constexpr (std::is_same_v<T, Expression>) {
             dump_expression(v);
           }
@@ -308,5 +308,5 @@ private:
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::ast
 //****************************************************************************

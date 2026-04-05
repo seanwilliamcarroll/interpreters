@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include <ostream>
+#include <sstream>
 #include <string>
 
 //****************************************************************************
@@ -31,6 +32,26 @@ inline std::ostream &operator<<(std::ostream &out, const SourceLocation &loc) {
   return out << "SourceLocation: " << loc.file_name << "::" << loc.line << ":"
              << loc.column;
 }
+
+inline std::string to_string(const SourceLocation &loc) {
+  std::ostringstream out;
+  out << loc;
+  return out.str();
+}
+
+inline std::string operator+(const std::string &lhs,
+                             const SourceLocation &loc) {
+  return lhs + to_string(loc);
+}
+
+inline std::string operator+(const SourceLocation &loc,
+                             const std::string &rhs) {
+  return to_string(loc) + rhs;
+}
+
+struct HasLocation {
+  SourceLocation m_location;
+};
 
 //****************************************************************************
 } // namespace core

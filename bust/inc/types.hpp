@@ -4,41 +4,25 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Top-level driver class for the bust language.
+//*  Purpose : Shared type definitions for bust.
 //*
 //*
 //****************************************************************************
-
 #pragma once
+//****************************************************************************
 
 #include <cstdint>
-#include <iostream>
 
 //****************************************************************************
-
 namespace bust {
+//****************************************************************************
 
-enum class Mode : std::uint8_t {
-  RUN,
-  DUMP_AST,
-  DUMP_HIR,
-  EVAL,
-  LLVM_IR,
+enum class PrimitiveType : uint8_t {
+  UNIT,
+  BOOL,
+  I64,
 };
 
-class Bust {
-public:
-  explicit Bust(std::istream &input, const char *filename = "<stdin>",
-                Mode mode = Mode::RUN);
-
-  void rep();
-
-private:
-  std::istream &m_input;
-  const char *m_filename;
-  Mode m_mode;
-};
-
+//****************************************************************************
 } // namespace bust
-
 //****************************************************************************
