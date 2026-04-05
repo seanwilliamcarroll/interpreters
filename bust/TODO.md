@@ -1,8 +1,8 @@
 # Bust — Next Steps
 
 ## Type Checker Fixes
-- [ ] Verify comparison operators (`<`, `>`, `<=`, `>=`) return `bool`, not operand type
-- [ ] Forward references: two-pass over top-level items (collect signatures, then check bodies)
+- [x] Verify comparison operators (`<`, `>`, `<=`, `>=`) return `bool`, not operand type
+- [x] Forward references: two-pass over top-level items (collect signatures, then check bodies)
 
 ## Type Inference
 - [ ] Allow lambdas with no type annotations (params and return type)
