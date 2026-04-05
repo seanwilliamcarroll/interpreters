@@ -29,21 +29,22 @@ struct PrimitiveTypeValue : public HasLocation {
   PrimitiveType m_type;
 };
 
+struct TypeVariable : public HasLocation {
+  std::string m_identifier;
+};
+
 struct FunctionType;
 
 struct NeverType : public HasLocation {};
 
 struct UnknownType : public HasLocation {};
 
-// TODO: Do we want to have an InferredType and ExplicitType, where Explicit has
-// a location?
-// TODO: Unknown type?
 // TODO: User defined types of some kind
-using Type = std::variant<PrimitiveTypeValue, std::unique_ptr<FunctionType>,
-                          NeverType, UnknownType>;
+using Type =
+    std::variant<PrimitiveTypeValue, TypeVariable,
+                 std::unique_ptr<FunctionType>, NeverType, UnknownType>;
 
 struct FunctionType : public HasLocation {
-  // I think this should have a location, inferred types may not
   std::vector<Type> m_argument_types;
   Type m_return_type;
 };

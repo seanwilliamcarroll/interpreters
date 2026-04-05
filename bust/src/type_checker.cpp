@@ -440,37 +440,54 @@ struct UnifiedChecker {
                 {return_expression->m_location}, std::move(expression)})};
   }
 
-  hir::Block check_callable_body(const std::vector<hir::Identifier> &parameters,
-                                 const hir::Type &return_type,
-                                 const ast::Block &ast_body) {
+  hir::Block
+  check_block_with_parameters(const std::vector<hir::Identifier> &parameters,
+                              const ast::Block &ast_block) {
     m_env.push_scope();
     for (const auto &parameter : parameters) {
       m_env.define(parameter.m_name, hir::clone_type(parameter.m_type));
     }
+    auto block = check_block(ast_block);
+    m_env.pop_scope();
+
+    return block;
+  }
+
+  hir::Block check_callable_body(const std::vector<hir::Identifier> &parameters,
+                                 const hir::Type &return_type,
+                                 const ast::Block &ast_body) {
 
     m_return_type_stack.push_back(hir::clone_type(return_type));
-    auto body = check_block(ast_body);
+    auto body = check_block_with_parameters(parameters, ast_body);
     m_return_type_stack.pop_back();
-    m_env.pop_scope();
     return body;
   }
 
   hir::Expression
   operator()(const std::unique_ptr<ast::LambdaExpr> &lambda_expression) {
-    if (!lambda_expression->m_return_type.has_value()) {
-      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
-                                    lambda_expression->m_location);
-    }
-
-    auto return_type = get_type(lambda_expression->m_return_type.value());
+    // Want to evaluate body and see what the type is
     auto [parameters, parameter_types] =
         convert_parameters(lambda_expression->m_parameters);
 
-    auto body =
-        check_callable_body(parameters, return_type, lambda_expression->m_body);
+    auto possible_return_type =
+        lambda_expression->m_return_type.has_value()
+            ? get_type(lambda_expression->m_return_type.value())
+            : hir::UnknownType{};
 
-    unify(body.m_type, return_type, "return type of lambda expression",
-          lambda_expression->m_location);
+    auto body = lambda_expression->m_return_type.has_value()
+                    ? check_callable_body(parameters, possible_return_type,
+                                          lambda_expression->m_body)
+                    : check_block_with_parameters(parameters,
+                                                  lambda_expression->m_body);
+
+    auto return_type = lambda_expression->m_return_type.has_value()
+                           ? std::move(possible_return_type)
+                           : hir::clone_type(body.m_type);
+
+    if (lambda_expression->m_return_type.has_value()) {
+      unify(body.m_type, return_type, "return type of lambda expression",
+            lambda_expression->m_location);
+    }
 
     auto function_type = std::make_unique<hir::FunctionType>(
         hir::FunctionType{{lambda_expression->m_location},
