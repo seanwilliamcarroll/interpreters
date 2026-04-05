@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include <type_traits>
 #include <utility>
 
 //****************************************************************************
@@ -23,13 +24,15 @@ namespace bust {
 /// A transform pass takes one type and returns a different type.
 /// If any pass throws, the pipeline stops and the exception propagates.
 
-template <typename AST, typename Pass> auto run_pipeline(AST ast, Pass &&pass) {
-  return pass(std::move(ast));
+template <typename AST, typename Pass>
+auto run_pipeline(AST &&ast, Pass &&pass) {
+  return pass(std::forward<AST>(ast));
 }
 
 template <typename AST, typename Pass, typename... Rest>
-auto run_pipeline(AST ast, Pass &&pass, Rest &&...rest) {
-  return run_pipeline(pass(std::move(ast)), std::forward<Rest>(rest)...);
+auto run_pipeline(AST &&ast, Pass &&pass, Rest &&...rest) {
+  return run_pipeline(pass(std::forward<AST>(ast)),
+                      std::forward<Rest>(rest)...);
 }
 
 //****************************************************************************
