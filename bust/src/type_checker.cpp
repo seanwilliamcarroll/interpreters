@@ -16,8 +16,11 @@
 #include "hir/type_environment.hpp"
 #include "hir/types.hpp"
 #include "source_location.hpp"
+#include "types.hpp"
 #include <memory>
+#include <numeric>
 #include <optional>
+#include <ranges>
 #include <type_checker.hpp>
 #include <variant>
 
@@ -47,6 +50,26 @@ hir::Type get_type(const ast::Identifier &identifier) {
   return hir::UnknownType{{identifier.m_location}};
 }
 
+bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
+  if (std::holds_alternative<hir::NeverType>(type)) {
+    return true;
+  }
+
+  if (std::holds_alternative<hir::UnknownType>(type)) {
+    throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+                                  std::get<hir::UnknownType>(type).m_location);
+  }
+
+  switch (op) {
+  case UnaryOperator::MINUS:
+    return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+           std::get<hir::PrimitiveTypeValue>(type).m_type == PrimitiveType::I64;
+  case UnaryOperator::NOT:
+    return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+           std::get<hir::PrimitiveTypeValue>(type).m_type ==
+               PrimitiveType::BOOL;
+  }
+}
 bool allowed_binary_type(BinaryOperator op, const hir::Type &type) {
   if (std::holds_alternative<hir::NeverType>(type)) {
     return true;
@@ -93,7 +116,6 @@ hir::Type get_statement_type(const hir::Statement &statement) {
 }
 
 struct UnifiedChecker {
-
   hir::Block operator()(const ast::Block &block) {
     m_env.push_scope();
 
@@ -145,11 +167,54 @@ struct UnifiedChecker {
             hir::clone_type(maybe_type.value()),
             hir::Identifier{{identifier.m_location},
                             identifier.m_name,
-                            std::move(maybe_type.value())}};
+                            hir::clone_type(maybe_type.value())}};
   }
 
-  hir::Expression operator()(const std::unique_ptr<ast::CallExpr> &) {
-    return {};
+  hir::Expression
+  operator()(const std::unique_ptr<ast::CallExpr> &call_expression) {
+    auto callee = std::visit((*this), call_expression->m_callee);
+
+    if (!std::holds_alternative<std::unique_ptr<hir::FunctionType>>(
+            callee.m_type)) {
+      throw core::CompilerException("TypeChecker",
+                                    "Expression of type: " + callee.m_type +
+                                        " is not callable!",
+                                    callee.m_location);
+    }
+    const auto &function_type =
+        std::get<std::unique_ptr<hir::FunctionType>>(callee.m_type);
+
+    std::vector<hir::Expression> arguments;
+    arguments.reserve(call_expression->m_arguments.size());
+    for (const auto &argument : call_expression->m_arguments) {
+      arguments.emplace_back(std::visit((*this), argument));
+    }
+
+    // Check types of arguments against their parameters, then bind and type
+    // check the body
+
+    for (const auto &[index, parameter_type, argument] :
+         std::views::zip(std::views::iota(0ULL),
+                         function_type->m_argument_types, arguments)) {
+      if (parameter_type != argument.m_type) {
+        throw core::CompilerException(
+            "TypeChecker",
+            "Type mismatch!\n Parameter at index: " + std::to_string(index) +
+                " expects type: " + parameter_type +
+                " vs. provided type: " + argument.m_type,
+            argument.m_location);
+      }
+    }
+    // They all match
+
+    auto return_type = hir::clone_type(function_type->m_return_type);
+
+    return {{call_expression->m_location},
+            std::move(return_type),
+            std::make_unique<hir::CallExpr>(
+                hir::CallExpr{{call_expression->m_location},
+                              std::move(callee),
+                              std::move(arguments)})};
   }
 
   hir::Expression
@@ -178,11 +243,13 @@ struct UnifiedChecker {
     if (!std::holds_alternative<hir::NeverType>(lhs.m_type) &&
         !std::holds_alternative<hir::NeverType>(rhs.m_type) &&
         lhs.m_type != rhs.m_type) {
-      throw core::CompilerException("TypeChecker",
-                                    "Type Mismatch! BinaryExpr expects both "
-                                    "arguments to have same type, lhs: " +
-                                        lhs.m_type + " vs. rhs: " + rhs.m_type,
-                                    binary_expression->m_location);
+      throw core::CompilerException(
+          "TypeChecker",
+          "Type Mismatch! BinaryExpr: " + binary_expression->m_operator +
+              " expects both "
+              "arguments to have same type, lhs: " +
+              lhs.m_type + " vs. rhs: " + rhs.m_type,
+          binary_expression->m_location);
     }
 
     // Types match
@@ -205,27 +272,170 @@ struct UnifiedChecker {
                                 std::move(rhs)})};
   }
 
-  hir::Expression operator()(const std::unique_ptr<ast::UnaryExpr> &) {
-    return {};
+  hir::Expression
+  operator()(const std::unique_ptr<ast::UnaryExpr> &unary_expression) {
+    auto expression = std::visit((*this), unary_expression->m_expression);
+
+    if (!allowed_unary_type(unary_expression->m_operator, expression.m_type)) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
+              " does not accept type: " + expression.m_type,
+          unary_expression->m_location);
+    }
+
+    return {{unary_expression->m_location},
+            hir::clone_type(expression.m_type),
+            std::make_unique<hir::UnaryExpr>(
+                hir::UnaryExpr{{unary_expression->m_location},
+                               unary_expression->m_operator,
+                               std::move(expression)})};
   }
 
-  hir::Expression operator()(const std::unique_ptr<ast::IfExpr> &) {
-    return {};
+  hir::Expression
+  operator()(const std::unique_ptr<ast::IfExpr> &if_expression) {
+
+    auto condition = std::visit((*this), if_expression->m_condition);
+
+    if (!std::holds_alternative<hir::PrimitiveTypeValue>(condition.m_type) ||
+        std::get<hir::PrimitiveTypeValue>(condition.m_type).m_type !=
+            PrimitiveType::BOOL) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Type mismatch!\nIfExpressions require condition to be of type BOOL, "
+          "instead saw type: " +
+              condition.m_type,
+          condition.m_location);
+    }
+
+    // Directly call because Block is not a variant type, don't need to visit
+    auto then_branch = (*this)(if_expression->m_then_block);
+
+    if (std::holds_alternative<hir::UnknownType>(then_branch.m_type)) {
+      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+                                    then_branch.m_location);
+    }
+
+    if (!if_expression->m_else_block.has_value()) {
+      // Just then branch
+      auto type = std::holds_alternative<hir::NeverType>(then_branch.m_type)
+                      ? hir::NeverType{}
+                      : hir::clone_type(then_branch.m_type);
+
+      return {
+          {if_expression->m_location},
+          std::move(type),
+          std::make_unique<hir::IfExpr>(hir::IfExpr{{if_expression->m_location},
+                                                    std::move(condition),
+                                                    std::move(then_branch),
+                                                    {}})};
+    }
+    // Check else branch too
+    auto else_branch = (*this)(if_expression->m_else_block.value());
+
+    if (std::holds_alternative<hir::UnknownType>(else_branch.m_type)) {
+      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+                                    else_branch.m_location);
+    }
+
+    if (!std::holds_alternative<hir::NeverType>(then_branch.m_type) &&
+        !std::holds_alternative<hir::NeverType>(else_branch.m_type) &&
+        then_branch.m_type != else_branch.m_type) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Type mismatch!\nThen branch of type: " + then_branch.m_type +
+              " vs. else branch of type: " + else_branch.m_type,
+          then_branch.m_location);
+    }
+
+    auto type = (std::holds_alternative<hir::NeverType>(then_branch.m_type) ||
+                 std::holds_alternative<hir::NeverType>(else_branch.m_type))
+                    ? hir::NeverType{}
+                    : hir::clone_type(then_branch.m_type);
+
+    return {{if_expression->m_location},
+            std::move(type),
+            std::make_unique<hir::IfExpr>(hir::IfExpr{
+                {if_expression->m_location},
+                std::move(condition),
+                std::move(then_branch),
+                std::optional<hir::Block>(std::move(else_branch))})};
   }
 
   hir::Expression operator()(const std::unique_ptr<ast::Block> &block) {
-    auto hir_block = UnifiedChecker{m_env}(*block);
+    auto hir_block = (*this)(*block);
     return {{block->m_location},
             hir::clone_type(hir_block.m_type),
             std::make_unique<hir::Block>(std::move(hir_block))};
   }
 
-  hir::Expression operator()(const std::unique_ptr<ast::ReturnExpr> &) {
-    return {};
+  hir::Expression
+  operator()(const std::unique_ptr<ast::ReturnExpr> &return_expression) {
+    auto expression =
+        std::visit((*this), return_expression->m_return_expression);
+
+    if (m_return_type_stack.empty()) {
+      // Should never happen?
+      throw core::CompilerException("TypeChecker", "Shouldn't happen, right?",
+                                    return_expression->m_location);
+    }
+
+    // Might make sense to throw a different exception here at some point so we
+    // can catch it and relay it up to the function/lambda
+    if (expression.m_type != m_return_type_stack.back()) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Type mismatch!\nFunction expects return type: " +
+              m_return_type_stack.back() +
+              " vs. returning type: " + expression.m_type,
+          expression.m_location);
+    }
+
+    return {{return_expression->m_location},
+            hir::NeverType{},
+            std::make_unique<hir::ReturnExpr>(hir::ReturnExpr{
+                {return_expression->m_location}, std::move(expression)})};
   }
 
-  hir::Expression operator()(const std::unique_ptr<ast::LambdaExpr> &) {
-    return {};
+  hir::Expression
+  operator()(const std::unique_ptr<ast::LambdaExpr> &lambda_expression) {
+    if (!lambda_expression->m_return_type.has_value()) {
+      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+                                    lambda_expression->m_location);
+    }
+
+    auto return_type = get_type(lambda_expression->m_return_type.value());
+
+    m_env.push_scope();
+    std::vector<hir::Identifier> parameters;
+    parameters.reserve(lambda_expression->m_parameters.size());
+    std::vector<hir::Type> parameter_types;
+    parameter_types.reserve(lambda_expression->m_parameters.size());
+    for (const auto &parameter : lambda_expression->m_parameters) {
+      parameters.emplace_back((*this)(parameter));
+      parameter_types.emplace_back(hir::clone_type(parameters.back().m_type));
+      m_env.define(parameters.back().m_name,
+                   hir::clone_type(parameters.back().m_type));
+    }
+
+    m_return_type_stack.push_back(hir::clone_type(return_type));
+
+    auto body = (*this)(lambda_expression->m_body);
+
+    m_return_type_stack.pop_back();
+    m_env.pop_scope();
+
+    auto function_type = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{lambda_expression->m_location},
+                          std::move(parameter_types),
+                          std::move(return_type)});
+
+    return {{lambda_expression->m_location},
+            std::move(function_type),
+            std::make_unique<hir::LambdaExpr>(
+                hir::LambdaExpr{{lambda_expression->m_location},
+                                std::move(parameters),
+                                std::move(body)})};
   }
 
   hir::Expression operator()(const std::unique_ptr<ast::WhileExpr> &) {
@@ -274,9 +484,8 @@ struct UnifiedChecker {
             "TypeChecker",
             "Type mismatch between annotated type and evaluated expression "
             "type of let binding: " +
-                let_binding.m_variable.m_name +
-                "\nAnnotated: " + hir::type_to_string(annotated_type) +
-                " vs. Evaluated: " + hir::type_to_string(body.m_type),
+                let_binding.m_variable.m_name + "\nAnnotated: " +
+                annotated_type + " vs. Evaluated: " + body.m_type,
             let_binding.m_location);
       }
     }
@@ -301,9 +510,8 @@ struct UnifiedChecker {
       throw core::CompilerException(
           "TypeChecker",
           "Cannot redefine identifier!\nAlready defined " +
-              function_def.m_id.m_name +
-              " with type: " + hir::type_to_string(other_id.value()) + " at " +
-              hir::type_location(other_id.value()),
+              function_def.m_id.m_name + " with type: " + other_id.value() +
+              " at " + hir::type_location(other_id.value()),
           function_def.m_id.m_location);
     }
 
@@ -336,14 +544,29 @@ struct UnifiedChecker {
     hir::Type function_type_as_type = std::move(function_type);
     m_env.define(function_def.m_id.m_name,
                  hir::clone_type(function_type_as_type));
+    const auto &expected_return_type =
+        std::get<std::unique_ptr<hir::FunctionType>>(function_type_as_type)
+            ->m_return_type;
     // Even though block will push and pop scope, we can insert a middle scope
     // here with the parameters in it, so we can pop it after
     m_env.push_scope();
     for (const auto &parameter : parameters) {
       m_env.define(parameter.m_name, hir::clone_type(parameter.m_type));
     }
+
+    m_return_type_stack.push_back(hir::clone_type(expected_return_type));
     auto body = (*this)(function_def.m_body);
+    m_return_type_stack.pop_back();
     m_env.pop_scope();
+
+    if (!std::holds_alternative<hir::NeverType>(body.m_type) &&
+        body.m_type != expected_return_type) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Type mismatch! Annotated return type: " + expected_return_type +
+              " vs. evaluated: " + body.m_type,
+          function_def.m_id.m_location);
+    }
 
     return hir::FunctionDef{
         {function_def.m_location},
@@ -355,13 +578,15 @@ struct UnifiedChecker {
   }
 
   hir::Environment &m_env;
+  std::vector<hir::Type> m_return_type_stack;
 };
 
 hir::Program TypeChecker::operator()(const ast::Program &program) {
   std::vector<hir::TopItem> typed_items;
   typed_items.reserve(program.m_items.size());
   for (const auto &top_item : program.m_items) {
-    typed_items.push_back(std::visit(UnifiedChecker{m_env}, top_item));
+    typed_items.push_back(std::visit(
+        UnifiedChecker{.m_env = m_env, .m_return_type_stack{}}, top_item));
   }
 
   return {{program.m_location}, std::move(typed_items)};
