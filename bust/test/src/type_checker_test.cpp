@@ -318,6 +318,32 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  TEST_CASE("logical and returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = true && false;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("logical or returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = true || false;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
   // --- Unary expressions ---------------------------------------------------
 
   TEST_CASE("unary minus on i64 produces i64") {
@@ -451,6 +477,51 @@ TEST_SUITE("bust.type_checker") {
   TEST_CASE("function call with wrong number of arguments throws") {
     CHECK_THROWS_AS(type_check("fn foo(x: i64) -> i64 { x }\n"
                                "fn main() -> i64 { foo(1, 2) }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("self-recursive function typechecks") {
+    auto hir = type_check("fn countdown(n: i64) -> i64 {\n"
+                          "  if n == 0 { 0 } else { countdown(n - 1) }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    CHECK(func.m_function_id == "countdown");
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Lambda expressions ----------------------------------------------------
+
+  TEST_CASE("lambda with annotated types typechecks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let add = |a: i64, b: i64| -> i64 { a + b };\n"
+                          "  add(1, 2)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("lambda body type must match return annotation") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let bad = |x: i64| -> bool { x };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("lambda with wrong argument type at call site throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x: i64| -> i64 { x };\n"
+                               "  f(true)\n"
+                               "}"),
                     core::CompilerException);
   }
 
