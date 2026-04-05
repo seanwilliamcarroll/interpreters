@@ -544,7 +544,7 @@ struct UnifiedChecker {
     return check_let_binding(let_binding);
   }
 
-  hir::TopItem operator()(const ast::FunctionDef &function_def) {
+  void collect_function_signature(const ast::FunctionDef &function_def) {
     if (auto other_id = m_env.lookup(function_def.m_id.m_name)) {
       throw core::CompilerException(
           "TypeChecker",
@@ -561,21 +561,28 @@ struct UnifiedChecker {
                                     hir::type_location(return_type));
     }
 
-    auto [parameters, parameter_types] =
-        convert_parameters(function_def.m_parameters);
+    auto [_, parameter_types] = convert_parameters(function_def.m_parameters);
 
     auto function_type = std::make_unique<hir::FunctionType>(
         hir::FunctionType{{function_def.m_location},
                           std::move(parameter_types),
                           std::move(return_type)});
 
-    // Define the function in the environment before checking its body
-    // (allows recursion)
     hir::Type function_type_as_type = std::move(function_type);
     m_env.define(function_def.m_id.m_name,
                  hir::clone_type(function_type_as_type));
+  }
+
+  hir::TopItem operator()(const ast::FunctionDef &function_def) {
+    // Should throw, this would be an error of the type checker itself
+    auto function_type = m_env.lookup(function_def.m_id.m_name).value();
+
+    auto [parameters, _] = convert_parameters(function_def.m_parameters);
+
+    // Define the function in the environment before checking its body
+    // (allows recursion)
     const auto &expected_return_type =
-        std::get<std::unique_ptr<hir::FunctionType>>(function_type_as_type)
+        std::get<std::unique_ptr<hir::FunctionType>>(function_type)
             ->m_return_type;
 
     auto body = check_callable_body(parameters, expected_return_type,
@@ -588,8 +595,7 @@ struct UnifiedChecker {
     return hir::FunctionDef{
         {function_def.m_location},
         function_def.m_id.m_name,
-        std::move(std::get<std::unique_ptr<hir::FunctionType>>(
-            function_type_as_type)),
+        std::move(std::get<std::unique_ptr<hir::FunctionType>>(function_type)),
         std::move(parameters),
         std::move(body)};
   }
@@ -599,11 +605,22 @@ struct UnifiedChecker {
 };
 
 hir::Program TypeChecker::operator()(const ast::Program &program) {
+  auto checker = UnifiedChecker{.m_env = m_env, .m_return_type_stack{}};
+
+  // First pass to collect function signatures
+  for (const auto &top_item : program.m_items) {
+    if (!std::holds_alternative<ast::FunctionDef>(top_item)) {
+      continue;
+    }
+    const auto &function_def = std::get<ast::FunctionDef>(top_item);
+    checker.collect_function_signature(function_def);
+  }
+
+  // Second pass to actually type check everything
   std::vector<hir::TopItem> typed_items;
   typed_items.reserve(program.m_items.size());
   for (const auto &top_item : program.m_items) {
-    typed_items.push_back(std::visit(
-        UnifiedChecker{.m_env = m_env, .m_return_type_stack{}}, top_item));
+    typed_items.push_back(std::visit(checker, top_item));
   }
 
   return {{program.m_location}, std::move(typed_items)};
