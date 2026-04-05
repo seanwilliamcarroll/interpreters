@@ -222,6 +222,82 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  TEST_CASE("greater-than returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = 2 > 1;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("less-than-or-equal returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = 1 <= 2;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("greater-than-or-equal returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = 2 >= 1;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("equality returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = 1 == 2;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("not-equal returns bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = 1 != 2;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("comparison result as function return type") {
+    auto hir = type_check("fn is_positive(x: i64) -> bool { x > 0 }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::BOOL);
+  }
+
   TEST_CASE("binary comparison with mismatched operands throws") {
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
                                "  let x: bool = 1 < true;\n"
@@ -464,6 +540,47 @@ TEST_SUITE("bust.type_checker") {
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
         func.m_body.m_final_expression->m_type);
     CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Forward references (two-pass) ----------------------------------------
+
+  TEST_CASE("forward reference: main calls function defined after it") {
+    auto hir = type_check("fn main() -> i64 { helper() }\n"
+                          "fn helper() -> i64 { 42 }");
+    DUMP_HIR(hir);
+    auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(main_func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        main_func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("forward reference: mutual recursion between two functions") {
+    auto hir = type_check("fn is_even(n: i64) -> bool {\n"
+                          "  if n == 0 { true } else { is_odd(n - 1) }\n"
+                          "}\n"
+                          "fn is_odd(n: i64) -> bool {\n"
+                          "  if n == 0 { false } else { is_even(n - 1) }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 3);
+    auto &is_even = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    CHECK(is_even.m_function_id == "is_even");
+    auto &is_odd = std::get<hir::FunctionDef>(hir.m_top_items[1]);
+    CHECK(is_odd.m_function_id == "is_odd");
+  }
+
+  TEST_CASE("forward reference: wrong argument type still caught") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 { helper(true) }\n"
+                               "fn helper(x: i64) -> i64 { x }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("forward reference: wrong arity still caught") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 { helper(1, 2) }\n"
+                               "fn helper(x: i64) -> i64 { x }"),
+                    core::CompilerException);
   }
 
 } // TEST_SUITE
