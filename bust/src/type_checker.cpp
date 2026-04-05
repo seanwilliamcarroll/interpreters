@@ -469,6 +469,9 @@ struct UnifiedChecker {
     auto body =
         check_callable_body(parameters, return_type, lambda_expression->m_body);
 
+    unify(body.m_type, return_type, "return type of lambda expression",
+          lambda_expression->m_location);
+
     auto function_type = std::make_unique<hir::FunctionType>(
         hir::FunctionType{{lambda_expression->m_location},
                           std::move(parameter_types),
