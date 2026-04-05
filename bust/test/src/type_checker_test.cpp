@@ -62,24 +62,32 @@ TEST_SUITE("bust.type_checker") {
   }
 
   TEST_CASE("literal bool has type bool") {
-    auto hir = type_check("fn main() -> i64 { true }");
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = true;\n"
+                          "  0\n"
+                          "}");
     DUMP_HIR(hir);
     REQUIRE(hir.m_top_items.size() == 1);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    REQUIRE(func.m_body.m_final_expression.has_value());
-    auto &expr = *func.m_body.m_final_expression;
+    REQUIRE(!func.m_body.m_statements.empty());
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr = let.m_expression;
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(expr.m_type));
     auto &ptype = std::get<hir::PrimitiveTypeValue>(expr.m_type);
     CHECK(ptype.m_type == PrimitiveType::BOOL);
   }
 
   TEST_CASE("literal unit has type unit") {
-    auto hir = type_check("fn main() -> i64 { () }");
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = ();\n"
+                          "  0\n"
+                          "}");
     DUMP_HIR(hir);
     REQUIRE(hir.m_top_items.size() == 1);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    REQUIRE(func.m_body.m_final_expression.has_value());
-    auto &expr = *func.m_body.m_final_expression;
+    REQUIRE(!func.m_body.m_statements.empty());
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr = let.m_expression;
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(expr.m_type));
     auto &ptype = std::get<hir::PrimitiveTypeValue>(expr.m_type);
     CHECK(ptype.m_type == PrimitiveType::UNIT);
@@ -89,7 +97,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("let binding with matching annotation typechecks") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let x: i64 = 42\n"
+                          "  let x: i64 = 42;\n"
                           "  x\n"
                           "}");
     DUMP_HIR(hir);
@@ -105,7 +113,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("let binding without annotation infers type from expression") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let x = 42\n"
+                          "  let x = 42;\n"
                           "  x\n"
                           "}");
     DUMP_HIR(hir);
@@ -119,7 +127,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("let binding with bool annotation and bool expr typechecks") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let flag: bool = true\n"
+                          "  let flag: bool = true;\n"
                           "  0\n"
                           "}");
     DUMP_HIR(hir);
@@ -131,7 +139,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("let binding with mismatched annotation throws") {
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
-                               "  let x: bool = 42\n"
+                               "  let x: bool = 42;\n"
                                "  0\n"
                                "}"),
                     core::CompilerException);
@@ -139,7 +147,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("let binding i64 annotation with bool value throws") {
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
-                               "  let x: i64 = true\n"
+                               "  let x: i64 = true;\n"
                                "  0\n"
                                "}"),
                     core::CompilerException);
@@ -198,7 +206,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("comparison binary expr has type bool") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let x: bool = 1 < 2\n"
+                          "  let x: bool = 1 < 2;\n"
                           "  0\n"
                           "}");
     DUMP_HIR(hir);
@@ -216,7 +224,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("binary comparison with mismatched operands throws") {
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
-                               "  let x: bool = 1 < true\n"
+                               "  let x: bool = 1 < true;\n"
                                "  0\n"
                                "}"),
                     core::CompilerException);
@@ -224,11 +232,11 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("logical and/or require bool operands") {
     CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
-                             "  let x: bool = true && false\n"
+                             "  let x: bool = true && false;\n"
                              "  0\n"
                              "}"));
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
-                               "  let x: bool = 1 && 2\n"
+                               "  let x: bool = 1 && 2;\n"
                                "  0\n"
                                "}"),
                     core::CompilerException);
@@ -248,7 +256,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("unary not on bool produces bool") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let x: bool = !true\n"
+                          "  let x: bool = !true;\n"
                           "  0\n"
                           "}");
     DUMP_HIR(hir);
@@ -265,7 +273,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("unary not on i64 throws") {
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
-                               "  let x: bool = !42\n"
+                               "  let x: bool = !42;\n"
                                "  0\n"
                                "}"),
                     core::CompilerException);
@@ -374,7 +382,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("identifier resolves to correct type from let binding") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let x: i64 = 42\n"
+                          "  let x: i64 = 42;\n"
                           "  x\n"
                           "}");
     DUMP_HIR(hir);
@@ -405,8 +413,8 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("variable shadowing in inner scope typechecks") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  let x: i64 = 42\n"
-                          "  let x: bool = true\n"
+                          "  let x: i64 = 42;\n"
+                          "  let x: bool = true;\n"
                           "  0\n"
                           "}");
     DUMP_HIR(hir);
@@ -415,7 +423,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("block scope isolates variables") {
     CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
-                               "  if true { let y: i64 = 1 }\n"
+                               "  if true { let y: i64 = 1; }\n"
                                "  y\n"
                                "}"),
                     core::CompilerException);

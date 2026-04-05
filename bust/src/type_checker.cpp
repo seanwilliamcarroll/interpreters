@@ -15,6 +15,7 @@
 #include "hir/nodes.hpp"
 #include "hir/type_environment.hpp"
 #include "hir/types.hpp"
+#include "operators.hpp"
 #include "source_location.hpp"
 #include "types.hpp"
 #include <memory>
@@ -22,6 +23,7 @@
 #include <optional>
 #include <ranges>
 #include <type_checker.hpp>
+#include <unordered_map>
 #include <variant>
 
 //****************************************************************************
@@ -70,6 +72,7 @@ bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
                PrimitiveType::BOOL;
   }
 }
+
 bool allowed_binary_type(BinaryOperator op, const hir::Type &type) {
   if (std::holds_alternative<hir::NeverType>(type)) {
     return true;
@@ -193,6 +196,15 @@ struct UnifiedChecker {
     // Check types of arguments against their parameters, then bind and type
     // check the body
 
+    if (function_type->m_argument_types.size() != arguments.size()) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Callee expects " +
+              std::to_string(function_type->m_argument_types.size()) +
+              " arguments, " + std::to_string(arguments.size()) + " provided",
+          call_expression->m_location);
+    }
+
     for (const auto &[index, parameter_type, argument] :
          std::views::zip(std::views::iota(0ULL),
                          function_type->m_argument_types, arguments)) {
@@ -237,8 +249,8 @@ struct UnifiedChecker {
     }
 
     auto type = (std::holds_alternative<hir::NeverType>(lhs.m_type))
-                    ? hir::clone_type(lhs.m_type)
-                    : hir::clone_type(rhs.m_type);
+                    ? hir::clone_type(rhs.m_type)
+                    : hir::clone_type(lhs.m_type);
 
     if (!std::holds_alternative<hir::NeverType>(lhs.m_type) &&
         !std::holds_alternative<hir::NeverType>(rhs.m_type) &&
@@ -263,8 +275,20 @@ struct UnifiedChecker {
                                     binary_expression->m_location);
     }
 
+    // Messy, could fix
+    auto final_type =
+        (binary_expression->m_operator == BinaryOperator::LT ||
+         binary_expression->m_operator == BinaryOperator::LT_EQ ||
+         binary_expression->m_operator == BinaryOperator::GT ||
+         binary_expression->m_operator == BinaryOperator::GT_EQ ||
+         binary_expression->m_operator == BinaryOperator::EQ ||
+         binary_expression->m_operator == BinaryOperator::NOT_EQ)
+            ? hir::PrimitiveTypeValue{{binary_expression->m_location},
+                                      PrimitiveType::BOOL}
+            : std::move(type);
+
     return {{binary_expression->m_location},
-            std::move(type),
+            std::move(final_type),
             std::make_unique<hir::BinaryExpr>(
                 hir::BinaryExpr{{binary_expression->m_location},
                                 binary_expression->m_operator,
@@ -318,13 +342,12 @@ struct UnifiedChecker {
 
     if (!if_expression->m_else_block.has_value()) {
       // Just then branch
-      auto type = std::holds_alternative<hir::NeverType>(then_branch.m_type)
-                      ? hir::NeverType{}
-                      : hir::clone_type(then_branch.m_type);
+      auto type = hir::PrimitiveTypeValue{{if_expression->m_location},
+                                          PrimitiveType::UNIT};
 
       return {
           {if_expression->m_location},
-          std::move(type),
+          type,
           std::make_unique<hir::IfExpr>(hir::IfExpr{{if_expression->m_location},
                                                     std::move(condition),
                                                     std::move(then_branch),
@@ -348,9 +371,8 @@ struct UnifiedChecker {
           then_branch.m_location);
     }
 
-    auto type = (std::holds_alternative<hir::NeverType>(then_branch.m_type) ||
-                 std::holds_alternative<hir::NeverType>(else_branch.m_type))
-                    ? hir::NeverType{}
+    auto type = std::holds_alternative<hir::NeverType>(then_branch.m_type)
+                    ? hir::clone_type(else_branch.m_type)
                     : hir::clone_type(then_branch.m_type);
 
     return {{if_expression->m_location},
@@ -392,7 +414,7 @@ struct UnifiedChecker {
     }
 
     return {{return_expression->m_location},
-            hir::NeverType{},
+            hir::NeverType{{return_expression->m_location}},
             std::make_unique<hir::ReturnExpr>(hir::ReturnExpr{
                 {return_expression->m_location}, std::move(expression)})};
   }
