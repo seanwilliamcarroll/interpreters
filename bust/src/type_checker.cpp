@@ -119,21 +119,27 @@ hir::Type get_statement_type(const hir::Statement &statement) {
 }
 
 struct UnifiedChecker {
-  hir::Block operator()(const ast::Block &block) {
+
+  hir::Statement convert(const ast::Statement &statement) {
+    return std::visit(
+        [&statement, this](const auto &t) -> hir::Statement {
+          using T = std::decay_t<decltype(t)>;
+          if constexpr (std::is_same_v<T, ast::LetBinding>) {
+            return convert(std::get<ast::LetBinding>(statement));
+          } else {
+            return std::visit((*this), std::get<ast::Expression>(statement));
+          }
+        },
+        statement);
+  }
+
+  hir::Block convert(const ast::Block &block) {
     m_env.push_scope();
 
     std::vector<hir::Statement> statements;
+    statements.reserve(block.m_statements.size());
     for (const auto &statement : block.m_statements) {
-      if (std::holds_alternative<ast::LetBinding>(statement)) {
-        statements.emplace_back(convert(std::get<ast::LetBinding>(statement)));
-      } else if (std::holds_alternative<ast::Expression>(statement)) {
-        statements.emplace_back(
-            std::visit((*this), std::get<ast::Expression>(statement)));
-      } else {
-        throw core::CompilerException("TypeChecker",
-                                      "Should never happen, TODO remove this",
-                                      block.m_location);
-      }
+      statements.emplace_back(convert(statement));
     }
 
     auto final_expression =
@@ -333,7 +339,7 @@ struct UnifiedChecker {
     }
 
     // Directly call because Block is not a variant type, don't need to visit
-    auto then_branch = (*this)(if_expression->m_then_block);
+    auto then_branch = convert(if_expression->m_then_block);
 
     if (std::holds_alternative<hir::UnknownType>(then_branch.m_type)) {
       throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
@@ -354,7 +360,7 @@ struct UnifiedChecker {
                                                     {}})};
     }
     // Check else branch too
-    auto else_branch = (*this)(if_expression->m_else_block.value());
+    auto else_branch = convert(if_expression->m_else_block.value());
 
     if (std::holds_alternative<hir::UnknownType>(else_branch.m_type)) {
       throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
@@ -385,7 +391,7 @@ struct UnifiedChecker {
   }
 
   hir::Expression operator()(const std::unique_ptr<ast::Block> &block) {
-    auto hir_block = (*this)(*block);
+    auto hir_block = convert(*block);
     return {{block->m_location},
             hir::clone_type(hir_block.m_type),
             std::make_unique<hir::Block>(std::move(hir_block))};
@@ -434,7 +440,7 @@ struct UnifiedChecker {
     std::vector<hir::Type> parameter_types;
     parameter_types.reserve(lambda_expression->m_parameters.size());
     for (const auto &parameter : lambda_expression->m_parameters) {
-      parameters.emplace_back((*this)(parameter));
+      parameters.emplace_back(convert_parameter(parameter));
       parameter_types.emplace_back(hir::clone_type(parameters.back().m_type));
       m_env.define(parameters.back().m_name,
                    hir::clone_type(parameters.back().m_type));
@@ -442,7 +448,7 @@ struct UnifiedChecker {
 
     m_return_type_stack.push_back(hir::clone_type(return_type));
 
-    auto body = (*this)(lambda_expression->m_body);
+    auto body = convert(lambda_expression->m_body);
 
     m_return_type_stack.pop_back();
     m_env.pop_scope();
@@ -577,7 +583,7 @@ struct UnifiedChecker {
     }
 
     m_return_type_stack.push_back(hir::clone_type(expected_return_type));
-    auto body = (*this)(function_def.m_body);
+    auto body = convert(function_def.m_body);
     m_return_type_stack.pop_back();
     m_env.pop_scope();
 
