@@ -15,6 +15,7 @@
 #include "hir/nodes.hpp"
 #include "hir/type_environment.hpp"
 #include "hir/type_unifier.hpp"
+#include "hir/type_visitors.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
 #include "source_location.hpp"
