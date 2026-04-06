@@ -837,6 +837,119 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Let-polymorphism (generalize/instantiate) ---------------------------
+
+  TEST_CASE("polymorphic identity used with different types") {
+    // The motivating example: |y| { y } called with bool and i64
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |y| { y };\n"
+                          "  let a: bool = id(true);\n"
+                          "  id(42)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    // id(true) returns bool
+    auto &let_a = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
+    auto &a_type = std::get<hir::PrimitiveTypeValue>(let_a.m_variable.m_type);
+    CHECK(a_type.m_type == PrimitiveType::BOOL);
+    // id(42) returns i64
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("polymorphic lambda used in if condition and return") {
+    // The exact example from the user's question
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = |y| { y };\n"
+                          "  if x(true) {\n"
+                          "    return x(9);\n"
+                          "  } else {\n"
+                          "    return x(10);\n"
+                          "  }\n"
+                          "  x(11)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("polymorphic lambda with body constraint used at multiple types") {
+    // |x, y| { x + y } constrains both params to i64 from body
+    // Should work when called with i64 but fail with bool
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let add = |x, y| { x + y };\n"
+                          "  add(1, 2)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("polymorphic const function ignores argument type") {
+    // |x| { 42 } — x is never constrained, so any call-site type works
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let always_42 = |x| { 42 };\n"
+                          "  let a: i64 = always_42(true);\n"
+                          "  let b: i64 = always_42(99);\n"
+                          "  a + b\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("polymorphic lambda passed to another function") {
+    // Polymorphic identity created in main, called from helper
+    auto hir =
+        type_check("fn apply_to_int(f: fn(i64) -> i64, x: i64) -> i64 {\n"
+                   "  f(x)\n"
+                   "}\n"
+                   "fn main() -> i64 {\n"
+                   "  let id = |y| { y };\n"
+                   "  apply_to_int(id, 5)\n"
+                   "}");
+    DUMP_HIR(hir);
+    auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
+    REQUIRE(main_func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        main_func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("monomorphic lambda rejects second use with different type") {
+    // Lambda with annotated param is NOT polymorphic
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x: i64| { x };\n"
+                               "  f(true)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("non-polymorphic let binding does not generalize") {
+    // let x: i64 = 5 should not become polymorphic
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = 42;\n"
+                          "  x + 1\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

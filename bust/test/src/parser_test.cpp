@@ -750,6 +750,67 @@ TEST_SUITE("bust.parser") {
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
         *if_expr.m_else_block->m_final_expression));
   }
+  // --- Function type annotations -------------------------------------------
+
+  TEST_CASE("bust::parse_function_type_annotation_in_parameter") {
+    // fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }
+    auto program = parse_string("fn apply(f: fn(i64) -> i64, x: i64) -> i64 {\n"
+                                "  f(x)\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    CHECK(func.m_id.m_name == "apply");
+    REQUIRE(func.m_parameters.size() == 2);
+
+    // First param should have a function type annotation
+    CHECK(func.m_parameters[0].m_name == "f");
+    REQUIRE(func.m_parameters[0].m_type.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
+        func.m_parameters[0].m_type.value()));
+    const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
+        func.m_parameters[0].m_type.value());
+    REQUIRE(fn_type.m_parameter_types.size() == 1);
+    check_primitive_type(fn_type.m_parameter_types[0], PrimitiveType::I64);
+    check_primitive_type(fn_type.m_return_type, PrimitiveType::I64);
+
+    // Second param is normal
+    CHECK(func.m_parameters[1].m_name == "x");
+  }
+
+  TEST_CASE("bust::parse_function_type_no_params") {
+    // fn run(f: fn() -> bool) -> bool { f() }
+    auto program = parse_string("fn run(f: fn() -> bool) -> bool {\n"
+                                "  f()\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_parameters.size() == 1);
+    REQUIRE(func.m_parameters[0].m_type.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
+        func.m_parameters[0].m_type.value()));
+    const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
+        func.m_parameters[0].m_type.value());
+    CHECK(fn_type.m_parameter_types.empty());
+    check_primitive_type(fn_type.m_return_type, PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("bust::parse_function_type_multiple_params") {
+    // fn apply(f: fn(i64, bool) -> i64) -> i64 { f(1, true) }
+    auto program = parse_string("fn apply(f: fn(i64, bool) -> i64) -> i64 {\n"
+                                "  f(1, true)\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_parameters[0].m_type.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
+        func.m_parameters[0].m_type.value()));
+    const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
+        func.m_parameters[0].m_type.value());
+    REQUIRE(fn_type.m_parameter_types.size() == 2);
+    check_primitive_type(fn_type.m_parameter_types[0], PrimitiveType::I64);
+    check_primitive_type(fn_type.m_parameter_types[1], PrimitiveType::BOOL);
+    check_primitive_type(fn_type.m_return_type, PrimitiveType::I64);
+  }
 }
 //****************************************************************************
 } // namespace bust

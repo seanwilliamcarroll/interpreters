@@ -85,6 +85,17 @@ private:
               m_out << "i64";
               break;
             }
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<
+                                                     FunctionTypeIdentifier>>) {
+            m_out << "fn(";
+            for (size_t i = 0; i < v->m_parameter_types.size(); ++i) {
+              if (i > 0) {
+                m_out << ", ";
+              }
+              dump_type_id(v->m_parameter_types[i]);
+            }
+            m_out << ") -> ";
+            dump_type_id(v->m_return_type);
           } else if constexpr (std::is_same_v<T, DefinedType>) {
             m_out << v.m_type;
           }
