@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <source_location.hpp>
@@ -29,21 +30,20 @@ struct PrimitiveTypeValue : public HasLocation {
   PrimitiveType m_type;
 };
 
+struct TypeVariable : public HasLocation {
+  // Not sure on needing a location
+  size_t m_id;
+};
+
 struct FunctionType;
 
 struct NeverType : public HasLocation {};
 
-struct UnknownType : public HasLocation {};
-
-// TODO: Do we want to have an InferredType and ExplicitType, where Explicit has
-// a location?
-// TODO: Unknown type?
 // TODO: User defined types of some kind
-using Type = std::variant<PrimitiveTypeValue, std::unique_ptr<FunctionType>,
-                          NeverType, UnknownType>;
+using Type = std::variant<PrimitiveTypeValue, TypeVariable,
+                          std::unique_ptr<FunctionType>, NeverType>;
 
 struct FunctionType : public HasLocation {
-  // I think this should have a location, inferred types may not
   std::vector<Type> m_argument_types;
   Type m_return_type;
 };
@@ -77,6 +77,8 @@ inline bool types_equal(const Type &lhs, const Type &rhs) {
         const auto &r = std::get<T>(rhs);
         if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
           return l.m_type == r.m_type;
+        } else if constexpr (std::is_same_v<T, TypeVariable>) {
+          return l.m_id == r.m_id;
         } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
           if (l->m_argument_types.size() != r->m_argument_types.size()) {
             return false;
@@ -88,7 +90,7 @@ inline bool types_equal(const Type &lhs, const Type &rhs) {
           }
           return l->m_return_type == r->m_return_type;
         } else {
-          // NeverType, UnknownType — same variant alternative means equal
+          // NeverType — same variant alternative means equal
           return true;
         }
       },
@@ -114,37 +116,40 @@ inline Type clone_type(const Type &type) {
       type);
 }
 
+struct TypeToStringConverter {
+  std::string operator()(const PrimitiveTypeValue &type) {
+    switch (type.m_type) {
+    case PrimitiveType::UNIT:
+      return "()";
+    case PrimitiveType::BOOL:
+      return "bool";
+    case PrimitiveType::I64:
+      return "i64";
+    }
+  }
+
+  std::string operator()(const TypeVariable &type) {
+    return "?T" + std::to_string(type.m_id);
+  }
+
+  std::string operator()(const std::unique_ptr<FunctionType> &type) {
+    std::string result = "fn(";
+    for (size_t i = 0; i < type->m_argument_types.size(); ++i) {
+      if (i > 0) {
+        result += ", ";
+      }
+      result += std::visit(*this, type->m_argument_types[i]);
+    }
+    result += ") -> ";
+    result += std::visit(*this, type->m_return_type);
+    return result;
+  }
+
+  std::string operator()(const NeverType &) { return "!"; }
+};
+
 inline std::string type_to_string(const Type &type) {
-  return std::visit(
-      [](const auto &t) -> std::string {
-        using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
-          switch (t.m_type) {
-          case PrimitiveType::UNIT:
-            return "()";
-          case PrimitiveType::BOOL:
-            return "bool";
-          case PrimitiveType::I64:
-            return "i64";
-          }
-        } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
-          std::string result = "fn(";
-          for (size_t i = 0; i < t->m_argument_types.size(); ++i) {
-            if (i > 0) {
-              result += ", ";
-            }
-            result += type_to_string(t->m_argument_types[i]);
-          }
-          result += ") -> ";
-          result += type_to_string(t->m_return_type);
-          return result;
-        } else if constexpr (std::is_same_v<T, NeverType>) {
-          return "!";
-        } else {
-          return "?";
-        }
-      },
-      type);
+  return std::visit(TypeToStringConverter{}, type);
 }
 
 inline std::ostream &operator<<(std::ostream &out, const Type &type) {
@@ -162,3 +167,13 @@ inline std::string operator+(const Type &type, const std::string &rhs) {
 //****************************************************************************
 } // namespace bust::hir
 //****************************************************************************
+
+namespace std {
+
+template <> struct hash<bust::hir::TypeVariable> {
+  size_t operator()(const bust::hir::TypeVariable &type) const {
+    return std::hash<size_t>{}(type.m_id);
+  }
+};
+
+} // namespace std

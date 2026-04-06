@@ -22,8 +22,13 @@ set_target_properties(bust-exe PROPERTIES OUTPUT_NAME bust)
 add_library(bust-lib STATIC
   src/bust.cpp
   src/bust_tokens.cpp
+  hir/block_checker.cpp
+  hir/expression_checker.cpp
+  hir/let_binding_checker.cpp
   src/lexer.cpp
   src/parser.cpp
+  hir/statement_checker.cpp
+  hir/top_item_checker.cpp
   src/type_checker.cpp
   src/validate_main.cpp)
 
@@ -46,6 +51,7 @@ add_executable(bust-test
   test/src/lexer_test.cpp
   test/src/parser_test.cpp
   test/src/type_checker_test.cpp
+  test/src/type_unifier_test.cpp
   test/src/validate_main_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
@@ -72,5 +78,6 @@ add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
 add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysis)
 add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
+add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
 
 #*****************************************************************************

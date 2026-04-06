@@ -13,6 +13,7 @@
 
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
+#include <operators.hpp>
 #include <sstream>
 #include <string>
 
@@ -146,12 +147,12 @@ private:
           } else if constexpr (std::is_same_v<T, LiteralUnit>) {
             m_out << "Unit\n";
           } else if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpr>>) {
-            m_out << "Binary(" << binary_op_str(v->m_operator) << ")\n";
+            m_out << "Binary(" << v->m_operator << ")\n";
             IndentGuard g(*this);
             dump_expression(v->m_lhs);
             dump_expression(v->m_rhs);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<UnaryExpr>>) {
-            m_out << "Unary(" << unary_op_str(v->m_operator) << ")\n";
+            m_out << "Unary(" << v->m_operator << ")\n";
             IndentGuard g(*this);
             dump_expression(v->m_expression);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<CallExpr>>) {
@@ -218,46 +219,6 @@ private:
       result.push_back(clone_type(t));
     }
     return result;
-  }
-
-  static const char *binary_op_str(BinaryOperator op) {
-    switch (op) {
-    case BinaryOperator::PLUS:
-      return "+";
-    case BinaryOperator::MINUS:
-      return "-";
-    case BinaryOperator::MULTIPLIES:
-      return "*";
-    case BinaryOperator::DIVIDES:
-      return "/";
-    case BinaryOperator::MODULUS:
-      return "%";
-    case BinaryOperator::EQ:
-      return "==";
-    case BinaryOperator::NOT_EQ:
-      return "!=";
-    case BinaryOperator::LT:
-      return "<";
-    case BinaryOperator::LT_EQ:
-      return "<=";
-    case BinaryOperator::GT:
-      return ">";
-    case BinaryOperator::GT_EQ:
-      return ">=";
-    case BinaryOperator::LOGICAL_AND:
-      return "&&";
-    case BinaryOperator::LOGICAL_OR:
-      return "||";
-    }
-  }
-
-  static const char *unary_op_str(UnaryOperator op) {
-    switch (op) {
-    case UnaryOperator::MINUS:
-      return "-";
-    case UnaryOperator::NOT:
-      return "!";
-    }
   }
 };
 

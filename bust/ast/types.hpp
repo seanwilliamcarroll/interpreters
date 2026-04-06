@@ -11,10 +11,12 @@
 #pragma once
 //****************************************************************************
 
+#include <memory>
 #include <source_location.hpp>
 #include <string>
 #include <types.hpp>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::ast {
@@ -31,7 +33,37 @@ struct DefinedType : public HasLocation {
   std::string m_type;
 };
 
-using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType>;
+struct FunctionTypeIdentifier;
+
+using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType,
+                                    std::unique_ptr<FunctionTypeIdentifier>>;
+
+struct FunctionTypeIdentifier : public HasLocation {
+  std::vector<TypeIdentifier> m_parameter_types;
+  TypeIdentifier m_return_type;
+};
+
+inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
+  return std::visit(
+      [](const auto &v) -> TypeIdentifier {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T,
+                                     std::unique_ptr<FunctionTypeIdentifier>>) {
+          std::vector<TypeIdentifier> params;
+          params.reserve(v->m_parameter_types.size());
+          for (const auto &p : v->m_parameter_types) {
+            params.push_back(clone_type_identifier(p));
+          }
+          return std::make_unique<FunctionTypeIdentifier>(
+              FunctionTypeIdentifier{{v->m_location},
+                                     std::move(params),
+                                     clone_type_identifier(v->m_return_type)});
+        } else {
+          return v;
+        }
+      },
+      tid);
+}
 
 inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
   return std::visit(
@@ -46,6 +78,18 @@ inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
           case PrimitiveType::I64:
             return "i64";
           }
+        } else if constexpr (std::is_same_v<
+                                 T, std::unique_ptr<FunctionTypeIdentifier>>) {
+          std::string result = "fn(";
+          for (size_t i = 0; i < v->m_parameter_types.size(); ++i) {
+            if (i > 0) {
+              result += ", ";
+            }
+            result += type_identifier_to_string(v->m_parameter_types[i]);
+          }
+          result += ") -> ";
+          result += type_identifier_to_string(v->m_return_type);
+          return result;
         } else {
           return v.m_type;
         }
