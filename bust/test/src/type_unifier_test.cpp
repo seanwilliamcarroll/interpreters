@@ -13,6 +13,7 @@
 //*
 //****************************************************************************
 
+#include <hir/type_environment.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
 
@@ -232,6 +233,76 @@ TEST_SUITE("bust.type_unifier") {
   }
 
 } // TEST_SUITE
+
+// --- FreeTypeVariableCollector tests ----------------------------------------
+
+TEST_SUITE("bust.free_type_variable_collector") {
+
+  TEST_CASE("collects type variable from bare TV") {
+    TypeUnifier unifier;
+    auto tv = unifier.new_type_var();
+    hir::Type type = tv;
+
+    hir::FreeTypeVariableCollector collector{};
+    std::visit(collector, type);
+
+    CHECK(collector.m_free_type_variables.size() == 1);
+    CHECK(collector.m_free_type_variables[0].m_id == tv.m_id);
+  }
+
+  TEST_CASE("collects nothing from concrete primitive") {
+    hir::Type type = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
+
+    hir::FreeTypeVariableCollector collector{};
+    std::visit(collector, type);
+
+    CHECK(collector.m_free_type_variables.empty());
+  }
+
+  TEST_CASE("collects nothing from NeverType") {
+    hir::Type type = hir::NeverType{};
+
+    hir::FreeTypeVariableCollector collector{};
+    std::visit(collector, type);
+
+    CHECK(collector.m_free_type_variables.empty());
+  }
+
+  TEST_CASE("collects TVs from inside FunctionType") {
+    TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+
+    // fn(?T0) -> ?T1
+    std::vector<hir::Type> params;
+    params.emplace_back(hir::clone_type(t0));
+    hir::Type fn_type = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{}, std::move(params), hir::clone_type(t1)});
+
+    hir::FreeTypeVariableCollector collector{};
+    std::visit(collector, fn_type);
+
+    CHECK(collector.m_free_type_variables.size() == 2);
+  }
+
+  TEST_CASE("collects only TVs not concrete parts of fn type") {
+    // fn(i64) -> ?T1 — only ?T1 is a TV
+    TypeUnifier unifier;
+    auto t1 = unifier.new_type_var();
+
+    std::vector<hir::Type> params;
+    params.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_type = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{}, std::move(params), hir::clone_type(t1)});
+
+    hir::FreeTypeVariableCollector collector{};
+    std::visit(collector, fn_type);
+
+    CHECK(collector.m_free_type_variables.size() == 1);
+    CHECK(collector.m_free_type_variables[0].m_id == t1.m_id);
+  }
+}
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************

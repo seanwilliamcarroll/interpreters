@@ -409,13 +409,33 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  TEST_CASE("if without else rejects non-unit then branch") {
+    CHECK_THROWS(type_check("fn main() -> i64 {\n"
+                            "  if true { 1 }\n"
+                            "  0\n"
+                            "}"));
+  }
+
   TEST_CASE("if without else has type unit") {
     auto hir = type_check("fn main() -> i64 {\n"
-                          "  if true { 1 }\n"
+                          "  if true { }\n"
                           "  0\n"
                           "}");
     DUMP_HIR(hir);
-    // The if-without-else should produce unit type
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(!func.m_body.m_statements.empty());
+    auto &expr = std::get<hir::Expression>(func.m_body.m_statements[0]);
+    CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(expr.m_type));
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(expr.m_type);
+    CHECK(ptype.m_type == PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("if without else allows return in then branch") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  if true { return 1 }\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(!func.m_body.m_statements.empty());
     auto &expr = std::get<hir::Expression>(func.m_body.m_statements[0]);
@@ -1081,6 +1101,69 @@ TEST_SUITE("bust.type_checker") {
                    "  0\n"
                    "}"),
         core::CompilerException);
+  }
+
+  // --- Monomorphic vs polymorphic generalization ---------------------------
+  //
+  // A lambda whose body constrains its parameters (e.g. x + 1 forces i64)
+  // must NOT be generalized as polymorphic. These tests verify that
+  // body-constrained lambdas are correctly rejected at incompatible types.
+
+  TEST_CASE("body-constrained lambda is NOT polymorphic") {
+    // |a| { a + 1 } constrains a to i64. It should NOT be usable at bool.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |a| { a + 1 };\n"
+                               "  let r: bool = f(true);\n" // should fail
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("body-constrained lambda used at two incompatible types") {
+    // |x| { x + 1 } is i64 -> i64. Using it at bool should fail even if
+    // the first call at i64 succeeds.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x| { x + 1 };\n"
+                               "  let a = f(5);\n"    // fine: i64 -> i64
+                               "  let b = f(true);\n" // should fail
+                               "  a\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("body-constrained lambda return type is not generalized") {
+    // |x| { if x { 1 } else { 0 } } constrains x to bool and returns i64.
+    // Assigning the result to bool should fail — the return is i64, not free.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x| { if x { 1 } else { 0 } };\n"
+                               "  let r: bool = f(true);\n" // should fail
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("true identity is polymorphic but constrained lambda is not") {
+    // Contrast: identity |x| { x } IS polymorphic (no body constraints).
+    // But |x| { x + 1 } is NOT. Both are let-bound.
+    // This test uses identity correctly at two types AND rejects the
+    // constrained version at the wrong type.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |x| { x };\n"
+                          "  let a: i64 = id(42);\n"
+                          "  let b: bool = id(true);\n"
+                          "  a\n"
+                          "}");
+    DUMP_HIR(hir);
+    // id works at both types — just check it compiles
+
+    // But add_one should not be polymorphic
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let add_one = |x| { x + 1 };\n"
+                               "  let a: i64 = add_one(5);\n"
+                               "  let b: bool = add_one(true);\n" // fail
+                               "  a\n"
+                               "}"),
+                    core::CompilerException);
   }
 
 } // TEST_SUITE
