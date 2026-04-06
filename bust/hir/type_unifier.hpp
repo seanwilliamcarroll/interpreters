@@ -25,6 +25,11 @@ struct TypeUnifier {
   hir::TypeVariable new_type_var() { return {.m_id = m_union_find.add_node()}; }
 
   void unify(const hir::Type &type_a, const hir::Type &type_b) {
+    if (std::holds_alternative<hir::NeverType>(type_a) ||
+        std::holds_alternative<hir::NeverType>(type_b)) {
+      return;
+    }
+
     if (std::holds_alternative<hir::TypeVariable>(type_a)) {
       unify(std::get<hir::TypeVariable>(type_a), type_b);
       return;
@@ -51,6 +56,10 @@ struct TypeUnifier {
   void unify(const hir::TypeVariable &type_a, const hir::Type &type_b) {
     if (std::holds_alternative<hir::TypeVariable>(type_b)) {
       unify(type_a, std::get<hir::TypeVariable>(type_b));
+      return;
+    }
+
+    if (std::holds_alternative<hir::NeverType>(type_b)) {
       return;
     }
 

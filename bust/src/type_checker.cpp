@@ -293,12 +293,14 @@ struct UnifiedChecker {
     for (const auto &[index, parameter_type, argument] :
          std::views::zip(std::views::iota(0ULL),
                          function_type->m_argument_types, arguments)) {
-      if (parameter_type != argument.m_type) {
+      try {
+        m_type_unifier.unify(parameter_type, argument.m_type);
+      } catch (std::runtime_error &error) {
         throw core::CompilerException(
             "TypeChecker",
-            "Type mismatch!\n Parameter at index: " + std::to_string(index) +
-                " expects type: " + parameter_type +
-                " vs. provided type: " + argument.m_type,
+            "Type unification error!\n Parameter at index: " +
+                std::to_string(index) + " expects type: " + parameter_type +
+                " Unificationn error: " + error.what(),
             argument.m_location);
       }
     }
@@ -395,16 +397,20 @@ struct UnifiedChecker {
 
     auto condition = std::visit((*this), if_expression->m_condition);
 
-    if (!std::holds_alternative<hir::PrimitiveTypeValue>(condition.m_type) ||
-        std::get<hir::PrimitiveTypeValue>(condition.m_type).m_type !=
-            PrimitiveType::BOOL) {
-      throw core::CompilerException(
-          "TypeChecker",
-          "Type mismatch!\nIfExpressions require condition to be of type BOOL, "
-          "instead saw type: " +
-              condition.m_type,
-          condition.m_location);
+    try {
+      m_type_unifier.unify(condition.m_type,
+                           hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL});
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException("TypeChecker",
+                                    std::string("Type unification error!: ") +
+                                        error.what(),
+                                    if_expression->m_location);
     }
+
+    auto resolved_condition =
+        hir::Expression{{condition.m_location},
+                        m_type_unifier.find(condition.m_type),
+                        std::move(condition.m_expression)};
 
     // Directly call because Block is not a variant type, don't need to visit
     auto then_branch = check_block(if_expression->m_then_block);
@@ -421,33 +427,35 @@ struct UnifiedChecker {
       auto type = hir::PrimitiveTypeValue{{if_expression->m_location},
                                           PrimitiveType::UNIT};
 
-      return {
-          {if_expression->m_location},
-          type,
-          std::make_unique<hir::IfExpr>(hir::IfExpr{{if_expression->m_location},
-                                                    std::move(condition),
-                                                    std::move(then_branch),
-                                                    {}})};
+      return {{if_expression->m_location},
+              type,
+              std::make_unique<hir::IfExpr>(
+                  hir::IfExpr{{if_expression->m_location},
+                              std::move(resolved_condition),
+                              std::move(then_branch),
+                              {}})};
     }
     // Check else branch too
     auto else_branch = check_block(if_expression->m_else_block.value());
 
-    if (std::holds_alternative<hir::TypeVariable>(else_branch.m_type)) {
+    try {
+      m_type_unifier.unify(then_branch.m_type, else_branch.m_type);
+    } catch (std::runtime_error &error) {
       throw core::CompilerException("TypeChecker",
-                                    std::string("UNIMPLEMENTED") + " " +
-                                        __PRETTY_FUNCTION__,
-                                    else_branch.m_location);
+                                    std::string("Type unification error!: ") +
+                                        error.what(),
+                                    if_expression->m_location);
     }
 
-    auto type =
-        unify(then_branch.m_type, else_branch.m_type,
-              "IfExpr expects both branches match!", if_expression->m_location);
+    auto type = std::holds_alternative<hir::NeverType>(then_branch.m_type)
+                    ? m_type_unifier.find(else_branch.m_type)
+                    : m_type_unifier.find(then_branch.m_type);
 
     return {{if_expression->m_location},
             std::move(type),
             std::make_unique<hir::IfExpr>(hir::IfExpr{
                 {if_expression->m_location},
-                std::move(condition),
+                std::move(resolved_condition),
                 std::move(then_branch),
                 std::optional<hir::Block>(std::move(else_branch))})};
   }
@@ -619,15 +627,20 @@ struct UnifiedChecker {
 
     // If annotated type is Unknown, go with type of expression
     // Else, unify the two (throws on mismatch)
-    if (!std::holds_alternative<hir::TypeVariable>(annotated_type)) {
-      unify(body.m_type, annotated_type,
-            "let binding '" + let_binding.m_variable.m_name + "'",
-            let_binding.m_location);
+    try {
+      m_type_unifier.unify(annotated_type, body.m_type);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException("TypeChecker",
+                                    std::string("Type unification error!: ") +
+                                        error.what(),
+                                    let_binding.m_location);
     }
+
+    auto unified_type = m_type_unifier.find(annotated_type);
 
     auto new_identifier = hir::Identifier{{let_binding.m_variable.m_location},
                                           let_binding.m_variable.m_name,
-                                          hir::clone_type(body.m_type)};
+                                          std::move(unified_type)};
 
     // Store the new let binding
     m_env.define(new_identifier.m_name, hir::clone_type(new_identifier.m_type));
@@ -694,9 +707,13 @@ struct UnifiedChecker {
     auto body = check_callable_body(parameters, expected_return_type,
                                     function_def.m_body);
 
-    unify(body.m_type, expected_return_type,
-          "return type of '" + function_def.m_id.m_name + "'",
-          function_def.m_id.m_location);
+    try {
+      m_type_unifier.unify(body.m_type, expected_return_type);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException(
+          "TypeChecker", std::string("Type unification error: ") + error.what(),
+          function_def.m_location);
+    }
 
     return hir::FunctionDef{
         {function_def.m_location},
