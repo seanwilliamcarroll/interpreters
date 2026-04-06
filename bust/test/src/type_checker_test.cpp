@@ -950,6 +950,139 @@ TEST_SUITE("bust.type_checker") {
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
+  // --- Bug regression: unary expression type resolution --------------------
+
+  TEST_CASE("unary negation on inferred parameter resolves type") {
+    // |x| { -x } should resolve x to i64 via unary minus constraint
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let neg = |x| { -x };\n"
+                          "  neg(5)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("unary not on inferred parameter resolves to bool") {
+    // |x| { !x } should resolve x to bool via unary not constraint
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let negate = |x| { !x };\n"
+                          "  let result: bool = negate(true);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::BOOL);
+  }
+
+  // --- Bug regression: if expression with inferred branch types -----------
+
+  TEST_CASE("if expression with inferred type variable in then branch") {
+    // Lambda body is an if-expr where branches return inferred types
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x| {\n"
+                          "    if true { x } else { 0 }\n"
+                          "  };\n"
+                          "  f(42)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Inferred return with mixed constraints -----------------------------
+
+  TEST_CASE("lambda return type inferred from multiple paths") {
+    // |x| { if true { x + 1 } else { 0 } } — both branches return i64
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x| {\n"
+                          "    if true { x + 1 } else { 0 }\n"
+                          "  };\n"
+                          "  f(5)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Mixed annotated and inferred parameters ----------------------------
+
+  TEST_CASE("lambda with mix of annotated and inferred parameters") {
+    // |x: bool, y| { if x { y + 1 } else { 0 } }
+    // x is annotated bool, y is inferred i64 from y + 1
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x: bool, y| {\n"
+                          "    if x { y + 1 } else { 0 }\n"
+                          "  };\n"
+                          "  f(true, 5)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("lambda with annotated and inferred rejects wrong annotated arg") {
+    // |x: bool, y| { y + 1 } — calling with i64 for x should fail
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x: bool, y| { y + 1 };\n"
+                               "  f(42, 5)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Lambda without let binding (no generalization) ---------------------
+
+  TEST_CASE("lambda passed directly as argument without let binding") {
+    auto hir = type_check("fn apply(f: fn(i64) -> i64, x: i64) -> i64 {\n"
+                          "  f(x)\n"
+                          "}\n"
+                          "fn main() -> i64 {\n"
+                          "  apply(|x| { x + 1 }, 5)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
+    REQUIRE(main_func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        main_func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Function type parameter errors -------------------------------------
+
+  TEST_CASE("function type parameter called with wrong argument type") {
+    CHECK_THROWS_AS(type_check("fn apply(f: fn(i64) -> i64, x: i64) -> i64 {\n"
+                               "  f(true)\n"
+                               "}\n"
+                               "fn main() -> i64 { apply(|x| { x }, 5) }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("function type parameter return type mismatch") {
+    CHECK_THROWS_AS(
+        type_check("fn apply(f: fn(i64) -> bool, x: i64) -> bool {\n"
+                   "  f(x)\n"
+                   "}\n"
+                   "fn main() -> i64 {\n"
+                   "  let r: bool = apply(|x| { x + 1 }, 5);\n"
+                   "  0\n"
+                   "}"),
+        core::CompilerException);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust
