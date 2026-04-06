@@ -46,6 +46,7 @@ add_executable(bust-test
   test/src/lexer_test.cpp
   test/src/parser_test.cpp
   test/src/type_checker_test.cpp
+  test/src/type_unifier_test.cpp
   test/src/validate_main_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
@@ -72,5 +73,6 @@ add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
 add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysis)
 add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
+add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
 
 #*****************************************************************************
