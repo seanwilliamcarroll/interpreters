@@ -14,6 +14,7 @@
 #include "exceptions.hpp"
 #include "hir/nodes.hpp"
 #include "hir/type_environment.hpp"
+#include "hir/type_unifier.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
 #include "source_location.hpp"
@@ -55,11 +56,6 @@ bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
     return true;
   }
 
-  if (std::holds_alternative<hir::UnknownType>(type)) {
-    throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
-                                  std::get<hir::UnknownType>(type).m_location);
-  }
-
   switch (op) {
   case UnaryOperator::MINUS:
     return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
@@ -74,11 +70,6 @@ bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
 bool allowed_binary_type(BinaryOperator op, const hir::Type &type) {
   if (std::holds_alternative<hir::NeverType>(type)) {
     return true;
-  }
-
-  if (std::holds_alternative<hir::UnknownType>(type)) {
-    throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
-                                  std::get<hir::UnknownType>(type).m_location);
   }
 
   switch (op) {
@@ -627,10 +618,12 @@ struct UnifiedChecker {
 
   hir::Environment &m_env;
   std::vector<hir::Type> m_return_type_stack;
+  TypeUnifier m_type_unifier;
 };
 
 hir::Program TypeChecker::operator()(const ast::Program &program) {
-  auto checker = UnifiedChecker{.m_env = m_env, .m_return_type_stack{}};
+  auto checker =
+      UnifiedChecker{.m_env = m_env, .m_return_type_stack{}, .m_type_unifier{}};
 
   // First pass to collect function signatures
   for (const auto &top_item : program.m_items) {

@@ -30,7 +30,12 @@ struct PrimitiveTypeValue : public HasLocation {
 };
 
 struct TypeVariable : public HasLocation {
-  std::string m_identifier;
+  // Not sure on needing a location
+  size_t m_id;
+};
+
+struct PolymorphicType : public HasLocation {
+  std::string m_name;
 };
 
 struct FunctionType;
@@ -41,7 +46,7 @@ struct UnknownType : public HasLocation {};
 
 // TODO: User defined types of some kind
 using Type =
-    std::variant<PrimitiveTypeValue, TypeVariable,
+    std::variant<PrimitiveTypeValue, TypeVariable, PolymorphicType,
                  std::unique_ptr<FunctionType>, NeverType, UnknownType>;
 
 struct FunctionType : public HasLocation {

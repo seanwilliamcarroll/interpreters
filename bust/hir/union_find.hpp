@@ -6,27 +6,22 @@
 
 class UnionFind {
 public:
-  explicit UnionFind(int n)
-      : parent(static_cast<size_t>(n), 0), rank(static_cast<size_t>(n), 0) {
-    for (int node = 0; node < n; ++node) {
-      get_parent(node) = node;
-    }
-  }
+  explicit UnionFind() = default;
 
-  int find(int x) {
-    int root_node = x;
+  size_t find(size_t x) {
+    size_t root_node = x;
     while (get_parent(root_node) != root_node) {
       root_node = get_parent(root_node);
     }
     while (get_parent(x) != root_node) {
-      int next_node = get_parent(x);
+      size_t next_node = get_parent(x);
       get_parent(x) = root_node;
       x = next_node;
     }
     return root_node;
   }
 
-  void unite(int x, int y) {
+  void unite(size_t x, size_t y) {
     auto parent_x = find(x);
     auto parent_y = find(y);
     if (parent_x == parent_y) {
@@ -43,27 +38,34 @@ public:
     }
   }
 
-  bool connected(int x, int y) { return find(x) == find(y); }
+  bool connected(size_t x, size_t y) { return find(x) == find(y); }
 
-private:
-  [[nodiscard]] const int &get_parent(int index) const {
-    return parent[static_cast<size_t>(index)];
+  size_t add_node() {
+    auto new_node = parent.size();
+    parent.push_back(new_node);
+    rank.push_back(0);
+    return new_node;
   }
 
-  int &get_parent(int index) {
-    return const_cast<int &>(
+private:
+  [[nodiscard]] const size_t &get_parent(size_t index) const {
+    return parent[index];
+  }
+
+  size_t &get_parent(size_t index) {
+    return const_cast<size_t &>(
         static_cast<const UnionFind *>(this)->get_parent(index));
   }
 
-  [[nodiscard]] const int &get_rank(int index) const {
-    return rank[static_cast<size_t>(index)];
+  [[nodiscard]] const size_t &get_rank(size_t index) const {
+    return rank[index];
   }
 
-  int &get_rank(int index) {
-    return const_cast<int &>(
+  size_t &get_rank(size_t index) {
+    return const_cast<size_t &>(
         static_cast<const UnionFind *>(this)->get_rank(index));
   }
 
-  std::vector<int> parent;
-  std::vector<int> rank;
+  std::vector<size_t> parent{};
+  std::vector<size_t> rank{};
 };
