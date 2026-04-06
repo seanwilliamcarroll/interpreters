@@ -19,25 +19,25 @@
 #include <variant>
 
 //****************************************************************************
-namespace bust {
+namespace bust::hir {
 //****************************************************************************
 
 struct TypeUnifier {
-  hir::TypeVariable new_type_var() { return {.m_id = m_union_find.add_node()}; }
+  TypeVariable new_type_var() { return {.m_id = m_union_find.add_node()}; }
 
-  void unify(const hir::Type &type_a, const hir::Type &type_b) {
-    if (std::holds_alternative<hir::NeverType>(type_a) ||
-        std::holds_alternative<hir::NeverType>(type_b)) {
+  void unify(const Type &type_a, const Type &type_b) {
+    if (std::holds_alternative<NeverType>(type_a) ||
+        std::holds_alternative<NeverType>(type_b)) {
       return;
     }
 
-    if (std::holds_alternative<hir::TypeVariable>(type_a)) {
-      unify(std::get<hir::TypeVariable>(type_a), type_b);
+    if (std::holds_alternative<TypeVariable>(type_a)) {
+      unify(std::get<TypeVariable>(type_a), type_b);
       return;
     }
 
-    if (std::holds_alternative<hir::TypeVariable>(type_b)) {
-      unify(type_a, std::get<hir::TypeVariable>(type_b));
+    if (std::holds_alternative<TypeVariable>(type_b)) {
+      unify(type_a, std::get<TypeVariable>(type_b));
       return;
     }
 
@@ -48,10 +48,10 @@ struct TypeUnifier {
     }
 
     // First check if they are both function types
-    if (std::holds_alternative<std::unique_ptr<hir::FunctionType>>(type_a) &&
-        std::holds_alternative<std::unique_ptr<hir::FunctionType>>(type_b)) {
-      unify(std::get<std::unique_ptr<hir::FunctionType>>(type_a),
-            std::get<std::unique_ptr<hir::FunctionType>>(type_b));
+    if (std::holds_alternative<std::unique_ptr<FunctionType>>(type_a) &&
+        std::holds_alternative<std::unique_ptr<FunctionType>>(type_b)) {
+      unify(std::get<std::unique_ptr<FunctionType>>(type_a),
+            std::get<std::unique_ptr<FunctionType>>(type_b));
       return;
     }
 
@@ -59,12 +59,12 @@ struct TypeUnifier {
                              " and " + type_b);
   }
 
-  void unify(const std::unique_ptr<hir::FunctionType> &type_a,
-             const std::unique_ptr<hir::FunctionType> &type_b) {
+  void unify(const std::unique_ptr<FunctionType> &type_a,
+             const std::unique_ptr<FunctionType> &type_b) {
     if (type_a->m_argument_types.size() != type_b->m_argument_types.size()) {
       throw std::runtime_error(std::string("Tried to unify concrete types: ") +
-                               hir::TypeToStringConverter{}(type_a) + " and " +
-                               hir::TypeToStringConverter{}(type_b));
+                               TypeToStringConverter{}(type_a) + " and " +
+                               TypeToStringConverter{}(type_b));
     }
 
     for (const auto &[parameter_type_a, parameter_type_b] :
@@ -75,18 +75,18 @@ struct TypeUnifier {
     unify(type_a->m_return_type, type_b->m_return_type);
   }
 
-  void unify(const hir::Type &type_a, const hir::TypeVariable &type_b) {
+  void unify(const Type &type_a, const TypeVariable &type_b) {
     // Define it once in the other method
     unify(type_b, type_a);
   }
 
-  void unify(const hir::TypeVariable &type_a, const hir::Type &type_b) {
-    if (std::holds_alternative<hir::TypeVariable>(type_b)) {
-      unify(type_a, std::get<hir::TypeVariable>(type_b));
+  void unify(const TypeVariable &type_a, const Type &type_b) {
+    if (std::holds_alternative<TypeVariable>(type_b)) {
+      unify(type_a, std::get<TypeVariable>(type_b));
       return;
     }
 
-    if (std::holds_alternative<hir::NeverType>(type_b)) {
+    if (std::holds_alternative<NeverType>(type_b)) {
       return;
     }
 
@@ -106,10 +106,10 @@ struct TypeUnifier {
     }
 
     // No entry
-    m_resolved_type.emplace(root_a, hir::clone_type(type_b));
+    m_resolved_type.emplace(root_a, clone_type(type_b));
   }
 
-  void unify(const hir::TypeVariable &type_a, const hir::TypeVariable &type_b) {
+  void unify(const TypeVariable &type_a, const TypeVariable &type_b) {
     auto root_a = m_union_find.find(type_a.m_id);
     auto root_b = m_union_find.find(type_b.m_id);
 
@@ -141,38 +141,38 @@ struct TypeUnifier {
       if (iter_a != m_resolved_type.end()) {
         // A is concrete, B is not
         const auto &concrete_a = iter_a->second;
-        m_resolved_type.emplace(new_root, hir::clone_type(concrete_a));
+        m_resolved_type.emplace(new_root, clone_type(concrete_a));
       } else {
         const auto &concrete_b = iter_b->second;
         // B is concrete, A is not
-        m_resolved_type.emplace(new_root, hir::clone_type(concrete_b));
+        m_resolved_type.emplace(new_root, clone_type(concrete_b));
       }
     }
   }
 
-  hir::Type find(const hir::Type &type) {
-    if (std::holds_alternative<hir::TypeVariable>(type)) {
-      return find(std::get<hir::TypeVariable>(type));
+  Type find(const Type &type) {
+    if (std::holds_alternative<TypeVariable>(type)) {
+      return find(std::get<TypeVariable>(type));
     }
-    return hir::clone_type(type);
+    return clone_type(type);
   }
 
-  hir::Type find(const hir::TypeVariable &type) {
+  Type find(const TypeVariable &type) {
     auto root = m_union_find.find(type.m_id);
 
     auto iter = m_resolved_type.find(root);
     if (iter != m_resolved_type.end()) {
-      return hir::clone_type(iter->second);
+      return clone_type(iter->second);
     }
 
     // Not a concrete type yet
-    return hir::TypeVariable{{}, root};
+    return TypeVariable{{}, root};
   }
 
   UnionFind m_union_find{};
-  std::unordered_map<size_t, hir::Type> m_resolved_type;
+  std::unordered_map<size_t, Type> m_resolved_type;
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::hir
 //****************************************************************************

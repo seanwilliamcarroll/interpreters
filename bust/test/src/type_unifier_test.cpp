@@ -4,7 +4,7 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Unit tests for bust::TypeUnifier
+//*  Purpose : Unit tests for bust::hir::TypeUnifier
 //*
 //*
 //*  See Also: https://github.com/doctest/doctest
@@ -27,7 +27,7 @@ TEST_SUITE("bust.type_unifier") {
   // --- fresh type variables --------------------------------------------------
 
   TEST_CASE("new type variables get unique ids") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     auto t2 = unifier.new_type_var();
@@ -37,7 +37,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unresolved type variable finds back to itself") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto result = unifier.find(t0);
     CHECK(std::holds_alternative<hir::TypeVariable>(result));
@@ -46,7 +46,7 @@ TEST_SUITE("bust.type_unifier") {
   // --- unify(TypeVariable, concrete Type) ------------------------------------
 
   TEST_CASE("unify type variable with concrete type resolves it") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
 
     hir::Type i64_type = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
@@ -59,7 +59,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify concrete type with type variable (reversed arg order)") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
 
     hir::Type bool_type = hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL};
@@ -72,7 +72,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify same type variable with same concrete type twice is ok") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
 
     hir::Type i64_type = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
@@ -81,7 +81,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify type variable with conflicting concrete types throws") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
 
     hir::Type i64_type = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
@@ -93,7 +93,7 @@ TEST_SUITE("bust.type_unifier") {
   // --- unify(TypeVariable, TypeVariable) -------------------------------------
 
   TEST_CASE("unify two unresolved type variables links them") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -109,7 +109,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify two type variables then resolve one resolves both") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -127,7 +127,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify resolved variable with unresolved propagates type") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -142,7 +142,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify two variables both resolved to same type is ok") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -154,7 +154,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("unify two variables resolved to different types throws") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -169,7 +169,7 @@ TEST_SUITE("bust.type_unifier") {
   // --- transitive chains -----------------------------------------------------
 
   TEST_CASE("chain of three variables resolves transitively") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     auto t2 = unifier.new_type_var();
@@ -192,7 +192,7 @@ TEST_SUITE("bust.type_unifier") {
   }
 
   TEST_CASE("resolve first in chain propagates to all") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     auto t2 = unifier.new_type_var();
@@ -210,7 +210,7 @@ TEST_SUITE("bust.type_unifier") {
   // --- self unification ------------------------------------------------------
 
   TEST_CASE("unify type variable with itself is a no-op") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     CHECK_NOTHROW(unifier.unify(t0, t0));
 
@@ -221,7 +221,7 @@ TEST_SUITE("bust.type_unifier") {
   // --- independent variables -------------------------------------------------
 
   TEST_CASE("independent type variables do not affect each other") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -239,7 +239,7 @@ TEST_SUITE("bust.type_unifier") {
 TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects type variable from bare TV") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto tv = unifier.new_type_var();
     hir::Type type = tv;
 
@@ -269,7 +269,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
   }
 
   TEST_CASE("collects TVs from inside FunctionType") {
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
 
@@ -287,7 +287,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects only TVs not concrete parts of fn type") {
     // fn(i64) -> ?T1 — only ?T1 is a TV
-    TypeUnifier unifier;
+    hir::TypeUnifier unifier;
     auto t1 = unifier.new_type_var();
 
     std::vector<hir::Type> params;

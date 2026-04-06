@@ -24,20 +24,20 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeScheme {
-  TypeScheme(Type type, std::vector<hir::TypeVariable> free_variables)
+  TypeScheme(Type type, std::vector<TypeVariable> free_variables)
       : m_type(std::move(type)),
         m_free_type_variables(std::move(free_variables)) {}
 
   TypeScheme(const TypeScheme &to_copy)
-      : m_type(hir::clone_type(to_copy.m_type)),
+      : m_type(clone_type(to_copy.m_type)),
         m_free_type_variables(to_copy.m_free_type_variables) {}
 
   TypeScheme(TypeScheme &&to_move) noexcept
       : m_type(std::move(to_move.m_type)),
         m_free_type_variables(std::move(to_move.m_free_type_variables)) {}
 
-  hir::Type m_type;
-  std::vector<hir::TypeVariable> m_free_type_variables;
+  Type m_type;
+  std::vector<TypeVariable> m_free_type_variables;
 };
 
 struct Scope {
