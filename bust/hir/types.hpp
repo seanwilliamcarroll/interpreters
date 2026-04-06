@@ -42,12 +42,9 @@ struct FunctionType;
 
 struct NeverType : public HasLocation {};
 
-struct UnknownType : public HasLocation {};
-
 // TODO: User defined types of some kind
-using Type =
-    std::variant<PrimitiveTypeValue, TypeVariable, PolymorphicType,
-                 std::unique_ptr<FunctionType>, NeverType, UnknownType>;
+using Type = std::variant<PrimitiveTypeValue, TypeVariable, PolymorphicType,
+                          std::unique_ptr<FunctionType>, NeverType>;
 
 struct FunctionType : public HasLocation {
   std::vector<Type> m_argument_types;
@@ -98,7 +95,7 @@ inline bool types_equal(const Type &lhs, const Type &rhs) {
           }
           return l->m_return_type == r->m_return_type;
         } else {
-          // NeverType, UnknownType — same variant alternative means equal
+          // NeverType — same variant alternative means equal
           return true;
         }
       },
@@ -154,8 +151,6 @@ inline std::string type_to_string(const Type &type) {
           return result;
         } else if constexpr (std::is_same_v<T, NeverType>) {
           return "!";
-        } else if constexpr (std::is_same_v<T, UnknownType>) {
-          return "?";
         } else {
           static_assert(sizeof(T) == 0, "unhandled Type variant");
         }

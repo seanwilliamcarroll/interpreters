@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <stdexcept>
 #include <type_checker.hpp>
 #include <variant>
 
@@ -31,69 +32,15 @@ namespace bust {
 
 struct TypeConverter {
   hir::Type operator()(const ast::DefinedType &type) {
-    // TODO
-    return hir::UnknownType{{type.m_location}};
+    throw core::CompilerException(
+        "TypeChecker", std::string("UNIMPLEMENTED") + " " + __PRETTY_FUNCTION__,
+        type.m_location);
   }
 
   hir::Type operator()(const ast::PrimitiveTypeIdentifier &type) {
     return hir::PrimitiveTypeValue{{type.m_location}, type.m_type};
   }
 };
-
-hir::Type get_type(const ast::TypeIdentifier &identifier) {
-  return std::visit(TypeConverter{}, identifier);
-}
-
-hir::Type get_type(const ast::Identifier &identifier) {
-  if (identifier.m_type.has_value()) {
-    return std::visit(TypeConverter{}, identifier.m_type.value());
-  }
-  return hir::UnknownType{{identifier.m_location}};
-}
-
-bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
-  if (std::holds_alternative<hir::NeverType>(type)) {
-    return true;
-  }
-
-  switch (op) {
-  case UnaryOperator::MINUS:
-    return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
-           std::get<hir::PrimitiveTypeValue>(type).m_type == PrimitiveType::I64;
-  case UnaryOperator::NOT:
-    return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
-           std::get<hir::PrimitiveTypeValue>(type).m_type ==
-               PrimitiveType::BOOL;
-  }
-}
-
-bool allowed_binary_type(BinaryOperator op, const hir::Type &type) {
-  if (std::holds_alternative<hir::NeverType>(type)) {
-    return true;
-  }
-
-  switch (op) {
-  case BinaryOperator::LOGICAL_AND:
-  case BinaryOperator::LOGICAL_OR:
-    return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
-           std::get<hir::PrimitiveTypeValue>(type).m_type ==
-               PrimitiveType::BOOL;
-  case BinaryOperator::PLUS:
-  case BinaryOperator::MINUS:
-  case BinaryOperator::MULTIPLIES:
-  case BinaryOperator::DIVIDES:
-  case BinaryOperator::MODULUS:
-  case BinaryOperator::LT:
-  case BinaryOperator::LT_EQ:
-  case BinaryOperator::GT:
-  case BinaryOperator::GT_EQ:
-    return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
-           std::get<hir::PrimitiveTypeValue>(type).m_type == PrimitiveType::I64;
-  case BinaryOperator::EQ:
-  case BinaryOperator::NOT_EQ:
-    return true;
-  }
-}
 
 bool is_comparison_op(BinaryOperator op) {
   switch (op) {
@@ -107,23 +54,6 @@ bool is_comparison_op(BinaryOperator op) {
   default:
     return false;
   }
-}
-
-hir::Identifier convert_parameter(const ast::Identifier &identifier) {
-  return {{identifier.m_location}, identifier.m_name, get_type(identifier)};
-}
-
-std::pair<std::vector<hir::Identifier>, std::vector<hir::Type>>
-convert_parameters(const std::vector<ast::Identifier> &ast_params) {
-  std::vector<hir::Identifier> parameters;
-  std::vector<hir::Type> parameter_types;
-  parameters.reserve(ast_params.size());
-  parameter_types.reserve(ast_params.size());
-  for (const auto &param : ast_params) {
-    parameters.emplace_back(convert_parameter(param));
-    parameter_types.emplace_back(hir::clone_type(parameters.back().m_type));
-  }
-  return {std::move(parameters), std::move(parameter_types)};
 }
 
 hir::Type get_statement_type(const hir::Statement &statement) {
@@ -153,6 +83,121 @@ hir::Type unify(const hir::Type &type_a, const hir::Type &type_b,
 }
 
 struct UnifiedChecker {
+
+  bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
+    if (std::holds_alternative<hir::NeverType>(type)) {
+      return true;
+    }
+
+    if (std::holds_alternative<hir::TypeVariable>(type)) {
+      switch (op) {
+      case UnaryOperator::MINUS:
+        m_type_unifier.unify(std::get<hir::TypeVariable>(type),
+                             hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+        return true;
+      case UnaryOperator::NOT:
+        m_type_unifier.unify(std::get<hir::TypeVariable>(type),
+                             hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL});
+        return true;
+      }
+    }
+
+    switch (op) {
+    case UnaryOperator::MINUS:
+      return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+             std::get<hir::PrimitiveTypeValue>(type).m_type ==
+                 PrimitiveType::I64;
+    case UnaryOperator::NOT:
+      return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+             std::get<hir::PrimitiveTypeValue>(type).m_type ==
+                 PrimitiveType::BOOL;
+    }
+  }
+
+  bool allowed_binary_type(BinaryOperator op, const hir::Type &type) {
+    if (std::holds_alternative<hir::NeverType>(type)) {
+      // Less sure about this
+      return true;
+    }
+
+    if (std::holds_alternative<hir::TypeVariable>(type)) {
+      // Add constraint
+      switch (op) {
+      case BinaryOperator::LOGICAL_AND:
+      case BinaryOperator::LOGICAL_OR:
+        m_type_unifier.unify(std::get<hir::TypeVariable>(type),
+                             hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL});
+        return true;
+      case BinaryOperator::PLUS:
+      case BinaryOperator::MINUS:
+      case BinaryOperator::MULTIPLIES:
+      case BinaryOperator::DIVIDES:
+      case BinaryOperator::MODULUS:
+      case BinaryOperator::LT:
+      case BinaryOperator::LT_EQ:
+      case BinaryOperator::GT:
+      case BinaryOperator::GT_EQ:
+        m_type_unifier.unify(std::get<hir::TypeVariable>(type),
+                             hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+        return true;
+      case BinaryOperator::EQ:
+      case BinaryOperator::NOT_EQ:
+        // Not enough information to add a constraint
+        return true;
+      }
+    }
+
+    switch (op) {
+    case BinaryOperator::LOGICAL_AND:
+    case BinaryOperator::LOGICAL_OR:
+      return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+             std::get<hir::PrimitiveTypeValue>(type).m_type ==
+                 PrimitiveType::BOOL;
+    case BinaryOperator::PLUS:
+    case BinaryOperator::MINUS:
+    case BinaryOperator::MULTIPLIES:
+    case BinaryOperator::DIVIDES:
+    case BinaryOperator::MODULUS:
+    case BinaryOperator::LT:
+    case BinaryOperator::LT_EQ:
+    case BinaryOperator::GT:
+    case BinaryOperator::GT_EQ:
+      return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+             std::get<hir::PrimitiveTypeValue>(type).m_type ==
+                 PrimitiveType::I64;
+    case BinaryOperator::EQ:
+    case BinaryOperator::NOT_EQ:
+      return true;
+    }
+  }
+
+  std::pair<std::vector<hir::Identifier>, std::vector<hir::Type>>
+  convert_parameters(const std::vector<ast::Identifier> &ast_params) {
+    std::vector<hir::Identifier> parameters;
+    std::vector<hir::Type> parameter_types;
+    parameters.reserve(ast_params.size());
+    parameter_types.reserve(ast_params.size());
+    for (const auto &param : ast_params) {
+      parameters.emplace_back(convert_parameter(param));
+      parameter_types.emplace_back(hir::clone_type(parameters.back().m_type));
+    }
+    return {std::move(parameters), std::move(parameter_types)};
+  }
+
+  hir::Identifier convert_parameter(const ast::Identifier &identifier) {
+    return {{identifier.m_location}, identifier.m_name, get_type(identifier)};
+  }
+
+  hir::Type get_type(const ast::TypeIdentifier &identifier) {
+    return std::visit(TypeConverter{}, identifier);
+  }
+
+  hir::Type get_type(const ast::Identifier &identifier) {
+    if (identifier.m_type.has_value()) {
+      return std::visit(TypeConverter{}, identifier.m_type.value());
+    }
+    return m_type_unifier.new_type_var();
+  }
 
   hir::Statement check_statement(const ast::Statement &statement) {
     return std::visit(
@@ -276,31 +321,31 @@ struct UnifiedChecker {
     auto lhs = std::visit((*this), binary_expression->m_lhs);
     auto rhs = std::visit((*this), binary_expression->m_rhs);
 
-    if (std::holds_alternative<hir::UnknownType>(lhs.m_type)) {
-      // TODO
-      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
-                                    lhs.m_location);
+    try {
+      m_type_unifier.unify(lhs.m_type, rhs.m_type);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException(
+          "TypeChecker", std::string("Type unification error: ") + error.what(),
+          binary_expression->m_location);
     }
 
-    if (std::holds_alternative<hir::UnknownType>(rhs.m_type)) {
-      // TODO
-      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
-                                    rhs.m_location);
-    }
-
-    auto type = unify(lhs.m_type, rhs.m_type,
-                      "BinaryExpr: " + binary_expression->m_operator,
-                      binary_expression->m_location);
+    auto type = m_type_unifier.find(lhs.m_type);
 
     // Types match
 
     // Need to check if binary operator allows this type
-    if (!allowed_binary_type(binary_expression->m_operator, type)) {
-      throw core::CompilerException("TypeChecker",
-                                    "Type " + type +
-                                        " is disallowed by binary operator: " +
-                                        binary_expression->m_operator,
-                                    binary_expression->m_location);
+    try {
+      if (!allowed_binary_type(binary_expression->m_operator, type)) {
+        throw core::CompilerException(
+            "TypeChecker",
+            "Type " + type + " is disallowed by binary operator: " +
+                binary_expression->m_operator,
+            binary_expression->m_location);
+      }
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException(
+          "TypeChecker", std::string("Type unification error: ") + error.what(),
+          binary_expression->m_location);
     }
 
     auto final_type =
@@ -322,11 +367,18 @@ struct UnifiedChecker {
   operator()(const std::unique_ptr<ast::UnaryExpr> &unary_expression) {
     auto expression = std::visit((*this), unary_expression->m_expression);
 
-    if (!allowed_unary_type(unary_expression->m_operator, expression.m_type)) {
+    try {
+      if (!allowed_unary_type(unary_expression->m_operator,
+                              expression.m_type)) {
+        throw core::CompilerException(
+            "TypeChecker",
+            "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
+                " does not accept type: " + expression.m_type,
+            unary_expression->m_location);
+      }
+    } catch (std::runtime_error &error) {
       throw core::CompilerException(
-          "TypeChecker",
-          "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
-              " does not accept type: " + expression.m_type,
+          "TypeChecker", std::string("Type unification error: ") + error.what(),
           unary_expression->m_location);
     }
 
@@ -357,8 +409,10 @@ struct UnifiedChecker {
     // Directly call because Block is not a variant type, don't need to visit
     auto then_branch = check_block(if_expression->m_then_block);
 
-    if (std::holds_alternative<hir::UnknownType>(then_branch.m_type)) {
-      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+    if (std::holds_alternative<hir::TypeVariable>(then_branch.m_type)) {
+      throw core::CompilerException("TypeChecker",
+                                    std::string("UNIMPLEMENTED") + " " +
+                                        __PRETTY_FUNCTION__,
                                     then_branch.m_location);
     }
 
@@ -378,8 +432,10 @@ struct UnifiedChecker {
     // Check else branch too
     auto else_branch = check_block(if_expression->m_else_block.value());
 
-    if (std::holds_alternative<hir::UnknownType>(else_branch.m_type)) {
-      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+    if (std::holds_alternative<hir::TypeVariable>(else_branch.m_type)) {
+      throw core::CompilerException("TypeChecker",
+                                    std::string("UNIMPLEMENTED") + " " +
+                                        __PRETTY_FUNCTION__,
                                     else_branch.m_location);
     }
 
@@ -463,7 +519,7 @@ struct UnifiedChecker {
     auto possible_return_type =
         lambda_expression->m_return_type.has_value()
             ? get_type(lambda_expression->m_return_type.value())
-            : hir::UnknownType{};
+            : m_type_unifier.new_type_var();
 
     auto body = lambda_expression->m_return_type.has_value()
                     ? check_callable_body(parameters, possible_return_type,
@@ -480,16 +536,48 @@ struct UnifiedChecker {
             lambda_expression->m_location);
     }
 
+    // Expect body to have a unified type?
+    std::vector<hir::Identifier> unified_parameters;
+    unified_parameters.reserve(parameters.size());
+    std::vector<hir::Type> unified_parameter_types;
+    unified_parameter_types.reserve(parameter_types.size());
+    for (const auto &[parameter, parameter_type] :
+         std::views::zip(parameters, parameter_types)) {
+      if (!std::holds_alternative<hir::TypeVariable>(parameter_type)) {
+        // TODO Could be more efficient than reconstructing
+        unified_parameters.emplace_back(
+            hir::Identifier{{parameter.m_location},
+                            parameter.m_name,
+                            hir::clone_type(parameter.m_type)});
+        unified_parameter_types.push_back(hir::clone_type(parameter_type));
+        continue;
+      }
+      // See if we can resolve them
+      auto unified_type =
+          m_type_unifier.find(std::get<hir::TypeVariable>(parameter_type));
+      if (std::holds_alternative<hir::TypeVariable>(unified_type)) {
+        throw core::CompilerException("TypeChecker",
+                                      "UNIMPLEMENTED: Expect lambda types to "
+                                      "resolve to concrete types at this point",
+                                      lambda_expression->m_location);
+      }
+      unified_parameters.emplace_back(
+          hir::Identifier{{parameter.m_location},
+                          parameter.m_name,
+                          hir::clone_type(unified_type)});
+      unified_parameter_types.push_back(std::move(unified_type));
+    }
+
     auto function_type = std::make_unique<hir::FunctionType>(
         hir::FunctionType{{lambda_expression->m_location},
-                          std::move(parameter_types),
+                          std::move(unified_parameter_types),
                           std::move(return_type)});
 
     return {{lambda_expression->m_location},
             std::move(function_type),
             std::make_unique<hir::LambdaExpr>(
                 hir::LambdaExpr{{lambda_expression->m_location},
-                                std::move(parameters),
+                                std::move(unified_parameters),
                                 std::move(body)})};
   }
 
@@ -531,7 +619,7 @@ struct UnifiedChecker {
 
     // If annotated type is Unknown, go with type of expression
     // Else, unify the two (throws on mismatch)
-    if (!std::holds_alternative<hir::UnknownType>(annotated_type)) {
+    if (!std::holds_alternative<hir::TypeVariable>(annotated_type)) {
       unify(body.m_type, annotated_type,
             "let binding '" + let_binding.m_variable.m_name + "'",
             let_binding.m_location);
@@ -563,9 +651,11 @@ struct UnifiedChecker {
     }
 
     auto return_type = get_type(function_def.m_return_type);
-    if (std::holds_alternative<hir::UnknownType>(return_type)) {
+    if (std::holds_alternative<hir::TypeVariable>(return_type)) {
       // Currently illegal
-      throw core::CompilerException("TypeChecker", "UNIMPLEMENTED",
+      throw core::CompilerException("TypeChecker",
+                                    std::string("UNIMPLEMENTED") + " " +
+                                        __PRETTY_FUNCTION__,
                                     hir::type_location(return_type));
     }
 

@@ -13,7 +13,9 @@
 
 #include "hir/types.hpp"
 #include "hir/union_find.hpp"
+#include <stdexcept>
 #include <unordered_map>
+#include <variant>
 
 //****************************************************************************
 namespace bust {
@@ -22,12 +24,36 @@ namespace bust {
 struct TypeUnifier {
   hir::TypeVariable new_type_var() { return {.m_id = m_union_find.add_node()}; }
 
+  void unify(const hir::Type &type_a, const hir::Type &type_b) {
+    if (std::holds_alternative<hir::TypeVariable>(type_a)) {
+      unify(std::get<hir::TypeVariable>(type_a), type_b);
+      return;
+    }
+
+    if (std::holds_alternative<hir::TypeVariable>(type_b)) {
+      unify(type_a, std::get<hir::TypeVariable>(type_b));
+      return;
+    }
+
+    // We've been passed two concrete types
+
+    if (type_a != type_b) {
+      throw std::runtime_error("Tried to unify concrete types: " + type_a +
+                               " and " + type_b);
+    }
+  }
+
   void unify(const hir::Type &type_a, const hir::TypeVariable &type_b) {
     // Define it once in the other method
     unify(type_b, type_a);
   }
 
   void unify(const hir::TypeVariable &type_a, const hir::Type &type_b) {
+    if (std::holds_alternative<hir::TypeVariable>(type_b)) {
+      unify(type_a, std::get<hir::TypeVariable>(type_b));
+      return;
+    }
+
     // We've been handled a concrete type, need to add as a resolved type
 
     auto root_a = m_union_find.find(type_a.m_id);
@@ -86,6 +112,13 @@ struct TypeUnifier {
         m_resolved_type.emplace(new_root, hir::clone_type(concrete_b));
       }
     }
+  }
+
+  hir::Type find(const hir::Type &type) {
+    if (std::holds_alternative<hir::TypeVariable>(type)) {
+      return find(std::get<hir::TypeVariable>(type));
+    }
+    return hir::clone_type(type);
   }
 
   hir::Type find(const hir::TypeVariable &type) {
