@@ -83,6 +83,9 @@ argument_inferred   = IDENTIFIER (COLON type)?
 type                = I64
                     | BOOL
                     | UNIT
+                    | function_type
+
+function_type       = FN LPAREN (type (COMMA type)*)? RPAREN ARROW type
 
 block               = LBRACE expression_or_binding* expression? RBRACE
 
