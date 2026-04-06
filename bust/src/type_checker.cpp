@@ -391,12 +391,18 @@ struct UnifiedChecker {
           unary_expression->m_location);
     }
 
+    auto final_type = m_type_unifier.find(expression.m_type);
+
+    auto final_expression = hir::Expression{{expression.m_location},
+                                            std::move(final_type),
+                                            std::move(expression.m_expression)};
+
     return {{unary_expression->m_location},
-            hir::clone_type(expression.m_type),
+            hir::clone_type(final_expression.m_type),
             std::make_unique<hir::UnaryExpr>(
                 hir::UnaryExpr{{unary_expression->m_location},
                                unary_expression->m_operator,
-                               std::move(expression)})};
+                               std::move(final_expression)})};
   }
 
   hir::Expression
