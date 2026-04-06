@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <source_location.hpp>
@@ -165,3 +166,13 @@ inline std::string operator+(const Type &type, const std::string &rhs) {
 //****************************************************************************
 } // namespace bust::hir
 //****************************************************************************
+
+namespace std {
+
+template <> struct hash<bust::hir::TypeVariable> {
+  size_t operator()(const bust::hir::TypeVariable &type) const {
+    return std::hash<size_t>{}(type.m_id);
+  }
+};
+
+} // namespace std

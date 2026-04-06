@@ -223,6 +223,16 @@ struct UnifiedChecker {
             std::move(final_expression)};
   }
 
+  hir::Type create_fresh_type_vars(const hir::TypeScheme &type_scheme) {
+    std::unordered_map<hir::TypeVariable, hir::TypeVariable> new_mapping;
+    for (const auto &old_type_variable : type_scheme.m_free_type_variables) {
+      new_mapping.emplace(old_type_variable, m_type_unifier.new_type_var());
+    }
+
+    return std::visit(hir::TypeVariableUpdater{new_mapping},
+                      type_scheme.m_type);
+  }
+
   hir::Expression operator()(const ast::Identifier &identifier) {
     auto maybe_type = m_env.lookup(identifier.m_name);
     if (!maybe_type.has_value()) {
@@ -233,11 +243,15 @@ struct UnifiedChecker {
           identifier.m_location);
     }
 
+    const auto &type_scheme = maybe_type.value();
+
+    auto final_type = create_fresh_type_vars(type_scheme);
+
     return {{identifier.m_location},
-            hir::clone_type(maybe_type.value()),
+            hir::clone_type(final_type),
             hir::Identifier{{identifier.m_location},
                             identifier.m_name,
-                            hir::clone_type(maybe_type.value())}};
+                            std::move(final_type)}};
   }
 
   hir::Expression
@@ -631,8 +645,13 @@ struct UnifiedChecker {
                                           let_binding.m_variable.m_name,
                                           std::move(unified_type)};
 
+    hir::FreeTypeVariableCollector collector{};
+    std::visit(collector, new_identifier.m_type);
+
     // Store the new let binding
-    m_env.define(new_identifier.m_name, hir::clone_type(new_identifier.m_type));
+    m_env.define(new_identifier.m_name,
+                 hir::TypeScheme{hir::clone_type(new_identifier.m_type),
+                                 std::move(collector.m_free_type_variables)});
 
     return {
         {let_binding.m_location}, std::move(new_identifier), std::move(body)};
@@ -647,8 +666,9 @@ struct UnifiedChecker {
       throw core::CompilerException(
           "TypeChecker",
           "Cannot redefine identifier!\nAlready defined " +
-              function_def.m_id.m_name + " with type: " + other_id.value() +
-              " at " + hir::type_location(other_id.value()),
+              function_def.m_id.m_name +
+              " with type: " + other_id.value().m_type + " at " +
+              hir::type_location(other_id.value().m_type),
           function_def.m_id.m_location);
     }
 
@@ -683,7 +703,7 @@ struct UnifiedChecker {
                                         " in first pass!",
                                     function_def.m_location);
     }
-    auto function_type = hir::clone_type(maybe_function_type.value());
+    auto function_type = hir::clone_type(maybe_function_type.value().m_type);
 
     auto [parameters, _] = convert_parameters(function_def.m_parameters);
 
