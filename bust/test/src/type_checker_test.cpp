@@ -525,6 +525,96 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Type inference (lambda return type) -----------------------------------
+
+  TEST_CASE("infer lambda return type from body") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x: i64| { x + 1 };\n"
+                          "  f(10)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("infer lambda return type as bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let is_zero = |x: i64| { x == 0 };\n"
+                          "  let result: bool = is_zero(5);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("infer lambda return type mismatch with usage throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x: i64| { x + 1 };\n"
+                               "  let result: bool = f(5);\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Type inference (lambda parameter types) -------------------------------
+
+  TEST_CASE("infer lambda parameter type from body usage") {
+    // x is used with +, so x must be i64
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x| { x + 1 };\n"
+                          "  f(10)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("infer lambda parameter type from negation") {
+    // !x means x must be bool
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x| { !x };\n"
+                          "  let result: bool = f(true);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("fully unannotated identity lambda inferred from call site") {
+    // |x| { x } called with i64 — both param and return inferred
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |x| { x };\n"
+                          "  id(42)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("inferred lambda rejects wrong argument type") {
+    // |x| { x + 1 } infers x: i64, so calling with bool should fail
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x| { x + 1 };\n"
+                               "  f(true)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
   // --- Identifier resolution -----------------------------------------------
 
   TEST_CASE("identifier resolves to correct type from let binding") {
