@@ -9,6 +9,7 @@
 //*
 //****************************************************************************
 
+#include "ast/types.hpp"
 #include "bust_tokens.hpp"
 #include "source_location.hpp"
 #include <ast/nodes.hpp>
@@ -77,6 +78,35 @@ Parser::parse_location_name_from_identifier(const char *error_message) {
   };
 }
 
+std::unique_ptr<FunctionTypeIdentifier>
+Parser::parse_function_type_identifier() {
+  auto original_location = peek().get_location();
+  expect(TokenType::FN, __FUNCTION__);
+
+  std::vector<TypeIdentifier> argument_types;
+  if (peek().get_token_type() == TokenType::LPAREN) {
+    expect(TokenType::LPAREN, __FUNCTION__);
+
+    while (peek().get_token_type() != TokenType::RPAREN) {
+      argument_types.push_back(parse_type_identifier());
+      if (peek().get_token_type() != TokenType::RPAREN) {
+        expect(TokenType::COMMA, __FUNCTION__);
+      }
+    }
+
+    expect(TokenType::RPAREN, __FUNCTION__);
+  } else {
+    expect(TokenType::UNIT, __FUNCTION__);
+  }
+
+  expect(TokenType::ARROW, __FUNCTION__);
+
+  auto return_type = parse_type_identifier();
+
+  return std::make_unique<FunctionTypeIdentifier>(FunctionTypeIdentifier{
+      {original_location}, std::move(argument_types), std::move(return_type)});
+}
+
 TypeIdentifier Parser::parse_type_identifier() {
   switch (peek().get_token_type()) {
   case TokenType::UNIT:
@@ -88,6 +118,8 @@ TypeIdentifier Parser::parse_type_identifier() {
   case TokenType::I64:
     return PrimitiveTypeIdentifier{{advance()->get_location()},
                                    PrimitiveType::I64};
+  case TokenType::FN:
+    return parse_function_type_identifier();
   default:
     const auto [location, identifier_name] =
         parse_location_name_from_identifier("Malformed type annotation");
@@ -104,7 +136,7 @@ TypeIdentifier Parser::parse_type_annotation() {
   return parse_type_identifier();
 }
 
-TypeIdentifier Parser::parse_function_type_annotation() {
+TypeIdentifier Parser::parse_function_return_type() {
   expect(TokenType::ARROW, __FUNCTION__);
   return parse_type_identifier();
 }
@@ -129,7 +161,7 @@ Identifier Parser::parse_possibly_annotated_identifier() {
                   ? std::optional(parse_type_annotation())
                   : std::nullopt;
 
-  return {{location}, identifier_name, type};
+  return {{location}, identifier_name, std::move(type)};
 }
 
 Identifier Parser::parse_annotated_identifier() {
@@ -139,7 +171,7 @@ Identifier Parser::parse_annotated_identifier() {
   auto type = parse_type_annotation();
   ;
 
-  return {{location}, identifier_name, type};
+  return {{location}, identifier_name, std::move(type)};
 }
 
 FunctionDef Parser::parse_func_def() {
@@ -160,7 +192,7 @@ FunctionDef Parser::parse_func_def() {
   }
 
   auto return_type = (peek().get_token_type() == TokenType::ARROW)
-                         ? parse_function_type_annotation()
+                         ? parse_function_return_type()
                          : PrimitiveTypeIdentifier{
                                {function_id.m_location},
                                PrimitiveType::UNIT,
@@ -169,9 +201,9 @@ FunctionDef Parser::parse_func_def() {
   auto body = parse_block();
 
   return {{original_location},
-          function_id,
-          parameters,
-          return_type,
+          std::move(function_id),
+          std::move(parameters),
+          std::move(return_type),
           std::move(body)};
 }
 
@@ -187,7 +219,7 @@ LetBinding Parser::parse_let_binding() {
 
   expect(TokenType::SEMICOLON, __FUNCTION__);
 
-  return {{original_location}, identifier, std::move(body)};
+  return {{original_location}, std::move(identifier), std::move(body)};
 }
 
 std::vector<Identifier> Parser::parse_param_list() {
@@ -476,13 +508,15 @@ Expression Parser::parse_lambda_expr() {
 
   auto function_type =
       (peek().get_token_type() == TokenType::ARROW)
-          ? std::optional<TypeIdentifier>(parse_function_type_annotation())
+          ? std::optional<TypeIdentifier>(parse_function_return_type())
           : std::nullopt;
 
   auto body = parse_block();
 
-  return std::make_unique<LambdaExpr>(LambdaExpr{
-      {original_location}, arguments, function_type, std::move(body)});
+  return std::make_unique<LambdaExpr>(LambdaExpr{{original_location},
+                                                 std::move(arguments),
+                                                 std::move(function_type),
+                                                 std::move(body)});
 }
 
 Expression Parser::parse_literal() {

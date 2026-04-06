@@ -47,8 +47,9 @@ private:
   parse_location_name_from_identifier(const char *error_message);
 
   TypeIdentifier parse_type_identifier();
-  TypeIdentifier parse_function_type_annotation();
+  TypeIdentifier parse_function_return_type();
   TypeIdentifier parse_type_annotation();
+  std::unique_ptr<FunctionTypeIdentifier> parse_function_type_identifier();
 
   Identifier parse_non_annotated_identifier();
   Identifier parse_possibly_annotated_identifier();
