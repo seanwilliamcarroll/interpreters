@@ -326,7 +326,6 @@ struct UnifiedChecker {
 
   hir::Expression
   operator()(const std::unique_ptr<ast::BinaryExpr> &binary_expression) {
-
     // Both arguments must match
     auto lhs = std::visit((*this), binary_expression->m_lhs);
     auto rhs = std::visit((*this), binary_expression->m_rhs);
@@ -362,7 +361,7 @@ struct UnifiedChecker {
         is_comparison_op(binary_expression->m_operator)
             ? hir::PrimitiveTypeValue{{binary_expression->m_location},
                                       PrimitiveType::BOOL}
-            : std::move(type);
+            : m_type_unifier.find(type);
 
     return {{binary_expression->m_location},
             std::move(final_type),
