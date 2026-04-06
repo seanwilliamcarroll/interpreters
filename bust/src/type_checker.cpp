@@ -308,7 +308,7 @@ struct UnifiedChecker {
             "TypeChecker",
             "Type unification error!\n Parameter at index: " +
                 std::to_string(index) + " expects type: " + parameter_type +
-                " Unificationn error: " + error.what(),
+                " Unification error: " + error.what(),
             argument.m_location);
       }
     }

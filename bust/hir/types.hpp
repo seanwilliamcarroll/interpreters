@@ -116,39 +116,40 @@ inline Type clone_type(const Type &type) {
       type);
 }
 
+struct TypeToStringConverter {
+  std::string operator()(const PrimitiveTypeValue &type) {
+    switch (type.m_type) {
+    case PrimitiveType::UNIT:
+      return "()";
+    case PrimitiveType::BOOL:
+      return "bool";
+    case PrimitiveType::I64:
+      return "i64";
+    }
+  }
+
+  std::string operator()(const TypeVariable &type) {
+    return "?T" + std::to_string(type.m_id);
+  }
+
+  std::string operator()(const std::unique_ptr<FunctionType> &type) {
+    std::string result = "fn(";
+    for (size_t i = 0; i < type->m_argument_types.size(); ++i) {
+      if (i > 0) {
+        result += ", ";
+      }
+      result += std::visit(*this, type->m_argument_types[i]);
+    }
+    result += ") -> ";
+    result += std::visit(*this, type->m_return_type);
+    return result;
+  }
+
+  std::string operator()(const NeverType &) { return "!"; }
+};
+
 inline std::string type_to_string(const Type &type) {
-  return std::visit(
-      [](const auto &t) -> std::string {
-        using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
-          switch (t.m_type) {
-          case PrimitiveType::UNIT:
-            return "()";
-          case PrimitiveType::BOOL:
-            return "bool";
-          case PrimitiveType::I64:
-            return "i64";
-          }
-        } else if constexpr (std::is_same_v<T, TypeVariable>) {
-          return "?T" + std::to_string(t.m_id);
-        } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
-          std::string result = "fn(";
-          for (size_t i = 0; i < t->m_argument_types.size(); ++i) {
-            if (i > 0) {
-              result += ", ";
-            }
-            result += type_to_string(t->m_argument_types[i]);
-          }
-          result += ") -> ";
-          result += type_to_string(t->m_return_type);
-          return result;
-        } else if constexpr (std::is_same_v<T, NeverType>) {
-          return "!";
-        } else {
-          static_assert(sizeof(T) == 0, "unhandled Type variant");
-        }
-      },
-      type);
+  return std::visit(TypeToStringConverter{}, type);
 }
 
 inline std::ostream &operator<<(std::ostream &out, const Type &type) {

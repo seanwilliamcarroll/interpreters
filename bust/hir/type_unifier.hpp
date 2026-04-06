@@ -13,6 +13,7 @@
 
 #include "hir/types.hpp"
 #include "hir/union_find.hpp"
+#include <ranges>
 #include <stdexcept>
 #include <unordered_map>
 #include <variant>
@@ -42,10 +43,36 @@ struct TypeUnifier {
 
     // We've been passed two concrete types
 
-    if (type_a != type_b) {
-      throw std::runtime_error("Tried to unify concrete types: " + type_a +
-                               " and " + type_b);
+    if (type_a == type_b) {
+      return;
     }
+
+    // First check if they are both function types
+    if (std::holds_alternative<std::unique_ptr<hir::FunctionType>>(type_a) &&
+        std::holds_alternative<std::unique_ptr<hir::FunctionType>>(type_b)) {
+      unify(std::get<std::unique_ptr<hir::FunctionType>>(type_a),
+            std::get<std::unique_ptr<hir::FunctionType>>(type_b));
+      return;
+    }
+
+    throw std::runtime_error("Tried to unify concrete types: " + type_a +
+                             " and " + type_b);
+  }
+
+  void unify(const std::unique_ptr<hir::FunctionType> &type_a,
+             const std::unique_ptr<hir::FunctionType> &type_b) {
+    if (type_a->m_argument_types.size() != type_b->m_argument_types.size()) {
+      throw std::runtime_error(std::string("Tried to unify concrete types: ") +
+                               hir::TypeToStringConverter{}(type_a) + " and " +
+                               hir::TypeToStringConverter{}(type_b));
+    }
+
+    for (const auto &[parameter_type_a, parameter_type_b] :
+         std::views::zip(type_a->m_argument_types, type_b->m_argument_types)) {
+      unify(parameter_type_a, parameter_type_b);
+    }
+
+    unify(type_a->m_return_type, type_b->m_return_type);
   }
 
   void unify(const hir::Type &type_a, const hir::TypeVariable &type_b) {
