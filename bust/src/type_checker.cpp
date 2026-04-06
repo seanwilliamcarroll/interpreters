@@ -428,17 +428,21 @@ struct UnifiedChecker {
     // Directly call because Block is not a variant type, don't need to visit
     auto then_branch = check_block(if_expression->m_then_block);
 
-    if (std::holds_alternative<hir::TypeVariable>(then_branch.m_type)) {
-      throw core::CompilerException("TypeChecker",
-                                    std::string("UNIMPLEMENTED") + " " +
-                                        __PRETTY_FUNCTION__,
-                                    then_branch.m_location);
-    }
-
     if (!if_expression->m_else_block.has_value()) {
+      // auto type = m_type_unifier.find(then_branch.m_type);
+
       // Just then branch
       auto type = hir::PrimitiveTypeValue{{if_expression->m_location},
                                           PrimitiveType::UNIT};
+
+      try {
+        m_type_unifier.unify(type, then_branch.m_type);
+      } catch (std::runtime_error &error) {
+        throw core::CompilerException("TypeChecker",
+                                      std::string("Type unification error!: ") +
+                                          error.what(),
+                                      if_expression->m_location);
+      }
 
       return {{if_expression->m_location},
               type,
