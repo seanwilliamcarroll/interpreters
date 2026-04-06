@@ -615,6 +615,99 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Type inference (call-site unification) --------------------------------
+
+  TEST_CASE("call site unifies type variable parameter with argument type") {
+    // |x| { x } — x has no constraint from body, but call site provides i64
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x| { x };\n"
+                          "  f(42)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("call site with wrong type after body inference throws") {
+    // |x| { x + 1 } infers x: i64 from body, calling with bool should fail
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x| { x + 1 };\n"
+                               "  f(true)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Type inference (if expression unification) ---------------------------
+
+  TEST_CASE("if expression unifies inferred branch types") {
+    // lambda returns if expr where branches have concrete types
+    // that need unification with inferred return type
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x: bool| {\n"
+                          "    if x { 1 } else { 2 }\n"
+                          "  };\n"
+                          "  f(true)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("if expression with mismatched branch types throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  if true { 1 } else { false }\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Type inference (let binding unification) -----------------------------
+
+  TEST_CASE("let binding with annotation unifies with inferred lambda return") {
+    // let result: bool = f(true) where f returns inferred type
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x| { !x };\n"
+                          "  let result: bool = f(true);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("let binding annotation mismatch with expression type throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: bool = 42;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Type inference (return expression unification) -----------------------
+
+  TEST_CASE("return with inferred type matches function signature") {
+    auto hir = type_check("fn add(x: i64, y: i64) -> i64 {\n"
+                          "  return x + y;\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    CHECK(func.m_function_id == "add");
+  }
+
+  TEST_CASE("return type mismatch with function signature throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  return true;\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
   // --- Identifier resolution -----------------------------------------------
 
   TEST_CASE("identifier resolves to correct type from let binding") {
