@@ -83,6 +83,10 @@ inline bool types_equal(const Type &lhs, const Type &rhs) {
         const auto &r = std::get<T>(rhs);
         if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
           return l.m_type == r.m_type;
+        } else if constexpr (std::is_same_v<T, TypeVariable>) {
+          return l.m_id == r.m_id;
+        } else if constexpr (std::is_same_v<T, PolymorphicType>) {
+          return l.m_name == r.m_name;
         } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
           if (l->m_argument_types.size() != r->m_argument_types.size()) {
             return false;
@@ -133,6 +137,10 @@ inline std::string type_to_string(const Type &type) {
           case PrimitiveType::I64:
             return "i64";
           }
+        } else if constexpr (std::is_same_v<T, TypeVariable>) {
+          return "?T" + std::to_string(t.m_id);
+        } else if constexpr (std::is_same_v<T, PolymorphicType>) {
+          return t.m_name;
         } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
           std::string result = "fn(";
           for (size_t i = 0; i < t->m_argument_types.size(); ++i) {
@@ -146,8 +154,10 @@ inline std::string type_to_string(const Type &type) {
           return result;
         } else if constexpr (std::is_same_v<T, NeverType>) {
           return "!";
-        } else {
+        } else if constexpr (std::is_same_v<T, UnknownType>) {
           return "?";
+        } else {
+          static_assert(sizeof(T) == 0, "unhandled Type variant");
         }
       },
       type);
