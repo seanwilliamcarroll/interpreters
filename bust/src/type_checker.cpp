@@ -64,24 +64,6 @@ hir::Type get_statement_type(const hir::Statement &statement) {
   return hir::PrimitiveTypeValue{{let_binding.m_location}, PrimitiveType::UNIT};
 }
 
-hir::Type unify(const hir::Type &type_a, const hir::Type &type_b,
-                const std::string &context,
-                const core::SourceLocation &location) {
-  if (!std::holds_alternative<hir::NeverType>(type_a) &&
-      !std::holds_alternative<hir::NeverType>(type_b) && type_a != type_b) {
-    throw core::CompilerException("TypeChecker",
-                                  "Type mismatch in " + context + ": " +
-                                      type_a + " vs. " + type_b,
-                                  location);
-  }
-
-  auto unified_type = (std::holds_alternative<hir::NeverType>(type_a))
-                          ? hir::clone_type(type_b)
-                          : hir::clone_type(type_a);
-
-  return unified_type;
-}
-
 struct UnifiedChecker {
 
   bool allowed_unary_type(UnaryOperator op, const hir::Type &type) {
@@ -306,7 +288,7 @@ struct UnifiedChecker {
     }
     // They all match
 
-    auto return_type = hir::clone_type(function_type->m_return_type);
+    auto return_type = m_type_unifier.find(function_type->m_return_type);
 
     return {{call_expression->m_location},
             std::move(return_type),
@@ -478,21 +460,28 @@ struct UnifiedChecker {
                                     return_expression->m_location);
     }
 
-    // Might make sense to throw a different exception here at some point so we
-    // can catch it and relay it up to the function/lambda
-    if (expression.m_type != m_return_type_stack.back()) {
-      throw core::CompilerException(
-          "TypeChecker",
-          "Type mismatch!\nFunction expects return type: " +
-              m_return_type_stack.back() +
-              " vs. returning type: " + expression.m_type,
-          expression.m_location);
+    try {
+      m_type_unifier.unify(expression.m_type, m_return_type_stack.back());
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException("TypeChecker",
+                                    std::string("Type unification error!: ") +
+                                        error.what(),
+                                    return_expression->m_location);
     }
+
+    auto expression_type = m_type_unifier.find(expression.m_type);
+
+    auto final_expression =
+        (expression_type == expression.m_type)
+            ? std::move(expression)
+            : hir::Expression{{expression.m_location},
+                              std::move(expression_type),
+                              std::move(expression.m_expression)};
 
     return {{return_expression->m_location},
             hir::NeverType{{return_expression->m_location}},
             std::make_unique<hir::ReturnExpr>(hir::ReturnExpr{
-                {return_expression->m_location}, std::move(expression)})};
+                {return_expression->m_location}, std::move(final_expression)})};
   }
 
   hir::Block
@@ -539,10 +528,16 @@ struct UnifiedChecker {
                            ? std::move(possible_return_type)
                            : hir::clone_type(body.m_type);
 
-    if (lambda_expression->m_return_type.has_value()) {
-      unify(body.m_type, return_type, "return type of lambda expression",
-            lambda_expression->m_location);
+    try {
+      m_type_unifier.unify(return_type, body.m_type);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException("TypeChecker",
+                                    std::string("Type unification error!: ") +
+                                        error.what(),
+                                    lambda_expression->m_location);
     }
+
+    // Do we need to rediscover the return type and body types?
 
     // Expect body to have a unified type?
     std::vector<hir::Identifier> unified_parameters;
@@ -563,12 +558,6 @@ struct UnifiedChecker {
       // See if we can resolve them
       auto unified_type =
           m_type_unifier.find(std::get<hir::TypeVariable>(parameter_type));
-      if (std::holds_alternative<hir::TypeVariable>(unified_type)) {
-        throw core::CompilerException("TypeChecker",
-                                      "UNIMPLEMENTED: Expect lambda types to "
-                                      "resolve to concrete types at this point",
-                                      lambda_expression->m_location);
-      }
       unified_parameters.emplace_back(
           hir::Identifier{{parameter.m_location},
                           parameter.m_name,
