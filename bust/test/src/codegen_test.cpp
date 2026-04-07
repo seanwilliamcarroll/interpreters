@@ -66,9 +66,17 @@ TEST_SUITE("bust.codegen") {
     return -1;
   }
 
-  static int run(const std::string &source) {
-    return run_via_lli(codegen(source));
-  }
+// Runs `source` and checks it exits with `expected`. On failure, doctest's
+// INFO machinery dumps the source and the generated IR, so you can see
+// exactly what lli was handed without rerunning anything by hand.
+#define CHECK_RUN(source, expected)                                            \
+  do {                                                                         \
+    const std::string _src = (source);                                         \
+    const std::string _ir = codegen(_src);                                     \
+    INFO("source: " << _src);                                                  \
+    INFO("generated IR:\n" << _ir);                                            \
+    CHECK(run_via_lli(_ir) == (expected));                                     \
+  } while (0)
 #endif
 
   // --- Tests ---------------------------------------------------------------
@@ -81,12 +89,22 @@ TEST_SUITE("bust.codegen") {
 
 #ifdef BUST_LLI_PATH
   TEST_CASE("stub program runs and exits with zero") {
-    CHECK(run("fn main() -> i64 { 0 }") == 0);
+    CHECK_RUN("fn main() -> i64 { 0 }", 0);
   }
 
   TEST_CASE("integer literal in main is returned") {
-    CHECK(run("fn main() -> i64 { 42 }") == 42);
-    CHECK(run("fn main() -> i64 { 7 }") == 7);
+    CHECK_RUN("fn main() -> i64 { 42 }", 42);
+    CHECK_RUN("fn main() -> i64 { 7 }", 7);
+  }
+
+  TEST_CASE("let binding to integer literal is returned") {
+    CHECK_RUN("fn main() -> i64 { let x = 42; x }", 42);
+    CHECK_RUN("fn main() -> i64 { let y = 7; y }", 7);
+  }
+
+  TEST_CASE("multiple let bindings, last one returned") {
+    CHECK_RUN("fn main() -> i64 { let x = 1; let y = 2; y }", 2);
+    CHECK_RUN("fn main() -> i64 { let x = 1; let y = 2; x }", 1);
   }
 #else
   TEST_CASE("codegen execution tests" * doctest::skip()) {
