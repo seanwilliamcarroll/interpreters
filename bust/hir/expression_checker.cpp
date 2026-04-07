@@ -10,10 +10,28 @@
 //****************************************************************************
 
 #include "hir/expression_checker.hpp"
+
+#include <optional>
+#include <ranges>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "ast/types.hpp"
 #include "exceptions.hpp"
 #include "hir/block_checker.hpp"
-#include "hir/checker_context.hpp"
+#include "hir/context.hpp"
+#include "hir/environment.hpp"
 #include "hir/type_converter.hpp"
+#include "hir/type_unifier.hpp"
+#include "hir/types.hpp"
+#include "operators.hpp"
+#include "source_location.hpp"
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust::hir {

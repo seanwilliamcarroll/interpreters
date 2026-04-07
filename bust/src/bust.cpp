@@ -9,47 +9,50 @@
 //*
 //****************************************************************************
 
-#include "lexer.hpp"
 #include <ast/dump.hpp>
 #include <bust.hpp>
+#include <evaluator.hpp>
 #include <hir/dump.hpp>
 #include <iostream>
+#include <memory>
 #include <parser.hpp>
 #include <pipeline.hpp>
+#include <stdexcept>
+#include <string>
 #include <type_checker.hpp>
+#include <utility>
 #include <validate_main.hpp>
+
+#include "lexer.hpp"
 
 //****************************************************************************
 
 namespace bust {
 
-Bust::Bust(std::istream &input, const char *filename, Mode mode)
-    : m_input(input), m_filename(filename), m_mode(mode) {}
+Bust::Bust(std::istream &input, const char *filename, Options options)
+    : m_input(input), m_filename(filename), m_options(options) {}
 
-void Bust::rep() {
+void Bust::run() {
   auto lexer = make_lexer(m_input, m_filename);
   Parser parser(std::move(lexer));
   auto program = parser.parse();
 
-  if (m_mode == Mode::DUMP_AST) {
-    std::cout << ast::Dumper::dump(program);
-    return;
+  if (m_options.dump_ast) {
+    std::cout << "=== AST ===\n" << ast::Dumper::dump(program) << "\n";
   }
 
   auto typed = run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
 
-  switch (m_mode) {
-  case Mode::RUN:
-  case Mode::DUMP_HIR:
-    std::cout << hir::Dumper::dump(typed);
-    return;
-  case Mode::EVAL:
-    throw std::runtime_error("--eval not yet implemented");
-  case Mode::LLVM_IR:
-    throw std::runtime_error("--llvm-ir not yet implemented");
-  case Mode::DUMP_AST:
-    std::unreachable();
+  if (m_options.dump_hir) {
+    std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
   }
+
+  if (m_options.llvm_ir) {
+    throw std::runtime_error("--llvm-ir not yet implemented");
+  }
+
+  auto result = Evaluator{}(typed);
+  std::cout << "Program returned: " << result << "\n";
 }
 
 } // namespace bust

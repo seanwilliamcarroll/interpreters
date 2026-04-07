@@ -11,8 +11,10 @@
 #pragma once
 //****************************************************************************
 
+#include <memory>
+
 #include "ast/nodes.hpp"
-#include "hir/checker_context.hpp"
+#include "hir/context.hpp"
 #include "hir/nodes.hpp"
 
 //****************************************************************************
@@ -34,7 +36,7 @@ struct ExpressionChecker {
   Expression operator()(const ast::LiteralBool &);
   Expression operator()(const ast::LiteralUnit &);
 
-  CheckerContext &m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************

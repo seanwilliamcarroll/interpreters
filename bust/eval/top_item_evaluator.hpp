@@ -4,30 +4,28 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Statement and block checker — scope management, block checking,
-//*            let bindings.
+//*  Purpose : Top-level item evaluator for bust tree-walking evaluator.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
+#include "eval/context.hpp"
+#include "eval/values.hpp"
 #include "hir/nodes.hpp"
 
 //****************************************************************************
-namespace bust::hir {
+namespace bust::eval {
 //****************************************************************************
 
-struct StatementChecker {
-  Statement operator()(const ast::LetBinding &);
+struct TopItemEvaluator {
+  Value operator()(const hir::FunctionDef &);
+  Value operator()(const hir::LetBinding &);
 
-  Statement operator()(const ast::Expression &);
-
-  Context &m_ctx;
+  Context m_ctx;
 };
 
 //****************************************************************************
-} // namespace bust::hir
+} // namespace bust::eval
 //****************************************************************************

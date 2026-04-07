@@ -4,30 +4,27 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Statement and block checker — scope management, block checking,
-//*            let bindings.
+//*  Purpose : Implementation of statement evaluator.
 //*
 //*
 //****************************************************************************
-#pragma once
-//****************************************************************************
 
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
-#include "hir/nodes.hpp"
+#include "eval/statement_evaluator.hpp"
+#include "eval/expression_evaluator.hpp"
+#include "eval/let_binding_evaluator.hpp"
 
 //****************************************************************************
-namespace bust::hir {
+namespace bust::eval {
 //****************************************************************************
 
-struct StatementChecker {
-  Statement operator()(const ast::LetBinding &);
+Value StatementEvaluator::operator()(const hir::Expression &expression) {
+  return ExpressionEvaluator{m_ctx}(expression);
+}
 
-  Statement operator()(const ast::Expression &);
-
-  Context &m_ctx;
-};
+Value StatementEvaluator::operator()(const hir::LetBinding &let_binding) {
+  return LetBindingEvaluator{m_ctx}(let_binding);
+}
 
 //****************************************************************************
-} // namespace bust::hir
+} // namespace bust::eval
 //****************************************************************************

@@ -10,9 +10,16 @@
 //****************************************************************************
 
 #include "hir/block_checker.hpp"
+
+#include <optional>
+#include <utility>
+#include <variant>
+
+#include "hir/environment.hpp"
 #include "hir/expression_checker.hpp"
 #include "hir/statement_checker.hpp"
-#include <variant>
+#include "source_location.hpp"
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust::hir {

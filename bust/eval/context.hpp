@@ -4,30 +4,23 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Statement and block checker — scope management, block checking,
-//*            let bindings.
+//*  Purpose : Shared context for the evaluator pass.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
-#include "hir/nodes.hpp"
+#include "eval/environment.hpp"
 
 //****************************************************************************
-namespace bust::hir {
+namespace bust::eval {
 //****************************************************************************
 
-struct StatementChecker {
-  Statement operator()(const ast::LetBinding &);
-
-  Statement operator()(const ast::Expression &);
-
-  Context &m_ctx;
+struct Context {
+  Environment m_env{};
 };
 
 //****************************************************************************
-} // namespace bust::hir
+} // namespace bust::eval
 //****************************************************************************

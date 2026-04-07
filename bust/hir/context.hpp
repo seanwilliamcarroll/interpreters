@@ -11,7 +11,7 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/type_environment.hpp"
+#include "hir/environment.hpp"
 #include "hir/type_unifier.hpp"
 #include "hir/type_visitors.hpp"
 #include <vector>
@@ -20,7 +20,7 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct CheckerContext {
+struct Context {
 
   Type create_fresh_type_vars(const TypeScheme &type_scheme) {
     std::unordered_map<TypeVariable, TypeVariable> new_mapping;

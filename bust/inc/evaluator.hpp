@@ -4,30 +4,24 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Statement and block checker — scope management, block checking,
-//*            let bindings.
+//*  Purpose : Tree-walking evaluator for bust HIR.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
-#include "hir/nodes.hpp"
+#include <hir/nodes.hpp>
+#include <stdint.h>
 
 //****************************************************************************
-namespace bust::hir {
+namespace bust {
 //****************************************************************************
 
-struct StatementChecker {
-  Statement operator()(const ast::LetBinding &);
-
-  Statement operator()(const ast::Expression &);
-
-  Context &m_ctx;
+struct Evaluator {
+  int64_t operator()(const hir::Program &program);
 };
 
 //****************************************************************************
-} // namespace bust::hir
+} // namespace bust
 //****************************************************************************

@@ -811,6 +811,165 @@ TEST_SUITE("bust.parser") {
     check_primitive_type(fn_type.m_parameter_types[1], PrimitiveType::BOOL);
     check_primitive_type(fn_type.m_return_type, PrimitiveType::I64);
   }
+
+  // === Error cases ===========================================================
+
+  TEST_CASE("bust::parse_missing_rbrace") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 { 0"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_missing_lbrace") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 0 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_missing_fn_keyword") {
+    CHECK_THROWS_AS(parse_string("main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_missing_semicolon_after_let") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let x = 42\n"
+                                 "  x\n"
+                                 "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_unexpected_token") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 { ; }"),
+                    core::CompilerException);
+  }
+
+  // === Comparison operators (GT, GT_EQ, LT_EQ) ==============================
+
+  TEST_CASE("bust::parse_greater_than") {
+    auto program = parse_string("fn main() -> bool { 5 > 3 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
+          BinaryOperator::GT);
+  }
+
+  TEST_CASE("bust::parse_greater_than_or_equal") {
+    auto program = parse_string("fn main() -> bool { 5 >= 3 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
+          BinaryOperator::GT_EQ);
+  }
+
+  TEST_CASE("bust::parse_less_than_or_equal") {
+    auto program = parse_string("fn main() -> bool { 5 <= 3 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
+          BinaryOperator::LT_EQ);
+  }
+
+  // === Chained and nested calls ==============================================
+
+  TEST_CASE("bust::parse_nested_function_call") {
+    // f(g(x)) — call as argument
+    auto program = parse_string("fn main() -> i64 { f(g(x)) }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CallExpr>>(expr));
+    const auto &outer_call = *std::get<std::unique_ptr<CallExpr>>(expr);
+    REQUIRE(outer_call.m_arguments.size() == 1);
+    CHECK(std::holds_alternative<std::unique_ptr<CallExpr>>(
+        outer_call.m_arguments[0]));
+  }
+
+  // === Nested lambdas ========================================================
+
+  TEST_CASE("bust::parse_nested_lambda") {
+    auto program =
+        parse_string("fn main() -> i64 {\n"
+                     "  let f = |x: i64| -> i64 { |y: i64| -> i64 { x } };\n"
+                     "  0\n"
+                     "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<LambdaExpr>>(
+        binding.m_expression));
+    const auto &outer_lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(binding.m_expression);
+    // The body's final expression should be another lambda
+    REQUIRE(outer_lambda.m_body.m_final_expression.has_value());
+    CHECK(std::holds_alternative<std::unique_ptr<LambdaExpr>>(
+        *outer_lambda.m_body.m_final_expression));
+  }
+
+  // === Chained unary is not supported ========================================
+
+  TEST_CASE("bust::parse_double_negation_rejects") {
+    // Parser doesn't support --42 (double unary minus)
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 { --42 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_double_not_rejects") {
+    // Parser doesn't support !!true (double unary not)
+    CHECK_THROWS_AS(parse_string("fn main() -> bool { !!true }"),
+                    core::CompilerException);
+  }
+
+  // === Nested blocks =========================================================
+
+  TEST_CASE("bust::parse_nested_blocks") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  {\n"
+                                "    { 42 }\n"
+                                "  }\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<Block>>(expr));
+    const auto &outer_block = *std::get<std::unique_ptr<Block>>(expr);
+    REQUIRE(outer_block.m_final_expression.has_value());
+    CHECK(std::holds_alternative<std::unique_ptr<Block>>(
+        *outer_block.m_final_expression));
+  }
+
+  // === Multiple top-level let bindings =======================================
+
+  TEST_CASE("bust::parse_multiple_top_level_lets_and_functions") {
+    auto program = parse_string("let x: i64 = 1;\n"
+                                "let y: i64 = 2;\n"
+                                "fn main() -> i64 { x + y }");
+    DUMP_AST(program);
+    REQUIRE(program.m_items.size() == 3);
+    CHECK(std::holds_alternative<LetBinding>(program.m_items[0]));
+    CHECK(std::holds_alternative<LetBinding>(program.m_items[1]));
+    CHECK(std::holds_alternative<FunctionDef>(program.m_items[2]));
+  }
+
+  // === Unary on expression (not just literal) ================================
+
+  TEST_CASE("bust::parse_unary_minus_on_parenthesized") {
+    auto program = parse_string("fn main() -> i64 { -(1 + 2) }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
+    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
+    CHECK(unary.m_operator == UnaryOperator::MINUS);
+    CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        unary.m_expression));
+  }
 }
 //****************************************************************************
 } // namespace bust

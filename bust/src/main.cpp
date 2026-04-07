@@ -9,68 +9,51 @@
 //*
 //****************************************************************************
 
+#include <bust.hpp>
 #include <cstring>
+#include <exception>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
-
-#include <bust.hpp>
 
 //****************************************************************************
 
-void repl() {
-  for (;;) {
-    std::cout << "bust> ";
-
-    std::string next_line;
-    std::getline(std::cin, next_line);
-
-    if (next_line == "quit") {
-      return;
-    }
-
-    std::istringstream line_stream(next_line);
-    bust::Bust line_bust(line_stream);
-    line_bust.rep();
-  }
-}
-
 int main(int argc, const char *argv[]) {
-  bust::Mode mode = bust::Mode::RUN;
+  bust::Options options;
   const char *filename = nullptr;
+  bool has_llvm_ir = false;
 
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--dump-ast") == 0) {
-      mode = bust::Mode::DUMP_AST;
+      options.dump_ast = true;
     } else if (std::strcmp(argv[i], "--dump-hir") == 0) {
-      mode = bust::Mode::DUMP_HIR;
-    } else if (std::strcmp(argv[i], "--eval") == 0) {
-      mode = bust::Mode::EVAL;
+      options.dump_hir = true;
     } else if (std::strcmp(argv[i], "--llvm-ir") == 0) {
-      mode = bust::Mode::LLVM_IR;
+      has_llvm_ir = true;
     } else if (argv[i][0] == '-') {
       std::cerr << "Unknown option: " << argv[i] << "\n";
       return 1;
     } else if (filename == nullptr) {
       filename = argv[i];
     } else {
-      std::cerr << "Usage: bust [--dump-ast|--dump-hir|--eval|--llvm-ir] "
-                   "[script.bu]\n";
+      std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--llvm-ir] "
+                   "<script.bu>\n";
       return 1;
     }
   }
 
+  if (filename == nullptr) {
+    std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--llvm-ir] "
+                 "<script.bu>\n";
+    return 1;
+  }
+
+  options.llvm_ir = has_llvm_ir;
+
   try {
-    if (filename == nullptr) {
-      repl();
-    } else {
-      std::fstream input_file;
-      input_file.open(filename, std::fstream::in);
-      bust::Bust bust_lang(input_file, filename, mode);
-      bust_lang.rep();
-      input_file.close();
-    }
+    std::ifstream input_file(filename);
+    bust::Bust bust_lang(input_file, filename, options);
+    bust_lang.run();
   } catch (std::runtime_error &run_err) {
     std::cerr << "Runtime error: " << run_err.what() << "\n";
     return 1;

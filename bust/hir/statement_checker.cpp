@@ -10,6 +10,9 @@
 //****************************************************************************
 
 #include "hir/statement_checker.hpp"
+
+#include <variant>
+
 #include "hir/expression_checker.hpp"
 #include "hir/let_binding_checker.hpp"
 

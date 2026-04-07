@@ -303,6 +303,150 @@ TEST_SUITE("bust.free_type_variable_collector") {
   }
 }
 
+// --- Function type unification tests -----------------------------------------
+
+TEST_SUITE("bust.type_unifier.function_types") {
+
+  TEST_CASE("unify two identical concrete function types") {
+    hir::TypeUnifier unifier;
+
+    // fn(i64) -> bool
+    auto make_fn = []() {
+      std::vector<hir::Type> params;
+      params.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+      return std::make_unique<hir::FunctionType>(
+          hir::FunctionType{{},
+                            std::move(params),
+                            hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
+    };
+
+    hir::Type fn_a = make_fn();
+    hir::Type fn_b = make_fn();
+    CHECK_NOTHROW(unifier.unify(fn_a, fn_b));
+  }
+
+  TEST_CASE("unify function types with different return types throws") {
+    hir::TypeUnifier unifier;
+
+    std::vector<hir::Type> params_a;
+    params_a.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_a = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params_a),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
+
+    std::vector<hir::Type> params_b;
+    params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_b = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params_b),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::I64}});
+
+    CHECK_THROWS(unifier.unify(fn_a, fn_b));
+  }
+
+  TEST_CASE("unify function types with different arity throws") {
+    hir::TypeUnifier unifier;
+
+    // fn(i64) -> i64
+    std::vector<hir::Type> params_a;
+    params_a.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_a = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params_a),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::I64}});
+
+    // fn(i64, i64) -> i64
+    std::vector<hir::Type> params_b;
+    params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_b = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params_b),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::I64}});
+
+    CHECK_THROWS(unifier.unify(fn_a, fn_b));
+  }
+
+  TEST_CASE("unify function type with type variable resolves it") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+
+    // fn(i64) -> bool
+    std::vector<hir::Type> params;
+    params.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_type = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
+
+    unifier.unify(t0, fn_type);
+
+    auto resolved = unifier.find(t0);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<hir::FunctionType>>(resolved));
+  }
+
+  TEST_CASE("unify function type containing type variables resolves params") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+
+    // fn(?T0) -> bool
+    std::vector<hir::Type> params;
+    params.emplace_back(hir::clone_type(t0));
+    hir::Type fn_a = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
+
+    // fn(i64) -> bool
+    std::vector<hir::Type> params_b;
+    params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
+    hir::Type fn_b = std::make_unique<hir::FunctionType>(
+        hir::FunctionType{{},
+                          std::move(params_b),
+                          hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
+
+    unifier.unify(fn_a, fn_b);
+
+    // t0 should now be resolved to i64
+    auto resolved = unifier.find(t0);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(resolved));
+    CHECK(std::get<hir::PrimitiveTypeValue>(resolved).m_type ==
+          PrimitiveType::I64);
+  }
+
+  TEST_CASE("unify two concrete mismatched types throws") {
+    hir::TypeUnifier unifier;
+
+    hir::Type i64_type = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
+    hir::Type bool_type = hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL};
+
+    CHECK_THROWS(unifier.unify(i64_type, bool_type));
+  }
+
+  TEST_CASE("unify two identical concrete types is ok") {
+    hir::TypeUnifier unifier;
+
+    hir::Type i64_a = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
+    hir::Type i64_b = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
+
+    CHECK_NOTHROW(unifier.unify(i64_a, i64_b));
+  }
+
+  TEST_CASE("never type unifies with anything") {
+    hir::TypeUnifier unifier;
+
+    hir::Type never = hir::NeverType{};
+    hir::Type i64_type = hir::PrimitiveTypeValue{{}, PrimitiveType::I64};
+    hir::Type bool_type = hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL};
+
+    CHECK_NOTHROW(unifier.unify(never, i64_type));
+    CHECK_NOTHROW(unifier.unify(bool_type, never));
+    CHECK_NOTHROW(unifier.unify(never, never));
+  }
+}
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
