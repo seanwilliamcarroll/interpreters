@@ -442,6 +442,105 @@ TEST_SUITE("bust.evaluator") {
     CHECK(evaluate("fn main() -> i64 { return 17; }") == 17);
   }
 
+  // --- Scope lifetime across return/unwind ---------------------------------
+  // These tests pin down that block scopes are correctly popped on BOTH the
+  // normal exit path and the return-exception unwind path. A leaked inner
+  // scope would show up as a shadowed binding incorrectly surviving into
+  // sibling or outer scopes.
+
+  TEST_CASE("inner block shadow does not leak to outer scope") {
+    // Normal path: inner scope must pop so outer x is visible again.
+    CHECK(evaluate("fn main() -> i64 {\n"
+                   "  let x = 1;\n"
+                   "  { let x = 99; };\n"
+                   "  x\n"
+                   "}") == 1);
+  }
+
+  TEST_CASE("sibling blocks with shadowing do not leak between each other") {
+    // If block A's scope leaked, block B would see x=10 from A instead of
+    // the outer x=1 when evaluating its own `let x = x + ...`.
+    CHECK(evaluate("fn main() -> i64 {\n"
+                   "  let x = 1;\n"
+                   "  { let x = 10; };\n"
+                   "  let y = { let x = x + 100; x };\n"
+                   "  y\n"
+                   "}") == 101);
+  }
+
+  TEST_CASE("deeply nested shadowing all pop on normal exit") {
+    CHECK(evaluate("fn main() -> i64 {\n"
+                   "  let x = 1;\n"
+                   "  { let x = 2; { let x = 3; { let x = 4; }; }; };\n"
+                   "  x\n"
+                   "}") == 1);
+  }
+
+  TEST_CASE("scope popped correctly when block contains untaken return") {
+    // The block enters the `try`, evaluates an if whose return branch is
+    // NOT taken, and exits normally. The catch path is not triggered, but
+    // the normal-path pop must still run.
+    CHECK(evaluate("fn f(flag: i64) -> i64 {\n"
+                   "  let x = 1;\n"
+                   "  {\n"
+                   "    let x = 99;\n"
+                   "    if flag > 0 { return 7; }\n"
+                   "  };\n"
+                   "  x\n"
+                   "}\n"
+                   "fn main() -> i64 { f(0) }") == 1);
+  }
+
+  TEST_CASE("return unwinds through multiple shadowing scopes cleanly") {
+    // Deep nested scopes each shadow x, then innermost returns the
+    // innermost x. If any scope leaked state that corrupted the return
+    // value in flight, this would fail.
+    CHECK(evaluate("fn f() -> i64 {\n"
+                   "  let x = 1;\n"
+                   "  {\n"
+                   "    let x = 2;\n"
+                   "    {\n"
+                   "      let x = 3;\n"
+                   "      {\n"
+                   "        let x = 4;\n"
+                   "        return x;\n"
+                   "      };\n"
+                   "    };\n"
+                   "  };\n"
+                   "  x\n"
+                   "}\n"
+                   "fn main() -> i64 { f() }") == 4);
+  }
+
+  TEST_CASE("after untaken return in nested block, outer shadowing resolves") {
+    // Exercises: nested blocks with shadowing, a return statement that is
+    // not triggered, then a subsequent read of the outer binding. If the
+    // inner scopes did not pop, the final `x` would resolve to 99 or 42.
+    CHECK(evaluate("fn f(flag: i64) -> i64 {\n"
+                   "  let x = 1;\n"
+                   "  {\n"
+                   "    let x = 42;\n"
+                   "    {\n"
+                   "      let x = 99;\n"
+                   "      if flag > 0 { return 0; }\n"
+                   "    };\n"
+                   "  };\n"
+                   "  x\n"
+                   "}\n"
+                   "fn main() -> i64 { f(0) }") == 1);
+  }
+
+  TEST_CASE("block after a block that contained an untaken return") {
+    // Sibling block sees clean outer scope after the first block's
+    // try/normal-pop path has run.
+    CHECK(evaluate("fn f() -> i64 {\n"
+                   "  let x = 5;\n"
+                   "  { let x = 100; if false { return 0; } };\n"
+                   "  { let x = x + 1; x }\n"
+                   "}\n"
+                   "fn main() -> i64 { f() }") == 6);
+  }
+
   // --- Lambda expressions --------------------------------------------------
 
   TEST_CASE("lambda call") {
