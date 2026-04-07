@@ -12,10 +12,18 @@
 //****************************************************************************
 
 //****************************************************************************
+#include "hir/nodes.hpp"
+#include <optional>
+#include <string>
 namespace bust::eval {
 //****************************************************************************
 
-struct Environment {};
+struct Environment {
+
+  std::optional<hir::Expression> lookup(const std::string &name) { return {}; }
+
+  void define(const std::string &name, hir::Expression expression) {}
+};
 
 //****************************************************************************
 } // namespace bust::eval
