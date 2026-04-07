@@ -17,10 +17,13 @@
 namespace bust::codegen {
 //****************************************************************************
 
-/// Threaded through the codegen sub-visitors. Holds the output buffer being
-/// built up and any cross-node state (fresh-name counters, current function,
-/// etc.) that later features will need.
+struct Value {
+  std::string m_reference;
+};
+
 struct Context {
+
+  Value m_last_reference;
   std::string m_output{};
 };
 

@@ -9,18 +9,24 @@
 //*
 //****************************************************************************
 
+#include "codegen/context.hpp"
+#include "codegen/top_item_generator.hpp"
 #include <codegen.hpp>
 
 //****************************************************************************
 namespace bust {
 //****************************************************************************
 
-std::string CodeGen::operator()(const hir::Program & /*program*/) {
-  // Stub: ignore the program and emit a trivial main that returns 0.
-  // Real lowering is added feature-by-feature, test-first.
-  return "define i64 @main() {\n"
-         "  ret i64 0\n"
-         "}\n";
+std::string CodeGen::operator()(const hir::Program &program) {
+  auto context = bust::codegen::Context{};
+
+  auto generator = bust::codegen::TopItemGenerator{context};
+
+  for (const auto &top_item : program.m_top_items) {
+    std::visit(generator, (top_item));
+  }
+
+  return context.m_output;
 }
 
 //****************************************************************************
