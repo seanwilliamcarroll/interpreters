@@ -35,6 +35,10 @@ add_library(bust-lib STATIC
   eval/top_item_evaluator.cpp
   src/evaluator.cpp
   src/codegen.cpp
+  codegen/expression_generator.cpp
+  codegen/let_binding_generator.cpp
+  codegen/statement_generator.cpp
+  codegen/top_item_generator.cpp
   src/type_checker.cpp
   src/validate_main.cpp)
 
