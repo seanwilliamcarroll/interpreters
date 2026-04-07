@@ -11,32 +11,29 @@
 
 #pragma once
 
-#include <cstdint>
 #include <iostream>
 
 //****************************************************************************
 
 namespace bust {
 
-enum class Mode : std::uint8_t {
-  RUN,
-  DUMP_AST,
-  DUMP_HIR,
-  EVAL,
-  LLVM_IR,
+struct Options {
+  bool dump_ast = false;
+  bool dump_hir = false;
+  bool llvm_ir = false;
 };
 
 class Bust {
 public:
-  explicit Bust(std::istream &input, const char *filename = "<stdin>",
-                Mode mode = Mode::RUN);
+  explicit Bust(std::istream &input, const char *filename,
+                Options options = {});
 
-  void rep();
+  void run();
 
 private:
   std::istream &m_input;
   const char *m_filename;
-  Mode m_mode;
+  Options m_options;
 };
 
 } // namespace bust

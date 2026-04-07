@@ -4,24 +4,19 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Tree-walking evaluator implementation.
+//*  Purpose : Value types for bust tree-walking evaluator.
 //*
 //*
 //****************************************************************************
-
-#include <evaluator.hpp>
-
-#include "eval/values.hpp"
-
-//****************************************************************************
-namespace bust {
+#pragma once
 //****************************************************************************
 
-int64_t Evaluator::operator()(const hir::Program & /*program*/) {
-  // TODO: implement
-  return 0;
-}
+//****************************************************************************
+namespace bust::eval {
+//****************************************************************************
+
+// TODO: define Value variant (i64, bool, unit, closure/function)
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::eval
 //****************************************************************************
