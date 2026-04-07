@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include "eval/values.hpp"
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -56,9 +57,8 @@ struct Environment {
   void push_scope() { m_scope = std::make_shared<Scope>(m_scope); }
 
   void pop_scope() {
-    if (m_scope->m_parent_scope == nullptr) {
-      throw std::runtime_error("Cannot pop scope, already at global scope!");
-    }
+    assert(m_scope->m_parent_scope != nullptr &&
+           "Cannot pop scope, already at global scope!");
     m_scope = m_scope->m_parent_scope;
   }
 

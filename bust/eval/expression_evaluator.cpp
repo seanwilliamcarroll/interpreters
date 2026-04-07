@@ -66,25 +66,26 @@ Value ExpressionEvaluator::operator()(
   return (*this)(*block);
 }
 
+struct ScopeGuard {
+  // More standard way of protecting the environment from leaking from return
+  // statements throwing
+  ScopeGuard(Environment &env) : m_env(env) { m_env.push_scope(); }
+  ~ScopeGuard() { m_env.pop_scope(); }
+  Environment &m_env;
+};
+
 Value ExpressionEvaluator::operator()(const hir::Block &block) {
-  m_ctx.m_env.push_scope();
+  ScopeGuard guard(m_ctx.m_env);
 
-  try {
-    for (const auto &statement : block.m_statements) {
-      std::visit(StatementEvaluator{m_ctx}, statement);
-    }
-
-    auto final_value = block.m_final_expression.has_value()
-                           ? (*this)(block.m_final_expression.value())
-                           : Unit{};
-
-    m_ctx.m_env.pop_scope();
-
-    return final_value;
-  } catch (ReturnException &return_exception) {
-    m_ctx.m_env.pop_scope();
-    throw;
+  for (const auto &statement : block.m_statements) {
+    std::visit(StatementEvaluator{m_ctx}, statement);
   }
+
+  auto final_value = block.m_final_expression.has_value()
+                         ? (*this)(block.m_final_expression.value())
+                         : Unit{};
+
+  return final_value;
 }
 
 Value ExpressionEvaluator::operator()(
