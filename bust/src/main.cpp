@@ -9,11 +9,12 @@
 //*
 //****************************************************************************
 
+#include <bust.hpp>
 #include <cstring>
+#include <exception>
 #include <fstream>
 #include <iostream>
-
-#include <bust.hpp>
+#include <stdexcept>
 
 //****************************************************************************
 

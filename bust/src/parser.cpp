@@ -9,9 +9,6 @@
 //*
 //****************************************************************************
 
-#include "ast/types.hpp"
-#include "bust_tokens.hpp"
-#include "source_location.hpp"
 #include <ast/nodes.hpp>
 #include <memory>
 #include <optional>
@@ -19,7 +16,17 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <variant>
+#include <vector>
+
+#include "ast/types.hpp"
+#include "bust_tokens.hpp"
+#include "lexer_interface.hpp"
+#include "operators.hpp"
+#include "source_location.hpp"
+#include "token.hpp"
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust {

@@ -9,26 +9,18 @@
 //*
 //****************************************************************************
 
+#include <type_checker.hpp>
+#include <unordered_map>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #include "ast/nodes.hpp"
-#include "ast/types.hpp"
-#include "exceptions.hpp"
 #include "hir/context.hpp"
-#include "hir/environment.hpp"
 #include "hir/nodes.hpp"
 #include "hir/top_item_checker.hpp"
-#include "hir/type_converter.hpp"
-#include "hir/type_unifier.hpp"
-#include "hir/type_visitors.hpp"
 #include "hir/types.hpp"
-#include "operators.hpp"
 #include "source_location.hpp"
-#include "types.hpp"
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <stdexcept>
-#include <type_checker.hpp>
-#include <variant>
 
 //****************************************************************************
 namespace bust {

@@ -10,9 +10,8 @@
 //****************************************************************************
 
 #include "eval/top_item_evaluator.hpp"
-#include "eval/expression_evaluator.hpp"
+
 #include "eval/let_binding_evaluator.hpp"
-#include <variant>
 
 //****************************************************************************
 namespace bust::eval {

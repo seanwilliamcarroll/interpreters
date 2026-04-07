@@ -9,15 +9,19 @@
 //*
 //****************************************************************************
 
-#include "bust_tokens.hpp"
-#include "exceptions.hpp"
 #include <cctype>
 #include <iostream>
-#include <memory>
-
 #include <lexer.hpp>
+#include <memory>
 #include <source_location.hpp>
+#include <sstream>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+
+#include "bust_tokens.hpp"
+#include "exceptions.hpp"
+#include "token.hpp"
 
 //****************************************************************************
 namespace bust {

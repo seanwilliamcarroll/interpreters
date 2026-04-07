@@ -9,16 +9,21 @@
 //*
 //****************************************************************************
 
-#include "lexer.hpp"
 #include <ast/dump.hpp>
 #include <bust.hpp>
 #include <evaluator.hpp>
 #include <hir/dump.hpp>
 #include <iostream>
+#include <memory>
 #include <parser.hpp>
 #include <pipeline.hpp>
+#include <stdexcept>
+#include <string>
 #include <type_checker.hpp>
+#include <utility>
 #include <validate_main.hpp>
+
+#include "lexer.hpp"
 
 //****************************************************************************
 

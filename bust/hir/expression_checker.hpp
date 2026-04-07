@@ -11,6 +11,8 @@
 #pragma once
 //****************************************************************************
 
+#include <memory>
+
 #include "ast/nodes.hpp"
 #include "hir/context.hpp"
 #include "hir/nodes.hpp"

@@ -11,8 +11,14 @@
 
 #include <ast/nodes.hpp>
 #include <exceptions.hpp>
+#include <string>
+#include <string_view>
 #include <validate_main.hpp>
 #include <variant>
+#include <vector>
+
+#include "ast/types.hpp"
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust {

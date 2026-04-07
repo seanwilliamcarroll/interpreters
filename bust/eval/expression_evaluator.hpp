@@ -11,6 +11,8 @@
 #pragma once
 //****************************************************************************
 
+#include <memory>
+
 #include "eval/context.hpp"
 #include "eval/values.hpp"
 #include "hir/nodes.hpp"

@@ -10,11 +10,23 @@
 //****************************************************************************
 
 #include "hir/let_binding_checker.hpp"
+
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #include "ast/nodes.hpp"
 #include "exceptions.hpp"
+#include "hir/environment.hpp"
 #include "hir/expression_checker.hpp"
 #include "hir/nodes.hpp"
 #include "hir/type_converter.hpp"
+#include "hir/type_unifier.hpp"
+#include "hir/type_visitors.hpp"
+#include "hir/types.hpp"
+#include "source_location.hpp"
 
 //****************************************************************************
 namespace bust::hir {
