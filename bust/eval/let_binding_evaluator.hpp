@@ -4,30 +4,17 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Type checking pass for bust programs.
+//*  Purpose : Let-binding evaluator for bust tree-walking evaluator.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "hir/environment.hpp"
-#include <ast/nodes.hpp>
-#include <hir/nodes.hpp>
-
 //****************************************************************************
-namespace bust {
+namespace bust::eval {
 //****************************************************************************
 
-/// Type checking pass. Validates that all expressions have consistent types.
-/// Currently a pass-through — will eventually produce a typed AST.
-struct TypeChecker {
-  hir::Program operator()(const ast::Program &program);
-
-private:
-  hir::Environment m_env;
-};
-
 //****************************************************************************
-} // namespace bust
+} // namespace bust::eval
 //****************************************************************************

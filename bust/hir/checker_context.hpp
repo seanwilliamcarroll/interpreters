@@ -11,7 +11,7 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/type_environment.hpp"
+#include "hir/environment.hpp"
 #include "hir/type_unifier.hpp"
 #include "hir/type_visitors.hpp"
 #include <vector>

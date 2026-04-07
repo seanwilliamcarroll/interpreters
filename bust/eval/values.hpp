@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include "eval/environment.hpp"
 #include "hir/nodes.hpp"
 #include "types.hpp"
 #include <cstdint>
@@ -22,8 +23,6 @@
 //****************************************************************************
 namespace bust::eval {
 //****************************************************************************
-
-struct Environment {};
 
 template <PrimitiveType InnerType> struct AbstractValue {
   const static PrimitiveType m_type = InnerType;
