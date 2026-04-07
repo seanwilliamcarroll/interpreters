@@ -329,6 +329,119 @@ TEST_SUITE("bust.evaluator") {
                    "fn main() -> i64 { early(5) }") == 5);
   }
 
+  // --- Return semantics ----------------------------------------------------
+  // These tests pin down that `return` unwinds to the *enclosing function*
+  // (or lambda) and no further. The evaluator implements this with a custom
+  // exception thrown by `return` and caught at every call boundary; these
+  // tests would catch a missing catch site, an over-broad catch, or a
+  // miscount of unwinding levels.
+
+  TEST_CASE("return unwinds through nested blocks") {
+    CHECK(evaluate("fn f(x: i64) -> i64 {\n"
+                   "  {\n"
+                   "    {\n"
+                   "      { return 7; };\n"
+                   "    };\n"
+                   "  };\n"
+                   "  x\n"
+                   "}\n"
+                   "fn main() -> i64 { f(0) }") == 7);
+  }
+
+  TEST_CASE("return unwinds through nested if-else") {
+    CHECK(evaluate("fn f(x: i64) -> i64 {\n"
+                   "  if x > 0 {\n"
+                   "    if x > 5 { return 1; } else { return 2; }\n"
+                   "  } else { return 3; }\n"
+                   "}\n"
+                   "fn main() -> i64 { f(10) }") == 1);
+  }
+
+  TEST_CASE("return from inside arithmetic subexpression") {
+    // The right operand triggers a return mid-expression; the `+` should
+    // never complete.
+    CHECK(evaluate("fn f() -> i64 {\n"
+                   "  1 + { return 99; }\n"
+                   "}\n"
+                   "fn main() -> i64 { f() }") == 99);
+  }
+
+  TEST_CASE("return inside callee does not affect caller") {
+    // `inner` returns 5; the caller should observe 5 and continue.
+    CHECK(evaluate("fn inner() -> i64 { return 5; }\n"
+                   "fn outer() -> i64 { inner() + 10 }\n"
+                   "fn main() -> i64 { outer() }") == 15);
+  }
+
+  TEST_CASE("return inside lambda returns from lambda only") {
+    // The return must be caught at the lambda call site, not propagate
+    // out to `main`. If it leaked, `+ 100` would never execute.
+    CHECK(evaluate("fn main() -> i64 {\n"
+                   "  let f = || -> i64 { return 1; };\n"
+                   "  f() + 100\n"
+                   "}") == 101);
+  }
+
+  TEST_CASE("return inside lambda passed to higher-order function") {
+    // Lambda returning early, invoked by another function. The catch must
+    // happen at the lambda invocation inside `apply`, not escape `apply`.
+    CHECK(evaluate("fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) + 1 }\n"
+                   "fn main() -> i64 {\n"
+                   "  let g = |x: i64| -> i64 { return x * 2; };\n"
+                   "  apply(g, 10)\n"
+                   "}") == 21);
+  }
+
+  TEST_CASE("return from recursive call unwinds only one frame") {
+    // Each recursive call has its own frame; an early return from a deep
+    // call should only pop that one frame, with the caller's arithmetic
+    // continuing normally.
+    CHECK(evaluate("fn f(n: i64) -> i64 {\n"
+                   "  if n == 0 { return 100; }\n"
+                   "  f(n - 1) + 1\n"
+                   "}\n"
+                   "fn main() -> i64 { f(3) }") == 103);
+  }
+
+  TEST_CASE("return inside lambda inside function returns from lambda") {
+    // Two nested call boundaries: the lambda's return must be caught at
+    // the lambda call, then the surrounding function continues to `+ 1`.
+    CHECK(evaluate("fn f() -> i64 {\n"
+                   "  let g = || -> i64 { return 41; };\n"
+                   "  g() + 1\n"
+                   "}\n"
+                   "fn main() -> i64 { f() }") == 42);
+  }
+
+  TEST_CASE("return from then-branch of if") {
+    CHECK(evaluate("fn f(x: i64) -> i64 {\n"
+                   "  if x > 0 { return 111; }\n"
+                   "  222\n"
+                   "}\n"
+                   "fn main() -> i64 { f(1) }") == 111);
+  }
+
+  TEST_CASE("return short-circuits subsequent statements") {
+    CHECK(evaluate("fn f() -> i64 {\n"
+                   "  let a = 1;\n"
+                   "  return 7;\n"
+                   "  let b = 2;\n"
+                   "  a + b\n"
+                   "}\n"
+                   "fn main() -> i64 { f() }") == 7);
+  }
+
+  TEST_CASE("return inside function called from main") {
+    // Sanity: the catch at main's call boundary must not let f's return
+    // escape into the host C++ runtime.
+    CHECK(evaluate("fn f() -> i64 { return 42; }\n"
+                   "fn main() -> i64 { f() }") == 42);
+  }
+
+  TEST_CASE("return directly from main") {
+    CHECK(evaluate("fn main() -> i64 { return 17; }") == 17);
+  }
+
   // --- Lambda expressions --------------------------------------------------
 
   TEST_CASE("lambda call") {
