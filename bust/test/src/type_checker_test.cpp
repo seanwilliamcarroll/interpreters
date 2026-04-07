@@ -1166,6 +1166,197 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Top-level let bindings ------------------------------------------------
+
+  TEST_CASE("top-level let binding typechecks") {
+    auto hir = type_check("let x: i64 = 42;\n"
+                          "fn main() -> i64 { x }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+    auto &let = std::get<hir::LetBinding>(hir.m_top_items[0]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("top-level let binding with mismatched annotation throws") {
+    CHECK_THROWS_AS(type_check("let x: bool = 42;\n"
+                               "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  // --- Block expression types ------------------------------------------------
+
+  TEST_CASE("block expression has type of its final expression") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = {\n"
+                          "    let a = 1;\n"
+                          "    a + 2\n"
+                          "  };\n"
+                          "  x\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("empty block has type unit") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = {};\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &expr_type =
+        std::get<hir::PrimitiveTypeValue>(let.m_expression.m_type);
+    CHECK(expr_type.m_type == PrimitiveType::UNIT);
+  }
+
+  // --- Calling non-callable --------------------------------------------------
+
+  TEST_CASE("calling an i64 value throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 42;\n"
+                               "  x(1)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("calling a bool value throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = true;\n"
+                               "  x(1)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Lambda with no parameters ---------------------------------------------
+
+  TEST_CASE("lambda with no parameters typechecks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = || { 42 };\n"
+                          "  f()\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Return in nested block ------------------------------------------------
+
+  TEST_CASE("return in nested block matches function return type") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  {\n"
+                          "    return 42;\n"
+                          "  }\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("return in nested block with wrong type throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  {\n"
+                               "    return true;\n"
+                               "  }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Multiple returns ------------------------------------------------------
+
+  TEST_CASE("multiple return paths with consistent types") {
+    auto hir = type_check("fn classify(n: i64) -> i64 {\n"
+                          "  if n > 0 { return 1; }\n"
+                          "  if n < 0 { return -1; }\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("multiple returns with inconsistent types throws") {
+    CHECK_THROWS_AS(type_check("fn bad(n: i64) -> i64 {\n"
+                               "  if n > 0 { return true; }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Nested lambda ---------------------------------------------------------
+
+  TEST_CASE("nested lambda typechecks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x: i64| -> i64 {\n"
+                          "    let g = |y: i64| -> i64 { x + y };\n"
+                          "    g(10)\n"
+                          "  };\n"
+                          "  f(5)\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Variable shadowing across scopes ------------------------------------
+
+  TEST_CASE("shadowing in inner block scope uses new type") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = true;\n"
+                          "  {\n"
+                          "    let x = 42;\n"
+                          "    x + 1\n"
+                          "  }\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("same-scope shadowing uses new type") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = true;\n"
+                          "  let x = 42;\n"
+                          "  x + 1\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("outer variable accessible after inner scope ends") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: bool = true;\n"
+                          "  {\n"
+                          "    let x = 42;\n"
+                          "  };\n"
+                          "  let y: bool = x;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[2]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::BOOL);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

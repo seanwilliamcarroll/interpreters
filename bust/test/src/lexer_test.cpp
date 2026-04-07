@@ -16,6 +16,7 @@
 //****************************************************************************
 
 #include <bust_tokens.hpp>
+#include <exceptions.hpp>
 #include <lexer.hpp>
 
 #include <doctest/doctest.h>
@@ -371,6 +372,114 @@ TEST_SUITE("bust.lexer") {
                        TokenType::IDENTIFIER, TokenType::GREATER_EQ,
                        TokenType::IDENTIFIER, TokenType::BANG_EQ,
                        TokenType::IDENTIFIER, TokenType::EOF_TOKEN});
+  }
+
+  // --- Error cases -----------------------------------------------------------
+
+  TEST_CASE("bust::lexer_invalid_character") {
+    std::istringstream stream("@");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  TEST_CASE("bust::lexer_invalid_character_hash") {
+    std::istringstream stream("#");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  TEST_CASE("bust::lexer_unterminated_block_comment") {
+    std::istringstream stream("/* unterminated");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  // --- Source location tracking ----------------------------------------------
+
+  TEST_CASE("bust::lexer_source_location_first_token") {
+    std::istringstream stream("42");
+    auto lexer = make_lexer(stream, "test.bu");
+    auto token = lexer->get_next_token();
+    CHECK(token->get_location().line == 1);
+    // Column is 0-based: first char hasn't been advanced yet
+    CHECK(token->get_location().column == 0);
+  }
+
+  TEST_CASE("bust::lexer_source_location_after_whitespace") {
+    std::istringstream stream("   x");
+    auto lexer = make_lexer(stream, "test.bu");
+    auto token = lexer->get_next_token();
+    CHECK(token->get_location().line == 1);
+    // 3 spaces consumed, column is 3
+    CHECK(token->get_location().column == 3);
+  }
+
+  TEST_CASE("bust::lexer_source_location_second_line") {
+    std::istringstream stream("x\ny");
+    auto lexer = make_lexer(stream, "test.bu");
+    lexer->get_next_token(); // x
+    auto token = lexer->get_next_token();
+    CHECK(token->get_location().line == 2);
+    CHECK(token->get_location().column == 0);
+  }
+
+  // --- Tokens without whitespace ---------------------------------------------
+
+  TEST_CASE("bust::lexer_adjacent_tokens_no_whitespace") {
+    check_token_types("1+2", {TokenType::INT_LITERAL, TokenType::PLUS,
+                              TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_parens_around_identifier") {
+    check_token_types("(foo)", {TokenType::LPAREN, TokenType::IDENTIFIER,
+                                TokenType::RPAREN, TokenType::EOF_TOKEN});
+  }
+
+  // --- Leading zeros ---------------------------------------------------------
+
+  TEST_CASE("bust::lexer_leading_zero_is_single_token") {
+    // 007 should lex as "0" then "07" is NOT valid — it should be 0, 0, 7
+    // Actually the lexer treats 0 as a complete int literal (no multi-digit
+    // starting with 0), so "007" → INT(0), INT(0), INT(7)
+    check_token_types("007", {TokenType::INT_LITERAL, TokenType::INT_LITERAL,
+                              TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  // --- Identifier with uppercase letters -------------------------------------
+
+  TEST_CASE("bust::lexer_uppercase_identifier") {
+    check_token_types("MyVar", {TokenType::IDENTIFIER, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_mixed_case_identifier") {
+    check_token_types("camelCase",
+                      {TokenType::IDENTIFIER, TokenType::EOF_TOKEN});
+  }
+
+  // --- Multiple comments -----------------------------------------------------
+
+  TEST_CASE("bust::lexer_consecutive_comments") {
+    check_token_types("// first\n// second\n42",
+                      {TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_block_comment_with_stars") {
+    // Block comment with extra * inside should still work
+    check_token_types("/*** comment ***/42",
+                      {TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  // --- Identifier value preservation -----------------------------------------
+
+  TEST_CASE("bust::lexer_identifier_value") {
+    std::istringstream stream("my_var2");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token != nullptr);
+    CHECK(token->get_token_type() == TokenType::IDENTIFIER);
+    auto *id_token = dynamic_cast<const TokenIdentifier *>(token.get());
+    CHECK(id_token != nullptr);
+    CHECK(id_token->get_value() == "my_var2");
   }
 }
 //****************************************************************************

@@ -75,6 +75,41 @@ TEST_SUITE("bust.semantic_analysis") {
                     core::CompilerException);
   }
 
+  TEST_CASE("bust::validate_main_rejects_no_main_function") {
+    // A program with only a non-main function
+    auto program = parse_string("fn not_main() -> i64 { 0 }");
+    CHECK_THROWS_AS(ValidateMain{}(std::move(program)),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::validate_main_rejects_only_let_bindings") {
+    auto program = parse_string("let x: i64 = 42;");
+    CHECK_THROWS_AS(ValidateMain{}(std::move(program)),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::validate_main_accepts_main_with_parameters") {
+    // ValidateMain currently does not reject main with parameters
+    // This documents the current behavior
+    auto program = parse_string("fn main(x: i64) -> i64 { x }");
+    CHECK_NOTHROW(ValidateMain{}(std::move(program)));
+  }
+
+  TEST_CASE("bust::validate_main_rejects_main_returning_function_type") {
+    auto program =
+        parse_string("fn main() -> fn(i64) -> i64 { |x: i64| -> i64 { x } }");
+    CHECK_THROWS_AS(ValidateMain{}(std::move(program)),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::validate_main_accepts_main_among_many") {
+    auto program = parse_string("fn helper1() -> i64 { 1 }\n"
+                                "fn helper2(x: i64) -> bool { true }\n"
+                                "let y: i64 = 99;\n"
+                                "fn main() -> i64 { 0 }");
+    CHECK_NOTHROW(ValidateMain{}(std::move(program)));
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust
