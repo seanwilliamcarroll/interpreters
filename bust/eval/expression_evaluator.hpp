@@ -37,6 +37,8 @@ struct ExpressionEvaluator {
 
   Value operator()(const hir::Expression &);
 
+  Value evaluate_function_body(const hir::Block &);
+
   Closure create_closure(const auto &function_object) {
 
     auto current_scope = m_ctx.m_env.get_current_scope();

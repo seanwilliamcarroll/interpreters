@@ -45,8 +45,8 @@ int64_t Evaluator::operator()(const hir::Program &program) {
 
   auto main_closure = std::get<eval::Closure>(main_expr.value());
 
-  auto final_value =
-      eval::ExpressionEvaluator{context}(*main_closure.m_expression);
+  auto final_value = eval::ExpressionEvaluator{context}.evaluate_function_body(
+      *main_closure.m_expression);
 
   if (!std::holds_alternative<eval::I64>(final_value)) {
     throw core::CompilerException(

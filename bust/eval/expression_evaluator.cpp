@@ -27,6 +27,13 @@
 namespace bust::eval {
 //****************************************************************************
 
+struct return_up_the_stack : public std::exception {
+  return_up_the_stack(Value return_value)
+      : std::exception(), m_return_value(std::move(return_value)) {}
+
+  Value m_return_value;
+};
+
 Value ExpressionEvaluator::operator()(const hir::Expression &expression) {
   return std::visit(*this, expression.m_expression);
 }
@@ -104,12 +111,13 @@ Value ExpressionEvaluator::operator()(
   return Unit{};
 }
 
-struct return_up_the_stack : public std::exception {
-  return_up_the_stack(Value return_value)
-      : std::exception(), m_return_value(std::move(return_value)) {}
-
-  Value m_return_value;
-};
+Value ExpressionEvaluator::evaluate_function_body(const hir::Block &block) {
+  try {
+    return (*this)(block);
+  } catch (return_up_the_stack &return_statement) {
+    return return_statement.m_return_value;
+  }
+}
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CallExpr> &call_expression) {
@@ -124,13 +132,8 @@ Value ExpressionEvaluator::operator()(
     new_closure_env->define(parameter, (*this)(argument));
   }
 
-  try {
-    return ExpressionEvaluator{
-        .m_ctx = {.m_env = Environment(new_closure_env)}}(
-        *closure.m_expression);
-  } catch (return_up_the_stack &return_statement) {
-    return return_statement.m_return_value;
-  }
+  return ExpressionEvaluator{.m_ctx = {.m_env = Environment(new_closure_env)}}
+      .evaluate_function_body(*closure.m_expression);
 }
 
 Value ExpressionEvaluator::operator()(
