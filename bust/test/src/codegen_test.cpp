@@ -106,6 +106,85 @@ TEST_SUITE("bust.codegen") {
     CHECK_RUN("fn main() -> i64 { let x = 1; let y = 2; y }", 2);
     CHECK_RUN("fn main() -> i64 { let x = 1; let y = 2; x }", 1);
   }
+
+  // --- Binary expressions --------------------------------------------------
+  //
+  // NOTE: lli returns main's result as the process exit code, which on
+  // Unix is truncated to the low 8 bits. Keep all expected values in
+  // [0, 255] so WEXITSTATUS round-trips cleanly.
+
+  TEST_CASE("binary addition of literals") {
+    CHECK_RUN("fn main() -> i64 { 20 + 22 }", 42);
+    CHECK_RUN("fn main() -> i64 { 0 + 0 }", 0);
+    CHECK_RUN("fn main() -> i64 { 1 + 2 }", 3);
+  }
+
+  TEST_CASE("binary subtraction of literals") {
+    CHECK_RUN("fn main() -> i64 { 50 - 8 }", 42);
+    CHECK_RUN("fn main() -> i64 { 10 - 10 }", 0);
+  }
+
+  TEST_CASE("binary multiplication of literals") {
+    CHECK_RUN("fn main() -> i64 { 6 * 7 }", 42);
+    CHECK_RUN("fn main() -> i64 { 0 * 99 }", 0);
+    CHECK_RUN("fn main() -> i64 { 1 * 42 }", 42);
+  }
+
+  TEST_CASE("binary division of literals (signed, truncating)") {
+    CHECK_RUN("fn main() -> i64 { 84 / 2 }", 42);
+    CHECK_RUN("fn main() -> i64 { 7 / 2 }", 3); // truncates toward zero
+    CHECK_RUN("fn main() -> i64 { 100 / 10 }", 10);
+  }
+
+  TEST_CASE("binary modulus of literals") {
+    CHECK_RUN("fn main() -> i64 { 17 % 5 }", 2);
+    CHECK_RUN("fn main() -> i64 { 100 % 7 }", 2);
+    CHECK_RUN("fn main() -> i64 { 10 % 2 }", 0);
+  }
+
+  TEST_CASE("operator precedence: mul/div bind tighter than add/sub") {
+    CHECK_RUN("fn main() -> i64 { 2 + 3 * 4 }", 14);
+    CHECK_RUN("fn main() -> i64 { 3 * 4 + 2 }", 14);
+    CHECK_RUN("fn main() -> i64 { 20 - 6 / 2 }", 17);
+    CHECK_RUN("fn main() -> i64 { 1 + 2 * 3 + 4 }", 11);
+  }
+
+  TEST_CASE("parentheses override precedence") {
+    CHECK_RUN("fn main() -> i64 { (2 + 3) * 4 }", 20);
+    CHECK_RUN("fn main() -> i64 { 2 * (3 + 4) }", 14);
+    CHECK_RUN("fn main() -> i64 { (1 + 2) * (3 + 4) }", 21);
+  }
+
+  TEST_CASE("left associativity of same-precedence operators") {
+    // 10 - 3 - 2 must parse as (10 - 3) - 2 = 5, not 10 - (3 - 2) = 9
+    CHECK_RUN("fn main() -> i64 { 10 - 3 - 2 }", 5);
+    // 20 / 4 / 2 must parse as (20 / 4) / 2 = 2, not 20 / (4 / 2) = 10
+    CHECK_RUN("fn main() -> i64 { 20 / 4 / 2 }", 2);
+  }
+
+  TEST_CASE("binary ops on let-bound identifiers") {
+    CHECK_RUN("fn main() -> i64 { let x = 20; let y = 22; x + y }", 42);
+    CHECK_RUN("fn main() -> i64 { let a = 6; let b = 7; a * b }", 42);
+    CHECK_RUN("fn main() -> i64 { let x = 100; x - 58 }", 42);
+  }
+
+  TEST_CASE("same identifier used multiple times in expression") {
+    // Exercises "every identifier read emits its own load" — the two
+    // reads of x must be independent.
+    CHECK_RUN("fn main() -> i64 { let x = 21; x + x }", 42);
+    CHECK_RUN("fn main() -> i64 { let x = 7; x * x }", 49);
+  }
+
+  TEST_CASE("deeply nested binary expressions") {
+    CHECK_RUN("fn main() -> i64 { ((1 + 2) + (3 + 4)) + ((5 + 6) + (7 + 8)) }",
+              36);
+    CHECK_RUN("fn main() -> i64 { 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 }", 36);
+  }
+
+  TEST_CASE("binary expression as let RHS") {
+    CHECK_RUN("fn main() -> i64 { let x = 2 + 3; let y = x * 4; y + 2 }", 22);
+    CHECK_RUN("fn main() -> i64 { let x = 10 - 5; let y = x + x; y }", 10);
+  }
 #else
   TEST_CASE("codegen execution tests" * doctest::skip()) {
     MESSAGE("lli not found at configure time - execution tests skipped");
