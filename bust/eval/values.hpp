@@ -11,7 +11,6 @@
 #pragma once
 //****************************************************************************
 
-#include "eval/environment.hpp"
 #include "hir/nodes.hpp"
 #include "types.hpp"
 #include <cstdint>
@@ -24,17 +23,19 @@
 namespace bust::eval {
 //****************************************************************************
 
+struct Scope;
+
 template <PrimitiveType InnerType> struct AbstractValue {
-  const static PrimitiveType m_type = InnerType;
+  constexpr static PrimitiveType m_type = InnerType;
 };
 
 template <> struct AbstractValue<PrimitiveType::BOOL> {
-  const static PrimitiveType m_type = PrimitiveType::BOOL;
+  constexpr static PrimitiveType m_type = PrimitiveType::BOOL;
   bool m_value;
 };
 
 template <> struct AbstractValue<PrimitiveType::I64> {
-  const static PrimitiveType m_type = PrimitiveType::I64;
+  constexpr static PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
 
@@ -44,8 +45,8 @@ using Unit = AbstractValue<PrimitiveType::UNIT>;
 
 struct Closure {
   std::vector<std::string> m_parameters;
-  const hir::Expression *m_expression;
-  std::shared_ptr<Environment> m_env;
+  const hir::Block *m_expression;
+  std::shared_ptr<Scope> m_scope;
 };
 
 using Value = std::variant<Bool, I64, Unit, Closure>;

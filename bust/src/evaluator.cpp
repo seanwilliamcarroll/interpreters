@@ -36,13 +36,17 @@ int64_t Evaluator::operator()(const hir::Program &program) {
   // Then "call" main() from the environment?
   auto main_expr = context.m_env.lookup("main");
 
-  if (!main_expr.has_value()) {
+  if (!main_expr.has_value() ||
+      !std::holds_alternative<eval::Closure>(main_expr.value())) {
     throw core::CompilerException(
         "Evaluator", "Compiler error, main should have been found in the env!",
         program.m_location);
   }
 
-  auto final_value = eval::ExpressionEvaluator{context}(main_expr.value());
+  auto main_closure = std::get<eval::Closure>(main_expr.value());
+
+  auto final_value =
+      eval::ExpressionEvaluator{context}(*main_closure.m_expression);
 
   if (!std::holds_alternative<eval::I64>(final_value)) {
     throw core::CompilerException(
