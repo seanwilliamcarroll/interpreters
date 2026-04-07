@@ -11,14 +11,13 @@
 
 #include <ast/dump.hpp>
 #include <bust.hpp>
+#include <codegen.hpp>
 #include <evaluator.hpp>
 #include <hir/dump.hpp>
 #include <iostream>
 #include <memory>
 #include <parser.hpp>
 #include <pipeline.hpp>
-#include <stdexcept>
-#include <string>
 #include <type_checker.hpp>
 #include <utility>
 #include <validate_main.hpp>
@@ -48,7 +47,8 @@ void Bust::run() {
   }
 
   if (m_options.llvm_ir) {
-    throw std::runtime_error("--llvm-ir not yet implemented");
+    std::cout << CodeGen{}(typed);
+    return;
   }
 
   auto result = Evaluator{}(typed);
