@@ -34,6 +34,7 @@ add_library(bust-lib STATIC
   eval/statement_evaluator.cpp
   eval/top_item_evaluator.cpp
   src/evaluator.cpp
+  src/codegen.cpp
   src/type_checker.cpp
   src/validate_main.cpp)
 
@@ -58,6 +59,7 @@ add_executable(bust-test
   test/src/type_checker_test.cpp
   test/src/type_unifier_test.cpp
   test/src/evaluator_test.cpp
+  test/src/codegen_test.cpp
   test/src/validate_main_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
@@ -66,6 +68,21 @@ target_link_libraries(bust-test
   bust-lib
   rapidcheck
   doctest::doctest)
+
+# Locate `lli` (LLVM IR interpreter) for codegen execution tests.
+# If found, its absolute path is baked into bust-test via BUST_LLI_PATH;
+# otherwise BUST_LLI_PATH is undefined and those tests skip at runtime.
+find_program(LLI_EXECUTABLE
+  NAMES lli lli-mp-21 lli-mp-20 lli-mp-19 lli-mp-18
+  DOC "Path to the LLVM IR interpreter (lli)")
+
+if(LLI_EXECUTABLE)
+  message(STATUS "Found lli: ${LLI_EXECUTABLE}")
+  target_compile_definitions(bust-test PRIVATE
+    BUST_LLI_PATH="${LLI_EXECUTABLE}")
+else()
+  message(STATUS "lli not found - codegen execution tests will be skipped")
+endif()
 
 #*****************************************************************************
 
@@ -86,5 +103,6 @@ add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysi
 add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
 add_test(NAME bust.evaluator COMMAND bust-test -ts=bust.evaluator)
+add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
 
 #*****************************************************************************
