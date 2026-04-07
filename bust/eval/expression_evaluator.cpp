@@ -17,20 +17,17 @@
 #include "operators.hpp"
 
 #include <cstdint>
-#include <exception>
 #include <functional>
 #include <memory>
 #include <ranges>
+#include <utility>
 #include <variant>
 
 //****************************************************************************
 namespace bust::eval {
 //****************************************************************************
 
-struct return_up_the_stack : public std::exception {
-  return_up_the_stack(Value return_value)
-      : std::exception(), m_return_value(std::move(return_value)) {}
-
+struct ReturnException {
   Value m_return_value;
 };
 
@@ -72,22 +69,22 @@ Value ExpressionEvaluator::operator()(
 Value ExpressionEvaluator::operator()(const hir::Block &block) {
   m_ctx.m_env.push_scope();
 
-  for (const auto &statement : block.m_statements) {
-    if (std::holds_alternative<hir::Expression>(statement) &&
-        std::holds_alternative<std::unique_ptr<hir::ReturnExpr>>(
-            std::get<hir::Expression>(statement).m_expression)) {
-      return std::visit(StatementEvaluator{m_ctx}, statement);
+  try {
+    for (const auto &statement : block.m_statements) {
+      std::visit(StatementEvaluator{m_ctx}, statement);
     }
-    std::visit(StatementEvaluator{m_ctx}, statement);
+
+    auto final_value = block.m_final_expression.has_value()
+                           ? (*this)(block.m_final_expression.value())
+                           : Unit{};
+
+    m_ctx.m_env.pop_scope();
+
+    return final_value;
+  } catch (ReturnException &return_exception) {
+    m_ctx.m_env.pop_scope();
+    throw;
   }
-
-  auto final_value = block.m_final_expression.has_value()
-                         ? (*this)(block.m_final_expression.value())
-                         : Unit{};
-
-  m_ctx.m_env.pop_scope();
-
-  return final_value;
 }
 
 Value ExpressionEvaluator::operator()(
@@ -114,7 +111,7 @@ Value ExpressionEvaluator::operator()(
 Value ExpressionEvaluator::evaluate_function_body(const hir::Block &block) {
   try {
     return (*this)(block);
-  } catch (return_up_the_stack &return_statement) {
+  } catch (ReturnException &return_statement) {
     return return_statement.m_return_value;
   }
 }
@@ -193,6 +190,7 @@ Value ExpressionEvaluator::operator()(
     return Bool{apply_int_or_bool(lhs, rhs, std::not_equal_to<int64_t>(),
                                   std::not_equal_to<bool>())};
   }
+  std::unreachable();
 }
 
 Value ExpressionEvaluator::operator()(
@@ -204,13 +202,12 @@ Value ExpressionEvaluator::operator()(
   case bust::UnaryOperator::NOT:
     return Bool{!std::get<Bool>(value).m_value};
   }
+  std::unreachable();
 }
 
-Value ExpressionEvaluator::operator()(
+[[noreturn]] Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expression) {
-  auto return_value = (*this)(return_expression->m_expression);
-
-  throw return_up_the_stack{return_value};
+  throw ReturnException{(*this)(return_expression->m_expression)};
 }
 
 Value ExpressionEvaluator::operator()(

@@ -32,7 +32,7 @@ struct ExpressionEvaluator {
   Value operator()(const std::unique_ptr<hir::CallExpr> &);
   Value operator()(const std::unique_ptr<hir::BinaryExpr> &);
   Value operator()(const std::unique_ptr<hir::UnaryExpr> &);
-  Value operator()(const std::unique_ptr<hir::ReturnExpr> &);
+  [[noreturn]] Value operator()(const std::unique_ptr<hir::ReturnExpr> &);
   Value operator()(const std::unique_ptr<hir::LambdaExpr> &);
 
   Value operator()(const hir::Expression &);
