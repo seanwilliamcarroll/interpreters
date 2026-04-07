@@ -12,6 +12,9 @@
 #include "codegen/expression_generator.hpp"
 #include "codegen/context.hpp"
 #include "codegen/statement_generator.hpp"
+#include "codegen/symbol_table.hpp"
+#include "exceptions.hpp"
+#include "operators.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
@@ -35,8 +38,9 @@ Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
 
 Handle ExpressionGenerator::operator()(const hir::LiteralBool &) { return {}; }
 
-Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &) {
-  return {};
+Handle
+ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &block) {
+  return (*this)(*block);
 }
 
 Handle ExpressionGenerator::operator()(const hir::Block &block) {
@@ -56,21 +60,84 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
 Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::IfExpr> &) {
   return {};
 }
+
 Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
   return {};
 }
-Handle
-ExpressionGenerator::operator()(const std::unique_ptr<hir::BinaryExpr> &) {
+
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+
+  auto lhs_handle = (*this)(binary_expression->m_lhs);
+
+  // For short cicuiting, this may become more complicated
+
+  auto rhs_handle = (*this)(binary_expression->m_rhs);
+
+  switch (binary_expression->m_operator) {
+  case bust::BinaryOperator::PLUS: {
+    auto result_handle = SymbolTable::next_ssa_temporary();
+
+    m_ctx.m_output += "  " + result_handle + " = add " +
+                      binary_expression->m_lhs.m_type + " " + lhs_handle +
+                      ", " + rhs_handle + "\n";
+    return result_handle;
+  }
+
+  case bust::BinaryOperator::MINUS: {
+    auto result_handle = SymbolTable::next_ssa_temporary();
+
+    m_ctx.m_output += "  " + result_handle + " = sub " +
+                      binary_expression->m_lhs.m_type + " " + lhs_handle +
+                      ", " + rhs_handle + "\n";
+    return result_handle;
+  }
+
+  case bust::BinaryOperator::MULTIPLIES: {
+    auto result_handle = SymbolTable::next_ssa_temporary();
+
+    m_ctx.m_output += "  " + result_handle + " = mul " +
+                      binary_expression->m_lhs.m_type + " " + lhs_handle +
+                      ", " + rhs_handle + "\n";
+    return result_handle;
+  }
+
+  case bust::BinaryOperator::DIVIDES: {
+    auto result_handle = SymbolTable::next_ssa_temporary();
+
+    m_ctx.m_output += "  " + result_handle + " = sdiv " +
+                      binary_expression->m_lhs.m_type + " " + lhs_handle +
+                      ", " + rhs_handle + "\n";
+    return result_handle;
+  }
+
+  case bust::BinaryOperator::MODULUS: {
+    auto result_handle = SymbolTable::next_ssa_temporary();
+
+    m_ctx.m_output += "  " + result_handle + " = srem " +
+                      binary_expression->m_lhs.m_type + " " + lhs_handle +
+                      ", " + rhs_handle + "\n";
+    return result_handle;
+  }
+
+  default:
+    throw core::CompilerException("Codegen", "UNIMPLEMENTED",
+                                  binary_expression->m_location);
+  }
+
   return {};
 }
+
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::UnaryExpr> &) {
   return {};
 }
+
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::ReturnExpr> &) {
   return {};
 }
+
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::LambdaExpr> &) {
   return {};
