@@ -29,6 +29,7 @@ add_library(bust-lib STATIC
   src/parser.cpp
   hir/statement_checker.cpp
   hir/top_item_checker.cpp
+  src/evaluator.cpp
   src/type_checker.cpp
   src/validate_main.cpp)
 
@@ -52,6 +53,7 @@ add_executable(bust-test
   test/src/parser_test.cpp
   test/src/type_checker_test.cpp
   test/src/type_unifier_test.cpp
+  test/src/evaluator_test.cpp
   test/src/validate_main_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
@@ -79,5 +81,6 @@ add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysis)
 add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
+add_test(NAME bust.evaluator COMMAND bust-test -ts=bust.evaluator)
 
 #*****************************************************************************
