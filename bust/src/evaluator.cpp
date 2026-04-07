@@ -11,6 +11,7 @@
 
 #include <evaluator.hpp>
 
+#include "eval/context.hpp"
 #include "eval/values.hpp"
 
 //****************************************************************************
@@ -18,7 +19,13 @@ namespace bust {
 //****************************************************************************
 
 int64_t Evaluator::operator()(const hir::Program & /*program*/) {
-  // TODO: implement
+
+  auto context = eval::Context{};
+
+  // Essentially go through program and load functions into env
+
+  // Then "call" main() with the environment?
+
   return 0;
 }
 

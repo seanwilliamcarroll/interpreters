@@ -10,10 +10,20 @@
 //****************************************************************************
 
 #include "eval/statement_evaluator.hpp"
+#include "eval/expression_evaluator.hpp"
+#include "eval/let_binding_evaluator.hpp"
 
 //****************************************************************************
 namespace bust::eval {
 //****************************************************************************
+
+Value StatementEvaluator::operator()(const hir::Expression &expression) {
+  return ExpressionEvaluator{m_ctx}(expression);
+}
+
+Value StatementEvaluator::operator()(const hir::LetBinding &let_binding) {
+  return LetBindingEvaluator{m_ctx}(let_binding);
+}
 
 //****************************************************************************
 } // namespace bust::eval

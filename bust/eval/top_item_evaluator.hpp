@@ -11,9 +11,20 @@
 #pragma once
 //****************************************************************************
 
+#include "eval/context.hpp"
+#include "eval/values.hpp"
+#include "hir/nodes.hpp"
+
 //****************************************************************************
 namespace bust::eval {
 //****************************************************************************
+
+struct TopItemEvaluator {
+  Value operator()(const hir::FunctionDef &);
+  Value operator()(const hir::LetBinding &);
+
+  Context m_ctx;
+};
 
 //****************************************************************************
 } // namespace bust::eval
