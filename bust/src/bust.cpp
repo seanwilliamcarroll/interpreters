@@ -33,13 +33,13 @@ void Bust::run() {
   auto program = parser.parse();
 
   if (m_options.dump_ast) {
-    std::cout << ast::Dumper::dump(program);
+    std::cout << "=== AST ===\n" << ast::Dumper::dump(program) << "\n";
   }
 
   auto typed = run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
 
   if (m_options.dump_hir) {
-    std::cout << hir::Dumper::dump(typed);
+    std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
   }
 
   if (m_options.llvm_ir) {
