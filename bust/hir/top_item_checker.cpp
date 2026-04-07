@@ -12,7 +12,7 @@
 #include "hir/top_item_checker.hpp"
 #include "exceptions.hpp"
 #include "hir/block_checker.hpp"
-#include "hir/checker_context.hpp"
+#include "hir/context.hpp"
 #include "hir/let_binding_checker.hpp"
 #include "hir/nodes.hpp"
 #include "hir/type_converter.hpp"

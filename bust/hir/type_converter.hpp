@@ -14,7 +14,7 @@
 #include "ast/nodes.hpp"
 #include "ast/types.hpp"
 #include "exceptions.hpp"
-#include "hir/checker_context.hpp"
+#include "hir/context.hpp"
 #include "hir/nodes.hpp"
 #include "hir/types.hpp"
 #include <memory>
@@ -75,7 +75,7 @@ struct TypeConverter {
     return {std::move(parameters), std::move(parameter_types)};
   }
 
-  CheckerContext &m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************

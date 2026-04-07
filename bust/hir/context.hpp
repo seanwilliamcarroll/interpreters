@@ -20,7 +20,7 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct CheckerContext {
+struct Context {
 
   Type create_fresh_type_vars(const TypeScheme &type_scheme) {
     std::unordered_map<TypeVariable, TypeVariable> new_mapping;

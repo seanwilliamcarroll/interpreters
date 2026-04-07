@@ -12,7 +12,7 @@
 //****************************************************************************
 
 #include "ast/nodes.hpp"
-#include "hir/checker_context.hpp"
+#include "hir/context.hpp"
 #include "hir/nodes.hpp"
 
 //****************************************************************************
@@ -28,7 +28,7 @@ struct BlockChecker {
                             const Type &return_type,
                             const ast::Block &ast_body);
 
-  CheckerContext &m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************
