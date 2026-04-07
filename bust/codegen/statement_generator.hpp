@@ -19,8 +19,8 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct StatementGenerator {
-  void operator()(const hir::Expression &);
-  void operator()(const hir::LetBinding &);
+  Handle operator()(const hir::Expression &);
+  Handle operator()(const hir::LetBinding &);
 
   Context &m_ctx;
 };

@@ -10,30 +10,39 @@
 //****************************************************************************
 
 #include "codegen/expression_generator.hpp"
+#include "codegen/context.hpp"
 #include "codegen/statement_generator.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-Value ExpressionGenerator::operator()(const hir::Identifier &) { return {}; }
+Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
 
-Value ExpressionGenerator::operator()(const hir::LiteralUnit &) { return {}; }
+  auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-Value ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
+  m_ctx.m_output += " " + ssa_temp + " = load " + identifier.m_type + ", ptr " +
+                    m_ctx.m_symbol_table.lookup(identifier.m_name) + "\n";
+
+  return ssa_temp;
+}
+
+Handle ExpressionGenerator::operator()(const hir::LiteralUnit &) { return {}; }
+
+Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
   return {std::to_string(literal.m_value)};
 }
 
-Value ExpressionGenerator::operator()(const hir::LiteralBool &) { return {}; }
+Handle ExpressionGenerator::operator()(const hir::LiteralBool &) { return {}; }
 
-Value ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &) {
+Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const hir::Block &block) {
-  Value last_value{};
+Handle ExpressionGenerator::operator()(const hir::Block &block) {
+  Handle last_value{};
   for (const auto &statement : block.m_statements) {
-    std::visit(StatementGenerator{m_ctx}, statement);
+    last_value = std::visit(StatementGenerator{m_ctx}, statement);
   }
 
   if (block.m_final_expression.has_value()) {
@@ -41,32 +50,33 @@ Value ExpressionGenerator::operator()(const hir::Block &block) {
   }
 
   // Need to return a value here potentially
+  return last_value;
+}
+
+Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::IfExpr> &) {
+  return {};
+}
+Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
+  return {};
+}
+Handle
+ExpressionGenerator::operator()(const std::unique_ptr<hir::BinaryExpr> &) {
+  return {};
+}
+Handle
+ExpressionGenerator::operator()(const std::unique_ptr<hir::UnaryExpr> &) {
+  return {};
+}
+Handle
+ExpressionGenerator::operator()(const std::unique_ptr<hir::ReturnExpr> &) {
+  return {};
+}
+Handle
+ExpressionGenerator::operator()(const std::unique_ptr<hir::LambdaExpr> &) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const std::unique_ptr<hir::IfExpr> &) {
-  return {};
-}
-Value ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
-  return {};
-}
-Value ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::BinaryExpr> &) {
-  return {};
-}
-Value ExpressionGenerator::operator()(const std::unique_ptr<hir::UnaryExpr> &) {
-  return {};
-}
-Value ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::ReturnExpr> &) {
-  return {};
-}
-Value ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::LambdaExpr> &) {
-  return {};
-}
-
-Value ExpressionGenerator::operator()(const hir::Expression &expression) {
+Handle ExpressionGenerator::operator()(const hir::Expression &expression) {
   return std::visit(*this, expression.m_expression);
 }
 

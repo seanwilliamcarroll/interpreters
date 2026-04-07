@@ -11,20 +11,18 @@
 #pragma once
 //****************************************************************************
 
+#include "codegen/symbol_table.hpp"
+#include <cassert>
 #include <string>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-struct Value {
-  std::string m_reference;
-};
-
 struct Context {
 
-  Value m_last_reference;
   std::string m_output{};
+  SymbolTable m_symbol_table;
 };
 
 //****************************************************************************

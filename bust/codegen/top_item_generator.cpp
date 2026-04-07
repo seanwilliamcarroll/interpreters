@@ -11,6 +11,7 @@
 
 #include "codegen/top_item_generator.hpp"
 #include "codegen/expression_generator.hpp"
+#include "codegen/let_binding_generator.hpp"
 #include "exceptions.hpp"
 
 //****************************************************************************
@@ -28,14 +29,14 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
-  m_ctx.m_output += "  ret " + function_def.m_type->m_return_type + " " +
-                    return_value.m_reference + "\n";
+  m_ctx.m_output +=
+      "  ret " + function_def.m_type->m_return_type + " " + return_value + "\n";
 
   m_ctx.m_output += "}\n";
 }
 
-void TopItemGenerator::operator()(const hir::LetBinding & /*binding*/) {
-  // Stub.
+void TopItemGenerator::operator()(const hir::LetBinding &let_binding) {
+  LetBindingGenerator{m_ctx}(let_binding);
 }
 
 //****************************************************************************

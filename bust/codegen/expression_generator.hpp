@@ -19,20 +19,20 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct ExpressionGenerator {
-  Value operator()(const hir::Identifier &);
-  Value operator()(const hir::LiteralUnit &);
-  Value operator()(const hir::LiteralI64 &);
-  Value operator()(const hir::LiteralBool &);
-  Value operator()(const std::unique_ptr<hir::Block> &);
-  Value operator()(const hir::Block &);
-  Value operator()(const std::unique_ptr<hir::IfExpr> &);
-  Value operator()(const std::unique_ptr<hir::CallExpr> &);
-  Value operator()(const std::unique_ptr<hir::BinaryExpr> &);
-  Value operator()(const std::unique_ptr<hir::UnaryExpr> &);
-  Value operator()(const std::unique_ptr<hir::ReturnExpr> &);
-  Value operator()(const std::unique_ptr<hir::LambdaExpr> &);
+  Handle operator()(const hir::Identifier &);
+  Handle operator()(const hir::LiteralUnit &);
+  Handle operator()(const hir::LiteralI64 &);
+  Handle operator()(const hir::LiteralBool &);
+  Handle operator()(const std::unique_ptr<hir::Block> &);
+  Handle operator()(const hir::Block &);
+  Handle operator()(const std::unique_ptr<hir::IfExpr> &);
+  Handle operator()(const std::unique_ptr<hir::CallExpr> &);
+  Handle operator()(const std::unique_ptr<hir::BinaryExpr> &);
+  Handle operator()(const std::unique_ptr<hir::UnaryExpr> &);
+  Handle operator()(const std::unique_ptr<hir::ReturnExpr> &);
+  Handle operator()(const std::unique_ptr<hir::LambdaExpr> &);
 
-  Value operator()(const hir::Expression &);
+  Handle operator()(const hir::Expression &);
 
   Context &m_ctx;
 };

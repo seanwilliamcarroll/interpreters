@@ -10,17 +10,21 @@
 //****************************************************************************
 
 #include "codegen/statement_generator.hpp"
+#include "codegen/expression_generator.hpp"
+#include "codegen/let_binding_generator.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-void StatementGenerator::operator()(const hir::Expression & /*expr*/) {
-  // Stub.
+Handle StatementGenerator::operator()(const hir::Expression &expression) {
+  return ExpressionGenerator{m_ctx}(expression);
 }
 
-void StatementGenerator::operator()(const hir::LetBinding & /*binding*/) {
-  // Stub.
+Handle StatementGenerator::operator()(const hir::LetBinding &let_binding) {
+  LetBindingGenerator{m_ctx}(let_binding);
+
+  return {};
 }
 
 //****************************************************************************
