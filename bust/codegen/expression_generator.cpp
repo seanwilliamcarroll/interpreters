@@ -14,6 +14,7 @@
 #include "codegen/context.hpp"
 #include "codegen/statement_generator.hpp"
 #include "codegen/symbol_table.hpp"
+#include "codegen/types.hpp"
 #include "exceptions.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
@@ -28,7 +29,7 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   m_ctx.add_instruction(LoadInstruction{
       .m_destination = ssa_temp,
       .m_source = m_ctx.m_symbol_table.lookup(identifier.m_name),
-      .m_type = hir::type_to_string(identifier.m_type)});
+      .m_type = to_llvm_type(identifier.m_type)});
 
   return ssa_temp;
 }
@@ -102,7 +103,7 @@ Handle ExpressionGenerator::operator()(
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,
       .m_operator = to_llvm_op(binary_expression->m_operator),
-      .m_type = hir::type_to_string(binary_expression->m_lhs.m_type)});
+      .m_type = to_llvm_type(binary_expression->m_lhs.m_type)});
 
   return result_handle;
 }

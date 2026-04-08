@@ -12,10 +12,10 @@
 //****************************************************************************
 
 #include "codegen/symbol_table.hpp"
-#include "operators.hpp"
-#include <algorithm>
-#include <cstdint>
+#include "codegen/types.hpp"
+#include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -23,26 +23,12 @@
 namespace bust::codegen {
 //****************************************************************************
 
-// How to encode types, just strings?
-
-enum class LLVMBinaryOperator : uint8_t {
-  ADD,
-  SUB,
-  MUL,
-  SDIV,
-  SREM,
-};
-
 struct BinaryInstruction {
   Handle m_result;
   Handle m_lhs;
   Handle m_rhs;
   LLVMBinaryOperator m_operator;
-  std::string m_type;
-};
-
-enum class BranchOperator : uint8_t {
-  BNE, // ??
+  LLVMType m_type;
 };
 
 struct BranchInstruction {
@@ -59,23 +45,23 @@ struct JumpInstruction {
 struct LoadInstruction {
   Handle m_destination;
   Handle m_source;
-  std::string m_type;
+  LLVMType m_type;
 };
 
 struct StoreInstruction {
   Handle m_destination;
   Handle m_source;
-  std::string m_type;
+  LLVMType m_type;
 };
 
 struct AllocaInstruction {
   Handle m_handle;
-  std::string m_type;
+  LLVMType m_type;
 };
 
 struct ReturnInstruction {
-  std::string m_type;
   Handle m_value;
+  LLVMType m_type;
 };
 
 using Instruction =
@@ -84,7 +70,6 @@ using Instruction =
                  ReturnInstruction>;
 
 struct BasicBlock {
-
   void add_instruction(Instruction instruction) {
     m_instructions.push_back(std::move(instruction));
   }
@@ -96,7 +81,7 @@ struct BasicBlock {
 
   std::string m_label;
   std::vector<Instruction> m_instructions;
-  Instruction m_terminal_instruction;
+  std::optional<Instruction> m_terminal_instruction;
 };
 
 struct Function {
@@ -114,7 +99,6 @@ struct Function {
 
   void add_terminal(Instruction instruction) {
     current_basic_block().add_terminal(std::move(instruction));
-    new_basic_block();
   }
 
   std::string m_function_id;

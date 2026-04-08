@@ -11,6 +11,7 @@
 
 #include "codegen/let_binding_generator.hpp"
 #include "codegen/expression_generator.hpp"
+#include "codegen/types.hpp"
 #include "hir/types.hpp"
 
 //****************************************************************************
@@ -23,14 +24,14 @@ void LetBindingGenerator::operator()(const hir::LetBinding &let_binding) {
 
   m_ctx.add_instruction(AllocaInstruction{
       .m_handle = identifier_handle,
-      .m_type = hir::type_to_string(let_binding.m_expression.m_type)});
+      .m_type = to_llvm_type(let_binding.m_expression.m_type)});
 
   auto value_handle = ExpressionGenerator{m_ctx}(let_binding.m_expression);
 
   m_ctx.add_instruction(StoreInstruction{
       .m_destination = identifier_handle,
       .m_source = value_handle,
-      .m_type = hir::type_to_string(let_binding.m_expression.m_type),
+      .m_type = to_llvm_type(let_binding.m_expression.m_type),
   });
 }
 

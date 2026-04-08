@@ -12,7 +12,7 @@
 //****************************************************************************
 
 #include "codegen/basic_block.hpp"
-#include <sstream>
+#include <iosfwd>
 #include <string>
 
 //****************************************************************************
@@ -20,6 +20,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Formatter {
+  Formatter(std::ostream &out) : m_out(out) {}
 
   constexpr static const char *INDENT = "  ";
 
@@ -40,7 +41,8 @@ struct Formatter {
     indent();
   }
 
-  std::stringstream m_out;
+private:
+  std::ostream &m_out;
 };
 
 //****************************************************************************

@@ -14,6 +14,7 @@
 #include "codegen/top_item_generator.hpp"
 #include <codegen.hpp>
 #include <concepts>
+#include <sstream>
 
 //****************************************************************************
 namespace bust {
@@ -29,12 +30,13 @@ std::string CodeGen::operator()(const hir::Program &program) {
   }
 
   // How to do top level let bindings?
-  auto formatter = codegen::Formatter{};
+  std::stringstream out;
+  auto formatter = codegen::Formatter(out);
   for (const auto &top_level_function : context.m_top_level_functions) {
     formatter(top_level_function);
   }
 
-  return formatter.m_out.str();
+  return out.str();
 }
 
 //****************************************************************************

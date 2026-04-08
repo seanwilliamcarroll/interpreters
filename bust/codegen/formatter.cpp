@@ -11,6 +11,9 @@
 
 #include "codegen/formatter.hpp"
 #include "codegen/basic_block.hpp"
+#include "exceptions.hpp"
+#include <iostream>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -19,13 +22,8 @@ namespace bust::codegen {
 //****************************************************************************
 
 void Formatter::operator()(const Function &function) {
-  m_out << "define ";
-
-  m_out << function.m_return_type;
-
-  m_out << " @";
-
-  m_out << function.m_function_id;
+  m_out << "define " << function.m_return_type << " @"
+        << function.m_function_id;
 
   // TODO
   m_out << "() {";
@@ -48,7 +46,11 @@ void Formatter::operator()(const BasicBlock &basic_block) {
     std::visit(*this, instruction);
   }
 
-  std::visit(*this, basic_block.m_terminal_instruction);
+  if (!basic_block.m_terminal_instruction.has_value()) {
+    throw std::runtime_error("Found basic block without terminal instruction!");
+  }
+
+  std::visit(*this, basic_block.m_terminal_instruction.value());
 
   newline();
 }
@@ -73,23 +75,9 @@ const char *get_string(LLVMBinaryOperator op) {
 void Formatter::operator()(const BinaryInstruction &instruction) {
   indent();
 
-  m_out << instruction.m_result;
-
-  m_out << " = ";
-
-  m_out << get_string(instruction.m_operator);
-
-  m_out << " ";
-
-  m_out << instruction.m_type;
-
-  m_out << " ";
-
-  m_out << instruction.m_lhs;
-
-  m_out << ", ";
-
-  m_out << instruction.m_rhs;
+  m_out << instruction.m_result << " = " << get_string(instruction.m_operator)
+        << " " << instruction.m_type << " " << instruction.m_lhs << ", "
+        << instruction.m_rhs;
 
   newline();
 }
@@ -97,15 +85,8 @@ void Formatter::operator()(const BinaryInstruction &instruction) {
 void Formatter::operator()(const LoadInstruction &instruction) {
   indent();
 
-  m_out << instruction.m_destination;
-
-  m_out << " = load ";
-
-  m_out << instruction.m_type;
-
-  m_out << ", ptr ";
-
-  m_out << instruction.m_source;
+  m_out << instruction.m_destination << " = load " << instruction.m_type
+        << ", ptr " << instruction.m_source;
 
   newline();
 }
@@ -113,17 +94,8 @@ void Formatter::operator()(const LoadInstruction &instruction) {
 void Formatter::operator()(const StoreInstruction &instruction) {
   indent();
 
-  m_out << "store ";
-
-  m_out << instruction.m_type;
-
-  m_out << " ";
-
-  m_out << instruction.m_source;
-
-  m_out << ", ptr ";
-
-  m_out << instruction.m_destination;
+  m_out << "store " << instruction.m_type << " " << instruction.m_source
+        << ", ptr " << instruction.m_destination;
 
   newline();
 }
@@ -131,11 +103,7 @@ void Formatter::operator()(const StoreInstruction &instruction) {
 void Formatter::operator()(const AllocaInstruction &instruction) {
   indent();
 
-  m_out << instruction.m_handle;
-
-  m_out << " = alloca ";
-
-  m_out << instruction.m_type;
+  m_out << instruction.m_handle << " = alloca " << instruction.m_type;
 
   newline();
 }
@@ -143,13 +111,7 @@ void Formatter::operator()(const AllocaInstruction &instruction) {
 void Formatter::operator()(const ReturnInstruction &instruction) {
   indent();
 
-  m_out << "ret ";
-
-  m_out << instruction.m_type;
-
-  m_out << " ";
-
-  m_out << instruction.m_value;
+  m_out << "ret " << instruction.m_type << " " << instruction.m_value;
 
   newline();
 }

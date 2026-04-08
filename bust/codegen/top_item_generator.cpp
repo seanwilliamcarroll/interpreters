@@ -12,6 +12,7 @@
 #include "codegen/top_item_generator.hpp"
 #include "codegen/expression_generator.hpp"
 #include "codegen/let_binding_generator.hpp"
+#include "codegen/types.hpp"
 #include "exceptions.hpp"
 #include "hir/types.hpp"
 #include <string>
@@ -37,8 +38,8 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
   final_block.m_terminal_instruction = ReturnInstruction{
-      .m_type = hir::type_to_string(function_def.m_type->m_return_type),
-      .m_value = return_value};
+      .m_value = return_value,
+      .m_type = to_llvm_type(function_def.m_type->m_return_type)};
 }
 
 void TopItemGenerator::operator()(const hir::LetBinding &let_binding) {
