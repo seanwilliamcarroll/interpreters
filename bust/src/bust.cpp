@@ -11,15 +11,18 @@
 
 #include <ast/dump.hpp>
 #include <bust.hpp>
+#include <codegen.hpp>
+#include <cstdlib>
 #include <evaluator.hpp>
+#include <fstream>
 #include <hir/dump.hpp>
 #include <iostream>
 #include <memory>
 #include <parser.hpp>
 #include <pipeline.hpp>
-#include <stdexcept>
-#include <string>
+#include <sys/wait.h>
 #include <type_checker.hpp>
+#include <unistd.h>
 #include <utility>
 #include <validate_main.hpp>
 
@@ -48,7 +51,31 @@ void Bust::run() {
   }
 
   if (m_options.llvm_ir) {
-    throw std::runtime_error("--llvm-ir not yet implemented");
+    auto ir = CodeGen{}(typed);
+    std::cout << "=== LLVM IR ===\n" << ir << "\n";
+
+    // Write IR to a temp file and run via lli, then surface its exit code
+    // as our "Program returned" value (mirrors the Evaluator path).
+    char tmp_path[] = "/tmp/bust-XXXXXX.ll";
+    int fd = mkstemps(tmp_path, 3);
+    if (fd < 0) {
+      throw std::runtime_error("failed to create temp file for lli");
+    }
+    {
+      std::ofstream out(tmp_path);
+      out << ir;
+    }
+    ::close(fd);
+
+    std::string cmd = std::string("lli ") + tmp_path;
+    int raw = std::system(cmd.c_str());
+    ::unlink(tmp_path);
+
+    if (raw < 0 || !WIFEXITED(raw)) {
+      throw std::runtime_error("lli did not exit normally");
+    }
+    std::cout << "Program returned: " << WEXITSTATUS(raw) << "\n";
+    return;
   }
 
   auto result = Evaluator{}(typed);
