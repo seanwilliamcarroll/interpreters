@@ -10,10 +10,12 @@
 //****************************************************************************
 
 #include "codegen/expression_generator.hpp"
+#include "codegen/basic_block.hpp"
 #include "codegen/context.hpp"
 #include "codegen/statement_generator.hpp"
 #include "codegen/symbol_table.hpp"
 #include "exceptions.hpp"
+#include "hir/types.hpp"
 #include "operators.hpp"
 
 //****************************************************************************
@@ -21,11 +23,12 @@ namespace bust::codegen {
 //****************************************************************************
 
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
-
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-  m_ctx.m_output += " " + ssa_temp + " = load " + identifier.m_type + ", ptr " +
-                    m_ctx.m_symbol_table.lookup(identifier.m_name) + "\n";
+  m_ctx.add_instruction(LoadInstruction{
+      .m_destination = ssa_temp,
+      .m_source = m_ctx.m_symbol_table.lookup(identifier.m_name),
+      .m_type = hir::type_to_string(identifier.m_type)});
 
   return ssa_temp;
 }
@@ -65,6 +68,24 @@ Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
   return {};
 }
 
+LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
+  switch (op) {
+  case bust::BinaryOperator::PLUS:
+    return LLVMBinaryOperator::ADD;
+  case bust::BinaryOperator::MINUS:
+    return LLVMBinaryOperator::SUB;
+  case bust::BinaryOperator::MULTIPLIES:
+    return LLVMBinaryOperator::MUL;
+  case bust::BinaryOperator::DIVIDES:
+    return LLVMBinaryOperator::SDIV;
+  case bust::BinaryOperator::MODULUS:
+    return LLVMBinaryOperator::SREM;
+
+  default:
+    throw core::CompilerException("Codegen", "UNIMPLEMENTED", {});
+  }
+}
+
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
@@ -74,58 +95,16 @@ Handle ExpressionGenerator::operator()(
 
   auto rhs_handle = (*this)(binary_expression->m_rhs);
 
-  switch (binary_expression->m_operator) {
-  case bust::BinaryOperator::PLUS: {
-    auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = SymbolTable::next_ssa_temporary();
 
-    m_ctx.m_output += "  " + result_handle + " = add " +
-                      binary_expression->m_lhs.m_type + " " + lhs_handle +
-                      ", " + rhs_handle + "\n";
-    return result_handle;
-  }
+  m_ctx.add_instruction(BinaryInstruction{
+      .m_result = result_handle,
+      .m_lhs = lhs_handle,
+      .m_rhs = rhs_handle,
+      .m_operator = to_llvm_op(binary_expression->m_operator),
+      .m_type = hir::type_to_string(binary_expression->m_lhs.m_type)});
 
-  case bust::BinaryOperator::MINUS: {
-    auto result_handle = SymbolTable::next_ssa_temporary();
-
-    m_ctx.m_output += "  " + result_handle + " = sub " +
-                      binary_expression->m_lhs.m_type + " " + lhs_handle +
-                      ", " + rhs_handle + "\n";
-    return result_handle;
-  }
-
-  case bust::BinaryOperator::MULTIPLIES: {
-    auto result_handle = SymbolTable::next_ssa_temporary();
-
-    m_ctx.m_output += "  " + result_handle + " = mul " +
-                      binary_expression->m_lhs.m_type + " " + lhs_handle +
-                      ", " + rhs_handle + "\n";
-    return result_handle;
-  }
-
-  case bust::BinaryOperator::DIVIDES: {
-    auto result_handle = SymbolTable::next_ssa_temporary();
-
-    m_ctx.m_output += "  " + result_handle + " = sdiv " +
-                      binary_expression->m_lhs.m_type + " " + lhs_handle +
-                      ", " + rhs_handle + "\n";
-    return result_handle;
-  }
-
-  case bust::BinaryOperator::MODULUS: {
-    auto result_handle = SymbolTable::next_ssa_temporary();
-
-    m_ctx.m_output += "  " + result_handle + " = srem " +
-                      binary_expression->m_lhs.m_type + " " + lhs_handle +
-                      ", " + rhs_handle + "\n";
-    return result_handle;
-  }
-
-  default:
-    throw core::CompilerException("Codegen", "UNIMPLEMENTED",
-                                  binary_expression->m_location);
-  }
-
-  return {};
+  return result_handle;
 }
 
 Handle

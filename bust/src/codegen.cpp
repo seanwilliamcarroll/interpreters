@@ -10,8 +10,10 @@
 //****************************************************************************
 
 #include "codegen/context.hpp"
+#include "codegen/formatter.hpp"
 #include "codegen/top_item_generator.hpp"
 #include <codegen.hpp>
+#include <concepts>
 
 //****************************************************************************
 namespace bust {
@@ -26,7 +28,13 @@ std::string CodeGen::operator()(const hir::Program &program) {
     std::visit(generator, (top_item));
   }
 
-  return context.m_output;
+  // How to do top level let bindings?
+  auto formatter = codegen::Formatter{};
+  for (const auto &top_level_function : context.m_top_level_functions) {
+    formatter(top_level_function);
+  }
+
+  return formatter.m_out.str();
 }
 
 //****************************************************************************
