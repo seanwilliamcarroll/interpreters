@@ -13,6 +13,7 @@
 
 #include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -64,47 +65,61 @@ struct ReturnInstruction {
   LLVMType m_type;
 };
 
-using Instruction =
-    std::variant<BinaryInstruction, // BranchInstruction, JumpInstruction,
-                 LoadInstruction, StoreInstruction, AllocaInstruction,
-                 ReturnInstruction>;
+using Instruction = std::variant<BinaryInstruction, LoadInstruction,
+                                 StoreInstruction, AllocaInstruction>;
+
+using Terminator =
+    std::variant<BranchInstruction, JumpInstruction, ReturnInstruction>;
 
 struct BasicBlock {
   void add_instruction(Instruction instruction) {
     m_instructions.push_back(std::move(instruction));
   }
 
-  void add_terminal(Instruction instruction) {
-    // Could assert on the terminals here
-    m_terminal_instruction = std::move(instruction);
+  void add_terminal(Terminator terminator) {
+    m_terminal_instruction = std::move(terminator);
   }
 
-  std::string m_label;
-  std::vector<Instruction> m_instructions;
-  std::optional<Instruction> m_terminal_instruction;
+  std::string m_label{};
+  std::vector<Instruction> m_instructions{};
+  std::optional<Terminator> m_terminal_instruction{};
+};
+
+struct Global {
+  // TODO
 };
 
 struct Function {
-
   BasicBlock &new_basic_block() {
-    m_basic_blocks.emplace_back();
-    return current_basic_block();
+    m_basic_blocks.emplace_back(new BasicBlock{});
+    return *m_basic_blocks.back();
   }
 
-  BasicBlock &current_basic_block() { return m_basic_blocks.back(); }
+  void set_insertion_point(BasicBlock &basic_block) {
+    m_current_block = &basic_block;
+  }
+
+  BasicBlock &current_basic_block() { return *m_current_block; }
 
   void add_instruction(Instruction instruction) {
     current_basic_block().add_instruction(std::move(instruction));
   }
 
-  void add_terminal(Instruction instruction) {
-    current_basic_block().add_terminal(std::move(instruction));
+  void add_terminal(Terminator terminator) {
+    current_basic_block().add_terminal(std::move(terminator));
   }
 
   std::string m_function_id;
   std::string m_return_type;
   // TODO: Params
-  std::vector<BasicBlock> m_basic_blocks;
+  std::vector<std::unique_ptr<BasicBlock>> m_basic_blocks;
+  BasicBlock *m_current_block = nullptr;
+};
+
+struct Module {
+
+  std::vector<Global> m_globals;
+  std::vector<Function> m_functions;
 };
 
 //****************************************************************************

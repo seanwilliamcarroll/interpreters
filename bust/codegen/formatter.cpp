@@ -31,7 +31,7 @@ void Formatter::operator()(const Function &function) {
   newline();
 
   for (const auto &basic_block : function.m_basic_blocks) {
-    (*this)(basic_block);
+    (*this)(*basic_block);
   }
 
   m_out << "}";
@@ -107,6 +107,10 @@ void Formatter::operator()(const AllocaInstruction &instruction) {
 
   newline();
 }
+
+void Formatter::operator()(const BranchInstruction &) {}
+
+void Formatter::operator()(const JumpInstruction &) {}
 
 void Formatter::operator()(const ReturnInstruction &instruction) {
   indent();

@@ -35,11 +35,13 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
 
   auto &final_block = function.new_basic_block();
 
+  function.set_insertion_point(final_block);
+
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
-  final_block.m_terminal_instruction = ReturnInstruction{
+  final_block.add_terminal(ReturnInstruction{
       .m_value = return_value,
-      .m_type = to_llvm_type(function_def.m_type->m_return_type)};
+      .m_type = to_llvm_type(function_def.m_type->m_return_type)});
 }
 
 void TopItemGenerator::operator()(const hir::LetBinding &let_binding) {

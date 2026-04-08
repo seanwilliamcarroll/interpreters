@@ -32,8 +32,8 @@ struct Context {
     current_func().add_instruction(std::move(instruction));
   }
 
-  void add_terminal(Instruction instruction) {
-    current_func().add_terminal(std::move(instruction));
+  void add_terminal(Terminator terminator) {
+    current_func().add_terminal(std::move(terminator));
   }
 
   std::string m_output{};

@@ -30,6 +30,9 @@ struct Formatter {
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
   void operator()(const AllocaInstruction &);
+
+  void operator()(const BranchInstruction &);
+  void operator()(const JumpInstruction &);
   void operator()(const ReturnInstruction &);
 
   void newline() { m_out << "\n"; }
