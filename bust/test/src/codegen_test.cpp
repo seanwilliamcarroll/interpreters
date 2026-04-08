@@ -185,6 +185,92 @@ TEST_SUITE("bust.codegen") {
     CHECK_RUN("fn main() -> i64 { let x = 2 + 3; let y = x * 4; y + 2 }", 22);
     CHECK_RUN("fn main() -> i64 { let x = 10 - 5; let y = x + x; y }", 10);
   }
+
+  // --- If expressions ------------------------------------------------------
+
+  TEST_CASE("if with literal true picks then branch") {
+    CHECK_RUN("fn main() -> i64 { if true { 1 } else { 2 } }", 1);
+    CHECK_RUN("fn main() -> i64 { if true { 42 } else { 0 } }", 42);
+  }
+
+  TEST_CASE("if with literal false picks else branch") {
+    CHECK_RUN("fn main() -> i64 { if false { 1 } else { 2 } }", 2);
+    CHECK_RUN("fn main() -> i64 { if false { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("if reading a let-bound bool condition") {
+    CHECK_RUN("fn main() -> i64 { let b = true; if b { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { let b = false; if b { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("if branches can read let-bound i64s") {
+    CHECK_RUN("fn main() -> i64 { let x = 40; if true { x + 2 } else { 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = 40; if false { 0 } else { x + 2 } }",
+              42);
+  }
+
+  TEST_CASE("if branches can contain multiple statements") {
+    CHECK_RUN("fn main() -> i64 { if true { let a = 20; let b = 22; a + b } "
+              "else { 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if false { 0 } else { let a = 6; let b = 7; "
+              "a * b } }",
+              42);
+  }
+
+  TEST_CASE("if as let RHS") {
+    CHECK_RUN("fn main() -> i64 { let x = if true { 20 } else { 0 }; x + 22 }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = if false { 0 } else { 21 }; x + x }",
+              42);
+  }
+
+  TEST_CASE("arithmetic on if results") {
+    CHECK_RUN("fn main() -> i64 { (if true { 6 } else { 0 }) * 7 }", 42);
+    CHECK_RUN("fn main() -> i64 { (if false { 0 } else { 5 }) + (if true { 37 "
+              "} else { 0 }) }",
+              42);
+  }
+
+  TEST_CASE("if nested in then branch") {
+    CHECK_RUN(
+        "fn main() -> i64 { if true { if true { 42 } else { 8 } } else { 9 } }",
+        42);
+    CHECK_RUN("fn main() -> i64 { if true { if false { 8 } else { 42 } } else "
+              "{ 9 } }",
+              42);
+  }
+
+  TEST_CASE("if nested in else branch") {
+    CHECK_RUN("fn main() -> i64 { if false { 1 } else { if true { 42 } else { "
+              "6 } } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if false { 1 } else { if false { 6 } else { "
+              "42 } } }",
+              42);
+  }
+
+  TEST_CASE("else-if chain via nested ifs") {
+    CHECK_RUN("fn main() -> i64 { if false { 1 } else { if false { 2 } else { "
+              "if true { 42 } else { 99 } } } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if false { 1 } else { if true { 42 } else { "
+              "if true { 2 } else { 3 } } } }",
+              42);
+  }
+
+  TEST_CASE("if condition computed from a binary expression on bools") {
+    // Only valid if logical and/or are wired through; harmless if not — skip
+    // by leaving commented. Uncomment when && / || are supported in codegen.
+    // CHECK_RUN("fn main() -> i64 { if true && false { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("deeply nested if-as-expression in arithmetic") {
+    CHECK_RUN("fn main() -> i64 { let x = if true { if false { 0 } else { 6 } "
+              "} else { 0 }; x * 7 }",
+              42);
+  }
 #else
   TEST_CASE("codegen execution tests" * doctest::skip()) {
     MESSAGE("lli not found at configure time - execution tests skipped");
