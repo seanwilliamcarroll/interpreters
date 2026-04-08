@@ -4,7 +4,7 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Shared context for the codegen pass.
+//*  Purpose : Module representation for the codegen pass.
 //*
 //*
 //****************************************************************************
@@ -13,26 +13,37 @@
 
 #include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
-#include "codegen/module.hpp"
-#include "codegen/symbol_table.hpp"
-#include <cassert>
 #include <memory>
-#include <string>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-struct Context {
-  Function &current_function() { return m_module.current_function(); }
+struct Global {
+  // TODO
+};
+
+struct Module {
+
+  Function &new_function() {
+    m_functions.emplace_back(std::make_unique<Function>());
+    return *m_functions.back();
+  }
+
+  Function &current_function() { return *m_current_function; }
+
+  void set_current_function(Function &function) {
+    m_current_function = &function;
+  }
 
   BasicBlock &current_basic_block() {
     return current_function().current_basic_block();
   }
 
-  std::string m_output{};
-  Module m_module{};
-  SymbolTable m_symbol_table;
+  std::vector<Global> m_globals;
+  std::vector<std::unique_ptr<Function>> m_functions;
+  Function *m_current_function;
 };
 
 //****************************************************************************

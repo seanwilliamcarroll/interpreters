@@ -12,6 +12,9 @@
 //****************************************************************************
 
 #include "codegen/basic_block.hpp"
+#include "codegen/function.hpp"
+#include "codegen/instructions.hpp"
+#include "codegen/module.hpp"
 #include <iosfwd>
 #include <string>
 
