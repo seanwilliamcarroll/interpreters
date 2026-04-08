@@ -90,29 +90,23 @@ void Formatter::operator()(const BasicBlock &basic_block) {
   newline();
 }
 
-const char *get_string(LLVMBinaryOperator op) {
-  switch (op) {
-  case LLVMBinaryOperator::ADD:
-    return "add";
-  case LLVMBinaryOperator::SUB:
-    return "sub";
-  case LLVMBinaryOperator::MUL:
-    return "mul";
-  case LLVMBinaryOperator::SDIV:
-    return "sdiv";
-  case LLVMBinaryOperator::SREM:
-    return "srem";
-  }
-
-  std::unreachable();
-}
-
 void Formatter::operator()(const BinaryInstruction &instruction) {
   indent();
 
   m_out << std::visit(m_handle_converter, instruction.m_result) << " = "
-        << get_string(instruction.m_operator) << " " << instruction.m_type
-        << " " << std::visit(m_handle_converter, instruction.m_lhs) << ", "
+        << instruction.m_operator << " " << instruction.m_type << " "
+        << std::visit(m_handle_converter, instruction.m_lhs) << ", "
+        << std::visit(m_handle_converter, instruction.m_rhs);
+
+  newline();
+}
+
+void Formatter::operator()(const IntegerCompareInstruction &instruction) {
+  indent();
+
+  m_out << std::visit(m_handle_converter, instruction.m_result) << " = icmp "
+        << instruction.m_condition << " " << instruction.m_type << " "
+        << std::visit(m_handle_converter, instruction.m_lhs) << ", "
         << std::visit(m_handle_converter, instruction.m_rhs);
 
   newline();

@@ -45,6 +45,7 @@ struct Formatter {
   void operator()(const BasicBlock &);
 
   void operator()(const BinaryInstruction &);
+  void operator()(const IntegerCompareInstruction &);
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
   void operator()(const AllocaInstruction &);

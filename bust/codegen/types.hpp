@@ -42,14 +42,31 @@ enum class LLVMBinaryOperator : uint8_t {
   SREM,
 };
 
+enum class LLVMIntegerCompareCondition : uint8_t {
+  EQ,
+  NE,
+  UGT,
+  UGE,
+  ULT,
+  ULE,
+  SGT,
+  SGE,
+  SLT,
+  SLE,
+};
+
 inline std::ostream &operator<<(std::ostream &out, LLVMBinaryOperator op) {
   constexpr static std::array op_names{"add", "sub", "mul", "sdiv", "srem"};
   return out << op_names[std::to_underlying(op)];
 }
 
-enum class BranchOperator : uint8_t {
-  BNE, // ??
-};
+inline std::ostream &operator<<(std::ostream &out,
+                                LLVMIntegerCompareCondition op) {
+  constexpr static std::array op_names{
+      "eq", "ne", "ugt", "uge", "ult", "ule", "sgt", "sge", "slt", "sle",
+  };
+  return out << op_names[std::to_underlying(op)];
+}
 
 inline LLVMType to_llvm_type(const hir::Type &type) {
   const auto *prim = std::get_if<hir::PrimitiveTypeValue>(&type);

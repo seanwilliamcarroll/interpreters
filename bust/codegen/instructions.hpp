@@ -27,6 +27,14 @@ struct BinaryInstruction {
   LLVMType m_type;
 };
 
+struct IntegerCompareInstruction {
+  Handle m_result;
+  Handle m_lhs;
+  Handle m_rhs;
+  LLVMIntegerCompareCondition m_condition;
+  LLVMType m_type;
+};
+
 struct BranchInstruction {
   Handle m_condition;
   Handle m_iftrue;
@@ -59,8 +67,9 @@ struct ReturnInstruction {
   LLVMType m_type;
 };
 
-using Instruction = std::variant<BinaryInstruction, LoadInstruction,
-                                 StoreInstruction, AllocaInstruction>;
+using Instruction =
+    std::variant<BinaryInstruction, IntegerCompareInstruction, LoadInstruction,
+                 StoreInstruction, AllocaInstruction>;
 
 using Terminator =
     std::variant<BranchInstruction, JumpInstruction, ReturnInstruction>;

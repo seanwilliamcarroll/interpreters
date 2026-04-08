@@ -12,6 +12,7 @@
 #include "codegen/expression_generator.hpp"
 #include "codegen/basic_block.hpp"
 #include "codegen/context.hpp"
+#include "codegen/instructions.hpp"
 #include "codegen/statement_generator.hpp"
 #include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
@@ -182,12 +183,91 @@ LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
   }
 }
 
-Handle ExpressionGenerator::operator()(
+bool is_signed_type(const hir::Type &type) {
+  if (!std::holds_alternative<hir::PrimitiveTypeValue>(type)) {
+    throw std::runtime_error("UNIMPLEMENTED");
+  }
+  return true;
+}
+
+LLVMIntegerCompareCondition to_llvm_compare_condition(BinaryOperator op,
+                                                      const hir::Type &type) {
+  switch (op) {
+  case bust::BinaryOperator::EQ:
+    return LLVMIntegerCompareCondition::EQ;
+  case bust::BinaryOperator::NOT_EQ:
+    return LLVMIntegerCompareCondition::NE;
+
+  case bust::BinaryOperator::LT:
+    if (is_signed_type(type)) {
+      return LLVMIntegerCompareCondition::SLT;
+    } else {
+      return LLVMIntegerCompareCondition::ULT;
+    }
+  case bust::BinaryOperator::LT_EQ:
+    if (is_signed_type(type)) {
+      return LLVMIntegerCompareCondition::SLE;
+    } else {
+      return LLVMIntegerCompareCondition::ULE;
+    }
+  case bust::BinaryOperator::GT:
+    if (is_signed_type(type)) {
+      return LLVMIntegerCompareCondition::SGT;
+    } else {
+      return LLVMIntegerCompareCondition::UGT;
+    }
+  case bust::BinaryOperator::GT_EQ:
+    if (is_signed_type(type)) {
+      return LLVMIntegerCompareCondition::SGE;
+    } else {
+      return LLVMIntegerCompareCondition::UGE;
+    }
+
+  default:
+    throw std::runtime_error("UNIMPLEMENTED");
+  }
+}
+
+bool is_binary_compare(BinaryOperator op) {
+  switch (op) {
+  case bust::BinaryOperator::EQ:
+  case bust::BinaryOperator::LT:
+  case bust::BinaryOperator::LT_EQ:
+  case bust::BinaryOperator::GT:
+  case bust::BinaryOperator::GT_EQ:
+  case bust::BinaryOperator::NOT_EQ:
+    return true;
+  default:
+    return false;
+  }
+}
+
+Handle ExpressionGenerator::generate_integer_compare_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+
+  auto compare_condition = to_llvm_compare_condition(
+      binary_expression->m_operator, binary_expression->m_lhs.m_type);
 
   auto lhs_handle = (*this)(binary_expression->m_lhs);
 
-  // For short cicuiting, this may become more complicated
+  auto rhs_handle = (*this)(binary_expression->m_rhs);
+
+  auto result_handle = SymbolTable::next_ssa_temporary();
+
+  m_ctx.current_basic_block().add_instruction(IntegerCompareInstruction{
+      .m_result = result_handle,
+      .m_lhs = lhs_handle,
+      .m_rhs = rhs_handle,
+      .m_condition = compare_condition,
+      .m_type = to_llvm_type(binary_expression->m_lhs.m_type)});
+
+  return result_handle;
+}
+
+Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
+    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+
+  auto lhs_handle = (*this)(binary_expression->m_lhs);
 
   auto rhs_handle = (*this)(binary_expression->m_rhs);
 
@@ -203,8 +283,18 @@ Handle ExpressionGenerator::operator()(
   return result_handle;
 }
 
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+  if (is_binary_compare(binary_expression->m_operator)) {
+    return generate_integer_compare_instruction(binary_expression);
+  }
+
+  return generate_arithmetic_binary_instruction(binary_expression);
+}
+
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::UnaryExpr> &) {
+
   return {};
 }
 

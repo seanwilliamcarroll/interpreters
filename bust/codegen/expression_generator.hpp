@@ -27,7 +27,13 @@ struct ExpressionGenerator {
   Handle operator()(const hir::Block &);
   Handle operator()(const std::unique_ptr<hir::IfExpr> &);
   Handle operator()(const std::unique_ptr<hir::CallExpr> &);
+
+  Handle generate_integer_compare_instruction(
+      const std::unique_ptr<hir::BinaryExpr> &);
+  Handle generate_arithmetic_binary_instruction(
+      const std::unique_ptr<hir::BinaryExpr> &);
   Handle operator()(const std::unique_ptr<hir::BinaryExpr> &);
+
   Handle operator()(const std::unique_ptr<hir::UnaryExpr> &);
   Handle operator()(const std::unique_ptr<hir::ReturnExpr> &);
   Handle operator()(const std::unique_ptr<hir::LambdaExpr> &);
