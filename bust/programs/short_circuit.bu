@@ -1,0 +1,21 @@
+fn main() -> i64 {
+  let x: i64 = 5;
+
+  // && short-circuit: if LHS is false, RHS must not be evaluated.
+  // Spot-check: there should be a branch on (x > 0); the false edge
+  // should jump straight to the merge with `false`, NOT fall into
+  // the (x < 10) compare block.
+  let a: bool = x > 0 && x < 10;
+
+  // || short-circuit: if LHS is true, RHS must not be evaluated.
+  // Spot-check: branch on (x == 5); the true edge should jump
+  // straight to the merge with `true`, skipping the (x > 100) compare.
+  let b: bool = x == 5 || x > 100;
+
+  // Nested: exercises chained control flow. Look for a phi (or
+  // alloca+load) at each merge, and that no compare block is
+  // unconditionally entered.
+  let c: bool = (x > 0 && x < 10) || x == 999;
+
+  if a && b && c { 42 } else { 0 }
+}
