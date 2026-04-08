@@ -364,6 +364,67 @@ TEST_SUITE("bust.codegen") {
               42);
   }
 
+  // --- Unary operators -----------------------------------------------------
+  //
+  // Avoid returning a negative i64 directly from main: WEXITSTATUS truncates
+  // to the low 8 bits and the interpretation of the resulting byte varies.
+  // Instead, compose unary back into a positive value before returning.
+
+  TEST_CASE("unary negation of integer literal composed back to positive") {
+    // -(-42) == 42
+    CHECK_RUN("fn main() -> i64 { -(-42) }", 42);
+    // 100 + (-58) == 42
+    CHECK_RUN("fn main() -> i64 { 100 + -58 }", 42);
+    // 0 - (-42) == 42
+    CHECK_RUN("fn main() -> i64 { 0 - -42 }", 42);
+  }
+
+  TEST_CASE("unary negation of identifier") {
+    CHECK_RUN("fn main() -> i64 { let x = 42; -(-x) }", 42);
+    CHECK_RUN("fn main() -> i64 { let x = 8; let y = 50; y + -x }", 42);
+  }
+
+  TEST_CASE("unary negation observed via comparison") {
+    // Lets us see negative values without returning them.
+    CHECK_RUN("fn main() -> i64 { if -1 < 0 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { let x = 5; if -x < 0 { 42 } else { 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if -5 == 0 - 5 { 42 } else { 0 } }", 42);
+  }
+
+  TEST_CASE("double negation is identity") {
+    CHECK_RUN(
+        "fn main() -> i64 { let x = 42; if -(-x) == x { 42 } else { 0 } }", 42);
+  }
+
+  TEST_CASE("logical not of bool literal") {
+    CHECK_RUN("fn main() -> i64 { if !false { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if !true { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("logical not of let-bound bool") {
+    CHECK_RUN("fn main() -> i64 { let b = false; if !b { 42 } else { 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let b = true; if !b { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("logical not of comparison result") {
+    CHECK_RUN("fn main() -> i64 { if !(1 == 2) { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if !(5 < 3) { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { let x = 10; if !(x < 5) { 42 } else { 0 } }",
+              42);
+  }
+
+  TEST_CASE("double logical not is identity") {
+    CHECK_RUN("fn main() -> i64 { if !(!true) { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if !(!false) { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("not bound to a let") {
+    CHECK_RUN("fn main() -> i64 { let b = !false; if b { 42 } else { 0 } }",
+              42);
+  }
+
   TEST_CASE("if condition computed from a binary expression on bools") {
     // Only valid if logical and/or are wired through; harmless if not — skip
     // by leaving commented. Uncomment when && / || are supported in codegen.
