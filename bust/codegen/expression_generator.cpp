@@ -292,10 +292,21 @@ Handle ExpressionGenerator::operator()(
   return generate_arithmetic_binary_instruction(binary_expression);
 }
 
-Handle
-ExpressionGenerator::operator()(const std::unique_ptr<hir::UnaryExpr> &) {
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
 
-  return {};
+  auto input_handle = (*this)(unary_expression->m_expression);
+
+  auto result_handle = SymbolTable::next_ssa_temporary();
+
+  m_ctx.current_basic_block().add_instruction(UnaryInstruction{
+      .m_result = result_handle,
+      .m_input = input_handle,
+      .m_operator = unary_expression->m_operator,
+      .m_type = to_llvm_type(unary_expression->m_expression.m_type),
+  });
+
+  return result_handle;
 }
 
 Handle

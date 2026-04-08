@@ -14,6 +14,7 @@
 #include "codegen/instructions.hpp"
 #include "codegen/types.hpp"
 #include "exceptions.hpp"
+#include "operators.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <utility>
@@ -97,6 +98,27 @@ void Formatter::operator()(const BinaryInstruction &instruction) {
         << instruction.m_operator << " " << instruction.m_type << " "
         << std::visit(m_handle_converter, instruction.m_lhs) << ", "
         << std::visit(m_handle_converter, instruction.m_rhs);
+
+  newline();
+}
+
+void Formatter::operator()(const UnaryInstruction &instruction) {
+  indent();
+
+  switch (instruction.m_operator) {
+  case bust::UnaryOperator::MINUS:
+    m_out << std::visit(m_handle_converter, instruction.m_result) << " = sub "
+          << " " << instruction.m_type << " 0, "
+          << std::visit(m_handle_converter, instruction.m_input);
+    break;
+  case bust::UnaryOperator::NOT:
+    const char *true_equivalent =
+        (instruction.m_type == LLVMType::I1) ? "true" : "-1";
+    m_out << std::visit(m_handle_converter, instruction.m_result) << " = xor "
+          << " " << instruction.m_type << " " << true_equivalent << ", "
+          << std::visit(m_handle_converter, instruction.m_input);
+    break;
+  }
 
   newline();
 }

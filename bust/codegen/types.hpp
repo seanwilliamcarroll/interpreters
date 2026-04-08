@@ -42,6 +42,11 @@ enum class LLVMBinaryOperator : uint8_t {
   SREM,
 };
 
+inline std::ostream &operator<<(std::ostream &out, LLVMBinaryOperator op) {
+  constexpr static std::array op_names{"add", "sub", "mul", "sdiv", "srem"};
+  return out << op_names[std::to_underlying(op)];
+}
+
 enum class LLVMIntegerCompareCondition : uint8_t {
   EQ,
   NE,
@@ -54,11 +59,6 @@ enum class LLVMIntegerCompareCondition : uint8_t {
   SLT,
   SLE,
 };
-
-inline std::ostream &operator<<(std::ostream &out, LLVMBinaryOperator op) {
-  constexpr static std::array op_names{"add", "sub", "mul", "sdiv", "srem"};
-  return out << op_names[std::to_underlying(op)];
-}
 
 inline std::ostream &operator<<(std::ostream &out,
                                 LLVMIntegerCompareCondition op) {
