@@ -72,98 +72,90 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
 
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
-  // Need refs to
-  //  - entry block for alloca
-  //  - current block to add terminator
-  //  - then block
-  //  - else block
-  //  - merge block
-
   auto &function = m_ctx.current_function();
 
-  const auto &if_type = if_expression->m_then_branch.m_type;
-  const auto if_type_is_unit =
-      std::holds_alternative<hir::PrimitiveTypeValue>(if_type) &&
-      std::get<hir::PrimitiveTypeValue>(if_type).m_type ==
-          hir::PrimitiveType::UNIT;
-
-  // We only return a value when there is an else block
-  // AND the types of the then and else expressions are NOT Unit
-  auto if_statement_returns_value =
-      if_expression->m_else_branch.has_value() && !if_type_is_unit;
-
-  auto condition_target = (*this)(if_expression->m_condition);
+  const auto &if_return_type = if_expression->m_then_branch.m_type;
 
   // Get handle to current after condition target generated, so even with nested
   // blocks, we're still starting right after the condition
+  auto condition_target = (*this)(if_expression->m_condition);
   auto &final_condition_block = function.current_basic_block();
 
-  auto &then_block = function.new_basic_block("then");
-  auto &merge_block = function.new_basic_block("merge");
+  // Create starting blocks that will always exist, then and merge
+  auto &starting_then_block = function.new_basic_block("then");
+  auto &starting_merge_block = function.new_basic_block("merge");
 
-  function.set_insertion_point(then_block);
+  // Do then branch, capture the final block for later if needed
+  function.set_insertion_point(starting_then_block);
   auto then_target = (*this)(if_expression->m_then_branch);
-
-  auto result_handle = m_ctx.m_symbol_table.define_local("if_result");
-
-  if (if_statement_returns_value) {
-    function.current_basic_block().add_instruction(
-        StoreInstruction{.m_destination = result_handle,
-                         .m_source = then_target,
-                         .m_type = to_llvm_type(if_type)});
-  }
-
-  function.current_basic_block().add_terminal(
-      JumpInstruction{.m_target = merge_block.m_label});
+  auto &final_then_block = function.current_basic_block();
+  final_then_block.add_terminal(
+      JumpInstruction{.m_target = starting_merge_block.m_label});
 
   if (!if_expression->m_else_branch.has_value()) {
     // Just bare if, else is merge
-    // Subsequent instructions should go into merge block
-    function.set_insertion_point(merge_block);
     final_condition_block.add_terminal(
         BranchInstruction{.m_condition = condition_target,
-                          .m_iftrue = then_block.m_label,
-                          .m_iffalse = merge_block.m_label});
+                          .m_iftrue = starting_then_block.m_label,
+                          .m_iffalse = starting_merge_block.m_label});
+    // Subsequent instructions should go into merge block
+    function.set_insertion_point(starting_merge_block);
     // Void, no handle to return
     return {};
   }
 
-  auto &else_block = function.new_basic_block("else");
-
-  function.set_insertion_point(else_block);
+  // Now we handle the else, capturing first block and last block related to
+  // this branch
+  auto &starting_else_block = function.new_basic_block("else");
+  function.set_insertion_point(starting_else_block);
   auto else_target = (*this)(if_expression->m_else_branch.value());
+  auto &final_else_block = function.current_basic_block();
+  final_else_block.add_terminal(
+      JumpInstruction{.m_target = starting_merge_block.m_label});
 
-  if (if_statement_returns_value) {
-    function.current_basic_block().add_instruction(
-        StoreInstruction{.m_destination = result_handle,
-                         .m_source = else_target,
-                         .m_type = to_llvm_type(if_type)});
-  }
-
-  function.current_basic_block().add_terminal(
-      JumpInstruction{.m_target = merge_block.m_label});
-
+  // Now we can merge on then vs else
   final_condition_block.add_terminal(
       BranchInstruction{.m_condition = condition_target,
-                        .m_iftrue = then_block.m_label,
-                        .m_iffalse = else_block.m_label});
+                        .m_iftrue = starting_then_block.m_label,
+                        .m_iffalse = starting_else_block.m_label});
 
   // Subsequent instructions should go into merge block
-  function.set_insertion_point(merge_block);
+  function.set_insertion_point(starting_merge_block);
 
-  // Check if we need to add all the necessary instructions for the result
+  // We only return a value when there is an else block
+  // AND the types of the then and else expressions are NOT Unit
+  const auto if_type_is_unit =
+      std::holds_alternative<hir::PrimitiveTypeValue>(if_return_type) &&
+      std::get<hir::PrimitiveTypeValue>(if_return_type).m_type ==
+          hir::PrimitiveType::UNIT;
+  auto if_statement_returns_value =
+      if_expression->m_else_branch.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
     // Void, no handle to return
     return {};
   }
 
+  auto result_handle = m_ctx.m_symbol_table.define_local("if_result");
+
   function.add_alloca_instruction(AllocaInstruction{
-      .m_handle = result_handle, .m_type = to_llvm_type(if_type)});
+      .m_handle = result_handle, .m_type = to_llvm_type(if_return_type)});
+
+  // Need to store the value generated by each branch for use in the merge block
+  final_then_block.add_instruction(
+      StoreInstruction{.m_destination = result_handle,
+                       .m_source = then_target,
+                       .m_type = to_llvm_type(if_return_type)});
+
+  final_else_block.add_instruction(
+      StoreInstruction{.m_destination = result_handle,
+                       .m_source = else_target,
+                       .m_type = to_llvm_type(if_return_type)});
 
   auto ssa_temp = SymbolTable::next_ssa_temporary();
-  merge_block.add_instruction(LoadInstruction{.m_destination = ssa_temp,
-                                              .m_source = {result_handle},
-                                              .m_type = to_llvm_type(if_type)});
+  starting_merge_block.add_instruction(
+      LoadInstruction{.m_destination = ssa_temp,
+                      .m_source = {result_handle},
+                      .m_type = to_llvm_type(if_return_type)});
   return ssa_temp;
 }
 
