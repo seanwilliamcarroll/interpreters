@@ -23,8 +23,6 @@ namespace bust {
 std::string CodeGen::operator()(const hir::Program &program) {
   auto context = bust::codegen::Context{};
 
-  auto &mod = context.new_module();
-
   auto generator = bust::codegen::TopItemGenerator{context};
 
   for (const auto &top_item : program.m_top_items) {
@@ -34,7 +32,7 @@ std::string CodeGen::operator()(const hir::Program &program) {
   // How to do top level let bindings?
   std::stringstream out;
   auto formatter = codegen::Formatter(out);
-  formatter(mod);
+  formatter(context.m_module);
 
   return out.str();
 }

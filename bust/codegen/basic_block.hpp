@@ -92,6 +92,8 @@ struct Global {
 };
 
 struct Function {
+  Function() { set_insertion_point(new_basic_block()); }
+
   BasicBlock &new_basic_block() {
     m_basic_blocks.emplace_back(std::make_unique<BasicBlock>());
     return *m_basic_blocks.back();
@@ -112,19 +114,24 @@ struct Function {
   }
 
   std::string m_function_id;
-  std::string m_return_type;
+  LLVMType m_return_type;
   // TODO: Params
   std::vector<std::unique_ptr<BasicBlock>> m_basic_blocks;
   BasicBlock *m_current_block = nullptr;
 };
 
 struct Module {
+
   Function &new_function() {
     m_functions.emplace_back(std::make_unique<Function>());
     return *m_functions.back();
   }
 
-  Function &current_function() { return *m_functions.back(); }
+  Function &current_function() { return *m_current_function; }
+
+  void set_current_function(Function &function) {
+    m_current_function = &function;
+  }
 
   BasicBlock &current_basic_block() {
     return current_function().current_basic_block();
@@ -132,6 +139,7 @@ struct Module {
 
   std::vector<Global> m_globals;
   std::vector<std::unique_ptr<Function>> m_functions;
+  Function *m_current_function;
 };
 
 //****************************************************************************

@@ -22,21 +22,14 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Context {
-  Module &new_module() {
-    m_modules.emplace_back(std::make_unique<Module>());
-    return current_module();
-  }
-
-  Module &current_module() { return *m_modules.back(); }
-
-  Function &current_function() { return current_module().current_function(); }
+  Function &current_function() { return m_module.current_function(); }
 
   BasicBlock &current_basic_block() {
     return current_function().current_basic_block();
   }
 
   std::string m_output{};
-  std::vector<std::unique_ptr<Module>> m_modules;
+  Module m_module{};
   SymbolTable m_symbol_table;
 };
 

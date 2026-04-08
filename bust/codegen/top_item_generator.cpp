@@ -27,15 +27,11 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
                                   function_def.m_location);
   }
 
-  auto &function = m_ctx.current_module().new_function();
+  auto &function = m_ctx.m_module.new_function();
+  m_ctx.m_module.set_current_function(function);
 
   function.m_function_id = function_def.m_function_id;
-  function.m_return_type =
-      hir::type_to_string(function_def.m_type->m_return_type);
-
-  auto &initial_block = function.new_basic_block();
-
-  function.set_insertion_point(initial_block);
+  function.m_return_type = to_llvm_type(function_def.m_type->m_return_type);
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
