@@ -13,6 +13,7 @@
 
 #include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
+#include "codegen/instructions.hpp"
 #include <memory>
 #include <vector>
 
@@ -25,9 +26,9 @@ struct Global {
 };
 
 struct Module {
-
-  Function &new_function() {
-    m_functions.emplace_back(std::make_unique<Function>());
+  Function &new_function(const Handle &function_handle, LLVMType return_type) {
+    m_functions.emplace_back(
+        std::make_unique<Function>(function_handle, return_type));
     return *m_functions.back();
   }
 

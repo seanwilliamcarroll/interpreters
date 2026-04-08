@@ -23,6 +23,8 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct BasicBlock {
+  BasicBlock(const Handle &label) : m_label(label) {}
+
   void add_instruction(Instruction instruction) {
     m_instructions.push_back(std::move(instruction));
   }
@@ -32,7 +34,14 @@ struct BasicBlock {
     m_terminal_instruction = std::move(terminator);
   }
 
-  std::string m_label{};
+  void add_alloca(size_t position, AllocaInstruction instruction) {
+    m_instructions.insert(
+        m_instructions.begin() +
+            static_cast<decltype(m_instructions)::difference_type>(position),
+        std::move(instruction));
+  }
+
+  Handle m_label;
   std::vector<Instruction> m_instructions{};
   std::optional<Terminator> m_terminal_instruction{};
 };

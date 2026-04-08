@@ -16,9 +16,13 @@
 #include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
 #include "exceptions.hpp"
+#include "hir/nodes.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
+#include <ios>
+#include <sstream>
 #include <string>
+#include <variant>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -27,9 +31,7 @@ namespace bust::codegen {
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-  auto &current_block = m_ctx.current_basic_block();
-
-  current_block.add_instruction(LoadInstruction{
+  m_ctx.current_basic_block().add_instruction(LoadInstruction{
       .m_destination = ssa_temp,
       .m_source = m_ctx.m_symbol_table.lookup(identifier.m_name),
       .m_type = to_llvm_type(identifier.m_type)});
@@ -40,11 +42,13 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
 Handle ExpressionGenerator::operator()(const hir::LiteralUnit &) { return {}; }
 
 Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
-  return {std::to_string(literal.m_value)};
+  return LiteralHandle{std::to_string(literal.m_value)};
 }
 
 Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
-  return {std::to_string(static_cast<uint8_t>(literal.m_value))};
+  std::stringstream output;
+  output << std::boolalpha << literal.m_value;
+  return LiteralHandle{output.str()};
 }
 
 Handle
@@ -66,8 +70,101 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
   return last_value;
 }
 
-Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::IfExpr> &) {
-  return {};
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::IfExpr> &if_expression) {
+  // Need refs to
+  //  - entry block for alloca
+  //  - current block to add terminator
+  //  - then block
+  //  - else block
+  //  - merge block
+
+  auto &function = m_ctx.current_function();
+
+  const auto &if_type = if_expression->m_then_branch.m_type;
+  const auto if_type_is_unit =
+      std::holds_alternative<hir::PrimitiveTypeValue>(if_type) &&
+      std::get<hir::PrimitiveTypeValue>(if_type).m_type ==
+          hir::PrimitiveType::UNIT;
+
+  // We only return a value when there is an else block
+  // AND the types of the then and else expressions are NOT Unit
+  auto if_statement_returns_value =
+      if_expression->m_else_branch.has_value() && !if_type_is_unit;
+
+  auto condition_target = (*this)(if_expression->m_condition);
+
+  // Get handle to current after condition target generated, so even with nested
+  // blocks, we're still starting right after the condition
+  auto &final_condition_block = function.current_basic_block();
+
+  auto &then_block = function.new_basic_block("then");
+  auto &merge_block = function.new_basic_block("merge");
+
+  function.set_insertion_point(then_block);
+  auto then_target = (*this)(if_expression->m_then_branch);
+
+  auto result_handle = m_ctx.m_symbol_table.define_local("if_result");
+
+  if (if_statement_returns_value) {
+    function.current_basic_block().add_instruction(
+        StoreInstruction{.m_destination = result_handle,
+                         .m_source = then_target,
+                         .m_type = to_llvm_type(if_type)});
+  }
+
+  function.current_basic_block().add_terminal(
+      JumpInstruction{.m_target = merge_block.m_label});
+
+  if (!if_expression->m_else_branch.has_value()) {
+    // Just bare if, else is merge
+    // Subsequent instructions should go into merge block
+    function.set_insertion_point(merge_block);
+    final_condition_block.add_terminal(
+        BranchInstruction{.m_condition = condition_target,
+                          .m_iftrue = then_block.m_label,
+                          .m_iffalse = merge_block.m_label});
+    // Void, no handle to return
+    return {};
+  }
+
+  auto &else_block = function.new_basic_block("else");
+
+  function.set_insertion_point(else_block);
+  auto else_target = (*this)(if_expression->m_else_branch.value());
+
+  if (if_statement_returns_value) {
+    function.current_basic_block().add_instruction(
+        StoreInstruction{.m_destination = result_handle,
+                         .m_source = else_target,
+                         .m_type = to_llvm_type(if_type)});
+  }
+
+  function.current_basic_block().add_terminal(
+      JumpInstruction{.m_target = merge_block.m_label});
+
+  final_condition_block.add_terminal(
+      BranchInstruction{.m_condition = condition_target,
+                        .m_iftrue = then_block.m_label,
+                        .m_iffalse = else_block.m_label});
+
+  // Subsequent instructions should go into merge block
+  function.set_insertion_point(merge_block);
+
+  // Check if we need to add all the necessary instructions for the result
+  if (!if_statement_returns_value) {
+    // Void, no handle to return
+    return {};
+  }
+
+  function.add_alloca_instruction(AllocaInstruction{
+      .m_handle = result_handle, .m_type = to_llvm_type(if_type)});
+
+  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  merge_block.add_instruction(LoadInstruction{.m_destination = ssa_temp,
+                                              .m_source = {result_handle},
+                                              .m_type = to_llvm_type(if_type)});
+  return ssa_temp;
 }
 
 Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
@@ -103,9 +200,7 @@ Handle ExpressionGenerator::operator()(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  auto &basic_block = m_ctx.current_basic_block();
-
-  basic_block.add_instruction(BinaryInstruction{
+  m_ctx.current_basic_block().add_instruction(BinaryInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,

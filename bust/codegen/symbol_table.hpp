@@ -12,35 +12,28 @@
 //****************************************************************************
 
 #include <cassert>
-#include <optional>
 #include <ranges>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "codegen/instructions.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-// struct SsaTemporary {
-//   static SsaTemporary next() {
-//     static size_t count = 1;
-//     return {.m_name="%" + std::to_string(count++)};
-//   }
+struct UniqueNameTracker {
 
-//   std::string m_name;
-// };
+  std::string uniquify(const std::string &name) {
+    auto count = ++m_master_name_count[name];
+    return name + "." + std::to_string(count);
+  }
 
-// struct Pointer {
-//   std::string m_name;
-// };
-
-// using Handle = std::variant<SsaTemporary, Pointer>;
-
-using Handle = std::string;
+  std::unordered_map<std::string, size_t> m_master_name_count;
+};
 
 struct Scope {
-
   void define(const std::string &name, const Handle &handle) {
     m_symbol_to_handle[name] = handle;
   }
@@ -70,11 +63,18 @@ struct SymbolTable {
     m_scopes.pop_back();
   }
 
-  Handle define(const std::string &name) {
-    auto count = ++m_master_name_count[name];
-    auto new_handle = "%" + name + "." + std::to_string(count);
+  Handle define_local(const std::string &name) {
+    LocalHandle new_handle{m_name_tracker.uniquify(name)};
 
     m_scopes.back().define(name, new_handle);
+
+    return new_handle;
+  }
+
+  Handle define_global(const std::string &name) {
+    GlobalHandle new_handle{m_name_tracker.uniquify(name)};
+
+    m_scopes.front().define(name, new_handle);
 
     return new_handle;
   }
@@ -87,17 +87,17 @@ struct SymbolTable {
       }
     }
     assert(false && "Shouldn't happen");
-    return "";
+    return {};
   }
 
   static Handle next_ssa_temporary() {
     static size_t count = 1;
-    return "%" + std::to_string(count++);
+    return TemporaryHandle{count++};
   }
 
 private:
   std::vector<Scope> m_scopes;
-  std::unordered_map<std::string, size_t> m_master_name_count;
+  UniqueNameTracker m_name_tracker{};
 };
 
 //****************************************************************************

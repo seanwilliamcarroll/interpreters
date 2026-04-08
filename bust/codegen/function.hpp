@@ -13,7 +13,9 @@
 
 #include "codegen/basic_block.hpp"
 #include "codegen/instructions.hpp"
+#include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -24,10 +26,14 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Function {
-  Function() { set_insertion_point(new_basic_block()); }
+  Function(const Handle &function_id, LLVMType return_type)
+      : m_function_id(function_id), m_return_type(return_type) {
+    set_insertion_point(new_basic_block("entry"));
+  }
 
-  BasicBlock &new_basic_block() {
-    m_basic_blocks.emplace_back(std::make_unique<BasicBlock>());
+  BasicBlock &new_basic_block(const std::string &label) {
+    m_basic_blocks.emplace_back(std::make_unique<BasicBlock>(
+        LocalHandle{m_name_tracker.uniquify(label)}));
     return *m_basic_blocks.back();
   }
 
@@ -48,11 +54,18 @@ struct Function {
     current_basic_block().add_terminal(std::move(terminator));
   }
 
-  std::string m_function_id;
+  void add_alloca_instruction(AllocaInstruction instruction) {
+    entry_basic_block().add_alloca(m_alloca_insertion_position++,
+                                   std::move(instruction));
+  }
+
+  Handle m_function_id;
   LLVMType m_return_type;
   // TODO: Params
   std::vector<std::unique_ptr<BasicBlock>> m_basic_blocks;
   BasicBlock *m_current_block = nullptr;
+  size_t m_alloca_insertion_position = 0;
+  UniqueNameTracker m_name_tracker;
 };
 
 //****************************************************************************

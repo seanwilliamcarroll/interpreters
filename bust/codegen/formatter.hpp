@@ -17,10 +17,21 @@
 #include "codegen/module.hpp"
 #include <iosfwd>
 #include <string>
+#include <unordered_map>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
+
+struct HandleToString {
+  std::string operator()(const LiteralHandle &);
+  std::string operator()(const TemporaryHandle &);
+  std::string operator()(const LocalHandle &);
+  std::string operator()(const GlobalHandle &);
+
+  size_t m_temporary_count = 0;
+  std::unordered_map<size_t, size_t> m_ssa_mapping;
+};
 
 struct Formatter {
   Formatter(std::ostream &out) : m_out(out) {}
@@ -53,6 +64,7 @@ struct Formatter {
 
 private:
   std::ostream &m_out;
+  HandleToString m_handle_converter{};
 };
 
 //****************************************************************************

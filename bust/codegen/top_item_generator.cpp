@@ -11,6 +11,7 @@
 
 #include "codegen/top_item_generator.hpp"
 #include "codegen/expression_generator.hpp"
+#include "codegen/instructions.hpp"
 #include "codegen/let_binding_generator.hpp"
 #include "codegen/types.hpp"
 #include "exceptions.hpp"
@@ -27,11 +28,10 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
                                   function_def.m_location);
   }
 
-  auto &function = m_ctx.m_module.new_function();
+  auto &function = m_ctx.m_module.new_function(
+      GlobalHandle{function_def.m_function_id},
+      to_llvm_type(function_def.m_type->m_return_type));
   m_ctx.m_module.set_current_function(function);
-
-  function.m_function_id = function_def.m_function_id;
-  function.m_return_type = to_llvm_type(function_def.m_type->m_return_type);
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
