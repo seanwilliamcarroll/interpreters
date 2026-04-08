@@ -21,6 +21,7 @@
 #include "operators.hpp"
 #include <ios>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <variant>
 
@@ -177,7 +178,7 @@ LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
     return LLVMBinaryOperator::SREM;
 
   default:
-    throw core::CompilerException("Codegen", "UNIMPLEMENTED", {});
+    throw std::runtime_error("UNIMPLEMENTED");
   }
 }
 
