@@ -32,6 +32,8 @@ struct ExpressionGenerator {
       const std::unique_ptr<hir::BinaryExpr> &);
   Handle generate_arithmetic_binary_instruction(
       const std::unique_ptr<hir::BinaryExpr> &);
+  Handle
+  generate_logical_binary_instruction(const std::unique_ptr<hir::BinaryExpr> &);
   Handle operator()(const std::unique_ptr<hir::BinaryExpr> &);
 
   Handle operator()(const std::unique_ptr<hir::UnaryExpr> &);

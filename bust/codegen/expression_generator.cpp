@@ -242,6 +242,16 @@ bool is_binary_compare(BinaryOperator op) {
   }
 }
 
+bool is_logical_op(BinaryOperator op) {
+  switch (op) {
+  case bust::BinaryOperator::LOGICAL_AND:
+  case bust::BinaryOperator::LOGICAL_OR:
+    return true;
+  default:
+    return false;
+  }
+}
+
 Handle ExpressionGenerator::generate_integer_compare_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
@@ -283,10 +293,99 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
   return result_handle;
 }
 
+Handle ExpressionGenerator::generate_logical_binary_instruction(
+    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+  // Supporting short circuiting is similar to if expressions
+
+  // lhs executes no matter what
+  // We start executing lhs in the current block we're in
+  // final_lhs_block will have a br based on the lhs_handle
+  // For AND, branch to merge on negative, else to rhs
+  // For OR, branch to merge on positive, else to rhs
+  // rhs jumps to merge
+  // at merge, we still need to do a compare on the result
+  // AND: lhs is negative, branch to merge with stored false
+  // AND: lhs is positive, branch to rhs, store rhs as result
+  //  OR: lhs is positive, branch to merge with stored true
+  //  OR: lhs is negative, branch to rhs, store rhs as result
+
+  // Need to alloca result
+  auto result_handle =
+      m_ctx.m_symbol_table.define_local("short_circuit_logic_result");
+
+  m_ctx.current_function().add_alloca_instruction(
+      AllocaInstruction{.m_handle = result_handle, .m_type = LLVMType::I1});
+
+  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto &final_lhs_block = m_ctx.current_basic_block();
+  // Store lhs in result handle
+  // Always store?
+  final_lhs_block.add_instruction(StoreInstruction{
+      .m_destination = result_handle,
+      .m_source = lhs_handle,
+      .m_type = LLVMType::I1,
+  });
+
+  auto &starting_rhs_block = m_ctx.current_function().new_basic_block("rhs");
+  m_ctx.current_function().set_insertion_point(starting_rhs_block);
+  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto &final_rhs_block = m_ctx.current_basic_block();
+
+  final_rhs_block.add_instruction(StoreInstruction{
+      .m_destination = result_handle,
+      .m_source = rhs_handle,
+      .m_type = LLVMType::I1,
+  });
+
+  auto &starting_merge_block =
+      m_ctx.current_function().new_basic_block("merge");
+  m_ctx.current_function().set_insertion_point(starting_merge_block);
+
+  // Figure out terminal instructions now
+
+  // LHS always branches
+  switch (binary_expression->m_operator) {
+  case bust::BinaryOperator::LOGICAL_AND:
+    final_lhs_block.add_terminal(BranchInstruction{
+        .m_condition = lhs_handle,
+        .m_iftrue = starting_rhs_block.m_label,
+        .m_iffalse = starting_merge_block.m_label,
+    });
+    break;
+  case bust::BinaryOperator::LOGICAL_OR:
+    final_lhs_block.add_terminal(BranchInstruction{
+        .m_condition = lhs_handle,
+        .m_iftrue = starting_merge_block.m_label,
+        .m_iffalse = starting_rhs_block.m_label,
+    });
+    break;
+  default:
+    throw std::runtime_error("UNIMPLEMENTED");
+  }
+
+  final_rhs_block.add_terminal(JumpInstruction{
+      .m_target = starting_merge_block.m_label,
+  });
+
+  auto final_result = SymbolTable::next_ssa_temporary();
+
+  m_ctx.current_basic_block().add_instruction(LoadInstruction{
+      .m_destination = final_result,
+      .m_source = result_handle,
+      .m_type = LLVMType::I1,
+  });
+
+  return final_result;
+}
+
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
   if (is_binary_compare(binary_expression->m_operator)) {
     return generate_integer_compare_instruction(binary_expression);
+  }
+
+  if (is_logical_op(binary_expression->m_operator)) {
+    return generate_logical_binary_instruction(binary_expression);
   }
 
   return generate_arithmetic_binary_instruction(binary_expression);
