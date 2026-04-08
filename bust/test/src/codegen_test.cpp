@@ -425,10 +425,129 @@ TEST_SUITE("bust.codegen") {
               42);
   }
 
-  TEST_CASE("if condition computed from a binary expression on bools") {
-    // Only valid if logical and/or are wired through; harmless if not — skip
-    // by leaving commented. Uncomment when && / || are supported in codegen.
-    // CHECK_RUN("fn main() -> i64 { if true && false { 0 } else { 42 } }", 42);
+  // --- Logical && and || ---------------------------------------------------
+  //
+  // Note: bust has no observable side effects yet, so these tests can't
+  // *prove* short-circuit evaluation is happening (vs. eager bitwise and/or).
+  // They verify the value semantics. Short-circuit *behavior* will need to
+  // be tested once side effects (println, panics, etc.) exist.
+
+  TEST_CASE("logical and: truth table") {
+    CHECK_RUN("fn main() -> i64 { if true && true { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if true && false { 0 } else { 42 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if false && true { 0 } else { 42 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if false && false { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("logical or: truth table") {
+    CHECK_RUN("fn main() -> i64 { if true || true { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if true || false { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if false || true { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if false || false { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("&& and || on let-bound bools") {
+    CHECK_RUN("fn main() -> i64 { let a = true; let b = false; if a && b { 0 } "
+              "else { 42 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let a = true; let b = false; if a || b { 42 "
+              "} else { 0 } }",
+              42);
+  }
+
+  TEST_CASE("&& and || over comparison results") {
+    CHECK_RUN("fn main() -> i64 { let x = 5; if x > 0 && x < 10 { 42 } else { "
+              "0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = 50; if x < 10 || x > 40 { 42 } else "
+              "{ 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = 5; if x < 0 || x > 10 { 0 } else { "
+              "42 } }",
+              42);
+  }
+
+  TEST_CASE("|| binds looser than &&") {
+    // a || b && c parses as a || (b && c)
+    // false || (true && true) == true
+    CHECK_RUN("fn main() -> i64 { if false || true && true { 42 } else { 0 } }",
+              42);
+    // true || (false && X) == true (X = false here)
+    CHECK_RUN(
+        "fn main() -> i64 { if true || false && false { 42 } else { 0 } }", 42);
+    // false || (false && true) == false
+    CHECK_RUN(
+        "fn main() -> i64 { if false || false && true { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("&& binds looser than comparison") {
+    // 1 < 2 && 3 < 4 parses as (1 < 2) && (3 < 4)
+    CHECK_RUN("fn main() -> i64 { if 1 < 2 && 3 < 4 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 1 < 2 && 4 < 3 { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("&& and || with unary not") {
+    CHECK_RUN("fn main() -> i64 { if !false && true { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if !true || !false { 42 } else { 0 } }", 42);
+    CHECK_RUN(
+        "fn main() -> i64 { let b = true; if !(b && false) { 42 } else { 0 } }",
+        42);
+  }
+
+  TEST_CASE("chained && (left-associative)") {
+    CHECK_RUN("fn main() -> i64 { if true && true && true { 42 } else { 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if true && true && false { 0 } else { 42 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if true && false && true { 0 } else { 42 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { if false && true && true { 0 } else { 42 } }",
+              42);
+  }
+
+  TEST_CASE("chained || (left-associative)") {
+    CHECK_RUN(
+        "fn main() -> i64 { if false || false || true { 42 } else { 0 } }", 42);
+    CHECK_RUN(
+        "fn main() -> i64 { if false || false || false { 0 } else { 42 } }",
+        42);
+    CHECK_RUN(
+        "fn main() -> i64 { if true || false || false { 42 } else { 0 } }", 42);
+  }
+
+  TEST_CASE("&& and || result bound to a let") {
+    CHECK_RUN(
+        "fn main() -> i64 { let b = true && true; if b { 42 } else { 0 } }",
+        42);
+    CHECK_RUN(
+        "fn main() -> i64 { let b = false || true; if b { 42 } else { 0 } }",
+        42);
+    CHECK_RUN("fn main() -> i64 { let x = 5; let in_range = x > 0 && x < 10; "
+              "if in_range { 42 } else { 0 } }",
+              42);
+  }
+
+  TEST_CASE("&& and || result feeds into another && or ||") {
+    // (true && false) || true == true
+    CHECK_RUN("fn main() -> i64 { if (true && false) || true { 42 } else { 0 "
+              "} }",
+              42);
+    // (false || true) && (true || false) == true
+    CHECK_RUN("fn main() -> i64 { if (false || true) && (true || false) { 42 "
+              "} else { 0 } }",
+              42);
+    // (true && true) && (false || false) == false
+    CHECK_RUN("fn main() -> i64 { if (true && true) && (false || false) { 0 } "
+              "else { 42 } }",
+              42);
+  }
+
+  TEST_CASE("&& and || drive an if-as-expression") {
+    CHECK_RUN("fn main() -> i64 { let x = if true && true { 42 } else { 0 }; "
+              "x }",
+              42);
+    CHECK_RUN("fn main() -> i64 { (if false || true { 6 } else { 0 }) * 7 }",
+              42);
   }
 
   TEST_CASE("deeply nested if-as-expression in arithmetic") {
