@@ -14,6 +14,7 @@
 #include "codegen/basic_block.hpp"
 #include "codegen/symbol_table.hpp"
 #include <cassert>
+#include <memory>
 #include <string>
 
 //****************************************************************************
@@ -21,24 +22,21 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Context {
-  Function &new_function() {
-    m_top_level_functions.emplace_back();
-    return current_func();
+  Module &new_module() {
+    m_modules.emplace_back(std::make_unique<Module>());
+    return current_module();
   }
 
-  Function &current_func() { return m_top_level_functions.back(); }
+  Module &current_module() { return *m_modules.back(); }
 
-  void add_instruction(Instruction instruction) {
-    current_func().add_instruction(std::move(instruction));
-  }
+  Function &current_function() { return current_module().current_function(); }
 
-  void add_terminal(Terminator terminator) {
-    current_func().add_terminal(std::move(terminator));
+  BasicBlock &current_basic_block() {
+    return current_function().current_basic_block();
   }
 
   std::string m_output{};
-  std::vector<Function> m_top_level_functions;
-  // How to deal with let bindings at global scope?
+  std::vector<std::unique_ptr<Module>> m_modules;
   SymbolTable m_symbol_table;
 };
 

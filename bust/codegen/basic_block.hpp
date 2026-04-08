@@ -13,6 +13,7 @@
 
 #include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <string>
@@ -77,6 +78,7 @@ struct BasicBlock {
   }
 
   void add_terminal(Terminator terminator) {
+    assert(!m_terminal_instruction.has_value() && "Shouldn't set this twice!");
     m_terminal_instruction = std::move(terminator);
   }
 
@@ -91,7 +93,7 @@ struct Global {
 
 struct Function {
   BasicBlock &new_basic_block() {
-    m_basic_blocks.emplace_back(new BasicBlock{});
+    m_basic_blocks.emplace_back(std::make_unique<BasicBlock>());
     return *m_basic_blocks.back();
   }
 
@@ -117,9 +119,19 @@ struct Function {
 };
 
 struct Module {
+  Function &new_function() {
+    m_functions.emplace_back(std::make_unique<Function>());
+    return *m_functions.back();
+  }
+
+  Function &current_function() { return *m_functions.back(); }
+
+  BasicBlock &current_basic_block() {
+    return current_function().current_basic_block();
+  }
 
   std::vector<Global> m_globals;
-  std::vector<Function> m_functions;
+  std::vector<std::unique_ptr<Function>> m_functions;
 };
 
 //****************************************************************************

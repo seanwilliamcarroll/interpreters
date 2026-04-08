@@ -26,7 +26,9 @@ namespace bust::codegen {
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-  m_ctx.add_instruction(LoadInstruction{
+  auto &current_block = m_ctx.current_basic_block();
+
+  current_block.add_instruction(LoadInstruction{
       .m_destination = ssa_temp,
       .m_source = m_ctx.m_symbol_table.lookup(identifier.m_name),
       .m_type = to_llvm_type(identifier.m_type)});
@@ -98,7 +100,9 @@ Handle ExpressionGenerator::operator()(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.add_instruction(BinaryInstruction{
+  auto &basic_block = m_ctx.current_basic_block();
+
+  basic_block.add_instruction(BinaryInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,

@@ -21,6 +21,13 @@
 namespace bust::codegen {
 //****************************************************************************
 
+void Formatter::operator()(const Module &mod) {
+  // TODO: Globals
+  for (const auto &function : mod.m_functions) {
+    (*this)(*function);
+  }
+}
+
 void Formatter::operator()(const Function &function) {
   m_out << "define " << function.m_return_type << " @"
         << function.m_function_id;

@@ -27,19 +27,20 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
                                   function_def.m_location);
   }
 
-  auto &function = m_ctx.new_function();
+  auto &function = m_ctx.current_module().new_function();
 
   function.m_function_id = function_def.m_function_id;
   function.m_return_type =
       hir::type_to_string(function_def.m_type->m_return_type);
 
-  auto &final_block = function.new_basic_block();
+  auto &initial_block = function.new_basic_block();
 
-  function.set_insertion_point(final_block);
+  function.set_insertion_point(initial_block);
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
-  final_block.add_terminal(ReturnInstruction{
+  // Wherever we are, we need to add this terminal to the final
+  function.current_basic_block().add_terminal(ReturnInstruction{
       .m_value = return_value,
       .m_type = to_llvm_type(function_def.m_type->m_return_type)});
 }

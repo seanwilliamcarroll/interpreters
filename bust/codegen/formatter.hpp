@@ -24,8 +24,12 @@ struct Formatter {
 
   constexpr static const char *INDENT = "  ";
 
+  void operator()(const Module &);
+
   void operator()(const Function &);
+
   void operator()(const BasicBlock &);
+
   void operator()(const BinaryInstruction &);
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
