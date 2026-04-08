@@ -260,6 +260,110 @@ TEST_SUITE("bust.codegen") {
               42);
   }
 
+  // --- Comparison operators ------------------------------------------------
+  //
+  // These all produce i1 (bool). The most direct way to observe a bool from
+  // `main` is to feed it into an `if` and return distinct i64s from each
+  // branch.
+
+  TEST_CASE("equality on integer literals") {
+    CHECK_RUN("fn main() -> i64 { if 1 == 1 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 1 == 2 { 0 } else { 42 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 0 == 0 { 42 } else { 0 } }", 42);
+  }
+
+  TEST_CASE("inequality on integer literals") {
+    CHECK_RUN("fn main() -> i64 { if 1 != 2 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 5 != 5 { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("less-than on integer literals") {
+    CHECK_RUN("fn main() -> i64 { if 1 < 2 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 2 < 1 { 0 } else { 42 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 5 < 5 { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("less-than-or-equal on integer literals") {
+    CHECK_RUN("fn main() -> i64 { if 1 <= 2 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 5 <= 5 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 6 <= 5 { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("greater-than on integer literals") {
+    CHECK_RUN("fn main() -> i64 { if 2 > 1 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 1 > 2 { 0 } else { 42 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 5 > 5 { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("greater-than-or-equal on integer literals") {
+    CHECK_RUN("fn main() -> i64 { if 2 >= 1 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 5 >= 5 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 4 >= 5 { 0 } else { 42 } }", 42);
+  }
+
+  TEST_CASE("signed comparison: negative vs positive") {
+    // If signed (icmp slt) is wired correctly, -1 < 1. If unsigned (ult)
+    // were used by mistake, -1 would be a huge unsigned value and the test
+    // would fail.
+    CHECK_RUN("fn main() -> i64 { if -1 < 1 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if -5 < -1 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if -1 > -5 { 42 } else { 0 } }", 42);
+  }
+
+  TEST_CASE("comparison on let-bound identifiers") {
+    CHECK_RUN("fn main() -> i64 { let x = 10; let y = 20; if x < y { 42 } else "
+              "{ 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = 10; let y = 10; if x == y { 42 } "
+              "else { 0 } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = 10; if x != 0 { 42 } else { 0 } }",
+              42);
+  }
+
+  TEST_CASE("comparison on arithmetic results") {
+    CHECK_RUN("fn main() -> i64 { if 1 + 1 == 2 { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if 3 * 4 > 10 { 42 } else { 0 } }", 42);
+    CHECK_RUN(
+        "fn main() -> i64 { let x = 21; if x * 2 == 42 { 42 } else { 0 } }",
+        42);
+  }
+
+  TEST_CASE("comparison result bound to a let") {
+    CHECK_RUN("fn main() -> i64 { let b = 1 < 2; if b { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { let b = 5 == 6; if b { 0 } else { 42 } }",
+              42);
+  }
+
+  TEST_CASE("comparison drives if-as-expression in arithmetic") {
+    CHECK_RUN("fn main() -> i64 { (if 3 < 5 { 6 } else { 0 }) * 7 }", 42);
+    CHECK_RUN("fn main() -> i64 { let x = 10; let y = if x >= 10 { 42 } else "
+              "{ 0 }; y }",
+              42);
+  }
+
+  TEST_CASE("else-if chain driven by comparisons") {
+    CHECK_RUN("fn main() -> i64 { let x = 3; if x == 1 { 1 } else { if x == 2 "
+              "{ 2 } else { if x == 3 { 42 } else { 99 } } } }",
+              42);
+    CHECK_RUN("fn main() -> i64 { let x = 100; if x < 10 { 1 } else { if x < "
+              "50 { 2 } else { 42 } } }",
+              42);
+  }
+
+  TEST_CASE("equality and inequality on bools") {
+    CHECK_RUN("fn main() -> i64 { if true == true { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if true == false { 0 } else { 42 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if false != true { 42 } else { 0 } }", 42);
+    CHECK_RUN("fn main() -> i64 { if false != false { 0 } else { 42 } }", 42);
+    CHECK_RUN(
+        "fn main() -> i64 { let b = (1 < 2) == true; if b { 42 } else { 0 } }",
+        42);
+    CHECK_RUN("fn main() -> i64 { let x = 5; if (x == 5) != false { 42 } else "
+              "{ 0 } }",
+              42);
+  }
+
   TEST_CASE("if condition computed from a binary expression on bools") {
     // Only valid if logical and/or are wired through; harmless if not — skip
     // by leaving commented. Uncomment when && / || are supported in codegen.
