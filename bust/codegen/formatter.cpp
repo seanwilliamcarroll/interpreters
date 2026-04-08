@@ -11,6 +11,7 @@
 
 #include "codegen/formatter.hpp"
 #include "codegen/basic_block.hpp"
+#include "codegen/types.hpp"
 #include "exceptions.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -122,7 +123,10 @@ void Formatter::operator()(const JumpInstruction &) {}
 void Formatter::operator()(const ReturnInstruction &instruction) {
   indent();
 
-  m_out << "ret " << instruction.m_type << " " << instruction.m_value;
+  m_out << "ret " << instruction.m_type;
+  if (instruction.m_type != LLVMType::VOID) {
+    m_out << " " << instruction.m_value;
+  }
 
   newline();
 }

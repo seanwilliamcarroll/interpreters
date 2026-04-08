@@ -18,6 +18,7 @@
 #include "exceptions.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
+#include <string>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -42,7 +43,9 @@ Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
   return {std::to_string(literal.m_value)};
 }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralBool &) { return {}; }
+Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
+  return {std::to_string(static_cast<uint8_t>(literal.m_value))};
+}
 
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &block) {
