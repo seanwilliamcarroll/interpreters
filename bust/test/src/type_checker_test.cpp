@@ -1357,6 +1357,305 @@ TEST_SUITE("bust.type_checker") {
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
+  // --- Char literal type -----------------------------------------------------
+
+  TEST_CASE("literal char has type char") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let c: char = 'A';\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("char literal inferred without annotation") {
+    auto hir = type_check("fn main() -> char { 'z' }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("char literal with escape has type char") {
+    auto hir = type_check("fn main() -> char { '\\n' }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("char assigned to i64 binding throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: i64 = 'A';\n"
+                               "  x\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- New integer type annotations ------------------------------------------
+
+  TEST_CASE("function with i8 return type") {
+    auto hir = type_check("fn to_i8() -> i8 { 42 as i8 }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &ret = std::get<hir::PrimitiveTypeValue>(func.m_type->m_return_type);
+    CHECK(ret.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("function with i32 return type") {
+    auto hir = type_check("fn to_i32() -> i32 { 42 as i32 }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &ret = std::get<hir::PrimitiveTypeValue>(func.m_type->m_return_type);
+    CHECK(ret.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE("function with i8 parameter") {
+    auto hir = type_check("fn use_i8(x: i8) -> i8 { x }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_parameters.size() == 1);
+    auto &p_type =
+        std::get<hir::PrimitiveTypeValue>(func.m_parameters[0].m_type);
+    CHECK(p_type.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("i8 and i64 are not interchangeable") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: i8 = 42;\n"
+                               "  x\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("i32 and i64 are not interchangeable") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: i32 = 42;\n"
+                               "  x\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Cast expressions ------------------------------------------------------
+
+  TEST_CASE("cast i64 to i8 typechecks") {
+    auto hir = type_check("fn main() -> i8 { 42 as i8 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("cast i64 to i32 typechecks") {
+    auto hir = type_check("fn main() -> i32 { 42 as i32 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE("cast i8 to i64 typechecks (widening)") {
+    auto hir = type_check("fn widen(x: i8) -> i64 { x as i64 }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("cast i8 to i32 typechecks (widening)") {
+    auto hir = type_check("fn widen(x: i8) -> i32 { x as i32 }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE("cast i32 to i64 typechecks (widening)") {
+    auto hir = type_check("fn widen(x: i32) -> i64 { x as i64 }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("cast char to i64 typechecks") {
+    auto hir = type_check("fn main() -> i64 { 'A' as i64 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("cast i64 to char typechecks") {
+    auto hir = type_check("fn main() -> char { 65 as char }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("cast bool to i64 typechecks") {
+    auto hir = type_check("fn main() -> i64 { true as i64 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("identity cast i64 to i64 typechecks") {
+    auto hir = type_check("fn main() -> i64 { 42 as i64 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("identity cast char to char typechecks") {
+    auto hir = type_check("fn main() -> char { 'A' as char }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::CHAR);
+  }
+
+  // --- Illegal casts ---------------------------------------------------------
+
+  TEST_CASE("cast i64 to bool throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> bool { 42 as bool }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("cast char to bool throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> bool { 'A' as bool }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("cast bool to char throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> char { true as char }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("cast unit to i64 throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 { () as i64 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("cast i64 to unit throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 42 as ();\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Chained casts ---------------------------------------------------------
+
+  TEST_CASE("chained cast i64 to i32 to i8 typechecks") {
+    auto hir = type_check("fn main() -> i8 { 42 as i32 as i8 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("chained cast char to i32 to i64 typechecks") {
+    auto hir = type_check("fn main() -> i64 { 'A' as i32 as i64 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Cast in expressions ---------------------------------------------------
+
+  TEST_CASE("cast result used in arithmetic") {
+    auto hir = type_check("fn main() -> i64 { 'A' as i64 + 1 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("cast in let binding with annotation") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x: i8 = 42 as i8;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &var_type = std::get<hir::PrimitiveTypeValue>(let.m_variable.m_type);
+    CHECK(var_type.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("cast result type mismatches let annotation throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: i32 = 42 as i8;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("arithmetic on mismatched types without cast throws") {
+    CHECK_THROWS_AS(type_check("fn add_mixed(a: i8, b: i64) -> i64 {\n"
+                               "  a + b\n"
+                               "}\n"
+                               "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("arithmetic on mismatched types with cast succeeds") {
+    auto hir = type_check("fn add_mixed(a: i8, b: i64) -> i64 {\n"
+                          "  a as i64 + b\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust
