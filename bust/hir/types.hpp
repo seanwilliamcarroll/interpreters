@@ -121,6 +121,19 @@ inline Type clone_type(const Type &type) {
       type);
 }
 
+inline Type get_return_type(const Type &type) {
+  return std::visit(
+      [](const auto &t) -> Type {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
+          return clone_type(t->m_return_type);
+        } else {
+          return t;
+        }
+      },
+      type);
+}
+
 struct TypeToStringConverter {
   std::string operator()(const PrimitiveTypeValue &type) {
     switch (type.m_type) {

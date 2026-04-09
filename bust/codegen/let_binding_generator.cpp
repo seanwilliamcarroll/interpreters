@@ -21,7 +21,6 @@ namespace bust::codegen {
 void LetBindingGenerator::operator()(const hir::LetBinding &let_binding) {
   auto value_handle = ExpressionGenerator{m_ctx}(let_binding.m_expression);
 
-  // TODO: assumes local for the moment
   auto identifier_handle =
       m_ctx.m_symbol_table.define_local(let_binding.m_variable.m_name);
 

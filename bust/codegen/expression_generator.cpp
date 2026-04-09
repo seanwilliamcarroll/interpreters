@@ -59,9 +59,7 @@ Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
 }
 
 Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
-  std::stringstream output;
-  output << std::boolalpha << literal.m_value;
-  return LiteralHandle{output.str()};
+  return LiteralHandle{literal.m_value ? "true" : "false"};
 }
 
 Handle
@@ -169,25 +167,10 @@ Handle ExpressionGenerator::operator()(
   return ssa_temp;
 }
 
-hir::Type get_function_return_type(const hir::Type &type) {
-
-  if (!std::holds_alternative<std::unique_ptr<hir::FunctionType>>(type)) {
-    throw std::runtime_error("Type checker should have caught this");
-  }
-
-  const auto &function_type =
-      std::get<std::unique_ptr<hir::FunctionType>>(type);
-  return hir::clone_type(function_type->m_return_type);
-}
-
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::CallExpr> &call_expression) {
 
   auto callee_handle = (*this)(call_expression->m_callee);
-
-  // No need to check anything, already been type checked, just pass arguments?
-
-  // Need to bind the arguments to their proper handles?
 
   std::vector<Argument> arguments;
   std::transform(call_expression->m_arguments.begin(),
@@ -200,7 +183,7 @@ Handle ExpressionGenerator::operator()(
                  });
 
   auto function_return_type =
-      get_function_return_type(call_expression->m_callee.m_type);
+      hir::get_return_type(call_expression->m_callee.m_type);
 
   if (hir::is_unit_type(function_return_type)) {
     m_ctx.current_basic_block().add_instruction(
@@ -350,20 +333,12 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 Handle ExpressionGenerator::generate_logical_binary_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
   // Supporting short circuiting is similar to if expressions
-
   // lhs executes no matter what
-  // We start executing lhs in the current block we're in
-  // final_lhs_block will have a br based on the lhs_handle
   // For AND, branch to merge on negative, else to rhs
   // For OR, branch to merge on positive, else to rhs
   // rhs jumps to merge
   // at merge, we still need to do a compare on the result
-  // AND: lhs is negative, branch to merge with stored false
-  // AND: lhs is positive, branch to rhs, store rhs as result
-  //  OR: lhs is positive, branch to merge with stored true
-  //  OR: lhs is negative, branch to rhs, store rhs as result
 
-  // Need to alloca result
   auto result_handle =
       m_ctx.m_symbol_table.define_local("short_circuit_logic_result");
 
@@ -373,7 +348,6 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   auto lhs_handle = (*this)(binary_expression->m_lhs);
   auto &final_lhs_block = m_ctx.current_basic_block();
   // Store lhs in result handle
-  // Always store?
   final_lhs_block.add_instruction(StoreInstruction{
       .m_destination = result_handle,
       .m_source = lhs_handle,
@@ -398,24 +372,15 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // Figure out terminal instructions now
 
   // LHS always branches
-  switch (binary_expression->m_operator) {
-  case bust::BinaryOperator::LOGICAL_AND:
-    final_lhs_block.add_terminal(BranchInstruction{
-        .m_condition = lhs_handle,
-        .m_iftrue = starting_rhs_block.m_label,
-        .m_iffalse = starting_merge_block.m_label,
-    });
-    break;
-  case bust::BinaryOperator::LOGICAL_OR:
-    final_lhs_block.add_terminal(BranchInstruction{
-        .m_condition = lhs_handle,
-        .m_iftrue = starting_merge_block.m_label,
-        .m_iffalse = starting_rhs_block.m_label,
-    });
-    break;
-  default:
-    throw std::runtime_error("UNIMPLEMENTED");
-  }
+  const auto is_and_op =
+      binary_expression->m_operator == bust::BinaryOperator::LOGICAL_AND;
+  final_lhs_block.add_terminal(BranchInstruction{
+      .m_condition = lhs_handle,
+      .m_iftrue =
+          is_and_op ? starting_rhs_block.m_label : starting_merge_block.m_label,
+      .m_iffalse =
+          is_and_op ? starting_merge_block.m_label : starting_rhs_block.m_label,
+  });
 
   final_rhs_block.add_terminal(JumpInstruction{
       .m_target = starting_merge_block.m_label,

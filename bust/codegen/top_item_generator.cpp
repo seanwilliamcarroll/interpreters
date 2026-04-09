@@ -53,6 +53,7 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
 }
 
 void TopItemGenerator::operator()(const hir::LetBinding &let_binding) {
+  // TODO: assumes local for the moment
   LetBindingGenerator{m_ctx}(let_binding);
 }
 
