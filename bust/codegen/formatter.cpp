@@ -12,6 +12,7 @@
 #include "codegen/formatter.hpp"
 #include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
+#include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 #include "codegen/parameter.hpp"
 #include "codegen/types.hpp"
@@ -45,6 +46,10 @@ std::string HandleToString::operator()(const TemporaryHandle &handle) {
 }
 
 std::string HandleToString::operator()(const LocalHandle &handle) {
+  return "%" + handle.m_handle;
+}
+
+std::string HandleToString::operator()(const ParameterHandle &handle) {
   return "%" + handle.m_handle;
 }
 
@@ -102,6 +107,7 @@ void Formatter::define(const FunctionDeclaration &signature) {
 }
 
 void Formatter::operator()(const Function &function) {
+  m_handle_converter = HandleToString{};
   define(function.signature());
 
   m_out << " {";

@@ -13,6 +13,7 @@
 
 #include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
+#include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 #include "codegen/module.hpp"
 #include <iosfwd>
@@ -27,6 +28,7 @@ struct HandleToString {
   std::string operator()(const LiteralHandle &);
   std::string operator()(const TemporaryHandle &);
   std::string operator()(const LocalHandle &);
+  std::string operator()(const ParameterHandle &);
   std::string operator()(const GlobalHandle &);
 
   size_t m_temporary_count = 0;

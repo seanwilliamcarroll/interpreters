@@ -19,7 +19,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Parameter {
-  LocalHandle m_name;
+  ParameterHandle m_name;
   LLVMType m_type;
 };
 

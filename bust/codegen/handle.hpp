@@ -31,12 +31,16 @@ struct LocalHandle {
   std::string m_handle;
 };
 
+struct ParameterHandle {
+  std::string m_handle;
+};
+
 struct GlobalHandle {
   std::string m_handle;
 };
 
-using Handle =
-    std::variant<LiteralHandle, TemporaryHandle, LocalHandle, GlobalHandle>;
+using Handle = std::variant<LiteralHandle, TemporaryHandle, LocalHandle,
+                            ParameterHandle, GlobalHandle>;
 
 inline std::string get_raw_handle(const Handle &handle) {
   return std::visit(

@@ -37,23 +37,10 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
   m_ctx.m_module.set_current_function(function);
 
   for (const auto &parameter : function_def.m_parameters) {
-    auto handle = m_ctx.m_symbol_table.define_local(parameter.m_name);
+    auto handle = m_ctx.m_symbol_table.define_parameter(parameter.m_name);
 
-    function.signature().add_parameter({parameter.m_name},
+    function.signature().add_parameter(ParameterHandle{parameter.m_name},
                                        to_llvm_type(parameter.m_type));
-
-    function.add_alloca_instruction(AllocaInstruction{
-        .m_handle = handle,
-        .m_type = to_llvm_type(parameter.m_type),
-    });
-
-    auto ssa_temp = SymbolTable::next_ssa_temporary();
-
-    function.current_basic_block().add_instruction(StoreInstruction{
-        .m_destination = handle,
-        .m_source = LocalHandle{parameter.m_name},
-        .m_type = to_llvm_type(parameter.m_type),
-    });
   }
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);

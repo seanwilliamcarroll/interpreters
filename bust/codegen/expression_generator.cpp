@@ -35,11 +35,11 @@ namespace bust::codegen {
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   auto identifier_handle = m_ctx.m_symbol_table.lookup(identifier.m_name);
 
+  // GlobalHandle (functions) and ParameterHandle (SSA args) are used directly.
+  // Only LocalHandle (alloca slots) need a load.
   if (!std::holds_alternative<LocalHandle>(identifier_handle)) {
     return identifier_handle;
   }
-  // Not checking for other handle types right now, not sure we need to throw on
-  // the other types
 
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 

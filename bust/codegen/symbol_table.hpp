@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 
 //****************************************************************************
@@ -65,6 +66,14 @@ struct SymbolTable {
 
   Handle define_local(const std::string &name) {
     LocalHandle new_handle{m_name_tracker.uniquify(name)};
+
+    m_scopes.back().define(name, new_handle);
+
+    return new_handle;
+  }
+
+  Handle define_parameter(const std::string &name) {
+    ParameterHandle new_handle{name};
 
     m_scopes.back().define(name, new_handle);
 

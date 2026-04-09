@@ -28,7 +28,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct FunctionDeclaration {
-  void add_parameter(LocalHandle name, LLVMType return_type) {
+  void add_parameter(ParameterHandle name, LLVMType return_type) {
     m_parameters.emplace_back(Parameter{std::move(name), return_type});
   }
 
