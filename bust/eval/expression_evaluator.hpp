@@ -11,9 +11,15 @@
 #pragma once
 //****************************************************************************
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "eval/context.hpp"
+#include "eval/environment.hpp"
 #include "eval/values.hpp"
 #include "hir/nodes.hpp"
 

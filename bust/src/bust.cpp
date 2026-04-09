@@ -20,6 +20,8 @@
 #include <memory>
 #include <parser.hpp>
 #include <pipeline.hpp>
+#include <stdexcept>
+#include <string>
 #include <sys/wait.h>
 #include <type_checker.hpp>
 #include <unistd.h>

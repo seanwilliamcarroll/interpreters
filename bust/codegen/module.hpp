@@ -11,9 +11,7 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
-#include "codegen/instructions.hpp"
 #include <memory>
 #include <vector>
 
@@ -46,7 +44,7 @@ struct Module {
 private:
   std::vector<Global> m_globals;
   std::vector<std::unique_ptr<Function>> m_functions;
-  Function *m_current_function;
+  Function *m_current_function = nullptr;
 };
 
 //****************************************************************************

@@ -10,7 +10,12 @@
 //****************************************************************************
 
 #include "codegen/let_binding_generator.hpp"
+
+#include "codegen/basic_block.hpp"
 #include "codegen/expression_generator.hpp"
+#include "codegen/function.hpp"
+#include "codegen/instructions.hpp"
+#include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
 
 //****************************************************************************

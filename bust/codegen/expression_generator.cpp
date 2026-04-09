@@ -10,22 +10,27 @@
 //****************************************************************************
 
 #include "codegen/expression_generator.hpp"
+
+#include <algorithm>
+#include <iterator>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #include "codegen/basic_block.hpp"
 #include "codegen/context.hpp"
+#include "codegen/function.hpp"
 #include "codegen/instructions.hpp"
 #include "codegen/parameter.hpp"
 #include "codegen/statement_generator.hpp"
 #include "codegen/symbol_table.hpp"
-#include "codegen/types.hpp"
 #include "hir/nodes.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
 #include "types.hpp"
-#include <algorithm>
-#include <iterator>
-#include <stdexcept>
-#include <string>
-#include <variant>
 
 //****************************************************************************
 namespace bust::codegen {

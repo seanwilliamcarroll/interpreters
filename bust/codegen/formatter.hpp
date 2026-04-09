@@ -11,14 +11,20 @@
 #pragma once
 //****************************************************************************
 
+#include <iosfwd>
+#include <ostream>
+#include <stddef.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
+#include "codegen/function_declaration.hpp"
 #include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 #include "codegen/module.hpp"
-#include <iosfwd>
-#include <string>
-#include <unordered_map>
+#include "codegen/parameter.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

@@ -10,18 +10,23 @@
 //****************************************************************************
 
 #include "eval/expression_evaluator.hpp"
+
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <ranges>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <variant>
+
 #include "eval/environment.hpp"
 #include "eval/statement_evaluator.hpp"
 #include "eval/values.hpp"
 #include "exceptions.hpp"
 #include "operators.hpp"
-
-#include <cstdint>
-#include <functional>
-#include <memory>
-#include <ranges>
-#include <utility>
-#include <variant>
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust::eval {
