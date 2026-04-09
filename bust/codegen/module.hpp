@@ -11,9 +11,7 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/basic_block.hpp"
 #include "codegen/function.hpp"
-#include "codegen/instructions.hpp"
 #include <memory>
 #include <vector>
 
@@ -26,10 +24,15 @@ struct Global {
 };
 
 struct Module {
-  Function &new_function(const Handle &function_handle, LLVMType return_type) {
-    m_functions.emplace_back(
-        std::make_unique<Function>(function_handle, return_type));
+  Function &new_function(FunctionDeclaration signature) {
+    m_functions.emplace_back(std::make_unique<Function>(std::move(signature)));
     return *m_functions.back();
+  }
+
+  const std::vector<Global> &globals() const { return m_globals; }
+
+  const std::vector<std::unique_ptr<Function>> &functions() const {
+    return m_functions;
   }
 
   Function &current_function() { return *m_current_function; }
@@ -38,13 +41,10 @@ struct Module {
     m_current_function = &function;
   }
 
-  BasicBlock &current_basic_block() {
-    return current_function().current_basic_block();
-  }
-
+private:
   std::vector<Global> m_globals;
   std::vector<std::unique_ptr<Function>> m_functions;
-  Function *m_current_function;
+  Function *m_current_function = nullptr;
 };
 
 //****************************************************************************

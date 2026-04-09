@@ -28,7 +28,6 @@
 #include "hir/environment.hpp"
 #include "hir/type_converter.hpp"
 #include "hir/type_unifier.hpp"
-#include "hir/types.hpp"
 #include "operators.hpp"
 #include "source_location.hpp"
 #include "types.hpp"

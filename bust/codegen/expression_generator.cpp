@@ -10,33 +10,47 @@
 //****************************************************************************
 
 #include "codegen/expression_generator.hpp"
+
+#include <algorithm>
+#include <iterator>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #include "codegen/basic_block.hpp"
 #include "codegen/context.hpp"
+#include "codegen/function.hpp"
 #include "codegen/instructions.hpp"
+#include "codegen/parameter.hpp"
 #include "codegen/statement_generator.hpp"
 #include "codegen/symbol_table.hpp"
-#include "codegen/types.hpp"
-#include "exceptions.hpp"
 #include "hir/nodes.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
-#include <ios>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
+  auto identifier_handle = m_ctx.symbols().lookup(identifier.m_name);
+
+  // GlobalHandle (functions) and ParameterHandle (SSA args) are used directly.
+  // Only LocalHandle (alloca slots) need a load.
+  if (!std::holds_alternative<LocalHandle>(identifier_handle)) {
+    return identifier_handle;
+  }
+
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(LoadInstruction{
-      .m_destination = ssa_temp,
-      .m_source = m_ctx.m_symbol_table.lookup(identifier.m_name),
-      .m_type = to_llvm_type(identifier.m_type)});
+  m_ctx.block().add_instruction(
+      LoadInstruction{.m_destination = ssa_temp,
+                      .m_source = identifier_handle,
+                      .m_type = to_llvm_type(identifier.m_type)});
 
   return ssa_temp;
 }
@@ -48,9 +62,7 @@ Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
 }
 
 Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
-  std::stringstream output;
-  output << std::boolalpha << literal.m_value;
-  return LiteralHandle{output.str()};
+  return LiteralHandle{literal.m_value ? "true" : "false"};
 }
 
 Handle
@@ -74,7 +86,7 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
 
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
-  auto &function = m_ctx.current_function();
+  auto &function = m_ctx.function();
 
   const auto &if_return_type = if_expression->m_then_branch.m_type;
 
@@ -92,14 +104,14 @@ Handle ExpressionGenerator::operator()(
   auto then_target = (*this)(if_expression->m_then_branch);
   auto &final_then_block = function.current_basic_block();
   final_then_block.add_terminal(
-      JumpInstruction{.m_target = starting_merge_block.m_label});
+      JumpInstruction{.m_target = starting_merge_block.label()});
 
   if (!if_expression->m_else_branch.has_value()) {
     // Just bare if, else is merge
     final_condition_block.add_terminal(
         BranchInstruction{.m_condition = condition_target,
-                          .m_iftrue = starting_then_block.m_label,
-                          .m_iffalse = starting_merge_block.m_label});
+                          .m_iftrue = starting_then_block.label(),
+                          .m_iffalse = starting_merge_block.label()});
     // Subsequent instructions should go into merge block
     function.set_insertion_point(starting_merge_block);
     // Void, no handle to return
@@ -113,23 +125,20 @@ Handle ExpressionGenerator::operator()(
   auto else_target = (*this)(if_expression->m_else_branch.value());
   auto &final_else_block = function.current_basic_block();
   final_else_block.add_terminal(
-      JumpInstruction{.m_target = starting_merge_block.m_label});
+      JumpInstruction{.m_target = starting_merge_block.label()});
 
   // Now we can merge on then vs else
   final_condition_block.add_terminal(
       BranchInstruction{.m_condition = condition_target,
-                        .m_iftrue = starting_then_block.m_label,
-                        .m_iffalse = starting_else_block.m_label});
+                        .m_iftrue = starting_then_block.label(),
+                        .m_iffalse = starting_else_block.label()});
 
   // Subsequent instructions should go into merge block
   function.set_insertion_point(starting_merge_block);
 
   // We only return a value when there is an else block
   // AND the types of the then and else expressions are NOT Unit
-  const auto if_type_is_unit =
-      std::holds_alternative<hir::PrimitiveTypeValue>(if_return_type) &&
-      std::get<hir::PrimitiveTypeValue>(if_return_type).m_type ==
-          hir::PrimitiveType::UNIT;
+  const auto if_type_is_unit = hir::is_unit_type(if_return_type);
   auto if_statement_returns_value =
       if_expression->m_else_branch.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
@@ -137,7 +146,7 @@ Handle ExpressionGenerator::operator()(
     return {};
   }
 
-  auto result_handle = m_ctx.m_symbol_table.define_local("if_result");
+  auto result_handle = m_ctx.symbols().define_local("if_result");
 
   function.add_alloca_instruction(AllocaInstruction{
       .m_handle = result_handle, .m_type = to_llvm_type(if_return_type)});
@@ -161,8 +170,39 @@ Handle ExpressionGenerator::operator()(
   return ssa_temp;
 }
 
-Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
-  return {};
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::CallExpr> &call_expression) {
+
+  auto callee_handle = (*this)(call_expression->m_callee);
+
+  std::vector<Argument> arguments;
+  std::transform(call_expression->m_arguments.begin(),
+                 call_expression->m_arguments.end(),
+                 std::back_inserter(arguments),
+                 [this](const auto &argument_expression) -> Argument {
+                   auto handle = (*this)(argument_expression);
+                   return {.m_name = handle,
+                           .m_type = to_llvm_type(argument_expression.m_type)};
+                 });
+
+  auto function_return_type =
+      hir::get_return_type(call_expression->m_callee.m_type);
+
+  if (hir::is_unit_type(function_return_type)) {
+    m_ctx.block().add_instruction(
+        CallVoidInstruction{.m_callee = std::move(callee_handle),
+                            .m_arguments = std::move(arguments)});
+    return {};
+  }
+
+  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  m_ctx.block().add_instruction(
+      CallInstruction{.m_target = ssa_temp,
+                      .m_callee = std::move(callee_handle),
+                      .m_arguments = std::move(arguments),
+                      .m_return_type = to_llvm_type(function_return_type)});
+
+  return ssa_temp;
 }
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
@@ -264,7 +304,7 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(IntegerCompareInstruction{
+  m_ctx.block().add_instruction(IntegerCompareInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,
@@ -283,7 +323,7 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(BinaryInstruction{
+  m_ctx.block().add_instruction(BinaryInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,
@@ -296,40 +336,31 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 Handle ExpressionGenerator::generate_logical_binary_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
   // Supporting short circuiting is similar to if expressions
-
   // lhs executes no matter what
-  // We start executing lhs in the current block we're in
-  // final_lhs_block will have a br based on the lhs_handle
   // For AND, branch to merge on negative, else to rhs
   // For OR, branch to merge on positive, else to rhs
   // rhs jumps to merge
   // at merge, we still need to do a compare on the result
-  // AND: lhs is negative, branch to merge with stored false
-  // AND: lhs is positive, branch to rhs, store rhs as result
-  //  OR: lhs is positive, branch to merge with stored true
-  //  OR: lhs is negative, branch to rhs, store rhs as result
 
-  // Need to alloca result
   auto result_handle =
-      m_ctx.m_symbol_table.define_local("short_circuit_logic_result");
+      m_ctx.symbols().define_local("short_circuit_logic_result");
 
-  m_ctx.current_function().add_alloca_instruction(
+  m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = result_handle, .m_type = LLVMType::I1});
 
   auto lhs_handle = (*this)(binary_expression->m_lhs);
-  auto &final_lhs_block = m_ctx.current_basic_block();
+  auto &final_lhs_block = m_ctx.block();
   // Store lhs in result handle
-  // Always store?
   final_lhs_block.add_instruction(StoreInstruction{
       .m_destination = result_handle,
       .m_source = lhs_handle,
       .m_type = LLVMType::I1,
   });
 
-  auto &starting_rhs_block = m_ctx.current_function().new_basic_block("rhs");
-  m_ctx.current_function().set_insertion_point(starting_rhs_block);
+  auto &starting_rhs_block = m_ctx.function().new_basic_block("rhs");
+  m_ctx.function().set_insertion_point(starting_rhs_block);
   auto rhs_handle = (*this)(binary_expression->m_rhs);
-  auto &final_rhs_block = m_ctx.current_basic_block();
+  auto &final_rhs_block = m_ctx.block();
 
   final_rhs_block.add_instruction(StoreInstruction{
       .m_destination = result_handle,
@@ -337,39 +368,29 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_type = LLVMType::I1,
   });
 
-  auto &starting_merge_block =
-      m_ctx.current_function().new_basic_block("merge");
-  m_ctx.current_function().set_insertion_point(starting_merge_block);
+  auto &starting_merge_block = m_ctx.function().new_basic_block("merge");
+  m_ctx.function().set_insertion_point(starting_merge_block);
 
   // Figure out terminal instructions now
 
   // LHS always branches
-  switch (binary_expression->m_operator) {
-  case bust::BinaryOperator::LOGICAL_AND:
-    final_lhs_block.add_terminal(BranchInstruction{
-        .m_condition = lhs_handle,
-        .m_iftrue = starting_rhs_block.m_label,
-        .m_iffalse = starting_merge_block.m_label,
-    });
-    break;
-  case bust::BinaryOperator::LOGICAL_OR:
-    final_lhs_block.add_terminal(BranchInstruction{
-        .m_condition = lhs_handle,
-        .m_iftrue = starting_merge_block.m_label,
-        .m_iffalse = starting_rhs_block.m_label,
-    });
-    break;
-  default:
-    throw std::runtime_error("UNIMPLEMENTED");
-  }
+  const auto is_and_op =
+      binary_expression->m_operator == bust::BinaryOperator::LOGICAL_AND;
+  final_lhs_block.add_terminal(BranchInstruction{
+      .m_condition = lhs_handle,
+      .m_iftrue =
+          is_and_op ? starting_rhs_block.label() : starting_merge_block.label(),
+      .m_iffalse =
+          is_and_op ? starting_merge_block.label() : starting_rhs_block.label(),
+  });
 
   final_rhs_block.add_terminal(JumpInstruction{
-      .m_target = starting_merge_block.m_label,
+      .m_target = starting_merge_block.label(),
   });
 
   auto final_result = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(LoadInstruction{
+  m_ctx.block().add_instruction(LoadInstruction{
       .m_destination = final_result,
       .m_source = result_handle,
       .m_type = LLVMType::I1,
@@ -398,7 +419,7 @@ Handle ExpressionGenerator::operator()(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(UnaryInstruction{
+  m_ctx.block().add_instruction(UnaryInstruction{
       .m_result = result_handle,
       .m_input = input_handle,
       .m_operator = unary_expression->m_operator,

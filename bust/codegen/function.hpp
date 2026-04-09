@@ -12,9 +12,10 @@
 //****************************************************************************
 
 #include "codegen/basic_block.hpp"
+#include "codegen/function_declaration.hpp"
+#include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 #include "codegen/symbol_table.hpp"
-#include "codegen/types.hpp"
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -26,10 +27,15 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Function {
-  Function(const Handle &function_id, LLVMType return_type)
-      : m_function_id(function_id), m_return_type(return_type) {
+  Function(FunctionDeclaration signature) : m_signature(std::move(signature)) {
     set_insertion_point(new_basic_block("entry"));
   }
+
+  FunctionDeclaration &signature() { return m_signature; }
+
+  const FunctionDeclaration &signature() const { return m_signature; }
+
+  const auto &basic_blocks() const { return m_basic_blocks; }
 
   BasicBlock &new_basic_block(const std::string &label) {
     m_basic_blocks.emplace_back(std::make_unique<BasicBlock>(
@@ -46,22 +52,13 @@ struct Function {
 
   BasicBlock &current_basic_block() { return *m_current_block; }
 
-  void add_instruction(Instruction instruction) {
-    current_basic_block().add_instruction(std::move(instruction));
-  }
-
-  void add_terminal(Terminator terminator) {
-    current_basic_block().add_terminal(std::move(terminator));
-  }
-
   void add_alloca_instruction(AllocaInstruction instruction) {
     entry_basic_block().add_alloca(m_alloca_insertion_position++,
                                    std::move(instruction));
   }
 
-  Handle m_function_id;
-  LLVMType m_return_type;
-  // TODO: Params
+private:
+  FunctionDeclaration m_signature;
   std::vector<std::unique_ptr<BasicBlock>> m_basic_blocks;
   BasicBlock *m_current_block = nullptr;
   size_t m_alloca_insertion_position = 0;

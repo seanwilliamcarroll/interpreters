@@ -4,32 +4,26 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Top-level item generator for bust LLVM IR codegen.
+//*  Purpose : Function declaration for the codegen pass.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "codegen/context.hpp"
-#include "hir/nodes.hpp"
+#include "codegen/handle.hpp"
+#include "codegen/parameter.hpp"
+#include "codegen/types.hpp"
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-struct TopItemDeclarationCollector {
-  void operator()(const hir::FunctionDef &);
-  void operator()(const hir::LetBinding &);
-
-  Context &m_ctx;
-};
-
-struct TopItemGenerator {
-  void operator()(const hir::FunctionDef &);
-  void operator()(const hir::LetBinding &);
-
-  Context &m_ctx;
+struct FunctionDeclaration {
+  Handle m_function_id;
+  LLVMType m_return_type;
+  std::vector<Parameter> m_parameters;
 };
 
 //****************************************************************************

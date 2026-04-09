@@ -10,6 +10,8 @@
 //****************************************************************************
 
 #include "eval/let_binding_evaluator.hpp"
+
+#include "eval/environment.hpp"
 #include "eval/expression_evaluator.hpp"
 #include "eval/values.hpp"
 

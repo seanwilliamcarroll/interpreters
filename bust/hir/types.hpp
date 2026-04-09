@@ -61,6 +61,11 @@ inline core::SourceLocation type_location(const Type &type) {
       type);
 }
 
+inline bool is_unit_type(const Type &type) {
+  return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+         std::get<hir::PrimitiveTypeValue>(type).m_type == PrimitiveType::UNIT;
+}
+
 inline bool types_equal(const Type &lhs, const Type &rhs);
 
 inline bool operator==(const Type &lhs, const Type &rhs) {
@@ -109,6 +114,19 @@ inline Type clone_type(const Type &type) {
           }
           return std::make_unique<FunctionType>(FunctionType{
               {t->m_location}, std::move(args), clone_type(t->m_return_type)});
+        } else {
+          return t;
+        }
+      },
+      type);
+}
+
+inline Type get_return_type(const Type &type) {
+  return std::visit(
+      [](const auto &t) -> Type {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
+          return clone_type(t->m_return_type);
         } else {
           return t;
         }

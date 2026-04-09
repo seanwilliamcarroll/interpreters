@@ -11,13 +11,20 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/basic_block.hpp"
-#include "codegen/function.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/module.hpp"
 #include <iosfwd>
+#include <ostream>
+#include <stddef.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+#include "codegen/basic_block.hpp"
+#include "codegen/function.hpp"
+#include "codegen/function_declaration.hpp"
+#include "codegen/handle.hpp"
+#include "codegen/instructions.hpp"
+#include "codegen/module.hpp"
+#include "codegen/parameter.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
@@ -27,6 +34,7 @@ struct HandleToString {
   std::string operator()(const LiteralHandle &);
   std::string operator()(const TemporaryHandle &);
   std::string operator()(const LocalHandle &);
+  std::string operator()(const ParameterHandle &);
   std::string operator()(const GlobalHandle &);
 
   size_t m_temporary_count = 0;
@@ -40,6 +48,10 @@ struct Formatter {
 
   void operator()(const Module &);
 
+  void operator()(const Parameter &);
+  void function_parameters(const FunctionDeclaration &);
+  void declare(const FunctionDeclaration &);
+  void define(const FunctionDeclaration &);
   void operator()(const Function &);
 
   void operator()(const BasicBlock &);
@@ -49,11 +61,17 @@ struct Formatter {
   void operator()(const IntegerCompareInstruction &);
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
+
+  void operator()(const Argument &);
+  void function_arguments(const std::vector<Argument> &);
+  void operator()(const CallVoidInstruction &);
+  void operator()(const CallInstruction &);
   void operator()(const AllocaInstruction &);
 
   void operator()(const BranchInstruction &);
   void operator()(const JumpInstruction &);
   void operator()(const ReturnInstruction &);
+  void operator()(const ReturnVoidInstruction &);
 
   void newline() { m_out << "\n"; }
 

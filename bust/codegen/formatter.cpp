@@ -10,15 +10,20 @@
 //****************************************************************************
 
 #include "codegen/formatter.hpp"
-#include "codegen/basic_block.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/types.hpp"
-#include "exceptions.hpp"
-#include "operators.hpp"
-#include <iostream>
+
+#include <memory>
+#include <optional>
 #include <stdexcept>
-#include <utility>
 #include <variant>
+#include <vector>
+
+#include "codegen/basic_block.hpp"
+#include "codegen/function.hpp"
+#include "codegen/handle.hpp"
+#include "codegen/instructions.hpp"
+#include "codegen/parameter.hpp"
+#include "codegen/types.hpp"
+#include "operators.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
@@ -45,27 +50,72 @@ std::string HandleToString::operator()(const LocalHandle &handle) {
   return "%" + handle.m_handle;
 }
 
+std::string HandleToString::operator()(const ParameterHandle &handle) {
+  return "%" + handle.m_handle;
+}
+
 std::string HandleToString::operator()(const GlobalHandle &handle) {
   return "@" + handle.m_handle;
 }
 
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
-  for (const auto &function : mod.m_functions) {
+
+  for (const auto &function : mod.functions()) {
     (*this)(*function);
   }
 }
 
-void Formatter::operator()(const Function &function) {
-  m_out << "define " << function.m_return_type << " "
-        << std::visit(m_handle_converter, function.m_function_id);
+void Formatter::operator()(const Parameter &parameter) {
+  m_out << parameter.m_type << " " << m_handle_converter(parameter.m_name);
+}
 
-  // TODO
-  m_out << "() {";
+void Formatter::function_parameters(const FunctionDeclaration &signature) {
+  if (signature.m_parameters.empty()) {
+    return;
+  }
+  for (size_t index = 0; index < signature.m_parameters.size() - 1; ++index) {
+    const auto &parameter = signature.m_parameters[index];
+    (*this)(parameter);
+    m_out << ", ";
+  }
+  (*this)(signature.m_parameters.back());
+}
+
+void Formatter::declare(const FunctionDeclaration &signature) {
+  m_out << "declare " << signature.m_return_type << " "
+        << std::visit(m_handle_converter, signature.m_function_id);
+
+  m_out << "(";
+
+  function_parameters(signature);
+
+  m_out << ")";
+
+  newline();
+  newline();
+}
+
+void Formatter::define(const FunctionDeclaration &signature) {
+  m_out << "define " << signature.m_return_type << " "
+        << std::visit(m_handle_converter, signature.m_function_id);
+
+  m_out << "(";
+
+  function_parameters(signature);
+
+  m_out << ")";
+}
+
+void Formatter::operator()(const Function &function) {
+  m_handle_converter = HandleToString{};
+  define(function.signature());
+
+  m_out << " {";
 
   newline();
 
-  for (const auto &basic_block : function.m_basic_blocks) {
+  for (const auto &basic_block : function.basic_blocks()) {
     (*this)(*basic_block);
   }
 
@@ -76,17 +126,17 @@ void Formatter::operator()(const Function &function) {
 
 void Formatter::operator()(const BasicBlock &basic_block) {
 
-  m_out << get_raw_handle(basic_block.m_label) << ":\n";
+  m_out << get_raw_handle(basic_block.label()) << ":\n";
 
-  for (const auto &instruction : basic_block.m_instructions) {
+  for (const auto &instruction : basic_block.instructions()) {
     std::visit(*this, instruction);
   }
 
-  if (!basic_block.m_terminal_instruction.has_value()) {
+  if (!basic_block.terminal().has_value()) {
     throw std::runtime_error("Found basic block without terminal instruction!");
   }
 
-  std::visit(*this, basic_block.m_terminal_instruction.value());
+  std::visit(*this, basic_block.terminal().value());
 
   newline();
 }
@@ -154,6 +204,49 @@ void Formatter::operator()(const StoreInstruction &instruction) {
   newline();
 }
 
+void Formatter::operator()(const Argument &argument) {
+  m_out << argument.m_type << " "
+        << std::visit(m_handle_converter, argument.m_name);
+}
+
+void Formatter::function_arguments(const std::vector<Argument> &arguments) {
+  if (arguments.empty()) {
+    return;
+  }
+  for (size_t index = 0; index < arguments.size() - 1; ++index) {
+    const auto &argument = arguments[index];
+    (*this)(argument);
+    m_out << ", ";
+  }
+  (*this)(arguments.back());
+}
+
+void Formatter::operator()(const CallVoidInstruction &instruction) {
+  indent();
+
+  m_out << "call void " << std::visit(m_handle_converter, instruction.m_callee);
+
+  m_out << "(";
+  function_arguments(instruction.m_arguments);
+  m_out << ")";
+
+  newline();
+}
+
+void Formatter::operator()(const CallInstruction &instruction) {
+  indent();
+
+  m_out << std::visit(m_handle_converter, instruction.m_target) << " = call "
+        << instruction.m_return_type << " "
+        << std::visit(m_handle_converter, instruction.m_callee);
+
+  m_out << "(";
+  function_arguments(instruction.m_arguments);
+  m_out << ")";
+
+  newline();
+}
+
 void Formatter::operator()(const AllocaInstruction &instruction) {
   indent();
 
@@ -178,6 +271,12 @@ void Formatter::operator()(const JumpInstruction &instruction) {
 
   m_out << "br label " << std::visit(m_handle_converter, instruction.m_target);
 
+  newline();
+}
+
+void Formatter::operator()(const ReturnVoidInstruction &) {
+  indent();
+  m_out << "ret void";
   newline();
 }
 

@@ -12,11 +12,13 @@
 //****************************************************************************
 
 #include <cassert>
+#include <iostream>
 #include <ranges>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 
 //****************************************************************************
@@ -24,7 +26,6 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct UniqueNameTracker {
-
   std::string uniquify(const std::string &name) {
     auto count = ++m_master_name_count[name];
     return name + "." + std::to_string(count);
@@ -63,19 +64,21 @@ struct SymbolTable {
     m_scopes.pop_back();
   }
 
-  Handle define_local(const std::string &name) {
+  LocalHandle define_local(const std::string &name) {
     LocalHandle new_handle{m_name_tracker.uniquify(name)};
-
     m_scopes.back().define(name, new_handle);
-
     return new_handle;
   }
 
-  Handle define_global(const std::string &name) {
-    GlobalHandle new_handle{m_name_tracker.uniquify(name)};
+  ParameterHandle define_parameter(const std::string &name) {
+    ParameterHandle new_handle{name};
+    m_scopes.back().define(name, new_handle);
+    return new_handle;
+  }
 
+  GlobalHandle define_global(const std::string &name) {
+    GlobalHandle new_handle{name};
     m_scopes.front().define(name, new_handle);
-
     return new_handle;
   }
 
@@ -98,6 +101,13 @@ struct SymbolTable {
 private:
   std::vector<Scope> m_scopes;
   UniqueNameTracker m_name_tracker{};
+};
+
+struct ScopeGuard {
+  ScopeGuard(SymbolTable &table) : m_table(table) { m_table.push_scope(); }
+  ~ScopeGuard() { m_table.pop_scope(); }
+
+  SymbolTable &m_table;
 };
 
 //****************************************************************************

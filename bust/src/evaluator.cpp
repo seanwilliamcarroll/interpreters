@@ -10,10 +10,14 @@
 //****************************************************************************
 
 #include <evaluator.hpp>
-#include <iostream>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <variant>
+#include <vector>
 
 #include "eval/context.hpp"
+#include "eval/environment.hpp"
 #include "eval/expression_evaluator.hpp"
 #include "eval/top_item_evaluator.hpp"
 #include "eval/values.hpp"

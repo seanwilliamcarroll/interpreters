@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include "codegen/handle.hpp"
+#include "codegen/parameter.hpp"
 #include "codegen/types.hpp"
 #include "operators.hpp"
 #include <variant>
@@ -65,6 +66,18 @@ struct StoreInstruction {
   LLVMType m_type;
 };
 
+struct CallVoidInstruction {
+  Handle m_callee;
+  std::vector<Argument> m_arguments;
+};
+
+struct CallInstruction {
+  Handle m_target;
+  Handle m_callee;
+  std::vector<Argument> m_arguments;
+  LLVMType m_return_type;
+};
+
 struct AllocaInstruction {
   Handle m_handle;
   LLVMType m_type;
@@ -75,12 +88,15 @@ struct ReturnInstruction {
   LLVMType m_type;
 };
 
+struct ReturnVoidInstruction {};
+
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
-                 LoadInstruction, StoreInstruction, AllocaInstruction>;
+                 LoadInstruction, StoreInstruction, CallVoidInstruction,
+                 CallInstruction, AllocaInstruction>;
 
-using Terminator =
-    std::variant<BranchInstruction, JumpInstruction, ReturnInstruction>;
+using Terminator = std::variant<BranchInstruction, JumpInstruction,
+                                ReturnInstruction, ReturnVoidInstruction>;
 
 //****************************************************************************
 } // namespace bust::codegen

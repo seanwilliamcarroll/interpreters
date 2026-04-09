@@ -16,21 +16,19 @@
 #include "codegen/module.hpp"
 #include "codegen/symbol_table.hpp"
 #include <cassert>
-#include <memory>
-#include <string>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct Context {
-  Function &current_function() { return m_module.current_function(); }
 
-  BasicBlock &current_basic_block() {
-    return current_function().current_basic_block();
-  }
+  Module &module() { return m_module; }
+  SymbolTable &symbols() { return m_symbol_table; }
+  Function &function() { return m_module.current_function(); }
+  BasicBlock &block() { return function().current_basic_block(); }
 
-  std::string m_output{};
+private:
   Module m_module{};
   SymbolTable m_symbol_table;
 };

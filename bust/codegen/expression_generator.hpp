@@ -11,7 +11,10 @@
 #pragma once
 //****************************************************************************
 
+#include <memory>
+
 #include "codegen/context.hpp"
+#include "codegen/handle.hpp"
 #include "hir/nodes.hpp"
 
 //****************************************************************************
