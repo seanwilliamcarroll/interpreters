@@ -970,6 +970,262 @@ TEST_SUITE("bust.parser") {
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
         unary.m_expression));
   }
+
+  // === Char literals =========================================================
+
+  TEST_CASE("bust::parse_char_literal_printable") {
+    auto program = parse_string("fn main() -> char { 'A' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == 'A');
+  }
+
+  TEST_CASE("bust::parse_char_literal_digit") {
+    auto program = parse_string("fn main() -> char { '7' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '7');
+  }
+
+  TEST_CASE("bust::parse_char_literal_space") {
+    auto program = parse_string("fn main() -> char { ' ' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == ' ');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_newline") {
+    auto program = parse_string("fn main() -> char { '\\n' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\n');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_tab") {
+    auto program = parse_string("fn main() -> char { '\\t' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\t');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_null") {
+    auto program = parse_string("fn main() -> char { '\\0' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\0');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_backslash") {
+    auto program = parse_string("fn main() -> char { '\\\\' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\\');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_single_quote") {
+    auto program = parse_string("fn main() -> char { '\\'' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\'');
+  }
+
+  TEST_CASE("bust::parse_char_literal_hex_escape") {
+    // '\x41' is 'A' (0x41 = 65)
+    auto program = parse_string("fn main() -> char { '\\x41' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == 'A');
+  }
+
+  TEST_CASE("bust::parse_char_literal_hex_escape_null") {
+    // '\x00' is null
+    auto program = parse_string("fn main() -> char { '\\x00' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\0');
+  }
+
+  // === Type annotations (i8, i32, char) ======================================
+
+  TEST_CASE("bust::parse_type_annotation_i8") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x: i8 = 42;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I8);
+  }
+
+  TEST_CASE("bust::parse_type_annotation_i32") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x: i32 = 42;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_type_annotation_char") {
+    auto program = parse_string("fn main() -> char { 'A' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    check_primitive_type(func.m_return_type, PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("bust::parse_function_param_i8") {
+    auto program = parse_string("fn foo(x: i8) -> i8 { x }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_parameters.size() == 1);
+    REQUIRE(func.m_parameters[0].m_type.has_value());
+    check_primitive_type(*func.m_parameters[0].m_type, PrimitiveType::I8);
+    check_primitive_type(func.m_return_type, PrimitiveType::I8);
+  }
+
+  // === Cast expressions ======================================================
+
+  TEST_CASE("bust::parse_cast_simple") {
+    // 42 as i8
+    auto program = parse_string("fn main() -> i8 { 42 as i8 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    CHECK(std::holds_alternative<LiteralInt64>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I8);
+  }
+
+  TEST_CASE("bust::parse_cast_to_i32") {
+    auto program = parse_string("fn main() -> i32 { x as i32 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_cast_to_char") {
+    auto program = parse_string("fn main() -> char { 65 as char }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    check_primitive_type(cast.m_type, PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("bust::parse_cast_chained") {
+    // x as i32 as i64 — left-associative: (x as i32) as i64
+    auto program = parse_string("fn main() -> i64 { x as i32 as i64 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &outer = *std::get<std::unique_ptr<CastExpr>>(expr);
+    check_primitive_type(outer.m_type, PrimitiveType::I64);
+    // Inner is also a cast
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(outer.m_expression));
+    const auto &inner =
+        *std::get<std::unique_ptr<CastExpr>>(outer.m_expression);
+    CHECK(std::holds_alternative<Identifier>(inner.m_expression));
+    check_primitive_type(inner.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_cast_lower_precedence_than_arithmetic") {
+    // x as i32 + 1 should parse as (x as i32) + 1
+    auto program = parse_string("fn main() -> i64 { x as i32 + 1 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
+    const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    CHECK(add.m_operator == BinaryOperator::PLUS);
+    // LHS is the cast
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(add.m_lhs));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(add.m_lhs);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I32);
+    // RHS is literal 1
+    CHECK(std::holds_alternative<LiteralInt64>(add.m_rhs));
+  }
+
+  TEST_CASE("bust::parse_cast_with_unary") {
+    // -x as i32 should parse as -(x as i32)
+    auto program = parse_string("fn main() -> i32 { -x as i32 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
+    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
+    CHECK(unary.m_operator == UnaryOperator::MINUS);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(unary.m_expression));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(unary.m_expression);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_cast_on_call_result") {
+    // foo() as i8
+    auto program = parse_string("fn main() -> i8 { foo() as i8 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    CHECK(std::holds_alternative<std::unique_ptr<CallExpr>>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I8);
+  }
+
+  TEST_CASE("bust::parse_cast_in_let_binding") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x: i8 = 42 as i8;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I8);
+    CHECK(std::holds_alternative<std::unique_ptr<CastExpr>>(
+        binding.m_expression));
+  }
 }
 //****************************************************************************
 } // namespace bust
