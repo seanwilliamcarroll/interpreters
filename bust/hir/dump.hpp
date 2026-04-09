@@ -196,6 +196,11 @@ private:
             m_out << "Return\n";
             IndentGuard g(*this);
             dump_expression(v->m_expression);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<CastExpr>>) {
+            m_out << "Cast\n";
+            IndentGuard g(*this);
+            dump_expression(v->m_expression);
+            m_out << " AS " << type_to_string(v->m_new_type);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
             m_out << "Lambda(";
             for (size_t i = 0; i < v->m_parameters.size(); ++i) {

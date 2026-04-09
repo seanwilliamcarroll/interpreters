@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 #include <variant>
@@ -224,6 +225,14 @@ Value ExpressionEvaluator::operator()(
 [[noreturn]] Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expression) {
   throw ReturnException{(*this)(return_expression->m_expression)};
+}
+
+Value ExpressionEvaluator::operator()(
+    const std::unique_ptr<hir::CastExpr> &cast_expression) {
+  auto value = (*this)(cast_expression->m_expression);
+  // Do cast
+
+  throw std::runtime_error("UNIMPLEMENTED");
 }
 
 Value ExpressionEvaluator::operator()(

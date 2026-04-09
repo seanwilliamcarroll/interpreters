@@ -11,6 +11,7 @@
 #pragma once
 //****************************************************************************
 
+#include <array>
 #include <cstdint>
 #include <string>
 
@@ -41,6 +42,42 @@ inline std::string to_string(const PrimitiveType &type) {
     return "i32";
   case PrimitiveType::I64:
     return "i64";
+  }
+}
+
+inline bool can_cast(PrimitiveType from, PrimitiveType to) {
+  switch (from) {
+  case PrimitiveType::UNIT: {
+    // Can't cast Unit to or from anything
+    return false;
+  }
+  case PrimitiveType::BOOL: {
+    switch (to) {
+    case PrimitiveType::BOOL:
+    case PrimitiveType::I8:
+    case PrimitiveType::I32:
+    case PrimitiveType::I64:
+      return true;
+    case PrimitiveType::UNIT:
+    case PrimitiveType::CHAR:
+      return false;
+    }
+  }
+  case PrimitiveType::CHAR:
+  case PrimitiveType::I8:
+  case PrimitiveType::I32:
+  case PrimitiveType::I64:
+    // Can always cast these 4 to one another, we allow narrowing and expanding
+    switch (to) {
+    case PrimitiveType::CHAR:
+    case PrimitiveType::I8:
+    case PrimitiveType::I32:
+    case PrimitiveType::I64:
+      return true;
+    case PrimitiveType::BOOL:
+    case PrimitiveType::UNIT:
+      return false;
+    }
   }
 }
 

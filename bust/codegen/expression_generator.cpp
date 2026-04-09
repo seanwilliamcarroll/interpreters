@@ -446,6 +446,10 @@ ExpressionGenerator::operator()(const std::unique_ptr<hir::ReturnExpr> &) {
   return {};
 }
 
+Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CastExpr> &) {
+  return {};
+}
+
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::LambdaExpr> &) {
   return {};

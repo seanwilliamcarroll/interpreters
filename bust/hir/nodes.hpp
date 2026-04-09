@@ -30,6 +30,7 @@ struct LetBinding;
 struct Block;
 struct IfExpr;
 struct CallExpr;
+struct CastExpr;
 struct BinaryExpr;
 struct UnaryExpr;
 struct ReturnExpr;
@@ -90,7 +91,8 @@ using ExprKind =
                  LiteralBool, LiteralChar, std::unique_ptr<Block>,
                  std::unique_ptr<IfExpr>, std::unique_ptr<CallExpr>,
                  std::unique_ptr<BinaryExpr>, std::unique_ptr<UnaryExpr>,
-                 std::unique_ptr<ReturnExpr>, std::unique_ptr<LambdaExpr>>;
+                 std::unique_ptr<ReturnExpr>, std::unique_ptr<CastExpr>,
+                 std::unique_ptr<LambdaExpr>>;
 
 struct Expression : public HasLocation {
   Type m_type;
@@ -121,6 +123,11 @@ struct UnaryExpr : public HasLocation {
 
 struct ReturnExpr : public HasLocation {
   Expression m_expression;
+};
+
+struct CastExpr : public HasLocation {
+  Expression m_expression;
+  Type m_new_type;
 };
 
 // --- Control flow ----------------------------------------------------------

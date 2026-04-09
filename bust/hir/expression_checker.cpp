@@ -11,12 +11,14 @@
 
 #include "hir/expression_checker.hpp"
 
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -26,6 +28,7 @@
 #include "hir/block_checker.hpp"
 #include "hir/context.hpp"
 #include "hir/environment.hpp"
+#include "hir/nodes.hpp"
 #include "hir/type_converter.hpp"
 #include "hir/type_unifier.hpp"
 #include "operators.hpp"
@@ -332,9 +335,38 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block) {
 }
 
 Expression ExpressionChecker::operator()(
-    const std::unique_ptr<ast::CastExpr> & // cast_expression
-) {
-  throw std::runtime_error("UNIMPLEMENTED");
+    const std::unique_ptr<ast::CastExpr> &cast_expression) {
+
+  auto hir_expression = std::visit(*this, cast_expression->m_expression);
+
+  auto original_type = m_ctx.m_type_unifier.find(hir_expression.m_type);
+
+  auto new_type = std::visit(TypeConverter{m_ctx}, cast_expression->m_type);
+
+  if (!std::holds_alternative<PrimitiveTypeValue>(original_type) ||
+      !std::holds_alternative<PrimitiveTypeValue>(new_type)) {
+    throw core::CompilerException("TypeChecker",
+                                  "Cannot cast an expression with type: " +
+                                      original_type + " to type: " + new_type,
+                                  cast_expression->m_location);
+  }
+
+  auto original_primitive = std::get<PrimitiveTypeValue>(original_type).m_type;
+  auto new_primitive = std::get<PrimitiveTypeValue>(new_type).m_type;
+
+  if (!can_cast(original_primitive, new_primitive)) {
+    throw core::CompilerException("TypeChecker",
+                                  "Cannot cast an expression with type: " +
+                                      to_string(original_primitive) +
+                                      " to type: " + to_string(new_primitive),
+                                  cast_expression->m_location);
+  }
+
+  return {{cast_expression->m_location},
+          std::move(new_type),
+          std::make_unique<CastExpr>(CastExpr{{cast_expression->m_location},
+                                              std::move(hir_expression),
+                                              std::move(new_type)})};
 }
 
 Expression ExpressionChecker::operator()(
