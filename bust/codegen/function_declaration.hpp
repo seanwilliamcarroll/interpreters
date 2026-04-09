@@ -4,33 +4,26 @@
 //*  Version : $Header:$
 //*
 //*
-//*  Purpose : Shared context for the codegen pass.
+//*  Purpose : Function declaration for the codegen pass.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "codegen/basic_block.hpp"
-#include "codegen/function.hpp"
-#include "codegen/module.hpp"
-#include "codegen/symbol_table.hpp"
-#include <cassert>
+#include "codegen/handle.hpp"
+#include "codegen/parameter.hpp"
+#include "codegen/types.hpp"
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-struct Context {
-
-  Module &module() { return m_module; }
-  SymbolTable &symbols() { return m_symbol_table; }
-  Function &function() { return m_module.current_function(); }
-  BasicBlock &block() { return function().current_basic_block(); }
-
-private:
-  Module m_module{};
-  SymbolTable m_symbol_table;
+struct FunctionDeclaration {
+  Handle m_function_id;
+  LLVMType m_return_type;
+  std::vector<Parameter> m_parameters;
 };
 
 //****************************************************************************

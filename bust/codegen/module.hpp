@@ -31,18 +31,20 @@ struct Module {
     return *m_functions.back();
   }
 
+  const std::vector<Global> &globals() const { return m_globals; }
+
+  const std::vector<std::unique_ptr<Function>> &functions() const {
+    return m_functions;
+  }
+
   Function &current_function() { return *m_current_function; }
 
   void set_current_function(Function &function) {
     m_current_function = &function;
   }
 
-  BasicBlock &current_basic_block() {
-    return current_function().current_basic_block();
-  }
-
+private:
   std::vector<Global> m_globals;
-  std::vector<std::unique_ptr<FunctionDeclaration>> m_signatures;
   std::vector<std::unique_ptr<Function>> m_functions;
   Function *m_current_function;
 };

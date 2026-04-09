@@ -22,9 +22,7 @@
 #include "operators.hpp"
 #include "types.hpp"
 #include <algorithm>
-#include <ios>
 #include <iterator>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -34,7 +32,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
-  auto identifier_handle = m_ctx.m_symbol_table.lookup(identifier.m_name);
+  auto identifier_handle = m_ctx.symbols().lookup(identifier.m_name);
 
   // GlobalHandle (functions) and ParameterHandle (SSA args) are used directly.
   // Only LocalHandle (alloca slots) need a load.
@@ -44,7 +42,7 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
 
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(
+  m_ctx.block().add_instruction(
       LoadInstruction{.m_destination = ssa_temp,
                       .m_source = identifier_handle,
                       .m_type = to_llvm_type(identifier.m_type)});
@@ -83,7 +81,7 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
 
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
-  auto &function = m_ctx.current_function();
+  auto &function = m_ctx.function();
 
   const auto &if_return_type = if_expression->m_then_branch.m_type;
 
@@ -101,14 +99,14 @@ Handle ExpressionGenerator::operator()(
   auto then_target = (*this)(if_expression->m_then_branch);
   auto &final_then_block = function.current_basic_block();
   final_then_block.add_terminal(
-      JumpInstruction{.m_target = starting_merge_block.m_label});
+      JumpInstruction{.m_target = starting_merge_block.label()});
 
   if (!if_expression->m_else_branch.has_value()) {
     // Just bare if, else is merge
     final_condition_block.add_terminal(
         BranchInstruction{.m_condition = condition_target,
-                          .m_iftrue = starting_then_block.m_label,
-                          .m_iffalse = starting_merge_block.m_label});
+                          .m_iftrue = starting_then_block.label(),
+                          .m_iffalse = starting_merge_block.label()});
     // Subsequent instructions should go into merge block
     function.set_insertion_point(starting_merge_block);
     // Void, no handle to return
@@ -122,13 +120,13 @@ Handle ExpressionGenerator::operator()(
   auto else_target = (*this)(if_expression->m_else_branch.value());
   auto &final_else_block = function.current_basic_block();
   final_else_block.add_terminal(
-      JumpInstruction{.m_target = starting_merge_block.m_label});
+      JumpInstruction{.m_target = starting_merge_block.label()});
 
   // Now we can merge on then vs else
   final_condition_block.add_terminal(
       BranchInstruction{.m_condition = condition_target,
-                        .m_iftrue = starting_then_block.m_label,
-                        .m_iffalse = starting_else_block.m_label});
+                        .m_iftrue = starting_then_block.label(),
+                        .m_iffalse = starting_else_block.label()});
 
   // Subsequent instructions should go into merge block
   function.set_insertion_point(starting_merge_block);
@@ -143,7 +141,7 @@ Handle ExpressionGenerator::operator()(
     return {};
   }
 
-  auto result_handle = m_ctx.m_symbol_table.define_local("if_result");
+  auto result_handle = m_ctx.symbols().define_local("if_result");
 
   function.add_alloca_instruction(AllocaInstruction{
       .m_handle = result_handle, .m_type = to_llvm_type(if_return_type)});
@@ -186,14 +184,14 @@ Handle ExpressionGenerator::operator()(
       hir::get_return_type(call_expression->m_callee.m_type);
 
   if (hir::is_unit_type(function_return_type)) {
-    m_ctx.current_basic_block().add_instruction(
+    m_ctx.block().add_instruction(
         CallVoidInstruction{.m_callee = std::move(callee_handle),
                             .m_arguments = std::move(arguments)});
     return {};
   }
 
   auto ssa_temp = SymbolTable::next_ssa_temporary();
-  m_ctx.current_basic_block().add_instruction(
+  m_ctx.block().add_instruction(
       CallInstruction{.m_target = ssa_temp,
                       .m_callee = std::move(callee_handle),
                       .m_arguments = std::move(arguments),
@@ -301,7 +299,7 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(IntegerCompareInstruction{
+  m_ctx.block().add_instruction(IntegerCompareInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,
@@ -320,7 +318,7 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(BinaryInstruction{
+  m_ctx.block().add_instruction(BinaryInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,
@@ -340,13 +338,13 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // at merge, we still need to do a compare on the result
 
   auto result_handle =
-      m_ctx.m_symbol_table.define_local("short_circuit_logic_result");
+      m_ctx.symbols().define_local("short_circuit_logic_result");
 
-  m_ctx.current_function().add_alloca_instruction(
+  m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = result_handle, .m_type = LLVMType::I1});
 
   auto lhs_handle = (*this)(binary_expression->m_lhs);
-  auto &final_lhs_block = m_ctx.current_basic_block();
+  auto &final_lhs_block = m_ctx.block();
   // Store lhs in result handle
   final_lhs_block.add_instruction(StoreInstruction{
       .m_destination = result_handle,
@@ -354,10 +352,10 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_type = LLVMType::I1,
   });
 
-  auto &starting_rhs_block = m_ctx.current_function().new_basic_block("rhs");
-  m_ctx.current_function().set_insertion_point(starting_rhs_block);
+  auto &starting_rhs_block = m_ctx.function().new_basic_block("rhs");
+  m_ctx.function().set_insertion_point(starting_rhs_block);
   auto rhs_handle = (*this)(binary_expression->m_rhs);
-  auto &final_rhs_block = m_ctx.current_basic_block();
+  auto &final_rhs_block = m_ctx.block();
 
   final_rhs_block.add_instruction(StoreInstruction{
       .m_destination = result_handle,
@@ -365,9 +363,8 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_type = LLVMType::I1,
   });
 
-  auto &starting_merge_block =
-      m_ctx.current_function().new_basic_block("merge");
-  m_ctx.current_function().set_insertion_point(starting_merge_block);
+  auto &starting_merge_block = m_ctx.function().new_basic_block("merge");
+  m_ctx.function().set_insertion_point(starting_merge_block);
 
   // Figure out terminal instructions now
 
@@ -377,18 +374,18 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   final_lhs_block.add_terminal(BranchInstruction{
       .m_condition = lhs_handle,
       .m_iftrue =
-          is_and_op ? starting_rhs_block.m_label : starting_merge_block.m_label,
+          is_and_op ? starting_rhs_block.label() : starting_merge_block.label(),
       .m_iffalse =
-          is_and_op ? starting_merge_block.m_label : starting_rhs_block.m_label,
+          is_and_op ? starting_merge_block.label() : starting_rhs_block.label(),
   });
 
   final_rhs_block.add_terminal(JumpInstruction{
-      .m_target = starting_merge_block.m_label,
+      .m_target = starting_merge_block.label(),
   });
 
   auto final_result = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(LoadInstruction{
+  m_ctx.block().add_instruction(LoadInstruction{
       .m_destination = final_result,
       .m_source = result_handle,
       .m_type = LLVMType::I1,
@@ -417,7 +414,7 @@ Handle ExpressionGenerator::operator()(
 
   auto result_handle = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(UnaryInstruction{
+  m_ctx.block().add_instruction(UnaryInstruction{
       .m_result = result_handle,
       .m_input = input_handle,
       .m_operator = unary_expression->m_operator,

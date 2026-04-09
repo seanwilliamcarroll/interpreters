@@ -60,7 +60,7 @@ std::string HandleToString::operator()(const GlobalHandle &handle) {
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
 
-  for (const auto &function : mod.m_functions) {
+  for (const auto &function : mod.functions()) {
     (*this)(*function);
   }
 }
@@ -114,7 +114,7 @@ void Formatter::operator()(const Function &function) {
 
   newline();
 
-  for (const auto &basic_block : function.m_basic_blocks) {
+  for (const auto &basic_block : function.basic_blocks()) {
     (*this)(*basic_block);
   }
 
@@ -125,17 +125,17 @@ void Formatter::operator()(const Function &function) {
 
 void Formatter::operator()(const BasicBlock &basic_block) {
 
-  m_out << get_raw_handle(basic_block.m_label) << ":\n";
+  m_out << get_raw_handle(basic_block.label()) << ":\n";
 
-  for (const auto &instruction : basic_block.m_instructions) {
+  for (const auto &instruction : basic_block.instructions()) {
     std::visit(*this, instruction);
   }
 
-  if (!basic_block.m_terminal_instruction.has_value()) {
+  if (!basic_block.terminal().has_value()) {
     throw std::runtime_error("Found basic block without terminal instruction!");
   }
 
-  std::visit(*this, basic_block.m_terminal_instruction.value());
+  std::visit(*this, basic_block.terminal().value());
 
   newline();
 }
