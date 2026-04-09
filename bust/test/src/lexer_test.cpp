@@ -15,9 +15,9 @@
 //*
 //****************************************************************************
 
-#include <bust_tokens.hpp>
 #include <exceptions.hpp>
 #include <lexer.hpp>
+#include <tokens.hpp>
 
 #include <doctest/doctest.h>
 #include <rapidcheck.h>

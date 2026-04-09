@@ -15,8 +15,11 @@ TRUE        = `true`
 FALSE       = `false`
 
 // Type keywords
+I8          = `i8`
+I32         = `i32`
 I64         = `i64`
 BOOL        = `bool`
+CHAR        = `char`
 UNIT        = `()`
 
 // Delimiters
@@ -57,11 +60,19 @@ BANG        = `!`
 LINE_COMMENT  = `//` (any char except newline)* newline
 BLOCK_COMMENT = `/*` (any char, including newlines)* `*/`  // nesting allowed
 
+// Cast operator
+AS          = `as`
+
 // Literals and identifiers
-NONZERO_DIGIT = '1' | ... | '9'
-DIGIT         = '0' | NONZERO_DIGIT
-INT_LITERAL   = '0' | NONZERO_DIGIT DIGIT*
-IDENTIFIER    = [_a-z][_a-zA-Z0-9]*   // checked against keyword table
+NONZERO_DIGIT   = '1' | ... | '9'
+DIGIT           = '0' | NONZERO_DIGIT
+HEX_DIGIT       = DIGIT | 'a' | ... | 'f' | 'A' | ... | 'F'
+INT_LITERAL     = '0' | NONZERO_DIGIT DIGIT*
+PRINTABLE_CHAR  = any ASCII 32-126 except "'" and "\"
+ESCAPE_SEQ      = '\' ('n' | 't' | 'r' | '\\' | '\'' | '0')
+                | '\x' HEX_DIGIT HEX_DIGIT
+CHAR_LITERAL    = "'" (PRINTABLE_CHAR | ESCAPE_SEQ) "'"
+IDENTIFIER      = [_a-z][_a-zA-Z0-9]*   // checked against keyword table
 ```
 
 ## Grammar Rules
@@ -80,8 +91,11 @@ argument_annotated  = IDENTIFIER COLON type
 
 argument_inferred   = IDENTIFIER (COLON type)?
 
-type                = I64
+type                = I8
+                    | I32
+                    | I64
                     | BOOL
+                    | CHAR
                     | UNIT
                     | function_type
 
@@ -120,8 +134,10 @@ add_sub             = mult_div_mod ((PLUS | MINUS) mult_div_mod)*
 
 mult_div_mod        = unary_pre ((STAR | SLASH | PERCENT) unary_pre)*
 
-unary_pre           = (MINUS | BANG) postfix
-                    | postfix
+unary_pre           = (MINUS | BANG) cast_expr
+                    | cast_expr
+
+cast_expr           = postfix (AS type)*
 
 postfix             = primary (LPAREN (expression (COMMA expression)*)? RPAREN)*
 
@@ -149,6 +165,7 @@ for_expr            = TODO (deferred — needs ranges/collections)
 // Literals
 
 literal             = INT_LITERAL
+                    | CHAR_LITERAL
                     | TRUE
                     | FALSE
                     | UNIT

@@ -15,9 +15,9 @@
 
 #include <ast/dump.hpp>
 #include <ast/nodes.hpp>
-#include <bust_tokens.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
+#include <tokens.hpp>
 
 #include <doctest/doctest.h>
 #include <sstream>

@@ -21,7 +21,7 @@ set_target_properties(bust-exe PROPERTIES OUTPUT_NAME bust)
 
 add_library(bust-lib STATIC
   src/bust.cpp
-  src/bust_tokens.cpp
+  src/tokens.cpp
   hir/block_checker.cpp
   hir/expression_checker.cpp
   hir/let_binding_checker.cpp
