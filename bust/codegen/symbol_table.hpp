@@ -109,6 +109,13 @@ private:
   UniqueNameTracker m_name_tracker{};
 };
 
+struct ScopeGuard {
+  ScopeGuard(SymbolTable &table) : m_table(table) { m_table.push_scope(); }
+  ~ScopeGuard() { m_table.pop_scope(); }
+
+  SymbolTable &m_table;
+};
+
 //****************************************************************************
 } // namespace bust::codegen
 //****************************************************************************

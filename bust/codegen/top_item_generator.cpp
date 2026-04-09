@@ -15,6 +15,7 @@
 #include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
 #include "codegen/let_binding_generator.hpp"
+#include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
 #include "hir/types.hpp"
 
@@ -30,7 +31,7 @@ void TopItemDeclarationCollector::operator()(
 void TopItemDeclarationCollector::operator()(const hir::LetBinding &) {}
 
 void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
-  m_ctx.m_symbol_table.push_scope();
+  ScopeGuard guard(m_ctx.m_symbol_table);
   auto &function = m_ctx.m_module.new_function(FunctionDeclaration{
       .m_function_id = GlobalHandle{function_def.m_function_id},
       .m_return_type = to_llvm_type(function_def.m_type->m_return_type)});
@@ -49,8 +50,6 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
   function.current_basic_block().add_terminal(ReturnInstruction{
       .m_value = return_value,
       .m_type = to_llvm_type(function_def.m_type->m_return_type)});
-
-  m_ctx.m_symbol_table.pop_scope();
 }
 
 void TopItemGenerator::operator()(const hir::LetBinding &let_binding) {
