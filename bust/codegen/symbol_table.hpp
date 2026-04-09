@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include <cassert>
+#include <iostream>
 #include <ranges>
 #include <string>
 #include <unordered_map>
@@ -24,7 +25,6 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct UniqueNameTracker {
-
   std::string uniquify(const std::string &name) {
     auto count = ++m_master_name_count[name];
     return name + "." + std::to_string(count);
@@ -72,7 +72,7 @@ struct SymbolTable {
   }
 
   Handle define_global(const std::string &name) {
-    GlobalHandle new_handle{m_name_tracker.uniquify(name)};
+    GlobalHandle new_handle{name};
 
     m_scopes.front().define(name, new_handle);
 

@@ -40,6 +40,10 @@ struct Formatter {
 
   void operator()(const Module &);
 
+  void operator()(const Parameter &);
+  void function_parameters(const FunctionDeclaration &);
+  void declare(const FunctionDeclaration &);
+  void define(const FunctionDeclaration &);
   void operator()(const Function &);
 
   void operator()(const BasicBlock &);
@@ -49,6 +53,10 @@ struct Formatter {
   void operator()(const IntegerCompareInstruction &);
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
+
+  void operator()(const Argument &);
+  void function_arguments(const std::vector<Argument> &);
+  void operator()(const CallInstruction &);
   void operator()(const AllocaInstruction &);
 
   void operator()(const BranchInstruction &);

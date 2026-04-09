@@ -26,9 +26,8 @@ struct Global {
 };
 
 struct Module {
-  Function &new_function(const Handle &function_handle, LLVMType return_type) {
-    m_functions.emplace_back(
-        std::make_unique<Function>(function_handle, return_type));
+  Function &new_function(FunctionDeclaration signature) {
+    m_functions.emplace_back(std::make_unique<Function>(std::move(signature)));
     return *m_functions.back();
   }
 
@@ -43,6 +42,7 @@ struct Module {
   }
 
   std::vector<Global> m_globals;
+  std::vector<std::unique_ptr<FunctionDeclaration>> m_signatures;
   std::vector<std::unique_ptr<Function>> m_functions;
   Function *m_current_function;
 };

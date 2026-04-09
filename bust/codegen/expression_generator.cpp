@@ -13,14 +13,16 @@
 #include "codegen/basic_block.hpp"
 #include "codegen/context.hpp"
 #include "codegen/instructions.hpp"
+#include "codegen/parameter.hpp"
 #include "codegen/statement_generator.hpp"
 #include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
-#include "exceptions.hpp"
 #include "hir/nodes.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
+#include <algorithm>
 #include <ios>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -31,12 +33,20 @@ namespace bust::codegen {
 //****************************************************************************
 
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
+  auto identifier_handle = m_ctx.m_symbol_table.lookup(identifier.m_name);
+
+  if (!std::holds_alternative<LocalHandle>(identifier_handle)) {
+    return identifier_handle;
+  }
+  // Not checking for other handle types right now, not sure we need to throw on
+  // the other types
+
   auto ssa_temp = SymbolTable::next_ssa_temporary();
 
-  m_ctx.current_basic_block().add_instruction(LoadInstruction{
-      .m_destination = ssa_temp,
-      .m_source = m_ctx.m_symbol_table.lookup(identifier.m_name),
-      .m_type = to_llvm_type(identifier.m_type)});
+  m_ctx.current_basic_block().add_instruction(
+      LoadInstruction{.m_destination = ssa_temp,
+                      .m_source = identifier_handle,
+                      .m_type = to_llvm_type(identifier.m_type)});
 
   return ssa_temp;
 }
@@ -161,8 +171,47 @@ Handle ExpressionGenerator::operator()(
   return ssa_temp;
 }
 
-Handle ExpressionGenerator::operator()(const std::unique_ptr<hir::CallExpr> &) {
-  return {};
+hir::Type get_function_return_type(const hir::Type &type) {
+
+  if (!std::holds_alternative<std::unique_ptr<hir::FunctionType>>(type)) {
+    throw std::runtime_error("Type checker should have caught this");
+  }
+
+  const auto &function_type =
+      std::get<std::unique_ptr<hir::FunctionType>>(type);
+  return hir::clone_type(function_type->m_return_type);
+}
+
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::CallExpr> &call_expression) {
+
+  auto callee_handle = (*this)(call_expression->m_callee);
+
+  // No need to check anything, already been type checked, just pass arguments?
+
+  // Need to bind the arguments to their proper handles?
+
+  std::vector<Argument> arguments;
+  std::transform(call_expression->m_arguments.begin(),
+                 call_expression->m_arguments.end(),
+                 std::back_inserter(arguments),
+                 [this](const auto &argument_expression) -> Argument {
+                   auto handle = (*this)(argument_expression);
+                   return {.m_name = handle,
+                           .m_type = to_llvm_type(argument_expression.m_type)};
+                 });
+
+  auto function_return_type =
+      get_function_return_type(call_expression->m_callee.m_type);
+
+  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  m_ctx.current_basic_block().add_instruction(
+      CallInstruction{.m_target = ssa_temp,
+                      .m_callee = std::move(callee_handle),
+                      .m_arguments = std::move(arguments),
+                      .m_return_type = to_llvm_type(function_return_type)});
+
+  return ssa_temp;
 }
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {

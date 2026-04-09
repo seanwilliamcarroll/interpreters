@@ -11,7 +11,9 @@
 
 #include "codegen/formatter.hpp"
 #include "codegen/basic_block.hpp"
+#include "codegen/function.hpp"
 #include "codegen/instructions.hpp"
+#include "codegen/parameter.hpp"
 #include "codegen/types.hpp"
 #include "exceptions.hpp"
 #include "operators.hpp"
@@ -19,6 +21,7 @@
 #include <stdexcept>
 #include <utility>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -51,17 +54,57 @@ std::string HandleToString::operator()(const GlobalHandle &handle) {
 
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
+
   for (const auto &function : mod.m_functions) {
     (*this)(*function);
   }
 }
 
-void Formatter::operator()(const Function &function) {
-  m_out << "define " << function.m_return_type << " "
-        << std::visit(m_handle_converter, function.m_function_id);
+void Formatter::operator()(const Parameter &parameter) {
+  m_out << parameter.m_type << " " << m_handle_converter(parameter.m_name);
+}
 
-  // TODO
-  m_out << "() {";
+void Formatter::function_parameters(const FunctionDeclaration &signature) {
+  if (signature.m_parameters.empty()) {
+    return;
+  }
+  for (size_t index = 0; index < signature.m_parameters.size() - 1; ++index) {
+    const auto &parameter = signature.m_parameters[index];
+    (*this)(parameter);
+    m_out << ", ";
+  }
+  (*this)(signature.m_parameters.back());
+}
+
+void Formatter::declare(const FunctionDeclaration &signature) {
+  m_out << "declare " << signature.m_return_type << " "
+        << std::visit(m_handle_converter, signature.m_function_id);
+
+  m_out << "(";
+
+  function_parameters(signature);
+
+  m_out << ")";
+
+  newline();
+  newline();
+}
+
+void Formatter::define(const FunctionDeclaration &signature) {
+  m_out << "define " << signature.m_return_type << " "
+        << std::visit(m_handle_converter, signature.m_function_id);
+
+  m_out << "(";
+
+  function_parameters(signature);
+
+  m_out << ")";
+}
+
+void Formatter::operator()(const Function &function) {
+  define(function.signature());
+
+  m_out << " {";
 
   newline();
 
@@ -150,6 +193,37 @@ void Formatter::operator()(const StoreInstruction &instruction) {
   m_out << "store " << instruction.m_type << " "
         << std::visit(m_handle_converter, instruction.m_source) << ", ptr "
         << std::visit(m_handle_converter, instruction.m_destination);
+
+  newline();
+}
+
+void Formatter::operator()(const Argument &argument) {
+  m_out << argument.m_type << " "
+        << std::visit(m_handle_converter, argument.m_name);
+}
+
+void Formatter::function_arguments(const std::vector<Argument> &arguments) {
+  if (arguments.empty()) {
+    return;
+  }
+  for (size_t index = 0; index < arguments.size() - 1; ++index) {
+    const auto &argument = arguments[index];
+    (*this)(argument);
+    m_out << ", ";
+  }
+  (*this)(arguments.back());
+}
+
+void Formatter::operator()(const CallInstruction &instruction) {
+  indent();
+
+  m_out << std::visit(m_handle_converter, instruction.m_target) << " = call "
+        << instruction.m_return_type << " "
+        << std::visit(m_handle_converter, instruction.m_callee);
+
+  m_out << "(";
+  function_arguments(instruction.m_arguments);
+  m_out << ")";
 
   newline();
 }

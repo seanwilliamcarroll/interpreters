@@ -12,7 +12,9 @@
 //****************************************************************************
 
 #include "codegen/basic_block.hpp"
+#include "codegen/handle.hpp"
 #include "codegen/instructions.hpp"
+#include "codegen/parameter.hpp"
 #include "codegen/symbol_table.hpp"
 #include "codegen/types.hpp"
 #include <cstddef>
@@ -25,11 +27,24 @@
 namespace bust::codegen {
 //****************************************************************************
 
+struct FunctionDeclaration {
+  void add_parameter(LocalHandle name, LLVMType return_type) {
+    m_parameters.emplace_back(Parameter{std::move(name), return_type});
+  }
+
+  Handle m_function_id;
+  LLVMType m_return_type;
+  std::vector<Parameter> m_parameters{};
+};
+
 struct Function {
-  Function(const Handle &function_id, LLVMType return_type)
-      : m_function_id(function_id), m_return_type(return_type) {
+  Function(FunctionDeclaration signature) : m_signature(std::move(signature)) {
     set_insertion_point(new_basic_block("entry"));
   }
+
+  FunctionDeclaration &signature() { return m_signature; }
+
+  const FunctionDeclaration &signature() const { return m_signature; }
 
   BasicBlock &new_basic_block(const std::string &label) {
     m_basic_blocks.emplace_back(std::make_unique<BasicBlock>(
@@ -59,9 +74,7 @@ struct Function {
                                    std::move(instruction));
   }
 
-  Handle m_function_id;
-  LLVMType m_return_type;
-  // TODO: Params
+  FunctionDeclaration m_signature;
   std::vector<std::unique_ptr<BasicBlock>> m_basic_blocks;
   BasicBlock *m_current_block = nullptr;
   size_t m_alloca_insertion_position = 0;

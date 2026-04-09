@@ -19,15 +19,16 @@ namespace bust::codegen {
 //****************************************************************************
 
 void LetBindingGenerator::operator()(const hir::LetBinding &let_binding) {
+
+  auto value_handle = ExpressionGenerator{m_ctx}(let_binding.m_expression);
+
   // TODO: assumes local for the moment
   auto identifier_handle =
       m_ctx.m_symbol_table.define_local(let_binding.m_variable.m_name);
 
-  m_ctx.current_basic_block().add_instruction(AllocaInstruction{
+  m_ctx.current_function().add_alloca_instruction(AllocaInstruction{
       .m_handle = identifier_handle,
       .m_type = to_llvm_type(let_binding.m_expression.m_type)});
-
-  auto value_handle = ExpressionGenerator{m_ctx}(let_binding.m_expression);
 
   m_ctx.current_basic_block().add_instruction(StoreInstruction{
       .m_destination = identifier_handle,

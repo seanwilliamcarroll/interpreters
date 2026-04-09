@@ -23,7 +23,12 @@ namespace bust {
 std::string CodeGen::operator()(const hir::Program &program) {
   auto context = bust::codegen::Context{};
 
+  auto collector = bust::codegen::TopItemDeclarationCollector{context};
   auto generator = bust::codegen::TopItemGenerator{context};
+
+  for (const auto &top_item : program.m_top_items) {
+    std::visit(collector, (top_item));
+  }
 
   for (const auto &top_item : program.m_top_items) {
     std::visit(generator, (top_item));
