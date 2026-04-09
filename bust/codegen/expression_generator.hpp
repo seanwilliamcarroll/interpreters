@@ -24,8 +24,11 @@ namespace bust::codegen {
 struct ExpressionGenerator {
   Handle operator()(const hir::Identifier &);
   Handle operator()(const hir::LiteralUnit &);
+  Handle operator()(const hir::LiteralI8 &);
+  Handle operator()(const hir::LiteralI32 &);
   Handle operator()(const hir::LiteralI64 &);
   Handle operator()(const hir::LiteralBool &);
+  Handle operator()(const hir::LiteralChar &);
   Handle operator()(const std::unique_ptr<hir::Block> &);
   Handle operator()(const hir::Block &);
   Handle operator()(const std::unique_ptr<hir::IfExpr> &);

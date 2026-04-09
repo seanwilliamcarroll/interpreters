@@ -34,12 +34,30 @@ template <> struct AbstractValue<PrimitiveType::BOOL> {
   bool m_value;
 };
 
+template <> struct AbstractValue<PrimitiveType::CHAR> {
+  constexpr static PrimitiveType m_type = PrimitiveType::CHAR;
+  char m_value;
+};
+
+template <> struct AbstractValue<PrimitiveType::I8> {
+  constexpr static PrimitiveType m_type = PrimitiveType::I8;
+  int8_t m_value;
+};
+
+template <> struct AbstractValue<PrimitiveType::I32> {
+  constexpr static PrimitiveType m_type = PrimitiveType::I32;
+  int32_t m_value;
+};
+
 template <> struct AbstractValue<PrimitiveType::I64> {
   constexpr static PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
 
 using Bool = AbstractValue<PrimitiveType::BOOL>;
+using Char = AbstractValue<PrimitiveType::CHAR>;
+using I8 = AbstractValue<PrimitiveType::I8>;
+using I32 = AbstractValue<PrimitiveType::I32>;
 using I64 = AbstractValue<PrimitiveType::I64>;
 using Unit = AbstractValue<PrimitiveType::UNIT>;
 
@@ -49,7 +67,7 @@ struct Closure {
   std::shared_ptr<Scope> m_scope;
 };
 
-using Value = std::variant<Bool, I64, Unit, Closure>;
+using Value = std::variant<Bool, Char, I8, I32, I64, Unit, Closure>;
 
 //****************************************************************************
 } // namespace bust::eval

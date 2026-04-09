@@ -30,8 +30,11 @@ namespace bust::eval {
 struct ExpressionEvaluator {
   Value operator()(const hir::Identifier &);
   Value operator()(const hir::LiteralUnit &);
+  Value operator()(const hir::LiteralI8 &);
+  Value operator()(const hir::LiteralI32 &);
   Value operator()(const hir::LiteralI64 &);
   Value operator()(const hir::LiteralBool &);
+  Value operator()(const hir::LiteralChar &);
   Value operator()(const std::unique_ptr<hir::Block> &);
   Value operator()(const hir::Block &);
   Value operator()(const std::unique_ptr<hir::IfExpr> &);

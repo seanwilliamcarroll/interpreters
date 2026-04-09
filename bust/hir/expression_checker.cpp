@@ -450,6 +450,18 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &) {
   return {};
 }
 
+Expression ExpressionChecker::operator()(const ast::LiteralInt8 &literal) {
+  return {{literal.m_location},
+          PrimitiveTypeValue{{literal.m_location}, PrimitiveType::I8},
+          LiteralI8{{literal.m_location}, literal.m_value}};
+}
+
+Expression ExpressionChecker::operator()(const ast::LiteralInt32 &literal) {
+  return {{literal.m_location},
+          PrimitiveTypeValue{{literal.m_location}, PrimitiveType::I32},
+          LiteralI32{{literal.m_location}, literal.m_value}};
+}
+
 Expression ExpressionChecker::operator()(const ast::LiteralInt64 &literal) {
   return {{literal.m_location},
           PrimitiveTypeValue{{literal.m_location}, PrimitiveType::I64},
@@ -460,6 +472,12 @@ Expression ExpressionChecker::operator()(const ast::LiteralBool &literal) {
   return {{literal.m_location},
           PrimitiveTypeValue{{literal.m_location}, PrimitiveType::BOOL},
           LiteralBool{{literal.m_location}, literal.m_value}};
+}
+
+Expression ExpressionChecker::operator()(const ast::LiteralChar &literal) {
+  return {{literal.m_location},
+          PrimitiveTypeValue{{literal.m_location}, PrimitiveType::CHAR},
+          LiteralChar{{literal.m_location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralUnit &literal) {

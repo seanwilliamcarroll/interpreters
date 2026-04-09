@@ -25,12 +25,14 @@ namespace bust::codegen {
 
 enum class LLVMType : uint8_t {
   I1,
+  I8,
+  I32,
   I64,
   VOID,
 };
 
 inline std::ostream &operator<<(std::ostream &out, LLVMType type) {
-  constexpr static std::array type_names{"i1", "i64", "void"};
+  constexpr static std::array type_names{"i1", "i8", "i32", "i64", "void"};
   return out << type_names[std::to_underlying(type)];
 }
 
@@ -74,15 +76,16 @@ inline LLVMType to_llvm_type(const hir::Type &type) {
   switch (prim->m_type) {
   case PrimitiveType::BOOL:
     return LLVMType::I1;
+  case PrimitiveType::I8:
+  case PrimitiveType::CHAR:
+    return LLVMType::I8;
+  case PrimitiveType::I32:
+    return LLVMType::I32;
   case PrimitiveType::I64:
     return LLVMType::I64;
   case PrimitiveType::UNIT:
     return LLVMType::VOID;
-  default:
-    // Punt for now
   }
-  assert(false && "unknown primitive type");
-  return LLVMType::I64;
 }
 
 //****************************************************************************

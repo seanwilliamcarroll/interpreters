@@ -56,23 +56,41 @@ template <> struct Literal<PrimitiveType::BOOL> : public HasLocation {
   bool m_value;
 };
 
+template <> struct Literal<PrimitiveType::CHAR> : public HasLocation {
+  static constexpr PrimitiveType m_type = PrimitiveType::CHAR;
+  char m_value;
+};
+
+template <> struct Literal<PrimitiveType::I8> : public HasLocation {
+  static constexpr PrimitiveType m_type = PrimitiveType::I8;
+  int8_t m_value;
+};
+
+template <> struct Literal<PrimitiveType::I32> : public HasLocation {
+  static constexpr PrimitiveType m_type = PrimitiveType::I32;
+  int32_t m_value;
+};
+
 template <> struct Literal<PrimitiveType::I64> : public HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
 
+using LiteralI8 = Literal<PrimitiveType::I8>;
+using LiteralI32 = Literal<PrimitiveType::I32>;
 using LiteralI64 = Literal<PrimitiveType::I64>;
 using LiteralBool = Literal<PrimitiveType::BOOL>;
+using LiteralChar = Literal<PrimitiveType::CHAR>;
 using LiteralUnit = Literal<PrimitiveType::UNIT>;
 
 // --- Core type aliases -----------------------------------------------------
 
 using ExprKind =
-    std::variant<Identifier, LiteralUnit, LiteralI64, LiteralBool,
-                 std::unique_ptr<Block>, std::unique_ptr<IfExpr>,
-                 std::unique_ptr<CallExpr>, std::unique_ptr<BinaryExpr>,
-                 std::unique_ptr<UnaryExpr>, std::unique_ptr<ReturnExpr>,
-                 std::unique_ptr<LambdaExpr>>;
+    std::variant<Identifier, LiteralUnit, LiteralI8, LiteralI32, LiteralI64,
+                 LiteralBool, LiteralChar, std::unique_ptr<Block>,
+                 std::unique_ptr<IfExpr>, std::unique_ptr<CallExpr>,
+                 std::unique_ptr<BinaryExpr>, std::unique_ptr<UnaryExpr>,
+                 std::unique_ptr<ReturnExpr>, std::unique_ptr<LambdaExpr>>;
 
 struct Expression : public HasLocation {
   Type m_type;

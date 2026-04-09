@@ -57,12 +57,24 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
 
 Handle ExpressionGenerator::operator()(const hir::LiteralUnit &) { return {}; }
 
+Handle ExpressionGenerator::operator()(const hir::LiteralI8 &literal) {
+  return LiteralHandle{std::to_string(literal.m_value)};
+}
+
+Handle ExpressionGenerator::operator()(const hir::LiteralI32 &literal) {
+  return LiteralHandle{std::to_string(literal.m_value)};
+}
+
 Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
   return LiteralHandle{std::to_string(literal.m_value)};
 }
 
 Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
   return LiteralHandle{literal.m_value ? "true" : "false"};
+}
+
+Handle ExpressionGenerator::operator()(const hir::LiteralChar &literal) {
+  return LiteralHandle{std::to_string(static_cast<int8_t>(literal.m_value))};
 }
 
 Handle

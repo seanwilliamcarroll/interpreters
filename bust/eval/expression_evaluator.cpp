@@ -17,7 +17,6 @@
 #include <optional>
 #include <ranges>
 #include <string_view>
-#include <tuple>
 #include <utility>
 #include <variant>
 
@@ -26,7 +25,6 @@
 #include "eval/values.hpp"
 #include "exceptions.hpp"
 #include "operators.hpp"
-#include "types.hpp"
 
 //****************************************************************************
 namespace bust::eval {
@@ -58,12 +56,24 @@ Value ExpressionEvaluator::operator()(const hir::LiteralUnit &) {
   return Unit{};
 }
 
+Value ExpressionEvaluator::operator()(const hir::LiteralI8 &literal) {
+  return I8{literal.m_value};
+}
+
+Value ExpressionEvaluator::operator()(const hir::LiteralI32 &literal) {
+  return I32{literal.m_value};
+}
+
 Value ExpressionEvaluator::operator()(const hir::LiteralI64 &literal) {
   return I64{literal.m_value};
 }
 
 Value ExpressionEvaluator::operator()(const hir::LiteralBool &literal) {
   return Bool{literal.m_value};
+}
+
+Value ExpressionEvaluator::operator()(const hir::LiteralChar &literal) {
+  return Char{literal.m_value};
 }
 
 Value ExpressionEvaluator::operator()(
