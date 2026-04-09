@@ -20,6 +20,7 @@
 #include "hir/nodes.hpp"
 #include "hir/types.hpp"
 #include "operators.hpp"
+#include "types.hpp"
 #include <algorithm>
 #include <ios>
 #include <iterator>
@@ -136,10 +137,7 @@ Handle ExpressionGenerator::operator()(
 
   // We only return a value when there is an else block
   // AND the types of the then and else expressions are NOT Unit
-  const auto if_type_is_unit =
-      std::holds_alternative<hir::PrimitiveTypeValue>(if_return_type) &&
-      std::get<hir::PrimitiveTypeValue>(if_return_type).m_type ==
-          hir::PrimitiveType::UNIT;
+  const auto if_type_is_unit = hir::is_unit_type(if_return_type);
   auto if_statement_returns_value =
       if_expression->m_else_branch.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
@@ -203,6 +201,13 @@ Handle ExpressionGenerator::operator()(
 
   auto function_return_type =
       get_function_return_type(call_expression->m_callee.m_type);
+
+  if (hir::is_unit_type(function_return_type)) {
+    m_ctx.current_basic_block().add_instruction(
+        CallVoidInstruction{.m_callee = std::move(callee_handle),
+                            .m_arguments = std::move(arguments)});
+    return {};
+  }
 
   auto ssa_temp = SymbolTable::next_ssa_temporary();
   m_ctx.current_basic_block().add_instruction(

@@ -220,6 +220,18 @@ void Formatter::function_arguments(const std::vector<Argument> &arguments) {
   (*this)(arguments.back());
 }
 
+void Formatter::operator()(const CallVoidInstruction &instruction) {
+  indent();
+
+  m_out << "call void " << std::visit(m_handle_converter, instruction.m_callee);
+
+  m_out << "(";
+  function_arguments(instruction.m_arguments);
+  m_out << ")";
+
+  newline();
+}
+
 void Formatter::operator()(const CallInstruction &instruction) {
   indent();
 
@@ -258,6 +270,12 @@ void Formatter::operator()(const JumpInstruction &instruction) {
 
   m_out << "br label " << std::visit(m_handle_converter, instruction.m_target);
 
+  newline();
+}
+
+void Formatter::operator()(const ReturnVoidInstruction &) {
+  indent();
+  m_out << "ret void";
   newline();
 }
 

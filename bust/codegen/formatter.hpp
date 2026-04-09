@@ -58,12 +58,14 @@ struct Formatter {
 
   void operator()(const Argument &);
   void function_arguments(const std::vector<Argument> &);
+  void operator()(const CallVoidInstruction &);
   void operator()(const CallInstruction &);
   void operator()(const AllocaInstruction &);
 
   void operator()(const BranchInstruction &);
   void operator()(const JumpInstruction &);
   void operator()(const ReturnInstruction &);
+  void operator()(const ReturnVoidInstruction &);
 
   void newline() { m_out << "\n"; }
 

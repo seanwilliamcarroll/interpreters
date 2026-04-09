@@ -61,6 +61,11 @@ inline core::SourceLocation type_location(const Type &type) {
       type);
 }
 
+inline bool is_unit_type(const Type &type) {
+  return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
+         std::get<hir::PrimitiveTypeValue>(type).m_type == PrimitiveType::UNIT;
+}
+
 inline bool types_equal(const Type &lhs, const Type &rhs);
 
 inline bool operator==(const Type &lhs, const Type &rhs) {
