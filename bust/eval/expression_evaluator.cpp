@@ -25,7 +25,9 @@
 #include "eval/statement_evaluator.hpp"
 #include "eval/values.hpp"
 #include "exceptions.hpp"
+#include "hir/types.hpp"
 #include "operators.hpp"
+#include "types.hpp"
 
 //****************************************************************************
 namespace bust::eval {
@@ -227,12 +229,102 @@ Value ExpressionEvaluator::operator()(
   throw ReturnException{(*this)(return_expression->m_expression)};
 }
 
+struct ValueCaster {
+  Value operator()(const Bool &from) {
+    switch (m_to) {
+    case bust::PrimitiveType::BOOL:
+      return from;
+    case bust::PrimitiveType::I8:
+      return I8{.m_value = static_cast<int8_t>(from.m_value)};
+    case bust::PrimitiveType::I32:
+      return I32{.m_value = static_cast<int32_t>(from.m_value)};
+    case bust::PrimitiveType::I64:
+      return I64{.m_value = static_cast<int64_t>(from.m_value)};
+    default:
+      throw std::runtime_error("bad cast");
+    }
+  }
+
+  Value operator()(const I8 &from) {
+    switch (m_to) {
+    case bust::PrimitiveType::CHAR:
+      return Char{.m_value = static_cast<char>(from.m_value)};
+    case bust::PrimitiveType::I8:
+      return I8{.m_value = static_cast<int8_t>(from.m_value)};
+    case bust::PrimitiveType::I32:
+      return I32{.m_value = static_cast<int32_t>(from.m_value)};
+    case bust::PrimitiveType::I64:
+      return I64{.m_value = static_cast<int64_t>(from.m_value)};
+    default:
+      throw std::runtime_error("bad cast");
+    }
+  }
+
+  Value operator()(const I32 &from) {
+    switch (m_to) {
+    case bust::PrimitiveType::CHAR:
+      return Char{.m_value = static_cast<char>(from.m_value)};
+    case bust::PrimitiveType::I8:
+      return I8{.m_value = static_cast<int8_t>(from.m_value)};
+    case bust::PrimitiveType::I32:
+      return I32{.m_value = static_cast<int32_t>(from.m_value)};
+    case bust::PrimitiveType::I64:
+      return I64{.m_value = static_cast<int64_t>(from.m_value)};
+    default:
+      throw std::runtime_error("bad cast");
+    }
+  }
+
+  Value operator()(const I64 &from) {
+    switch (m_to) {
+    case bust::PrimitiveType::CHAR:
+      return Char{.m_value = static_cast<char>(from.m_value)};
+    case bust::PrimitiveType::I8:
+      return I8{.m_value = static_cast<int8_t>(from.m_value)};
+    case bust::PrimitiveType::I32:
+      return I32{.m_value = static_cast<int32_t>(from.m_value)};
+    case bust::PrimitiveType::I64:
+      return I64{.m_value = static_cast<int64_t>(from.m_value)};
+    default:
+      throw std::runtime_error("bad cast");
+    }
+  }
+
+  Value operator()(const Char &from) {
+    switch (m_to) {
+    case bust::PrimitiveType::CHAR:
+      return Char{.m_value = static_cast<char>(from.m_value)};
+    case bust::PrimitiveType::I8:
+      return I8{.m_value = static_cast<int8_t>(from.m_value)};
+    case bust::PrimitiveType::I32:
+      return I32{.m_value = static_cast<int32_t>(from.m_value)};
+    case bust::PrimitiveType::I64:
+      return I64{.m_value = static_cast<int64_t>(from.m_value)};
+    default:
+      throw std::runtime_error("bad cast");
+    }
+  }
+
+  [[noreturn]] Value operator()(const Unit &) {
+    throw std::runtime_error("Can't cast unit");
+  }
+
+  [[noreturn]] Value operator()(const Closure &) {
+    throw std::runtime_error("Can't cast closure");
+  }
+
+  PrimitiveType m_to;
+};
+
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expression) {
   auto value = (*this)(cast_expression->m_expression);
-  // Do cast
+  // Do cast, we already type checked
 
-  throw std::runtime_error("UNIMPLEMENTED");
+  return std::visit(
+      ValueCaster{std::get<hir::PrimitiveTypeValue>(cast_expression->m_new_type)
+                      .m_type},
+      value);
 }
 
 Value ExpressionEvaluator::operator()(
