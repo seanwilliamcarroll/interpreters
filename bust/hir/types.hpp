@@ -136,14 +136,7 @@ inline Type get_return_type(const Type &type) {
 
 struct TypeToStringConverter {
   std::string operator()(const PrimitiveTypeValue &type) {
-    switch (type.m_type) {
-    case PrimitiveType::UNIT:
-      return "()";
-    case PrimitiveType::BOOL:
-      return "bool";
-    case PrimitiveType::I64:
-      return "i64";
-    }
+    return to_string(type.m_type);
   }
 
   std::string operator()(const TypeVariable &type) {

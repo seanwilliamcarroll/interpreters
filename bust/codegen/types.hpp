@@ -78,6 +78,8 @@ inline LLVMType to_llvm_type(const hir::Type &type) {
     return LLVMType::I64;
   case PrimitiveType::UNIT:
     return LLVMType::VOID;
+  default:
+    // Punt for now
   }
   assert(false && "unknown primitive type");
   return LLVMType::I64;

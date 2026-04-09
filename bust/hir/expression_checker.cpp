@@ -332,6 +332,12 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block) {
 }
 
 Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::CastExpr> & // cast_expression
+) {
+  throw std::runtime_error("UNIMPLEMENTED");
+}
+
+Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::ReturnExpr> &return_expression) {
   auto expression = std::visit((*this), return_expression->m_return_expression);
 

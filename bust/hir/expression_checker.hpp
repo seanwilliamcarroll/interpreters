@@ -28,6 +28,7 @@ struct ExpressionChecker {
   Expression operator()(const std::unique_ptr<ast::UnaryExpr> &);
   Expression operator()(const std::unique_ptr<ast::IfExpr> &);
   Expression operator()(const std::unique_ptr<ast::Block> &);
+  Expression operator()(const std::unique_ptr<ast::CastExpr> &);
   Expression operator()(const std::unique_ptr<ast::ReturnExpr> &);
   Expression operator()(const std::unique_ptr<ast::LambdaExpr> &);
   Expression operator()(const std::unique_ptr<ast::WhileExpr> &);

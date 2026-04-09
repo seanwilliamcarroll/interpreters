@@ -122,6 +122,15 @@ TypeIdentifier Parser::parse_type_identifier() {
   case TokenType::BOOL:
     return PrimitiveTypeIdentifier{{advance()->get_location()},
                                    PrimitiveType::BOOL};
+  case TokenType::CHAR:
+    return PrimitiveTypeIdentifier{{advance()->get_location()},
+                                   PrimitiveType::CHAR};
+  case TokenType::I8:
+    return PrimitiveTypeIdentifier{{advance()->get_location()},
+                                   PrimitiveType::I8};
+  case TokenType::I32:
+    return PrimitiveTypeIdentifier{{advance()->get_location()},
+                                   PrimitiveType::I32};
   case TokenType::I64:
     return PrimitiveTypeIdentifier{{advance()->get_location()},
                                    PrimitiveType::I64};
@@ -391,10 +400,27 @@ Expression Parser::parse_unary_pre() {
     auto op = iter->second;
     advance();
     return std::make_unique<UnaryExpr>(
-        UnaryExpr{{original_location}, op, parse_postfix()});
+        UnaryExpr{{original_location}, op, parse_cast_expr()});
   }
 
-  return parse_postfix();
+  return parse_cast_expr();
+}
+
+Expression Parser::parse_cast_expr() {
+  auto original_location = peek().get_location();
+
+  auto postfix = parse_postfix();
+
+  while (peek().get_token_type() == TokenType::AS) {
+    advance();
+
+    auto casting_type = parse_type_identifier();
+
+    postfix = std::make_unique<CastExpr>(CastExpr{
+        {original_location}, std::move(postfix), std::move(casting_type)});
+  }
+
+  return postfix;
 }
 
 Expression Parser::parse_postfix() {
@@ -433,6 +459,7 @@ Expression Parser::parse_postfix() {
 Expression Parser::parse_primary() {
   switch (peek().get_token_type()) {
   case TokenType::INT_LITERAL:
+  case TokenType::CHAR_LITERAL:
   case TokenType::TRUE:
   case TokenType::FALSE:
   case TokenType::UNIT:
@@ -548,6 +575,32 @@ Expression Parser::parse_literal() {
                "Could not cast TokenNumber with lexeme: \"",
                int_token_ptr->get_value(), "\" to int64: ", error.what());
     }
+  }
+  case TokenType::CHAR_LITERAL: {
+    const auto token = advance();
+    const auto *char_token_ptr = dynamic_cast<const TokenChar *>(token.get());
+    if (char_token_ptr == nullptr) {
+      on_error(token->get_location(), "Error casting token to TokenChar");
+    }
+    // We expect we've lexed things correctly, so should be a valid char
+    const auto &lexeme = char_token_ptr->get_value();
+    if (lexeme[1] == '\\') {
+      // Escaped char
+      const static std::unordered_map<char, char> escaped_chars{
+          {'n', '\n'},  {'t', '\t'},  {'r', '\r'},
+          {'\\', '\\'}, {'\'', '\''}, {'0', '\0'},
+      };
+      auto iter = escaped_chars.find(lexeme[2]);
+      if (iter != escaped_chars.end()) {
+        return LiteralChar{{char_token_ptr->get_location()}, iter->second};
+      }
+      // Must be \x, want indices 3 and 4
+      return LiteralChar{
+          {char_token_ptr->get_location()},
+          static_cast<char>(std::stoi(lexeme.substr(3, 2), nullptr, 16))};
+    }
+    // Must have been printable
+    return LiteralChar{{char_token_ptr->get_location()}, lexeme[1]};
   }
   default:
     on_error(peek().get_location(),

@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include <cstdint>
+#include <string>
 
 //****************************************************************************
 namespace bust {
@@ -20,8 +21,28 @@ namespace bust {
 enum class PrimitiveType : uint8_t {
   UNIT,
   BOOL,
+  CHAR,
+  I8,
+  I32,
   I64,
 };
+
+inline std::string to_string(const PrimitiveType &type) {
+  switch (type) {
+  case PrimitiveType::UNIT:
+    return "()";
+  case PrimitiveType::BOOL:
+    return "bool";
+  case PrimitiveType::CHAR:
+    return "char";
+  case PrimitiveType::I8:
+    return "i8";
+  case PrimitiveType::I32:
+    return "i32";
+  case PrimitiveType::I64:
+    return "i64";
+  }
+}
 
 //****************************************************************************
 } // namespace bust

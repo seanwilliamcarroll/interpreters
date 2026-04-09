@@ -69,6 +69,7 @@ private:
   Expression parse_add_sub();
   Expression parse_mult_div_mod();
   Expression parse_unary_pre();
+  Expression parse_cast_expr();
   Expression parse_postfix();
   Expression parse_primary();
 

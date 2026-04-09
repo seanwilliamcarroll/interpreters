@@ -74,17 +74,7 @@ private:
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
           if constexpr (std::is_same_v<T, PrimitiveTypeIdentifier>) {
-            switch (v.m_type) {
-            case PrimitiveType::UNIT:
-              m_out << "Unit";
-              break;
-            case PrimitiveType::BOOL:
-              m_out << "bool";
-              break;
-            case PrimitiveType::I64:
-              m_out << "i64";
-              break;
-            }
+            m_out << to_string(v.m_type);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<
                                                      FunctionTypeIdentifier>>) {
             m_out << "fn(";
@@ -187,6 +177,8 @@ private:
             dump_if(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<Block>>) {
             dump_block(*v);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<CastExpr>>) {
+            dump_cast(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ReturnExpr>>) {
             dump_return(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
@@ -290,6 +282,14 @@ private:
       IndentGuard g2(*this);
       dump_block(*i.m_else_block);
     }
+  }
+
+  void dump_cast(const CastExpr &c) {
+    line("Cast");
+    IndentGuard g(*this);
+    dump_expression(c.m_expression);
+    m_out << " AS ";
+    dump_type_id(c.m_type);
   }
 
   void dump_return(const ReturnExpr &r) {
