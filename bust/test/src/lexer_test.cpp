@@ -251,23 +251,9 @@ TEST_SUITE("bust.lexer") {
   // --- Keywords ------------------------------------------------------------
 
   TEST_CASE("bust::lexer_keywords") {
-    struct Case {
-      const char *input;
-      TokenType type;
-    };
-
-    std::vector<Case> cases = {
-        {"fn", TokenType::FN},         {"let", TokenType::LET},
-        {"return", TokenType::RETURN}, {"if", TokenType::IF},
-        {"else", TokenType::ELSE},     {"while", TokenType::WHILE},
-        {"for", TokenType::FOR},       {"true", TokenType::TRUE},
-        {"false", TokenType::FALSE},   {"i64", TokenType::I64},
-        {"bool", TokenType::BOOL},
-    };
-
-    for (const auto &c : cases) {
-      CAPTURE(c.input);
-      check_token_types(c.input, {c.type, TokenType::EOF_TOKEN});
+    for (const auto &[input, type] : keywords) {
+      CAPTURE(input);
+      check_token_types(std::string(input), {type, TokenType::EOF_TOKEN});
     }
   }
 
@@ -467,6 +453,200 @@ TEST_SUITE("bust.lexer") {
     // Block comment with extra * inside should still work
     check_token_types("/*** comment ***/42",
                       {TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  // --- Keyword prefix disambiguation
+  // ------------------------------------------
+
+  TEST_CASE("bust::lexer_as_keyword_not_identifier_prefix") {
+    check_token_types("asdf", {TokenType::IDENTIFIER, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_i8_not_identifier_prefix") {
+    check_token_types("i8x", {TokenType::IDENTIFIER, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_char_not_identifier_prefix") {
+    check_token_types("charcoal",
+                      {TokenType::IDENTIFIER, TokenType::EOF_TOKEN});
+  }
+
+  // --- Char literals ---------------------------------------------------------
+
+  TEST_CASE("bust::lexer_char_literal_simple") {
+    check_token_types("'A'", {TokenType::CHAR_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_char_literal_value") {
+    std::istringstream stream("'A'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token != nullptr);
+    CHECK(char_token->get_value() == "'A'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_digit") {
+    std::istringstream stream("'9'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token != nullptr);
+    CHECK(char_token->get_value() == "'9'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_space") {
+    std::istringstream stream("' '");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token != nullptr);
+    CHECK(char_token->get_value() == "' '");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_tilde") {
+    std::istringstream stream("'~'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+  }
+
+  // --- Char literal escape sequences -----------------------------------------
+
+  TEST_CASE("bust::lexer_char_literal_escape_newline") {
+    std::istringstream stream("'\\n'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\n'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_escape_tab") {
+    std::istringstream stream("'\\t'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\t'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_escape_carriage_return") {
+    std::istringstream stream("'\\r'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\r'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_escape_backslash") {
+    std::istringstream stream("'\\\\'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\\\'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_escape_single_quote") {
+    std::istringstream stream("'\\''");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\''");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_escape_null") {
+    std::istringstream stream("'\\0'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\0'");
+  }
+
+  // --- Char literal hex escapes ----------------------------------------------
+
+  TEST_CASE("bust::lexer_char_literal_hex_escape") {
+    std::istringstream stream("'\\x41'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\x41'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_hex_escape_lowercase") {
+    std::istringstream stream("'\\xff'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\xff'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_hex_escape_zero") {
+    std::istringstream stream("'\\x00'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\x00'");
+  }
+
+  TEST_CASE("bust::lexer_char_literal_hex_escape_mixed_case") {
+    std::istringstream stream("'\\xAf'");
+    auto lexer = make_lexer(stream);
+    auto token = lexer->get_next_token();
+    CHECK(token->get_token_type() == TokenType::CHAR_LITERAL);
+    auto *char_token = dynamic_cast<const TokenChar *>(token.get());
+    CHECK(char_token->get_value() == "'\\xAf'");
+  }
+
+  // --- Char literal errors ---------------------------------------------------
+
+  TEST_CASE("bust::lexer_char_literal_empty") {
+    std::istringstream stream("''");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  TEST_CASE("bust::lexer_char_literal_unterminated") {
+    std::istringstream stream("'A");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  TEST_CASE("bust::lexer_char_literal_invalid_escape") {
+    std::istringstream stream("'\\z'");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  TEST_CASE("bust::lexer_char_literal_hex_escape_incomplete") {
+    std::istringstream stream("'\\xA'");
+    auto lexer = make_lexer(stream);
+    CHECK_THROWS_AS(lexer->get_next_token(), core::CompilerException);
+  }
+
+  // --- Char literal in context -----------------------------------------------
+
+  TEST_CASE("bust::lexer_char_literal_in_let_binding") {
+    check_token_types("let c: char = 'A';",
+                      {TokenType::LET, TokenType::IDENTIFIER, TokenType::COLON,
+                       TokenType::CHAR, TokenType::EQUALS,
+                       TokenType::CHAR_LITERAL, TokenType::SEMICOLON,
+                       TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_cast_expression") {
+    check_token_types("'A' as i32", {TokenType::CHAR_LITERAL, TokenType::AS,
+                                     TokenType::I32, TokenType::EOF_TOKEN});
   }
 
   // --- Identifier value preservation -----------------------------------------
