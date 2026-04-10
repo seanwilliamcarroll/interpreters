@@ -43,7 +43,7 @@ struct TypeConverter {
       param_types.push_back(std::visit(*this, param));
     }
     auto return_type = std::visit(*this, type->m_return_type);
-    return std::make_unique<FunctionType>(FunctionType{
+    return std::make_shared<FunctionTypePtr::element_type>(FunctionType{
         {type->m_location}, std::move(param_types), std::move(return_type)});
   }
 
@@ -70,7 +70,7 @@ struct TypeConverter {
     parameter_types.reserve(ast_params.size());
     for (const auto &param : ast_params) {
       parameters.emplace_back(convert_parameter(param));
-      parameter_types.emplace_back(clone_type(parameters.back().m_type));
+      parameter_types.emplace_back(parameters.back().m_type);
     }
     return {std::move(parameters), std::move(parameter_types)};
   }

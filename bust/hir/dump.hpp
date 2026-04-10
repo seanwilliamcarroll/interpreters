@@ -78,10 +78,11 @@ private:
   void dump_func_def(const FunctionDef &f) {
     indent();
     m_out << "FunctionDef " << f.m_function_id << ": "
-          << type_to_string(Type(std::make_unique<FunctionType>(
-                 FunctionType{{f.m_type->m_location},
-                              clone_types(f.m_type->m_argument_types),
-                              clone_type(f.m_type->m_return_type)})))
+          << type_to_string(
+                 Type(std::make_shared<FunctionTypePtr::element_type>(
+                     FunctionType{{f.m_type->m_location},
+                                  f.m_type->m_argument_types,
+                                  f.m_type->m_return_type})))
           << "\n";
     IndentGuard g(*this);
     indent();
@@ -215,15 +216,6 @@ private:
           }
         },
         e.m_expression);
-  }
-
-  static std::vector<Type> clone_types(const std::vector<Type> &types) {
-    std::vector<Type> result;
-    result.reserve(types.size());
-    for (const auto &t : types) {
-      result.push_back(clone_type(t));
-    }
-    return result;
   }
 };
 

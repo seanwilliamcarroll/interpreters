@@ -158,7 +158,7 @@ struct LambdaExpr : public HasLocation {
 
 struct FunctionDef : public HasLocation {
   std::string m_function_id;
-  std::unique_ptr<FunctionType> m_type;
+  FunctionTypePtr m_type;
   std::vector<Identifier> m_parameters;
   Block m_body;
 };

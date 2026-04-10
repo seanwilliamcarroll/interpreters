@@ -13,7 +13,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <ostream>
 #include <source_location.hpp>
 #include <string>
@@ -38,11 +37,13 @@ struct TypeVariable : public HasLocation {
 
 struct FunctionType;
 
+using FunctionTypePtr = std::shared_ptr<const FunctionType>;
+
 struct NeverType : public HasLocation {};
 
 // TODO: User defined types of some kind
-using Type = std::variant<PrimitiveTypeValue, TypeVariable,
-                          std::unique_ptr<FunctionType>, NeverType>;
+using Type =
+    std::variant<PrimitiveTypeValue, TypeVariable, FunctionTypePtr, NeverType>;
 
 struct FunctionType : public HasLocation {
   std::vector<Type> m_argument_types;
@@ -53,7 +54,7 @@ inline core::SourceLocation type_location(const Type &type) {
   return std::visit(
       [](const auto &t) -> core::SourceLocation {
         using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
+        if constexpr (std::is_same_v<T, FunctionTypePtr>) {
           return t->m_location;
         } else {
           return t.m_location;
@@ -85,7 +86,7 @@ inline bool types_equal(const Type &lhs, const Type &rhs) {
           return l.m_type == r.m_type;
         } else if constexpr (std::is_same_v<T, TypeVariable>) {
           return l.m_id == r.m_id;
-        } else if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
+        } else if constexpr (std::is_same_v<T, FunctionTypePtr>) {
           if (l->m_argument_types.size() != r->m_argument_types.size()) {
             return false;
           }
@@ -103,31 +104,12 @@ inline bool types_equal(const Type &lhs, const Type &rhs) {
       lhs);
 }
 
-inline Type clone_type(const Type &type) {
-  return std::visit(
-      [](const auto &t) -> Type {
-        using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
-          std::vector<Type> args;
-          args.reserve(t->m_argument_types.size());
-          for (const auto &arg : t->m_argument_types) {
-            args.push_back(clone_type(arg));
-          }
-          return std::make_unique<FunctionType>(FunctionType{
-              {t->m_location}, std::move(args), clone_type(t->m_return_type)});
-        } else {
-          return t;
-        }
-      },
-      type);
-}
-
 inline Type get_return_type(const Type &type) {
   return std::visit(
       [](const auto &t) -> Type {
         using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, std::unique_ptr<FunctionType>>) {
-          return clone_type(t->m_return_type);
+        if constexpr (std::is_same_v<T, FunctionTypePtr>) {
+          return t->m_return_type;
         } else {
           return t;
         }
@@ -144,7 +126,7 @@ struct TypeToStringConverter {
     return "?T" + std::to_string(type.m_id);
   }
 
-  std::string operator()(const std::unique_ptr<FunctionType> &type) {
+  std::string operator()(const FunctionTypePtr &type) {
     std::string result = "fn(";
     for (size_t i = 0; i < type->m_argument_types.size(); ++i) {
       if (i > 0) {

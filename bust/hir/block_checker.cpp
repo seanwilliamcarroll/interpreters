@@ -27,7 +27,7 @@ namespace bust::hir {
 
 Type BlockChecker::get_statement_type(const Statement &statement) {
   if (std::holds_alternative<Expression>(statement)) {
-    return clone_type(std::get<Expression>(statement).m_type);
+    return std::get<Expression>(statement).m_type;
   }
   const auto &let_binding = std::get<LetBinding>(statement);
   return PrimitiveTypeValue{{let_binding.m_location}, PrimitiveType::UNIT};
@@ -48,8 +48,7 @@ Block BlockChecker::check_block(const ast::Block &block) {
                 ExpressionChecker{m_ctx}, block.m_final_expression.value()))
           : std::nullopt;
 
-  auto type = final_expression.has_value()
-                  ? clone_type(final_expression.value().m_type)
+  auto type = final_expression.has_value() ? final_expression.value().m_type
               : !statements.empty()
                   ? get_statement_type(statements.back())
                   : PrimitiveTypeValue{{block.m_location}, PrimitiveType::UNIT};
@@ -65,7 +64,7 @@ Block BlockChecker::check_block_with_parameters(
     const std::vector<Identifier> &parameters, const ast::Block &ast_block) {
   m_ctx.m_env.push_scope();
   for (const auto &parameter : parameters) {
-    m_ctx.m_env.define(parameter.m_name, clone_type(parameter.m_type));
+    m_ctx.m_env.define(parameter.m_name, parameter.m_type);
   }
   auto block = check_block(ast_block);
   m_ctx.m_env.pop_scope();
@@ -76,7 +75,7 @@ Block BlockChecker::check_block_with_parameters(
 Block BlockChecker::check_callable_body(
     const std::vector<Identifier> &parameters, const Type &return_type,
     const ast::Block &ast_body) {
-  m_ctx.m_return_type_stack.push_back(clone_type(return_type));
+  m_ctx.m_return_type_stack.push_back(return_type);
   auto body = check_block_with_parameters(parameters, ast_body);
   m_ctx.m_return_type_stack.pop_back();
   return body;

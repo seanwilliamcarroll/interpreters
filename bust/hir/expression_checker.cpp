@@ -106,7 +106,7 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier) {
   auto final_type = m_ctx.create_fresh_type_vars(type_scheme);
 
   return {{identifier.m_location},
-          clone_type(final_type),
+          final_type,
           Identifier{{identifier.m_location},
                      identifier.m_name,
                      std::move(final_type)}};
@@ -116,14 +116,13 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::CallExpr> &call_expression) {
   auto callee = std::visit((*this), call_expression->m_callee);
 
-  if (!std::holds_alternative<std::unique_ptr<FunctionType>>(callee.m_type)) {
+  if (!std::holds_alternative<FunctionTypePtr>(callee.m_type)) {
     throw core::CompilerException("TypeChecker",
                                   "Expression of type: " + callee.m_type +
                                       " is not callable!",
                                   callee.m_location);
   }
-  const auto &function_type =
-      std::get<std::unique_ptr<FunctionType>>(callee.m_type);
+  const auto &function_type = std::get<FunctionTypePtr>(callee.m_type);
 
   std::vector<Expression> arguments;
   arguments.reserve(call_expression->m_arguments.size());
@@ -247,7 +246,7 @@ Expression ExpressionChecker::operator()(
                                      std::move(expression.m_expression)};
 
   return {{unary_expression->m_location},
-          clone_type(final_expression.m_type),
+          final_expression.m_type,
           std::make_unique<UnaryExpr>(UnaryExpr{{unary_expression->m_location},
                                                 unary_expression->m_operator,
                                                 std::move(final_expression)})};
@@ -328,7 +327,7 @@ Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block) {
   auto hir_block = BlockChecker{m_ctx}.check_block(*block);
   return {{block->m_location},
-          clone_type(hir_block.m_type),
+          hir_block.m_type,
           std::make_unique<Block>(std::move(hir_block))};
 }
 
@@ -361,7 +360,7 @@ Expression ExpressionChecker::operator()(
   }
 
   return {{cast_expression->m_location},
-          clone_type(new_type),
+          new_type,
           std::make_unique<CastExpr>(CastExpr{{cast_expression->m_location},
                                               std::move(hir_expression),
                                               std::move(new_type)})};
@@ -421,7 +420,7 @@ Expression ExpressionChecker::operator()(
 
   auto return_type = lambda_expression->m_return_type.has_value()
                          ? std::move(possible_return_type)
-                         : clone_type(body.m_type);
+                         : body.m_type;
 
   try {
     m_ctx.m_type_unifier.unify(return_type, body.m_type);
@@ -442,21 +441,20 @@ Expression ExpressionChecker::operator()(
        std::views::zip(parameters, parameter_types)) {
     if (!std::holds_alternative<TypeVariable>(parameter_type)) {
       // TODO Could be more efficient than reconstructing
-      unified_parameters.emplace_back(Identifier{{parameter.m_location},
-                                                 parameter.m_name,
-                                                 clone_type(parameter.m_type)});
-      unified_parameter_types.push_back(clone_type(parameter_type));
+      unified_parameters.emplace_back(Identifier{
+          {parameter.m_location}, parameter.m_name, parameter.m_type});
+      unified_parameter_types.push_back(parameter_type);
       continue;
     }
     // See if we can resolve them
     auto unified_type =
         m_ctx.m_type_unifier.find(std::get<TypeVariable>(parameter_type));
-    unified_parameters.emplace_back(Identifier{
-        {parameter.m_location}, parameter.m_name, clone_type(unified_type)});
+    unified_parameters.emplace_back(
+        Identifier{{parameter.m_location}, parameter.m_name, unified_type});
     unified_parameter_types.push_back(std::move(unified_type));
   }
 
-  auto function_type = std::make_unique<FunctionType>(
+  auto function_type = std::make_shared<FunctionTypePtr::element_type>(
       FunctionType{{lambda_expression->m_location},
                    std::move(unified_parameter_types),
                    std::move(return_type)});

@@ -62,7 +62,7 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
 
   // Store the new let binding
   m_ctx.m_env.define(new_identifier.m_name,
-                     TypeScheme{clone_type(new_identifier.m_type),
+                     TypeScheme{new_identifier.m_type,
                                 std::move(collector.m_free_type_variables)});
 
   return {{let_binding.m_location}, std::move(new_identifier), std::move(body)};

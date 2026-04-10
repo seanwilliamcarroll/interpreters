@@ -275,9 +275,9 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
     // fn(?T0) -> ?T1
     std::vector<hir::Type> params;
-    params.emplace_back(hir::clone_type(t0));
-    hir::Type fn_type = std::make_unique<hir::FunctionType>(
-        hir::FunctionType{{}, std::move(params), hir::clone_type(t1)});
+    params.emplace_back(t0);
+    hir::Type fn_type = std::make_shared<hir::FunctionTypePtr::element_type>(
+        hir::FunctionType{{}, std::move(params), t1});
 
     hir::FreeTypeVariableCollector collector{};
     std::visit(collector, fn_type);
@@ -292,8 +292,8 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
     std::vector<hir::Type> params;
     params.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_type = std::make_unique<hir::FunctionType>(
-        hir::FunctionType{{}, std::move(params), hir::clone_type(t1)});
+    hir::Type fn_type = std::make_shared<hir::FunctionTypePtr::element_type>(
+        hir::FunctionType{{}, std::move(params), t1});
 
     hir::FreeTypeVariableCollector collector{};
     std::visit(collector, fn_type);
@@ -314,7 +314,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     auto make_fn = []() {
       std::vector<hir::Type> params;
       params.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-      return std::make_unique<hir::FunctionType>(
+      return std::make_shared<hir::FunctionTypePtr::element_type>(
           hir::FunctionType{{},
                             std::move(params),
                             hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
@@ -330,14 +330,14 @@ TEST_SUITE("bust.type_unifier.function_types") {
 
     std::vector<hir::Type> params_a;
     params_a.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_a = std::make_unique<hir::FunctionType>(
+    hir::Type fn_a = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params_a),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
 
     std::vector<hir::Type> params_b;
     params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_b = std::make_unique<hir::FunctionType>(
+    hir::Type fn_b = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params_b),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::I64}});
@@ -351,7 +351,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     // fn(i64) -> i64
     std::vector<hir::Type> params_a;
     params_a.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_a = std::make_unique<hir::FunctionType>(
+    hir::Type fn_a = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params_a),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::I64}});
@@ -360,7 +360,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     std::vector<hir::Type> params_b;
     params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
     params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_b = std::make_unique<hir::FunctionType>(
+    hir::Type fn_b = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params_b),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::I64}});
@@ -375,7 +375,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     // fn(i64) -> bool
     std::vector<hir::Type> params;
     params.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_type = std::make_unique<hir::FunctionType>(
+    hir::Type fn_type = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
@@ -383,8 +383,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     unifier.unify(t0, fn_type);
 
     auto resolved = unifier.find(t0);
-    REQUIRE(
-        std::holds_alternative<std::unique_ptr<hir::FunctionType>>(resolved));
+    REQUIRE(std::holds_alternative<hir::FunctionTypePtr>(resolved));
   }
 
   TEST_CASE("unify function type containing type variables resolves params") {
@@ -393,8 +392,8 @@ TEST_SUITE("bust.type_unifier.function_types") {
 
     // fn(?T0) -> bool
     std::vector<hir::Type> params;
-    params.emplace_back(hir::clone_type(t0));
-    hir::Type fn_a = std::make_unique<hir::FunctionType>(
+    params.emplace_back(t0);
+    hir::Type fn_a = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});
@@ -402,7 +401,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     // fn(i64) -> bool
     std::vector<hir::Type> params_b;
     params_b.emplace_back(hir::PrimitiveTypeValue{{}, PrimitiveType::I64});
-    hir::Type fn_b = std::make_unique<hir::FunctionType>(
+    hir::Type fn_b = std::make_shared<hir::FunctionTypePtr::element_type>(
         hir::FunctionType{{},
                           std::move(params_b),
                           hir::PrimitiveTypeValue{{}, PrimitiveType::BOOL}});

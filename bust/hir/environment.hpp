@@ -29,7 +29,7 @@ struct TypeScheme {
         m_free_type_variables(std::move(free_variables)) {}
 
   TypeScheme(const TypeScheme &to_copy)
-      : m_type(clone_type(to_copy.m_type)),
+      : m_type(to_copy.m_type),
         m_free_type_variables(to_copy.m_free_type_variables) {}
 
   TypeScheme(TypeScheme &&to_move) noexcept

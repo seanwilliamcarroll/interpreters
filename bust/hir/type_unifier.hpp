@@ -49,10 +49,10 @@ struct TypeUnifier {
     }
 
     // First check if they are both function types
-    if (std::holds_alternative<std::unique_ptr<FunctionType>>(type_a) &&
-        std::holds_alternative<std::unique_ptr<FunctionType>>(type_b)) {
-      unify(std::get<std::unique_ptr<FunctionType>>(type_a),
-            std::get<std::unique_ptr<FunctionType>>(type_b));
+    if (std::holds_alternative<FunctionTypePtr>(type_a) &&
+        std::holds_alternative<FunctionTypePtr>(type_b)) {
+      unify(std::get<FunctionTypePtr>(type_a),
+            std::get<FunctionTypePtr>(type_b));
       return;
     }
 
@@ -60,8 +60,7 @@ struct TypeUnifier {
                              " and " + type_b);
   }
 
-  void unify(const std::unique_ptr<FunctionType> &type_a,
-             const std::unique_ptr<FunctionType> &type_b) {
+  void unify(const FunctionTypePtr &type_a, const FunctionTypePtr &type_b) {
     if (type_a->m_argument_types.size() != type_b->m_argument_types.size()) {
       throw std::runtime_error(std::string("Tried to unify concrete types: ") +
                                TypeToStringConverter{}(type_a) + " and " +
@@ -121,7 +120,7 @@ struct TypeUnifier {
     }
 
     // No entry
-    m_resolved_type.emplace(root_a, clone_type(type_b));
+    m_resolved_type.emplace(root_a, type_b);
   }
 
   void constrain(const TypeVariable &type,
@@ -251,11 +250,11 @@ struct TypeUnifier {
       if (iter_a != m_resolved_type.end()) {
         // A is concrete, B is not
         const auto &concrete_a = iter_a->second;
-        m_resolved_type.emplace(new_root, clone_type(concrete_a));
+        m_resolved_type.emplace(new_root, concrete_a);
       } else {
         const auto &concrete_b = iter_b->second;
         // B is concrete, A is not
-        m_resolved_type.emplace(new_root, clone_type(concrete_b));
+        m_resolved_type.emplace(new_root, concrete_b);
       }
     }
   }
@@ -264,7 +263,7 @@ struct TypeUnifier {
     if (std::holds_alternative<TypeVariable>(type)) {
       return find(std::get<TypeVariable>(type));
     }
-    return clone_type(type);
+    return type;
   }
 
   Type find(const TypeVariable &type) {
@@ -273,7 +272,7 @@ struct TypeUnifier {
     auto iter = m_resolved_type.find(root);
     if (iter != m_resolved_type.end()) {
       const auto &resolved_type = iter->second;
-      return clone_type(resolved_type);
+      return resolved_type;
     }
 
     // Not a concrete type yet

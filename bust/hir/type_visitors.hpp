@@ -21,32 +21,32 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeVariableUpdater {
-  Type operator()(const PrimitiveTypeValue &type) { return clone_type(type); }
+  Type operator()(const PrimitiveTypeValue &type) { return type; }
 
   Type operator()(const TypeVariable &type) {
     auto iter = m_new_mapping.find(type);
 
     if (iter == m_new_mapping.end()) {
-      return clone_type(type);
+      return type;
     }
 
-    return clone_type(iter->second);
+    return iter->second;
   }
 
-  Type operator()(const std::unique_ptr<FunctionType> &type) {
+  Type operator()(const FunctionTypePtr &type) {
     std::vector<Type> parameter_types;
     parameter_types.reserve(type->m_argument_types.size());
     for (const auto &parameter_type : type->m_argument_types) {
       parameter_types.emplace_back(std::visit(*this, parameter_type));
     }
 
-    return std::make_unique<FunctionType>(
+    return std::make_shared<FunctionTypePtr::element_type>(
         FunctionType{{type->m_location},
                      std::move(parameter_types),
                      std::visit(*this, type->m_return_type)});
   }
 
-  Type operator()(const NeverType &type) { return clone_type(type); }
+  Type operator()(const NeverType &type) { return type; }
 
   const std::unordered_map<TypeVariable, TypeVariable> &m_new_mapping;
 };
@@ -58,7 +58,7 @@ struct FreeTypeVariableCollector {
     m_free_type_variables.emplace_back(type);
   }
 
-  void operator()(const std::unique_ptr<FunctionType> &type) {
+  void operator()(const FunctionTypePtr &type) {
     for (const auto &parameter_type : type->m_argument_types) {
       std::visit(*this, parameter_type);
     }
