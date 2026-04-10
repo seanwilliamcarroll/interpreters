@@ -693,6 +693,144 @@ TEST_SUITE("bust.codegen") {
               1);
   }
 
+  // --- Char literals --------------------------------------------------------
+
+  TEST_CASE("char literal cast to i64") {
+    CHECK_RUN("fn main() -> i64 { 'A' as i64 }", 65);
+    CHECK_RUN("fn main() -> i64 { '0' as i64 }", 48);
+    CHECK_RUN("fn main() -> i64 { ' ' as i64 }", 32);
+  }
+
+  TEST_CASE("char literal escape sequences") {
+    CHECK_RUN("fn main() -> i64 { '\\n' as i64 }", 10);
+    CHECK_RUN("fn main() -> i64 { '\\t' as i64 }", 9);
+    CHECK_RUN("fn main() -> i64 { '\\0' as i64 }", 0);
+  }
+
+  TEST_CASE("char literal hex escape") {
+    // '\x41' == 'A' == 65
+    CHECK_RUN("fn main() -> i64 { '\\x41' as i64 }", 65);
+    // '\x61' == 'a' == 97
+    CHECK_RUN("fn main() -> i64 { '\\x61' as i64 }", 97);
+  }
+
+  TEST_CASE("char literal in let binding") {
+    CHECK_RUN("fn main() -> i64 { let c: char = 'Z'; c as i64 }", 90);
+  }
+
+  // --- Cast expressions (sext / trunc / zext) --------------------------------
+  //
+  // The codegen emits sext for signed widening, trunc for narrowing, and
+  // zext for bool→integer. Same-size casts (e.g. char↔i8) are no-ops in
+  // LLVM since both map to i8.
+
+  TEST_CASE("identity cast is a no-op") {
+    CHECK_RUN("fn main() -> i64 { 42 as i64 }", 42);
+  }
+
+  TEST_CASE("cast i64 to i8 and back (small value round-trips)") {
+    CHECK_RUN("fn main() -> i64 { 42 as i8 as i64 }", 42);
+    CHECK_RUN("fn main() -> i64 { 0 as i8 as i64 }", 0);
+    CHECK_RUN("fn main() -> i64 { 127 as i8 as i64 }", 127);
+  }
+
+  TEST_CASE("cast i64 to i8 truncates") {
+    // 256 truncates to 0 in i8
+    CHECK_RUN("fn main() -> i64 { if 256 as i8 as i64 == 0 { 1 } else { 0 } }",
+              1);
+    // 255 truncates to -1 in i8, sign-extends back to -1 in i64
+    CHECK_RUN("fn main() -> i64 { if 255 as i8 as i64 == -1 { 1 } else { 0 } }",
+              1);
+  }
+
+  TEST_CASE("cast i64 to i32 and back") {
+    CHECK_RUN("fn main() -> i64 { 42 as i32 as i64 }", 42);
+    CHECK_RUN("fn main() -> i64 { 100 as i32 as i64 }", 100);
+  }
+
+  TEST_CASE("cast negative via i8 sign-extends") {
+    // -1 as i8 as i64 should preserve -1
+    CHECK_RUN("fn main() -> i64 { if -1 as i8 as i64 == -1 { 1 } else { 0 } }",
+              1);
+  }
+
+  TEST_CASE("chained narrowing cast") {
+    // 1000 as i32 as i8 as i64: 1000 fits in i32, then truncate to i8
+    // 1000 % 256 = 232, but as signed i8 that's -24, sign-extended to -24
+    CHECK_RUN("fn main() -> i64 { if 1000 as i32 as i8 as i64 == -24 { 1 } "
+              "else { 0 } }",
+              1);
+  }
+
+  TEST_CASE("cast bool to i64 via zext") {
+    CHECK_RUN("fn main() -> i64 { true as i64 }", 1);
+    CHECK_RUN("fn main() -> i64 { false as i64 }", 0);
+  }
+
+  TEST_CASE("cast bool to i8 via zext") {
+    CHECK_RUN("fn main() -> i64 { true as i8 as i64 }", 1);
+    CHECK_RUN("fn main() -> i64 { false as i8 as i64 }", 0);
+  }
+
+  TEST_CASE("cast bool to i32 via zext") {
+    CHECK_RUN("fn main() -> i64 { true as i32 as i64 }", 1);
+  }
+
+  TEST_CASE("cast char to i64 (sext through i8)") {
+    CHECK_RUN("fn main() -> i64 { 'A' as i64 }", 65);
+  }
+
+  TEST_CASE("cast char to i8 is no-op (both i8 in LLVM)") {
+    CHECK_RUN("fn main() -> i64 { 'A' as i8 as i64 }", 65);
+  }
+
+  TEST_CASE("cast i64 to char and back") {
+    CHECK_RUN("fn main() -> i64 { 65 as char as i64 }", 65);
+  }
+
+  TEST_CASE("cast in arithmetic expression") {
+    // 'A' (65) cast to i64, then + 1 = 66
+    CHECK_RUN("fn main() -> i64 { 'A' as i64 + 1 }", 66);
+  }
+
+  TEST_CASE("cast in let binding") {
+    CHECK_RUN("fn main() -> i64 { let x: i8 = 42 as i8; x as i64 }", 42);
+  }
+
+  TEST_CASE("cast to match function parameter type") {
+    CHECK_RUN("fn use_i8(x: i8) -> i8 { x }\n"
+              "fn main() -> i64 { use_i8(10 as i8) as i64 }",
+              10);
+  }
+
+  TEST_CASE("mixed type arithmetic via cast") {
+    CHECK_RUN("fn add_mixed(a: i8, b: i64) -> i64 { a as i64 + b }\n"
+              "fn main() -> i64 { add_mixed(10 as i8, 20) }",
+              30);
+  }
+
+  TEST_CASE("i8 function with i8 arithmetic") {
+    CHECK_RUN("fn add_i8(a: i8, b: i8) -> i8 { a + b }\n"
+              "fn main() -> i64 { add_i8(3 as i8, 4 as i8) as i64 }",
+              7);
+  }
+
+  TEST_CASE("i32 function with i32 arithmetic") {
+    CHECK_RUN("fn add_i32(a: i32, b: i32) -> i32 { a + b }\n"
+              "fn main() -> i64 { add_i32(20 as i32, 22 as i32) as i64 }",
+              42);
+  }
+
+  TEST_CASE("comparison on i8 values") {
+    CHECK_RUN("fn main() -> i64 { if 1 as i8 < 2 as i8 { 1 } else { 0 } }", 1);
+    CHECK_RUN("fn main() -> i64 { if 5 as i8 == 5 as i8 { 1 } else { 0 } }", 1);
+  }
+
+  TEST_CASE("comparison on i32 values") {
+    CHECK_RUN("fn main() -> i64 { if 10 as i32 > 5 as i32 { 1 } else { 0 } }",
+              1);
+  }
+
 #else
   TEST_CASE("codegen execution tests" * doctest::skip()) {
     MESSAGE("lli not found at configure time - execution tests skipped");

@@ -1656,6 +1656,131 @@ TEST_SUITE("bust.type_checker") {
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
+  // --- Arithmetic and comparison on non-i64 integer types -------------------
+
+  TEST_CASE("i8 arithmetic has type i8") {
+    auto hir = type_check("fn f(a: i8, b: i8) -> i8 { a + b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("i32 arithmetic has type i32") {
+    auto hir = type_check("fn f(a: i32, b: i32) -> i32 { a + b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE("i8 subtraction has type i8") {
+    auto hir = type_check("fn f(a: i8, b: i8) -> i8 { a - b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("i32 multiplication has type i32") {
+    auto hir = type_check("fn f(a: i32, b: i32) -> i32 { a * b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE("i8 comparison returns bool") {
+    auto hir = type_check("fn f(a: i8, b: i8) -> bool { a < b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("i32 comparison returns bool") {
+    auto hir = type_check("fn f(a: i32, b: i32) -> bool { a >= b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("i8 equality returns bool") {
+    auto hir = type_check("fn f(a: i8, b: i8) -> bool { a == b }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("i8 and i32 arithmetic throws (no implicit coercion)") {
+    CHECK_THROWS_AS(type_check("fn f(a: i8, b: i32) -> i32 { a + b }\n"
+                               "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("i8 and i32 comparison throws") {
+    CHECK_THROWS_AS(type_check("fn f(a: i8, b: i32) -> bool { a < b }\n"
+                               "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("char arithmetic throws") {
+    CHECK_THROWS_AS(type_check("fn f(a: char, b: char) -> char { a + b }\n"
+                               "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("unary minus on i8 produces i8") {
+    auto hir = type_check("fn f(a: i8) -> i8 { -a }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("unary minus on i32 produces i32") {
+    auto hir = type_check("fn f(a: i32) -> i32 { -a }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        func.m_body.m_final_expression->m_type);
+    CHECK(ptype.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE("unary minus on char throws") {
+    CHECK_THROWS_AS(type_check("fn f(a: char) -> char { -a }\n"
+                               "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust
