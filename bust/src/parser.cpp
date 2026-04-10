@@ -569,13 +569,11 @@ ast::Expression Parser::parse_literal() {
   const auto original_location = peek().get_location();
   switch (peek().get_token_type()) {
   case TokenType::TRUE:
-    return {{original_location},
-            ast::LiteralBool{{advance()->get_location()}, true}};
+    return {{advance()->get_location()}, ast::LiteralBool{true}};
   case TokenType::FALSE:
-    return {{original_location},
-            ast::LiteralBool{{advance()->get_location()}, false}};
+    return {{advance()->get_location()}, ast::LiteralBool{false}};
   case TokenType::UNIT:
-    return {{original_location}, ast::LiteralUnit{{advance()->get_location()}}};
+    return {{advance()->get_location()}, ast::LiteralUnit{}};
   case TokenType::INT_LITERAL: {
     const auto token = advance();
     const auto *int_token_ptr = dynamic_cast<const TokenNumber *>(token.get());
@@ -584,8 +582,7 @@ ast::Expression Parser::parse_literal() {
     }
     try {
       return {{original_location},
-              ast::LiteralI64{{int_token_ptr->get_location()},
-                              std::stoll(int_token_ptr->get_value())}};
+              ast::LiteralI64{std::stoll(int_token_ptr->get_value())}};
     } catch (std::out_of_range &error) {
       on_error(int_token_ptr->get_location(),
                "Could not cast TokenNumber with lexeme: \"",
@@ -608,19 +605,15 @@ ast::Expression Parser::parse_literal() {
       };
       auto iter = escaped_chars.find(lexeme[2]);
       if (iter != escaped_chars.end()) {
-        return {
-            {original_location},
-            ast::LiteralChar{{char_token_ptr->get_location()}, iter->second}};
+        return {{original_location}, ast::LiteralChar{iter->second}};
       }
       // Must be \x, want indices 3 and 4
       return {{original_location},
-              ast::LiteralChar{{char_token_ptr->get_location()},
-                               static_cast<char>(std::stoi(lexeme.substr(3, 2),
-                                                           nullptr, 16))}};
+              ast::LiteralChar{static_cast<char>(
+                  std::stoi(lexeme.substr(3, 2), nullptr, 16))}};
     }
     // Must have been printable
-    return {{original_location},
-            ast::LiteralChar{{char_token_ptr->get_location()}, lexeme[1]}};
+    return {{original_location}, ast::LiteralChar{lexeme[1]}};
   }
   default:
     on_error(peek().get_location(),

@@ -31,8 +31,7 @@ struct ForExpr;
 
 // --- Literals --------------------------------------------------------------
 
-template <typename LiteralType>
-struct AbstractLiteral : public core::HasLocation {
+template <typename LiteralType> struct AbstractLiteral {
   LiteralType m_value;
 };
 
@@ -41,7 +40,7 @@ using LiteralI32 = AbstractLiteral<int32_t>;
 using LiteralI64 = AbstractLiteral<int64_t>;
 using LiteralBool = AbstractLiteral<bool>;
 using LiteralChar = AbstractLiteral<char>;
-struct LiteralUnit : public core::HasLocation {};
+struct LiteralUnit {};
 
 // --- Core type aliases -----------------------------------------------------
 
