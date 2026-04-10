@@ -16,8 +16,8 @@
 #include <sstream>
 
 #include <ast/nodes.hpp>
-#include <bust_tokens.hpp>
 #include <exceptions.hpp>
+#include <tokens.hpp>
 #include <unordered_map>
 
 //****************************************************************************
@@ -69,6 +69,7 @@ private:
   Expression parse_add_sub();
   Expression parse_mult_div_mod();
   Expression parse_unary_pre();
+  Expression parse_cast_expr();
   Expression parse_postfix();
   Expression parse_primary();
 

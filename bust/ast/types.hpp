@@ -70,14 +70,7 @@ inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
       [](const auto &v) -> std::string {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, PrimitiveTypeIdentifier>) {
-          switch (v.m_type) {
-          case PrimitiveType::UNIT:
-            return "()";
-          case PrimitiveType::BOOL:
-            return "bool";
-          case PrimitiveType::I64:
-            return "i64";
-          }
+          return to_string(v.m_type);
         } else if constexpr (std::is_same_v<
                                  T, std::unique_ptr<FunctionTypeIdentifier>>) {
           std::string result = "fn(";

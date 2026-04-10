@@ -10,6 +10,7 @@
 //****************************************************************************
 
 #include <cctype>
+#include <functional>
 #include <iostream>
 #include <lexer.hpp>
 #include <memory>
@@ -19,33 +20,65 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "bust_tokens.hpp"
 #include "exceptions.hpp"
 #include "token.hpp"
+#include "tokens.hpp"
 
 //****************************************************************************
 namespace bust {
 namespace {
 //****************************************************************************
 
+bool is_digit(char character) { return std::isdigit(character) != 0; }
+
+bool is_spacing_char(char character) {
+  return character == ' ' || character == '\t';
+}
+
+bool is_line_terminator_char(char character) {
+  return character == '\n' || character == '\r';
+}
+
+bool is_lower(char character) { return character >= 'a' && character <= 'z'; }
+
+bool is_upper(char character) { return character >= 'A' && character <= 'Z'; }
+
+bool is_single_quote(char character) { return character == '\''; }
+
+bool is_slash(char character) { return character == '/'; }
+
+bool is_printable_char(char character) {
+  // skip single quote and backslash so they are parsed correctly
+  return character >= 32 && character <= 126 && character != '\'' &&
+         character != '\\';
+}
+
+bool is_escape_sequence_terminator(char character) {
+  switch (character) {
+  case 'n':
+  case 't':
+  case 'r':
+  case '\\':
+  case '\'':
+  case '0':
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool is_hex_character(char character) {
+  return (character >= '0' && character <= '9') ||
+         (character >= 'a' && character <= 'f') ||
+         (character >= 'A' && character <= 'F');
+}
+
 using core::SourceLocation;
 
 struct Lexer : LexerInterface {
 
   Lexer(std::istream &in_stream, const char *hint)
-      : m_in_stream(in_stream), m_keywords({
-                                    {"fn", TokenType::FN},
-                                    {"let", TokenType::LET},
-                                    {"return", TokenType::RETURN},
-                                    {"if", TokenType::IF},
-                                    {"else", TokenType::ELSE},
-                                    {"while", TokenType::WHILE},
-                                    {"for", TokenType::FOR},
-                                    {"true", TokenType::TRUE},
-                                    {"false", TokenType::FALSE},
-                                    {"i64", TokenType::I64},
-                                    {"bool", TokenType::BOOL},
-                                }),
+      : m_in_stream(in_stream), m_keywords(keywords.begin(), keywords.end()),
         m_hint(hint) {}
 
   auto make_token(TokenType t) const {
@@ -68,24 +101,6 @@ struct Lexer : LexerInterface {
     (o << ... << a); // Fold operator <<
 
     throw core::CompilerException("LexerException", o.str(), get_current_loc());
-  }
-
-  static bool is_digit(char character) { return std::isdigit(character) != 0; }
-
-  static bool is_spacing_char(char character) {
-    return character == ' ' || character == '\t';
-  }
-
-  static bool is_line_terminator_char(char character) {
-    return character == '\n' || character == '\r';
-  }
-
-  static bool is_lower(char character) {
-    return character >= 'a' && character <= 'z';
-  }
-
-  static bool is_upper(char character) {
-    return character >= 'A' && character <= 'Z';
   }
 
   std::unique_ptr<Token> try_single_char_token(char character) {
@@ -192,11 +207,14 @@ struct Lexer : LexerInterface {
       if (is_digit(character)) {
         return int_literal();
       }
-      if (character == '/') {
+      if (is_slash(character)) {
         if (auto output = slash_or_comment()) {
           return output;
         }
         continue;
+      }
+      if (is_single_quote(character)) {
+        return char_literal();
       }
 
       return identifier();
@@ -218,7 +236,7 @@ struct Lexer : LexerInterface {
                "be '/'");
     }
     if (peek(character)) {
-      if (character == '/') {
+      if (is_slash(character)) {
         comment();
         return {};
       }
@@ -262,7 +280,7 @@ struct Lexer : LexerInterface {
       }
       if (character == '*') {
         advance();
-        if (peek(character) && character == '/') {
+        if (peek(character) && is_slash(character)) {
           advance();
           return;
         }
@@ -272,6 +290,60 @@ struct Lexer : LexerInterface {
     }
 
     on_error("Did not see end of block comment at ", get_current_loc());
+  }
+
+  char expect_peek_advance(const std::function<bool(char)> &matches,
+                           const char *calling_func) {
+    char character;
+    expect_peek(character,
+                "Invalid usage of Lexer::char_literal, did not expect EOF");
+    if (matches(character)) {
+      return advance();
+    }
+    unexpected_character(character, calling_func);
+  }
+
+  std::unique_ptr<Token> char_literal() {
+    const SourceLocation loc = get_current_loc();
+    std::string lexeme;
+
+    char character;
+    lexeme += expect_peek_advance(is_single_quote, __FUNCTION__);
+
+    // Could be 0-9, a-z, A-Z
+    expect_peek(character,
+                "Invalid usage of Lexer::char_literal, did not expect EOF");
+
+    if (character == '\'') {
+      // Premature end of quote
+      unexpected_character(character, __FUNCTION__);
+    }
+
+    if (character == '\\') {
+      // Escape sequence
+      lexeme += advance();
+
+      expect_peek(character,
+                  "Invalid usage of Lexer::char_literal, did not expect EOF");
+      if (character == 'x') {
+        // Hex sequence
+        lexeme += advance();
+        lexeme += expect_peek_advance(is_hex_character, __FUNCTION__);
+        lexeme += expect_peek_advance(is_hex_character, __FUNCTION__);
+      } else if (is_escape_sequence_terminator(character)) {
+        lexeme += advance();
+      } else {
+        unexpected_character(character, __FUNCTION__);
+      }
+    } else if (is_printable_char(character)) {
+      lexeme += advance();
+    } else {
+      unexpected_character(character, __FUNCTION__);
+    }
+
+    lexeme += expect_peek_advance(is_single_quote, __FUNCTION__);
+
+    return make_token(loc, TokenType::CHAR_LITERAL, lexeme);
   }
 
   std::unique_ptr<Token> int_literal() {
@@ -406,6 +478,7 @@ struct Lexer : LexerInterface {
     m_column = 0;
   }
 
+  [[noreturn]]
   void unexpected_character(char character,
                             std::string_view function_name) const {
     on_error("Invalid usage of Lexer::", function_name,

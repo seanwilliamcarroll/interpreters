@@ -57,12 +57,24 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
 
 Handle ExpressionGenerator::operator()(const hir::LiteralUnit &) { return {}; }
 
+Handle ExpressionGenerator::operator()(const hir::LiteralI8 &literal) {
+  return LiteralHandle{std::to_string(literal.m_value)};
+}
+
+Handle ExpressionGenerator::operator()(const hir::LiteralI32 &literal) {
+  return LiteralHandle{std::to_string(literal.m_value)};
+}
+
 Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
   return LiteralHandle{std::to_string(literal.m_value)};
 }
 
 Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
   return LiteralHandle{literal.m_value ? "true" : "false"};
+}
+
+Handle ExpressionGenerator::operator()(const hir::LiteralChar &literal) {
+  return LiteralHandle{std::to_string(static_cast<int8_t>(literal.m_value))};
 }
 
 Handle
@@ -432,6 +444,46 @@ Handle ExpressionGenerator::operator()(
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::ReturnExpr> &) {
   return {};
+}
+
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::CastExpr> &cast_expression) {
+
+  // We've type checked, so we know it's a valid cast
+  auto input_handle = (*this)(cast_expression->m_expression);
+
+  const auto &from = to_llvm_type(cast_expression->m_expression.m_type);
+  const auto &to = to_llvm_type(cast_expression->m_new_type);
+
+  if (from == to) {
+    // Nothing casted, noop
+    return input_handle;
+  }
+
+  LLVMCastOperator cast_op;
+
+  if (width_bits(from) > width_bits(to)) {
+    // Truncation
+    cast_op = LLVMCastOperator::TRUNC;
+  } else if (from == LLVMType::I1) {
+    // Unsigned extend
+    cast_op = LLVMCastOperator::ZEXT;
+  } else {
+    // Signed extend
+    cast_op = LLVMCastOperator::SEXT;
+  }
+
+  auto ssa_temporary = SymbolTable::next_ssa_temporary();
+
+  m_ctx.block().add_instruction(CastInstruction{
+      .m_destination = ssa_temporary,
+      .m_source = input_handle,
+      .m_operator = cast_op,
+      .m_from = from,
+      .m_to = to,
+  });
+
+  return ssa_temporary;
 }
 
 Handle

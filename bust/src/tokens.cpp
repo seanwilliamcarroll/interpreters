@@ -9,8 +9,8 @@
 //*
 //****************************************************************************
 
-#include <bust_tokens.hpp>
 #include <ostream>
+#include <tokens.hpp>
 
 //****************************************************************************
 namespace bust {
@@ -79,6 +79,8 @@ std::string token_type_to_string(TokenType type) {
     return "IDENTIFIER";
   case TokenType::INT_LITERAL:
     return "INT_LITERAL";
+  case TokenType::CHAR_LITERAL:
+    return "CHAR_LITERAL";
   // Keywords
   case TokenType::FN:
     return "FN \"fn\"";
@@ -94,14 +96,22 @@ std::string token_type_to_string(TokenType type) {
     return "WHILE \"while\"";
   case TokenType::FOR:
     return "FOR \"for\"";
+  case TokenType::AS:
+    return "AS \"as\"";
   case TokenType::TRUE:
     return "TRUE \"true\"";
   case TokenType::FALSE:
     return "FALSE \"false\"";
+  case TokenType::I8:
+    return "I8 \"i8\"";
+  case TokenType::I32:
+    return "I32 \"i32\"";
   case TokenType::I64:
     return "I64 \"i64\"";
   case TokenType::BOOL:
     return "BOOL \"bool\"";
+  case TokenType::CHAR:
+    return "CHAR \"char\"";
   }
 }
 

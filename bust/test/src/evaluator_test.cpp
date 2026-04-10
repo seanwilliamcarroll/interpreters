@@ -621,6 +621,117 @@ TEST_SUITE("bust.evaluator") {
                    "}") == 14);
   }
 
+  // --- Char literals --------------------------------------------------------
+
+  TEST_CASE("char literal value") {
+    CHECK(evaluate("fn main() -> i64 { 'A' as i64 }") == 65);
+  }
+
+  TEST_CASE("char literal digit") {
+    CHECK(evaluate("fn main() -> i64 { '0' as i64 }") == 48);
+  }
+
+  TEST_CASE("char literal escape newline") {
+    CHECK(evaluate("fn main() -> i64 { '\\n' as i64 }") == 10);
+  }
+
+  TEST_CASE("char literal escape tab") {
+    CHECK(evaluate("fn main() -> i64 { '\\t' as i64 }") == 9);
+  }
+
+  TEST_CASE("char literal escape null") {
+    CHECK(evaluate("fn main() -> i64 { '\\0' as i64 }") == 0);
+  }
+
+  TEST_CASE("char literal escape backslash") {
+    CHECK(evaluate("fn main() -> i64 { '\\\\' as i64 }") == 92);
+  }
+
+  TEST_CASE("char literal hex escape") {
+    // '\x41' == 'A' == 65
+    CHECK(evaluate("fn main() -> i64 { '\\x41' as i64 }") == 65);
+  }
+
+  TEST_CASE("char literal hex escape lowercase") {
+    // '\x61' == 'a' == 97
+    CHECK(evaluate("fn main() -> i64 { '\\x61' as i64 }") == 97);
+  }
+
+  // --- Cast expressions (evaluation) ----------------------------------------
+
+  TEST_CASE("cast i64 to i8 truncates") {
+    // 256 as i8 should wrap to 0 (truncation)
+    CHECK(evaluate("fn main() -> i64 { 256 as i8 as i64 }") == 0);
+  }
+
+  TEST_CASE("cast i64 to i8 preserves small values") {
+    CHECK(evaluate("fn main() -> i64 { 42 as i8 as i64 }") == 42);
+  }
+
+  TEST_CASE("cast i64 to i32 truncates") {
+    CHECK(evaluate("fn main() -> i64 { 42 as i32 as i64 }") == 42);
+  }
+
+  TEST_CASE("cast i8 to i64 widens") {
+    CHECK(evaluate("fn to_i8(x: i64) -> i8 { x as i8 }\n"
+                   "fn main() -> i64 { to_i8(100) as i64 }") == 100);
+  }
+
+  TEST_CASE("cast negative i8 to i64 sign extends") {
+    // -1 as i8 as i64 should preserve -1 (sign extension)
+    CHECK(evaluate("fn main() -> i64 { -1 as i8 as i64 }") == -1);
+  }
+
+  TEST_CASE("cast i64 to char") {
+    // 65 as char as i64 round trips
+    CHECK(evaluate("fn main() -> i64 { 65 as char as i64 }") == 65);
+  }
+
+  TEST_CASE("cast char to i8") {
+    CHECK(evaluate("fn main() -> i64 { 'A' as i8 as i64 }") == 65);
+  }
+
+  TEST_CASE("cast bool true to i64") {
+    CHECK(evaluate("fn main() -> i64 { true as i64 }") == 1);
+  }
+
+  TEST_CASE("cast bool false to i64") {
+    CHECK(evaluate("fn main() -> i64 { false as i64 }") == 0);
+  }
+
+  TEST_CASE("cast bool to i8") {
+    CHECK(evaluate("fn main() -> i64 { true as i8 as i64 }") == 1);
+  }
+
+  TEST_CASE("identity cast i64") {
+    CHECK(evaluate("fn main() -> i64 { 42 as i64 }") == 42);
+  }
+
+  TEST_CASE("chained narrowing cast") {
+    CHECK(evaluate("fn main() -> i64 { 1000 as i32 as i8 as i64 }") == -24);
+  }
+
+  TEST_CASE("cast in arithmetic") {
+    CHECK(evaluate("fn main() -> i64 { 'A' as i64 + 1 }") == 66);
+  }
+
+  TEST_CASE("cast in let binding") {
+    CHECK(evaluate("fn main() -> i64 {\n"
+                   "  let x: i8 = 42 as i8;\n"
+                   "  x as i64\n"
+                   "}") == 42);
+  }
+
+  TEST_CASE("cast to match function parameter type") {
+    CHECK(evaluate("fn use_i8(x: i8) -> i8 { x }\n"
+                   "fn main() -> i64 { use_i8(10 as i8) as i64 }") == 10);
+  }
+
+  TEST_CASE("mixed type arithmetic via cast") {
+    CHECK(evaluate("fn add_mixed(a: i8, b: i64) -> i64 { a as i64 + b }\n"
+                   "fn main() -> i64 { add_mixed(10 as i8, 20) }") == 30);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

@@ -14,7 +14,7 @@
 #include <iosfwd>
 #include <memory>
 
-#include <bust_tokens.hpp>
+#include <tokens.hpp>
 
 //****************************************************************************
 namespace bust {

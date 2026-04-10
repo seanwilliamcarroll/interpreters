@@ -11,12 +11,14 @@
 
 #include "hir/expression_checker.hpp"
 
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -26,6 +28,7 @@
 #include "hir/block_checker.hpp"
 #include "hir/context.hpp"
 #include "hir/environment.hpp"
+#include "hir/nodes.hpp"
 #include "hir/type_converter.hpp"
 #include "hir/type_unifier.hpp"
 #include "operators.hpp"
@@ -50,20 +53,20 @@ bool is_comparison_op(BinaryOperator op) {
   }
 }
 
-PrimitiveType required_type_for_unary_op(UnaryOperator op) {
+PrimitiveTypeClass required_type_class_for_unary_op(UnaryOperator op) {
   switch (op) {
   case UnaryOperator::MINUS:
-    return PrimitiveType::I64;
+    return PrimitiveTypeClass::NUMERIC;
   case UnaryOperator::NOT:
-    return PrimitiveType::BOOL;
+    return PrimitiveTypeClass::BOOL;
   }
 }
 
-std::optional<PrimitiveType> required_type_for_binary_op(BinaryOperator op) {
+PrimitiveTypeClass required_type_class_for_binary_op(BinaryOperator op) {
   switch (op) {
   case BinaryOperator::LOGICAL_AND:
   case BinaryOperator::LOGICAL_OR:
-    return PrimitiveType::BOOL;
+    return PrimitiveTypeClass::BOOL;
   case BinaryOperator::PLUS:
   case BinaryOperator::MINUS:
   case BinaryOperator::MULTIPLIES:
@@ -73,10 +76,23 @@ std::optional<PrimitiveType> required_type_for_binary_op(BinaryOperator op) {
   case BinaryOperator::LT_EQ:
   case BinaryOperator::GT:
   case BinaryOperator::GT_EQ:
-    return PrimitiveType::I64;
+    return PrimitiveTypeClass::NUMERIC;
   case BinaryOperator::EQ:
   case BinaryOperator::NOT_EQ:
-    return std::nullopt;
+    return PrimitiveTypeClass::COMPARABLE;
+  }
+}
+
+bool is_type_in_type_class(PrimitiveTypeClass type_class, PrimitiveType type) {
+  switch (type_class) {
+  case bust::PrimitiveTypeClass::BOOL:
+    return type == PrimitiveType::BOOL;
+  case bust::PrimitiveTypeClass::NUMERIC:
+    return type == PrimitiveType::I8 || type == PrimitiveType::I32 ||
+           type == PrimitiveType::I64;
+  case bust::PrimitiveTypeClass::COMPARABLE:
+    return type == PrimitiveType::BOOL || type == PrimitiveType::I8 ||
+           type == PrimitiveType::I32 || type == PrimitiveType::I64;
   }
 }
 
@@ -182,24 +198,22 @@ Expression ExpressionChecker::operator()(
   auto type = m_ctx.m_type_unifier.find(lhs.m_type);
 
   // Apply operator constraint
-  auto required = required_type_for_binary_op(binary_expression->m_operator);
-  if (required.has_value()) {
-    Type required_type = PrimitiveTypeValue{{}, required.value()};
-    try {
-      if (std::holds_alternative<TypeVariable>(type)) {
-        m_ctx.m_type_unifier.unify(std::get<TypeVariable>(type), required_type);
-      } else if (!is_type_allowed(required.value(), type)) {
-        throw core::CompilerException(
-            "TypeChecker",
-            "Type " + type + " is disallowed by binary operator: " +
-                binary_expression->m_operator,
-            binary_expression->m_location);
-      }
-    } catch (std::runtime_error &error) {
-      throw core::CompilerException(
-          "TypeChecker", std::string("Type unification error: ") + error.what(),
-          binary_expression->m_location);
+  auto required =
+      required_type_class_for_binary_op(binary_expression->m_operator);
+  try {
+    if (std::holds_alternative<TypeVariable>(type)) {
+      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(type), required);
+    } else if (!is_type_in_type_class(required, type)) {
+      throw core::CompilerException("TypeChecker",
+                                    "Type " + type +
+                                        " is disallowed by binary operator: " +
+                                        binary_expression->m_operator,
+                                    binary_expression->m_location);
     }
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException(
+        "TypeChecker", std::string("Type unification error: ") + error.what(),
+        binary_expression->m_location);
   }
 
   auto final_type = is_comparison_op(binary_expression->m_operator)
@@ -220,13 +234,13 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::UnaryExpr> &unary_expression) {
   auto expression = std::visit((*this), unary_expression->m_expression);
 
-  auto required = required_type_for_unary_op(unary_expression->m_operator);
-  Type required_type = PrimitiveTypeValue{{}, required};
+  auto required_type_class =
+      required_type_class_for_unary_op(unary_expression->m_operator);
   try {
     if (std::holds_alternative<TypeVariable>(expression.m_type)) {
-      m_ctx.m_type_unifier.unify(std::get<TypeVariable>(expression.m_type),
-                                 required_type);
-    } else if (!is_type_allowed(required, expression.m_type)) {
+      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(expression.m_type),
+                                     required_type_class);
+    } else if (!is_type_in_type_class(required_type_class, expression.m_type)) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
@@ -329,6 +343,41 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block) {
   return {{block->m_location},
           clone_type(hir_block.m_type),
           std::make_unique<Block>(std::move(hir_block))};
+}
+
+Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::CastExpr> &cast_expression) {
+
+  auto hir_expression = std::visit(*this, cast_expression->m_expression);
+
+  auto original_type = m_ctx.m_type_unifier.find(hir_expression.m_type);
+
+  auto new_type = std::visit(TypeConverter{m_ctx}, cast_expression->m_type);
+
+  if (!std::holds_alternative<PrimitiveTypeValue>(original_type) ||
+      !std::holds_alternative<PrimitiveTypeValue>(new_type)) {
+    throw core::CompilerException("TypeChecker",
+                                  "Cannot cast an expression with type: " +
+                                      original_type + " to type: " + new_type,
+                                  cast_expression->m_location);
+  }
+
+  auto original_primitive = std::get<PrimitiveTypeValue>(original_type).m_type;
+  auto new_primitive = std::get<PrimitiveTypeValue>(new_type).m_type;
+
+  if (!can_cast(original_primitive, new_primitive)) {
+    throw core::CompilerException("TypeChecker",
+                                  "Cannot cast an expression with type: " +
+                                      to_string(original_primitive) +
+                                      " to type: " + to_string(new_primitive),
+                                  cast_expression->m_location);
+  }
+
+  return {{cast_expression->m_location},
+          clone_type(new_type),
+          std::make_unique<CastExpr>(CastExpr{{cast_expression->m_location},
+                                              std::move(hir_expression),
+                                              std::move(new_type)})};
 }
 
 Expression ExpressionChecker::operator()(
@@ -444,7 +493,19 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &) {
   return {};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralInt64 &literal) {
+Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal) {
+  return {{literal.m_location},
+          PrimitiveTypeValue{{literal.m_location}, PrimitiveType::I8},
+          LiteralI8{{literal.m_location}, literal.m_value}};
+}
+
+Expression ExpressionChecker::operator()(const ast::LiteralI32 &literal) {
+  return {{literal.m_location},
+          PrimitiveTypeValue{{literal.m_location}, PrimitiveType::I32},
+          LiteralI32{{literal.m_location}, literal.m_value}};
+}
+
+Expression ExpressionChecker::operator()(const ast::LiteralI64 &literal) {
   return {{literal.m_location},
           PrimitiveTypeValue{{literal.m_location}, PrimitiveType::I64},
           LiteralI64{{literal.m_location}, literal.m_value}};
@@ -454,6 +515,12 @@ Expression ExpressionChecker::operator()(const ast::LiteralBool &literal) {
   return {{literal.m_location},
           PrimitiveTypeValue{{literal.m_location}, PrimitiveType::BOOL},
           LiteralBool{{literal.m_location}, literal.m_value}};
+}
+
+Expression ExpressionChecker::operator()(const ast::LiteralChar &literal) {
+  return {{literal.m_location},
+          PrimitiveTypeValue{{literal.m_location}, PrimitiveType::CHAR},
+          LiteralChar{{literal.m_location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralUnit &literal) {

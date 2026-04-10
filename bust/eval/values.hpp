@@ -27,19 +27,15 @@ struct Scope;
 
 template <PrimitiveType InnerType> struct AbstractValue {
   constexpr static PrimitiveType m_type = InnerType;
+  ToConcrete<m_type>::type m_value;
 };
 
-template <> struct AbstractValue<PrimitiveType::BOOL> {
-  constexpr static PrimitiveType m_type = PrimitiveType::BOOL;
-  bool m_value;
-};
-
-template <> struct AbstractValue<PrimitiveType::I64> {
-  constexpr static PrimitiveType m_type = PrimitiveType::I64;
-  int64_t m_value;
-};
+template <> struct AbstractValue<PrimitiveType::UNIT> {};
 
 using Bool = AbstractValue<PrimitiveType::BOOL>;
+using Char = AbstractValue<PrimitiveType::CHAR>;
+using I8 = AbstractValue<PrimitiveType::I8>;
+using I32 = AbstractValue<PrimitiveType::I32>;
 using I64 = AbstractValue<PrimitiveType::I64>;
 using Unit = AbstractValue<PrimitiveType::UNIT>;
 
@@ -49,7 +45,7 @@ struct Closure {
   std::shared_ptr<Scope> m_scope;
 };
 
-using Value = std::variant<Bool, I64, Unit, Closure>;
+using Value = std::variant<Bool, Char, I8, I32, I64, Unit, Closure>;
 
 //****************************************************************************
 } // namespace bust::eval

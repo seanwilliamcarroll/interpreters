@@ -14,6 +14,7 @@
 #include <ast/types.hpp>
 #include <operators.hpp>
 #include <optional>
+#include <variant>
 #include <vector>
 
 //****************************************************************************
@@ -33,6 +34,7 @@ struct BinaryExpr;
 struct UnaryExpr;
 struct IfExpr;
 struct Block;
+struct CastExpr;
 struct ReturnExpr;
 struct LambdaExpr;
 struct WhileExpr;
@@ -44,8 +46,11 @@ template <typename LiteralType> struct AbstractLiteral : public HasLocation {
   LiteralType m_value;
 };
 
-using LiteralInt64 = AbstractLiteral<int64_t>;
+using LiteralI8 = AbstractLiteral<int8_t>;
+using LiteralI32 = AbstractLiteral<int32_t>;
+using LiteralI64 = AbstractLiteral<int64_t>;
 using LiteralBool = AbstractLiteral<bool>;
+using LiteralChar = AbstractLiteral<char>;
 struct LiteralUnit : public HasLocation {};
 
 // --- Core type aliases -----------------------------------------------------
@@ -55,9 +60,10 @@ using Expression =
     std::variant<Identifier, std::unique_ptr<CallExpr>,
                  std::unique_ptr<BinaryExpr>, std::unique_ptr<UnaryExpr>,
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
-                 std::unique_ptr<ReturnExpr>, std::unique_ptr<LambdaExpr>,
-                 std::unique_ptr<WhileExpr>, std::unique_ptr<ForExpr>,
-                 LiteralInt64, LiteralBool, LiteralUnit>;
+                 std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
+                 std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
+                 std::unique_ptr<ForExpr>, LiteralI8, LiteralI32, LiteralI64,
+                 LiteralBool, LiteralChar, LiteralUnit>;
 
 using Statement = std::variant<LetBinding, Expression>;
 
@@ -86,6 +92,11 @@ struct UnaryExpr : public HasLocation {
 struct CallExpr : public HasLocation {
   Expression m_callee;
   std::vector<Expression> m_arguments;
+};
+
+struct CastExpr : public HasLocation {
+  Expression m_expression;
+  TypeIdentifier m_type;
 };
 
 struct ReturnExpr : public HasLocation {

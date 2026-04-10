@@ -15,9 +15,9 @@
 
 #include <ast/dump.hpp>
 #include <ast/nodes.hpp>
-#include <bust_tokens.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
+#include <tokens.hpp>
 
 #include <doctest/doctest.h>
 #include <sstream>
@@ -68,8 +68,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralInt64>(expr));
-    CHECK(std::get<LiteralInt64>(expr).m_value == 42);
+    REQUIRE(std::holds_alternative<LiteralI64>(expr));
+    CHECK(std::get<LiteralI64>(expr).m_value == 42);
   }
 
   TEST_CASE("bust::parse_zero") {
@@ -77,8 +77,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralInt64>(expr));
-    CHECK(std::get<LiteralInt64>(expr).m_value == 0);
+    REQUIRE(std::holds_alternative<LiteralI64>(expr));
+    CHECK(std::get<LiteralI64>(expr).m_value == 0);
   }
 
   TEST_CASE("bust::parse_bool_true") {
@@ -172,7 +172,7 @@ TEST_SUITE("bust.parser") {
     CHECK(binding.m_variable.m_name == "x");
     REQUIRE(binding.m_variable.m_type.has_value());
     check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
-    REQUIRE(std::holds_alternative<LiteralInt64>(binding.m_expression));
+    REQUIRE(std::holds_alternative<LiteralI64>(binding.m_expression));
   }
 
   TEST_CASE("bust::parse_let_without_type") {
@@ -212,8 +212,8 @@ TEST_SUITE("bust.parser") {
     REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
     const auto &bin = *std::get<std::unique_ptr<BinaryExpr>>(expr);
     CHECK(bin.m_operator == BinaryOperator::PLUS);
-    CHECK(std::holds_alternative<LiteralInt64>(bin.m_lhs));
-    CHECK(std::holds_alternative<LiteralInt64>(bin.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(bin.m_lhs));
+    CHECK(std::holds_alternative<LiteralI64>(bin.m_rhs));
   }
 
   TEST_CASE("bust::parse_binary_sub") {
@@ -236,7 +236,7 @@ TEST_SUITE("bust.parser") {
     const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr);
     CHECK(add.m_operator == BinaryOperator::PLUS);
     // LHS is literal 1
-    CHECK(std::holds_alternative<LiteralInt64>(add.m_lhs));
+    CHECK(std::holds_alternative<LiteralI64>(add.m_lhs));
     // RHS is 2 * 3
     REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(add.m_rhs));
     const auto &mul = *std::get<std::unique_ptr<BinaryExpr>>(add.m_rhs);
@@ -256,10 +256,10 @@ TEST_SUITE("bust.parser") {
     REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(outer.m_lhs));
     const auto &inner = *std::get<std::unique_ptr<BinaryExpr>>(outer.m_lhs);
     CHECK(inner.m_operator == BinaryOperator::MINUS);
-    CHECK(std::holds_alternative<LiteralInt64>(inner.m_lhs));
-    CHECK(std::holds_alternative<LiteralInt64>(inner.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(inner.m_lhs));
+    CHECK(std::holds_alternative<LiteralI64>(inner.m_rhs));
     // RHS is 3
-    CHECK(std::holds_alternative<LiteralInt64>(outer.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(outer.m_rhs));
   }
 
   TEST_CASE("bust::parse_parenthesized_expression") {
@@ -393,7 +393,7 @@ TEST_SUITE("bust.parser") {
     REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
     const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
     CHECK(unary.m_operator == UnaryOperator::MINUS);
-    CHECK(std::holds_alternative<LiteralInt64>(unary.m_expression));
+    CHECK(std::holds_alternative<LiteralI64>(unary.m_expression));
   }
 
   TEST_CASE("bust::parse_unary_not") {
@@ -431,8 +431,8 @@ TEST_SUITE("bust.parser") {
     REQUIRE(std::holds_alternative<Identifier>(call.m_callee));
     CHECK(std::get<Identifier>(call.m_callee).m_name == "add");
     REQUIRE(call.m_arguments.size() == 2);
-    CHECK(std::holds_alternative<LiteralInt64>(call.m_arguments[0]));
-    CHECK(std::holds_alternative<LiteralInt64>(call.m_arguments[1]));
+    CHECK(std::holds_alternative<LiteralI64>(call.m_arguments[0]));
+    CHECK(std::holds_alternative<LiteralI64>(call.m_arguments[1]));
   }
 
   TEST_CASE("bust::parse_function_call_expression_args") {
@@ -473,11 +473,11 @@ TEST_SUITE("bust.parser") {
     REQUIRE(if_expr.m_else_block.has_value());
     // Then block has final expr 1
     REQUIRE(if_expr.m_then_block.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralInt64>(
+    CHECK(std::holds_alternative<LiteralI64>(
         *if_expr.m_then_block.m_final_expression));
     // Else block has final expr 2
     REQUIRE(if_expr.m_else_block->m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralInt64>(
+    CHECK(std::holds_alternative<LiteralI64>(
         *if_expr.m_else_block->m_final_expression));
   }
 
@@ -502,7 +502,7 @@ TEST_SUITE("bust.parser") {
     const auto &expr = get_final_expr(func.m_body);
     REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(expr));
     const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(expr);
-    CHECK(std::holds_alternative<LiteralInt64>(ret.m_return_expression));
+    CHECK(std::holds_alternative<LiteralI64>(ret.m_return_expression));
   }
 
   TEST_CASE("bust::parse_return_as_only_statement") {
@@ -516,7 +516,7 @@ TEST_SUITE("bust.parser") {
     const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
     REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(stmt_expr));
     const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr);
-    CHECK(std::holds_alternative<LiteralInt64>(ret.m_return_expression));
+    CHECK(std::holds_alternative<LiteralI64>(ret.m_return_expression));
     CHECK_FALSE(func.m_body.m_final_expression.has_value());
   }
 
@@ -533,11 +533,10 @@ TEST_SUITE("bust.parser") {
     const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
     REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(stmt_expr));
     const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr);
-    CHECK(std::holds_alternative<LiteralInt64>(ret.m_return_expression));
+    CHECK(std::holds_alternative<LiteralI64>(ret.m_return_expression));
     // Final expression: 0
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(
-        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
   }
 
   TEST_CASE("bust::parse_early_return_in_if") {
@@ -551,8 +550,7 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     // Final expression: 0
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(
-        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
   }
 
   // === Block-like statements without semicolons ============================
@@ -569,8 +567,7 @@ TEST_SUITE("bust.parser") {
     CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
         std::get<Expression>(func.m_body.m_statements[0])));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(
-        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
   }
 
   TEST_CASE("bust::parse_bare_block_as_statement_no_semicolon") {
@@ -585,8 +582,7 @@ TEST_SUITE("bust.parser") {
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(
         std::get<Expression>(func.m_body.m_statements[0])));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(
-        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
   }
 
   TEST_CASE("bust::parse_multiple_block_like_no_semicolons") {
@@ -606,8 +602,7 @@ TEST_SUITE("bust.parser") {
     CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
         std::get<Expression>(func.m_body.m_statements[2])));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(
-        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
   }
 
   // === Blocks ==============================================================
@@ -644,8 +639,7 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(
-        std::holds_alternative<LiteralInt64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
   }
 
   TEST_CASE("bust::parse_block_as_expression") {
@@ -969,6 +963,262 @@ TEST_SUITE("bust.parser") {
     CHECK(unary.m_operator == UnaryOperator::MINUS);
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
         unary.m_expression));
+  }
+
+  // === Char literals =========================================================
+
+  TEST_CASE("bust::parse_char_literal_printable") {
+    auto program = parse_string("fn main() -> char { 'A' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == 'A');
+  }
+
+  TEST_CASE("bust::parse_char_literal_digit") {
+    auto program = parse_string("fn main() -> char { '7' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '7');
+  }
+
+  TEST_CASE("bust::parse_char_literal_space") {
+    auto program = parse_string("fn main() -> char { ' ' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == ' ');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_newline") {
+    auto program = parse_string("fn main() -> char { '\\n' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\n');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_tab") {
+    auto program = parse_string("fn main() -> char { '\\t' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\t');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_null") {
+    auto program = parse_string("fn main() -> char { '\\0' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\0');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_backslash") {
+    auto program = parse_string("fn main() -> char { '\\\\' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\\');
+  }
+
+  TEST_CASE("bust::parse_char_literal_escape_single_quote") {
+    auto program = parse_string("fn main() -> char { '\\'' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\'');
+  }
+
+  TEST_CASE("bust::parse_char_literal_hex_escape") {
+    // '\x41' is 'A' (0x41 = 65)
+    auto program = parse_string("fn main() -> char { '\\x41' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == 'A');
+  }
+
+  TEST_CASE("bust::parse_char_literal_hex_escape_null") {
+    // '\x00' is null
+    auto program = parse_string("fn main() -> char { '\\x00' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<LiteralChar>(expr));
+    CHECK(std::get<LiteralChar>(expr).m_value == '\0');
+  }
+
+  // === Type annotations (i8, i32, char) ======================================
+
+  TEST_CASE("bust::parse_type_annotation_i8") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x: i8 = 42;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I8);
+  }
+
+  TEST_CASE("bust::parse_type_annotation_i32") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x: i32 = 42;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_type_annotation_char") {
+    auto program = parse_string("fn main() -> char { 'A' }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    check_primitive_type(func.m_return_type, PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("bust::parse_function_param_i8") {
+    auto program = parse_string("fn foo(x: i8) -> i8 { x }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_parameters.size() == 1);
+    REQUIRE(func.m_parameters[0].m_type.has_value());
+    check_primitive_type(*func.m_parameters[0].m_type, PrimitiveType::I8);
+    check_primitive_type(func.m_return_type, PrimitiveType::I8);
+  }
+
+  // === Cast expressions ======================================================
+
+  TEST_CASE("bust::parse_cast_simple") {
+    // 42 as i8
+    auto program = parse_string("fn main() -> i8 { 42 as i8 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    CHECK(std::holds_alternative<LiteralI64>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I8);
+  }
+
+  TEST_CASE("bust::parse_cast_to_i32") {
+    auto program = parse_string("fn main() -> i32 { x as i32 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_cast_to_char") {
+    auto program = parse_string("fn main() -> char { 65 as char }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    check_primitive_type(cast.m_type, PrimitiveType::CHAR);
+  }
+
+  TEST_CASE("bust::parse_cast_chained") {
+    // x as i32 as i64 — left-associative: (x as i32) as i64
+    auto program = parse_string("fn main() -> i64 { x as i32 as i64 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &outer = *std::get<std::unique_ptr<CastExpr>>(expr);
+    check_primitive_type(outer.m_type, PrimitiveType::I64);
+    // Inner is also a cast
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(outer.m_expression));
+    const auto &inner =
+        *std::get<std::unique_ptr<CastExpr>>(outer.m_expression);
+    CHECK(std::holds_alternative<Identifier>(inner.m_expression));
+    check_primitive_type(inner.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_cast_lower_precedence_than_arithmetic") {
+    // x as i32 + 1 should parse as (x as i32) + 1
+    auto program = parse_string("fn main() -> i64 { x as i32 + 1 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
+    const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    CHECK(add.m_operator == BinaryOperator::PLUS);
+    // LHS is the cast
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(add.m_lhs));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(add.m_lhs);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I32);
+    // RHS is literal 1
+    CHECK(std::holds_alternative<LiteralI64>(add.m_rhs));
+  }
+
+  TEST_CASE("bust::parse_cast_with_unary") {
+    // -x as i32 should parse as -(x as i32)
+    auto program = parse_string("fn main() -> i32 { -x as i32 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
+    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
+    CHECK(unary.m_operator == UnaryOperator::MINUS);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(unary.m_expression));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(unary.m_expression);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_cast_on_call_result") {
+    // foo() as i8
+    auto program = parse_string("fn main() -> i8 { foo() as i8 }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
+    CHECK(std::holds_alternative<std::unique_ptr<CallExpr>>(cast.m_expression));
+    check_primitive_type(cast.m_type, PrimitiveType::I8);
+  }
+
+  TEST_CASE("bust::parse_cast_in_let_binding") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x: i8 = 42 as i8;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I8);
+    CHECK(std::holds_alternative<std::unique_ptr<CastExpr>>(
+        binding.m_expression));
   }
 }
 //****************************************************************************

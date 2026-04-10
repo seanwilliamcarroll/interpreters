@@ -14,6 +14,7 @@
 #include <ast/nodes.hpp>
 #include <sstream>
 #include <string>
+#include <utility>
 
 //****************************************************************************
 namespace bust::ast {
@@ -74,17 +75,7 @@ private:
         [this](const auto &v) {
           using T = std::decay_t<decltype(v)>;
           if constexpr (std::is_same_v<T, PrimitiveTypeIdentifier>) {
-            switch (v.m_type) {
-            case PrimitiveType::UNIT:
-              m_out << "Unit";
-              break;
-            case PrimitiveType::BOOL:
-              m_out << "bool";
-              break;
-            case PrimitiveType::I64:
-              m_out << "i64";
-              break;
-            }
+            m_out << to_string(v.m_type);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<
                                                      FunctionTypeIdentifier>>) {
             m_out << "fn(";
@@ -169,12 +160,15 @@ private:
           if constexpr (std::is_same_v<T, Identifier>) {
             indent();
             m_out << "Ident(" << v.m_name << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralInt64>) {
+          } else if constexpr (std::is_same_v<T, LiteralI64>) {
             indent();
             m_out << "Int(" << v.m_value << ")\n";
           } else if constexpr (std::is_same_v<T, LiteralBool>) {
             indent();
             m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";
+          } else if constexpr (std::is_same_v<T, LiteralChar>) {
+            indent();
+            m_out << "Char('" << (v.m_value) << "')\n";
           } else if constexpr (std::is_same_v<T, LiteralUnit>) {
             line("Unit");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpr>>) {
@@ -187,6 +181,8 @@ private:
             dump_if(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<Block>>) {
             dump_block(*v);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<CastExpr>>) {
+            dump_cast(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ReturnExpr>>) {
             dump_return(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
@@ -195,6 +191,8 @@ private:
             line("While(TODO)");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ForExpr>>) {
             line("For(TODO)");
+          } else {
+            std::unreachable();
           }
         },
         e);
@@ -290,6 +288,14 @@ private:
       IndentGuard g2(*this);
       dump_block(*i.m_else_block);
     }
+  }
+
+  void dump_cast(const CastExpr &c) {
+    line("Cast");
+    IndentGuard g(*this);
+    dump_expression(c.m_expression);
+    m_out << " AS ";
+    dump_type_id(c.m_type);
   }
 
   void dump_return(const ReturnExpr &r) {
