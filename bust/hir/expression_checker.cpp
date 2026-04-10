@@ -363,7 +363,7 @@ Expression ExpressionChecker::operator()(
   }
 
   return {{cast_expression->m_location},
-          std::move(new_type),
+          clone_type(new_type),
           std::make_unique<CastExpr>(CastExpr{{cast_expression->m_location},
                                               std::move(hir_expression),
                                               std::move(new_type)})};
