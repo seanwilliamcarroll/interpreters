@@ -18,6 +18,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -152,62 +153,78 @@ Value ExpressionEvaluator::operator()(
       .evaluate_function_body(*closure.m_expression);
 }
 
+// The requires here is ensuring that we the expression within is well formed
+// So if we couldn't construct that value, the compiler prunes the branch
+template <template <typename> typename Function>
+Value same_return_type_op(const Value &lhs, const Value &rhs) {
+  return std::visit(
+      [&](const auto &left) -> Value {
+        using T = std::decay_t<decltype(left)>;
+        if constexpr (requires {
+                        T{Function<decltype(left.m_value)>{}(left.m_value,
+                                                             left.m_value)};
+                      }) {
+          return T{Function<decltype(left.m_value)>{}(
+              left.m_value, std::get<T>(rhs).m_value)};
+        } else {
+          std::unreachable();
+        }
+      },
+      lhs);
+}
+
+template <template <typename> typename Function, typename ReturnType>
+Value different_return_type_op(const Value &lhs, const Value &rhs) {
+  return std::visit(
+      [&](const auto &left) -> Value {
+        using T = std::decay_t<decltype(left)>;
+        if constexpr (requires {
+                        ReturnType{Function<decltype(left.m_value)>{}(
+                            left.m_value, left.m_value)};
+                      }) {
+          return ReturnType{Function<decltype(left.m_value)>{}(
+              left.m_value, std::get<T>(rhs).m_value)};
+        } else {
+          std::unreachable();
+        }
+      },
+      lhs);
+}
+
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
   auto lhs = (*this)(binary_expression->m_lhs);
   auto rhs = (*this)(binary_expression->m_rhs);
 
-  auto apply_int = [](const Value &value_a, const Value &value_b,
-                      auto operation) {
-    return operation(std::get<I64>(value_a).m_value,
-                     std::get<I64>(value_b).m_value);
-  };
-
-  auto apply_bool = [](const Value &value_a, const Value &value_b,
-                       auto operation) {
-    return operation(std::get<Bool>(value_a).m_value,
-                     std::get<Bool>(value_b).m_value);
-  };
-
-  auto apply_int_or_bool =
-      [&apply_int, &apply_bool](const Value &value_a, const Value &value_b,
-                                auto int_operation, auto bool_operation) {
-        if (std::holds_alternative<I64>(value_a)) {
-          return apply_int(value_a, value_b, int_operation);
-        }
-        return apply_bool(value_a, value_b, bool_operation);
-      };
-
   switch (binary_expression->m_operator) {
   case BinaryOperator::LOGICAL_AND:
-    return Bool{apply_bool(lhs, rhs, std::logical_and<bool>())};
+    return same_return_type_op<std::logical_and>(lhs, rhs);
   case BinaryOperator::LOGICAL_OR:
-    return Bool{apply_bool(lhs, rhs, std::logical_or<bool>())};
+    return same_return_type_op<std::logical_or>(lhs, rhs);
   case BinaryOperator::PLUS:
-    return I64{apply_int(lhs, rhs, std::plus<int64_t>())};
+    return same_return_type_op<std::plus>(lhs, rhs);
   case BinaryOperator::MINUS:
-    return I64{apply_int(lhs, rhs, std::minus<int64_t>())};
+    return same_return_type_op<std::minus>(lhs, rhs);
   case BinaryOperator::MULTIPLIES:
-    return I64{apply_int(lhs, rhs, std::multiplies<int64_t>())};
+    return same_return_type_op<std::multiplies>(lhs, rhs);
   case BinaryOperator::DIVIDES:
-    return I64{apply_int(lhs, rhs, std::divides<int64_t>())};
+    return same_return_type_op<std::divides>(lhs, rhs);
   case BinaryOperator::MODULUS:
-    return I64{apply_int(lhs, rhs, std::modulus<int64_t>())};
+    return same_return_type_op<std::modulus>(lhs, rhs);
   case BinaryOperator::EQ:
-    return Bool{apply_int_or_bool(lhs, rhs, std::equal_to<int64_t>(),
-                                  std::equal_to<bool>())};
+    return different_return_type_op<std::equal_to, Bool>(lhs, rhs);
   case BinaryOperator::LT:
-    return Bool{apply_int(lhs, rhs, std::less<int64_t>())};
+    return different_return_type_op<std::less, Bool>(lhs, rhs);
   case BinaryOperator::LT_EQ:
-    return Bool{apply_int(lhs, rhs, std::less_equal<int64_t>())};
+    return different_return_type_op<std::less_equal, Bool>(lhs, rhs);
   case BinaryOperator::GT:
-    return Bool{apply_int(lhs, rhs, std::greater<int64_t>())};
+    return different_return_type_op<std::greater, Bool>(lhs, rhs);
   case BinaryOperator::GT_EQ:
-    return Bool{apply_int(lhs, rhs, std::greater_equal<int64_t>())};
+    return different_return_type_op<std::greater_equal, Bool>(lhs, rhs);
   case BinaryOperator::NOT_EQ:
-    return Bool{apply_int_or_bool(lhs, rhs, std::not_equal_to<int64_t>(),
-                                  std::not_equal_to<bool>())};
+    return different_return_type_op<std::not_equal_to, Bool>(lhs, rhs);
+  default:
   }
   std::unreachable();
 }
@@ -229,102 +246,41 @@ Value ExpressionEvaluator::operator()(
   throw ReturnException{(*this)(return_expression->m_expression)};
 }
 
-struct ValueCaster {
-  Value operator()(const Bool &from) {
-    switch (m_to) {
-    case bust::PrimitiveType::BOOL:
-      return from;
-    case bust::PrimitiveType::I8:
-      return I8{.m_value = static_cast<int8_t>(from.m_value)};
-    case bust::PrimitiveType::I32:
-      return I32{.m_value = static_cast<int32_t>(from.m_value)};
-    case bust::PrimitiveType::I64:
-      return I64{.m_value = static_cast<int64_t>(from.m_value)};
-    default:
-      throw std::runtime_error("bad cast");
-    }
-  }
-
-  Value operator()(const I8 &from) {
-    switch (m_to) {
-    case bust::PrimitiveType::CHAR:
-      return Char{.m_value = static_cast<char>(from.m_value)};
-    case bust::PrimitiveType::I8:
-      return I8{.m_value = static_cast<int8_t>(from.m_value)};
-    case bust::PrimitiveType::I32:
-      return I32{.m_value = static_cast<int32_t>(from.m_value)};
-    case bust::PrimitiveType::I64:
-      return I64{.m_value = static_cast<int64_t>(from.m_value)};
-    default:
-      throw std::runtime_error("bad cast");
-    }
-  }
-
-  Value operator()(const I32 &from) {
-    switch (m_to) {
-    case bust::PrimitiveType::CHAR:
-      return Char{.m_value = static_cast<char>(from.m_value)};
-    case bust::PrimitiveType::I8:
-      return I8{.m_value = static_cast<int8_t>(from.m_value)};
-    case bust::PrimitiveType::I32:
-      return I32{.m_value = static_cast<int32_t>(from.m_value)};
-    case bust::PrimitiveType::I64:
-      return I64{.m_value = static_cast<int64_t>(from.m_value)};
-    default:
-      throw std::runtime_error("bad cast");
-    }
-  }
-
-  Value operator()(const I64 &from) {
-    switch (m_to) {
-    case bust::PrimitiveType::CHAR:
-      return Char{.m_value = static_cast<char>(from.m_value)};
-    case bust::PrimitiveType::I8:
-      return I8{.m_value = static_cast<int8_t>(from.m_value)};
-    case bust::PrimitiveType::I32:
-      return I32{.m_value = static_cast<int32_t>(from.m_value)};
-    case bust::PrimitiveType::I64:
-      return I64{.m_value = static_cast<int64_t>(from.m_value)};
-    default:
-      throw std::runtime_error("bad cast");
-    }
-  }
-
-  Value operator()(const Char &from) {
-    switch (m_to) {
-    case bust::PrimitiveType::CHAR:
-      return Char{.m_value = static_cast<char>(from.m_value)};
-    case bust::PrimitiveType::I8:
-      return I8{.m_value = static_cast<int8_t>(from.m_value)};
-    case bust::PrimitiveType::I32:
-      return I32{.m_value = static_cast<int32_t>(from.m_value)};
-    case bust::PrimitiveType::I64:
-      return I64{.m_value = static_cast<int64_t>(from.m_value)};
-    default:
-      throw std::runtime_error("bad cast");
-    }
-  }
-
-  [[noreturn]] Value operator()(const Unit &) {
-    throw std::runtime_error("Can't cast unit");
-  }
-
-  [[noreturn]] Value operator()(const Closure &) {
-    throw std::runtime_error("Can't cast closure");
-  }
-
-  PrimitiveType m_to;
-};
+// The requires here is ensuring that we the expression within is well formed
+// So if we couldn't construct that value, the compiler prunes the branch
+Value cast_op(const Value &from, PrimitiveType to) {
+  return std::visit(
+      [&](const auto &value) -> Value {
+        if constexpr (requires { value.m_value; }) {
+          switch (to) {
+          case bust::PrimitiveType::CHAR:
+            return Char{static_cast<char>(value.m_value)};
+          case bust::PrimitiveType::I8:
+            return I8{static_cast<int8_t>(value.m_value)};
+          case bust::PrimitiveType::I32:
+            return I32{static_cast<int32_t>(value.m_value)};
+          case bust::PrimitiveType::I64:
+            return I64{static_cast<int64_t>(value.m_value)};
+          case bust::PrimitiveType::BOOL:
+            return Bool{static_cast<bool>(value.m_value)};
+          case bust::PrimitiveType::UNIT:
+            std::unreachable();
+          }
+        } else {
+          std::unreachable();
+        }
+      },
+      from);
+}
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expression) {
   auto value = (*this)(cast_expression->m_expression);
   // Do cast, we already type checked
 
-  return std::visit(
-      ValueCaster{std::get<hir::PrimitiveTypeValue>(cast_expression->m_new_type)
-                      .m_type},
-      value);
+  return cast_op(
+      value,
+      std::get<hir::PrimitiveTypeValue>(cast_expression->m_new_type).m_type);
 }
 
 Value ExpressionEvaluator::operator()(

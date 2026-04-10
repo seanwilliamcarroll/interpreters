@@ -27,32 +27,10 @@ struct Scope;
 
 template <PrimitiveType InnerType> struct AbstractValue {
   constexpr static PrimitiveType m_type = InnerType;
+  ToConcrete<m_type>::type m_value;
 };
 
-template <> struct AbstractValue<PrimitiveType::BOOL> {
-  constexpr static PrimitiveType m_type = PrimitiveType::BOOL;
-  bool m_value;
-};
-
-template <> struct AbstractValue<PrimitiveType::CHAR> {
-  constexpr static PrimitiveType m_type = PrimitiveType::CHAR;
-  char m_value;
-};
-
-template <> struct AbstractValue<PrimitiveType::I8> {
-  constexpr static PrimitiveType m_type = PrimitiveType::I8;
-  int8_t m_value;
-};
-
-template <> struct AbstractValue<PrimitiveType::I32> {
-  constexpr static PrimitiveType m_type = PrimitiveType::I32;
-  int32_t m_value;
-};
-
-template <> struct AbstractValue<PrimitiveType::I64> {
-  constexpr static PrimitiveType m_type = PrimitiveType::I64;
-  int64_t m_value;
-};
+template <> struct AbstractValue<PrimitiveType::UNIT> {};
 
 using Bool = AbstractValue<PrimitiveType::BOOL>;
 using Char = AbstractValue<PrimitiveType::CHAR>;

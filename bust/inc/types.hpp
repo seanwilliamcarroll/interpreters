@@ -14,6 +14,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 
 //****************************************************************************
 namespace bust {
@@ -26,6 +27,28 @@ enum class PrimitiveType : uint8_t {
   I8,
   I32,
   I64,
+};
+
+template <PrimitiveType AbstractType> struct ToConcrete : std::false_type {};
+
+template <> struct ToConcrete<PrimitiveType::BOOL> {
+  using type = bool;
+};
+
+template <> struct ToConcrete<PrimitiveType::CHAR> {
+  using type = char;
+};
+
+template <> struct ToConcrete<PrimitiveType::I8> {
+  using type = int8_t;
+};
+
+template <> struct ToConcrete<PrimitiveType::I32> {
+  using type = int32_t;
+};
+
+template <> struct ToConcrete<PrimitiveType::I64> {
+  using type = int64_t;
 };
 
 inline std::string to_string(const PrimitiveType &type) {
