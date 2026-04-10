@@ -113,11 +113,6 @@ Value ExpressionEvaluator::operator()(
 
   auto condition_value = (*this)(if_expression->m_condition);
 
-  if (!std::holds_alternative<Bool>(condition_value)) {
-    throw core::CompilerException("Evaluator", "Condition must be bool",
-                                  if_expression->m_location);
-  }
-
   if (std::get<Bool>(condition_value).m_value) {
     return (*this)(if_expression->m_then_branch);
   }

@@ -162,9 +162,8 @@ Expression ExpressionChecker::operator()(
 
   return {{call_expression->m_location},
           std::move(return_type),
-          std::make_unique<CallExpr>(CallExpr{{call_expression->m_location},
-                                              std::move(callee),
-                                              std::move(arguments)})};
+          std::make_unique<CallExpr>(
+              CallExpr{std::move(callee), std::move(arguments)})};
 }
 
 Expression ExpressionChecker::operator()(
@@ -207,13 +206,10 @@ Expression ExpressionChecker::operator()(
                                              PrimitiveType::BOOL}
                         : m_ctx.m_type_unifier.find(type);
 
-  return {
-      {binary_expression->m_location},
-      std::move(final_type),
-      std::make_unique<BinaryExpr>(BinaryExpr{{binary_expression->m_location},
-                                              binary_expression->m_operator,
-                                              std::move(lhs),
-                                              std::move(rhs)})};
+  return {{binary_expression->m_location},
+          std::move(final_type),
+          std::make_unique<BinaryExpr>(BinaryExpr{
+              binary_expression->m_operator, std::move(lhs), std::move(rhs)})};
 }
 
 Expression ExpressionChecker::operator()(
@@ -247,8 +243,7 @@ Expression ExpressionChecker::operator()(
 
   return {{unary_expression->m_location},
           final_expression.m_type,
-          std::make_unique<UnaryExpr>(UnaryExpr{{unary_expression->m_location},
-                                                unary_expression->m_operator,
+          std::make_unique<UnaryExpr>(UnaryExpr{unary_expression->m_operator,
                                                 std::move(final_expression)})};
 }
 
@@ -293,10 +288,8 @@ Expression ExpressionChecker::operator()(
 
     return {{if_expression->m_location},
             type,
-            std::make_unique<IfExpr>(IfExpr{{if_expression->m_location},
-                                            std::move(resolved_condition),
-                                            std::move(then_branch),
-                                            {}})};
+            std::make_unique<IfExpr>(IfExpr{
+                std::move(resolved_condition), std::move(then_branch), {}})};
   }
   // Check else branch too
   auto else_branch =
@@ -317,9 +310,7 @@ Expression ExpressionChecker::operator()(
   return {{if_expression->m_location},
           std::move(type),
           std::make_unique<IfExpr>(
-              IfExpr{{if_expression->m_location},
-                     std::move(resolved_condition),
-                     std::move(then_branch),
+              IfExpr{std::move(resolved_condition), std::move(then_branch),
                      std::optional<Block>(std::move(else_branch))})};
 }
 
@@ -361,9 +352,8 @@ Expression ExpressionChecker::operator()(
 
   return {{cast_expression->m_location},
           new_type,
-          std::make_unique<CastExpr>(CastExpr{{cast_expression->m_location},
-                                              std::move(hir_expression),
-                                              std::move(new_type)})};
+          std::make_unique<CastExpr>(
+              CastExpr{std::move(hir_expression), std::move(new_type)})};
 }
 
 Expression ExpressionChecker::operator()(
@@ -393,10 +383,10 @@ Expression ExpressionChecker::operator()(
                                            std::move(expression_type),
                                            std::move(expression.m_expression)};
 
-  return {{return_expression->m_location},
-          NeverType{{return_expression->m_location}},
-          std::make_unique<ReturnExpr>(ReturnExpr{
-              {return_expression->m_location}, std::move(final_expression)})};
+  return {
+      {return_expression->m_location},
+      NeverType{{return_expression->m_location}},
+      std::make_unique<ReturnExpr>(ReturnExpr{std::move(final_expression)})};
 }
 
 Expression ExpressionChecker::operator()(
@@ -459,12 +449,10 @@ Expression ExpressionChecker::operator()(
                    std::move(unified_parameter_types),
                    std::move(return_type)});
 
-  return {
-      {lambda_expression->m_location},
-      std::move(function_type),
-      std::make_unique<LambdaExpr>(LambdaExpr{{lambda_expression->m_location},
-                                              std::move(unified_parameters),
-                                              std::move(body)})};
+  return {{lambda_expression->m_location},
+          std::move(function_type),
+          std::make_unique<LambdaExpr>(
+              LambdaExpr{std::move(unified_parameters), std::move(body)})};
 }
 
 Expression

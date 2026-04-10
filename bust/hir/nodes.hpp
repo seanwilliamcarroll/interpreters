@@ -105,27 +105,27 @@ using TopItem = std::variant<FunctionDef, LetBinding>;
 
 // --- Expressions -----------------------------------------------------------
 
-struct CallExpr : public HasLocation {
+struct CallExpr {
   Expression m_callee;
   std::vector<Expression> m_arguments;
 };
 
-struct BinaryExpr : public HasLocation {
+struct BinaryExpr {
   BinaryOperator m_operator;
   Expression m_lhs;
   Expression m_rhs;
 };
 
-struct UnaryExpr : public HasLocation {
+struct UnaryExpr {
   UnaryOperator m_operator;
   Expression m_expression;
 };
 
-struct ReturnExpr : public HasLocation {
+struct ReturnExpr {
   Expression m_expression;
 };
 
-struct CastExpr : public HasLocation {
+struct CastExpr {
   Expression m_expression;
   Type m_new_type;
 };
@@ -138,7 +138,7 @@ struct Block : public HasLocation {
   std::optional<Expression> m_final_expression;
 };
 
-struct IfExpr : public HasLocation {
+struct IfExpr {
   Expression m_condition;
   Block m_then_branch;
   std::optional<Block> m_else_branch;
@@ -151,7 +151,7 @@ struct LetBinding : public HasLocation {
   Expression m_expression;
 };
 
-struct LambdaExpr : public HasLocation {
+struct LambdaExpr {
   std::vector<Identifier> m_parameters;
   Block m_body;
 };
