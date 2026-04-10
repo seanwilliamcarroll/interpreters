@@ -15,10 +15,10 @@
 #include <variant>
 #include <vector>
 
-#include "codegen/context.hpp"
-#include "codegen/formatter.hpp"
-#include "codegen/top_item_generator.hpp"
-#include "hir/nodes.hpp"
+#include <codegen/context.hpp>
+#include <codegen/formatter.hpp>
+#include <codegen/top_item_generator.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust {

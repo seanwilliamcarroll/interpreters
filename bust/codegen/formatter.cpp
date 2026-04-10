@@ -9,21 +9,22 @@
 //*
 //****************************************************************************
 
-#include "codegen/formatter.hpp"
-
+#include <codegen/basic_block.hpp>
+#include <codegen/formatter.hpp>
+#include <codegen/function.hpp>
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 #include <memory>
+#include <operators.hpp>
 #include <optional>
 #include <stdexcept>
 #include <variant>
 #include <vector>
 
-#include "codegen/basic_block.hpp"
-#include "codegen/function.hpp"
-#include "codegen/handle.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
-#include "operators.hpp"
+#include <codegen/function_declaration.hpp>
+#include <codegen/module.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

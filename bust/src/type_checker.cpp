@@ -9,18 +9,16 @@
 //*
 //****************************************************************************
 
+#include <ast/nodes.hpp>
+#include <hir/context.hpp>
+#include <hir/nodes.hpp>
+#include <hir/top_item_checker.hpp>
+#include <source_location.hpp>
 #include <type_checker.hpp>
 #include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
-#include "hir/nodes.hpp"
-#include "hir/top_item_checker.hpp"
-#include "hir/types.hpp"
-#include "source_location.hpp"
 
 //****************************************************************************
 namespace bust {

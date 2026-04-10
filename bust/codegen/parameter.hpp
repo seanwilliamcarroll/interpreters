@@ -11,8 +11,8 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/handle.hpp"
-#include "codegen/types.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/types.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

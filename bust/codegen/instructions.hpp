@@ -11,10 +11,10 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/handle.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
-#include "operators.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
+#include <operators.hpp>
 #include <variant>
 
 //****************************************************************************

@@ -18,8 +18,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "codegen/handle.hpp"
-#include "codegen/instructions.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

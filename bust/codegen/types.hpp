@@ -11,10 +11,10 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/types.hpp"
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <hir/types.hpp>
 #include <ostream>
 #include <utility>
 #include <variant>

@@ -13,9 +13,9 @@
 
 #include <memory>
 
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
-#include "hir/nodes.hpp"
+#include <ast/nodes.hpp>
+#include <hir/context.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::hir {

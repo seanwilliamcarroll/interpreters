@@ -9,31 +9,31 @@
 //*
 //****************************************************************************
 
-#include "hir/expression_checker.hpp"
-
+#include <ast/types.hpp>
+#include <exceptions.hpp>
+#include <hir/block_checker.hpp>
+#include <hir/context.hpp>
+#include <hir/environment.hpp>
+#include <hir/expression_checker.hpp>
+#include <hir/nodes.hpp>
+#include <hir/type_converter.hpp>
+#include <hir/type_unifier.hpp>
 #include <memory>
+#include <operators.hpp>
 #include <optional>
 #include <ranges>
+#include <source_location.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <unordered_map>
+#include <types.hpp>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include "ast/types.hpp"
-#include "exceptions.hpp"
-#include "hir/block_checker.hpp"
-#include "hir/context.hpp"
-#include "hir/environment.hpp"
-#include "hir/nodes.hpp"
-#include "hir/type_converter.hpp"
-#include "hir/type_unifier.hpp"
-#include "operators.hpp"
-#include "source_location.hpp"
-#include "types.hpp"
+#include <ast/nodes.hpp>
+#include <hir/types.hpp>
 
 //****************************************************************************
 namespace bust::hir {

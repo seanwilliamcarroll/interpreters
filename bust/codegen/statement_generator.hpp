@@ -11,9 +11,9 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/context.hpp"
-#include "codegen/handle.hpp"
-#include "hir/nodes.hpp"
+#include <codegen/context.hpp>
+#include <codegen/handle.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

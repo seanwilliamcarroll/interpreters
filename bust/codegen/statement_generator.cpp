@@ -9,9 +9,12 @@
 //*
 //****************************************************************************
 
-#include "codegen/statement_generator.hpp"
-#include "codegen/expression_generator.hpp"
-#include "codegen/let_binding_generator.hpp"
+#include <codegen/expression_generator.hpp>
+#include <codegen/let_binding_generator.hpp>
+#include <codegen/statement_generator.hpp>
+
+#include <codegen/handle.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

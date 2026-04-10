@@ -11,7 +11,7 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/types.hpp"
+#include <hir/types.hpp>
 #include <unordered_map>
 #include <variant>
 #include <vector>

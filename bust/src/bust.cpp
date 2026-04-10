@@ -28,7 +28,7 @@
 #include <utility>
 #include <validate_main.hpp>
 
-#include "lexer.hpp"
+#include <lexer.hpp>
 
 //****************************************************************************
 

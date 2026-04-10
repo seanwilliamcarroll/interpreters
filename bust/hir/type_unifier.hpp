@@ -11,11 +11,11 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/types.hpp"
-#include "hir/union_find.hpp"
-#include "types.hpp"
+#include <hir/types.hpp>
+#include <hir/union_find.hpp>
 #include <ranges>
 #include <stdexcept>
+#include <types.hpp>
 #include <unordered_map>
 #include <variant>
 

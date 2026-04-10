@@ -9,27 +9,27 @@
 //*
 //****************************************************************************
 
-#include "eval/expression_evaluator.hpp"
-
 #include <cstdint>
+#include <eval/context.hpp>
+#include <eval/environment.hpp>
+#include <eval/expression_evaluator.hpp>
+#include <eval/statement_evaluator.hpp>
+#include <eval/values.hpp>
+#include <exceptions.hpp>
 #include <functional>
+#include <hir/types.hpp>
 #include <memory>
+#include <operators.hpp>
 #include <optional>
 #include <ranges>
-#include <stdexcept>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
+#include <types.hpp>
 #include <utility>
 #include <variant>
 
-#include "eval/context.hpp"
-#include "eval/environment.hpp"
-#include "eval/statement_evaluator.hpp"
-#include "eval/values.hpp"
-#include "exceptions.hpp"
-#include "hir/types.hpp"
-#include "operators.hpp"
-#include "types.hpp"
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::eval {

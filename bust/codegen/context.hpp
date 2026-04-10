@@ -11,11 +11,11 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/basic_block.hpp"
-#include "codegen/function.hpp"
-#include "codegen/module.hpp"
-#include "codegen/symbol_table.hpp"
 #include <cassert>
+#include <codegen/basic_block.hpp>
+#include <codegen/function.hpp>
+#include <codegen/module.hpp>
+#include <codegen/symbol_table.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

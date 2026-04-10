@@ -11,8 +11,8 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/environment.hpp"
 #include <ast/nodes.hpp>
+#include <hir/environment.hpp>
 #include <hir/nodes.hpp>
 
 //****************************************************************************

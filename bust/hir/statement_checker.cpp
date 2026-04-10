@@ -9,12 +9,13 @@
 //*
 //****************************************************************************
 
-#include "hir/statement_checker.hpp"
-
+#include <hir/expression_checker.hpp>
+#include <hir/let_binding_checker.hpp>
+#include <hir/statement_checker.hpp>
 #include <variant>
 
-#include "hir/expression_checker.hpp"
-#include "hir/let_binding_checker.hpp"
+#include <ast/nodes.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::hir {

@@ -11,8 +11,8 @@
 #pragma once
 //****************************************************************************
 
-#include "eval/values.hpp"
 #include <cassert>
+#include <eval/values.hpp>
 #include <memory>
 #include <optional>
 #include <ranges>

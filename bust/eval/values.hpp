@@ -11,11 +11,11 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/nodes.hpp"
-#include "types.hpp"
 #include <cstdint>
+#include <hir/nodes.hpp>
 #include <memory>
 #include <string>
+#include <types.hpp>
 #include <variant>
 #include <vector>
 

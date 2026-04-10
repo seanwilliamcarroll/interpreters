@@ -11,9 +11,9 @@
 #pragma once
 //****************************************************************************
 
-#include "eval/context.hpp"
-#include "eval/values.hpp"
-#include "hir/nodes.hpp"
+#include <eval/context.hpp>
+#include <eval/values.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::eval {

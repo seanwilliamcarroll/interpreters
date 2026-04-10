@@ -16,13 +16,13 @@
 #include <variant>
 #include <vector>
 
-#include "eval/context.hpp"
-#include "eval/environment.hpp"
-#include "eval/expression_evaluator.hpp"
-#include "eval/top_item_evaluator.hpp"
-#include "eval/values.hpp"
-#include "exceptions.hpp"
-#include "hir/nodes.hpp"
+#include <eval/context.hpp>
+#include <eval/environment.hpp>
+#include <eval/expression_evaluator.hpp>
+#include <eval/top_item_evaluator.hpp>
+#include <eval/values.hpp>
+#include <exceptions.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust {
