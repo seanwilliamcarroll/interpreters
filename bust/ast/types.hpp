@@ -19,14 +19,11 @@
 namespace bust::ast {
 //****************************************************************************
 
-using bust::PrimitiveType;
-using core::HasLocation;
-
-struct PrimitiveTypeIdentifier : public HasLocation {
+struct PrimitiveTypeIdentifier : public core::HasLocation {
   PrimitiveType m_type;
 };
 
-struct DefinedType : public HasLocation {
+struct DefinedType : public core::HasLocation {
   std::string m_type;
 };
 
@@ -35,7 +32,7 @@ struct FunctionTypeIdentifier;
 using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType,
                                     std::unique_ptr<FunctionTypeIdentifier>>;
 
-struct FunctionTypeIdentifier : public HasLocation {
+struct FunctionTypeIdentifier : public core::HasLocation {
   std::vector<TypeIdentifier> m_parameter_types;
   TypeIdentifier m_return_type;
 };

@@ -19,15 +19,13 @@
 
 //****************************************************************************
 namespace bust::hir {
-using bust::PrimitiveType;
-using core::HasLocation;
 //****************************************************************************
 
-struct PrimitiveTypeValue : public HasLocation {
+struct PrimitiveTypeValue : public core::HasLocation {
   PrimitiveType m_type;
 };
 
-struct TypeVariable : public HasLocation {
+struct TypeVariable : public core::HasLocation {
   // Not sure on needing a location
   size_t m_id;
 };
@@ -36,13 +34,13 @@ struct FunctionType;
 
 using FunctionTypePtr = std::shared_ptr<const FunctionType>;
 
-struct NeverType : public HasLocation {};
+struct NeverType : public core::HasLocation {};
 
 // TODO: User defined types of some kind
 using Type =
     std::variant<PrimitiveTypeValue, TypeVariable, FunctionTypePtr, NeverType>;
 
-struct FunctionType : public HasLocation {
+struct FunctionType : public core::HasLocation {
   std::vector<Type> m_argument_types;
   Type m_return_type;
 };

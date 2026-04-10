@@ -16,9 +16,6 @@
 
 //****************************************************************************
 namespace bust::ast {
-using bust::BinaryOperator;
-using bust::UnaryOperator;
-using core::HasLocation;
 //****************************************************************************
 
 // --- Forward declarations --------------------------------------------------
@@ -39,7 +36,8 @@ struct ForExpr;
 
 // --- Literals --------------------------------------------------------------
 
-template <typename LiteralType> struct AbstractLiteral : public HasLocation {
+template <typename LiteralType>
+struct AbstractLiteral : public core::HasLocation {
   LiteralType m_value;
 };
 
@@ -48,7 +46,7 @@ using LiteralI32 = AbstractLiteral<int32_t>;
 using LiteralI64 = AbstractLiteral<int64_t>;
 using LiteralBool = AbstractLiteral<bool>;
 using LiteralChar = AbstractLiteral<char>;
-struct LiteralUnit : public HasLocation {};
+struct LiteralUnit : public core::HasLocation {};
 
 // --- Core type aliases -----------------------------------------------------
 
@@ -68,70 +66,70 @@ using TopItem = std::variant<FunctionDef, LetBinding>;
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public HasLocation {
+struct Identifier : public core::HasLocation {
   std::string m_name;
   std::optional<TypeIdentifier> m_type;
 };
 
 // --- Expressions -----------------------------------------------------------
 
-struct BinaryExpr : public HasLocation {
+struct BinaryExpr : public core::HasLocation {
   BinaryOperator m_operator;
   Expression m_lhs;
   Expression m_rhs;
 };
 
-struct UnaryExpr : public HasLocation {
+struct UnaryExpr : public core::HasLocation {
   UnaryOperator m_operator;
   Expression m_expression;
 };
 
-struct CallExpr : public HasLocation {
+struct CallExpr : public core::HasLocation {
   Expression m_callee;
   std::vector<Expression> m_arguments;
 };
 
-struct CastExpr : public HasLocation {
+struct CastExpr : public core::HasLocation {
   Expression m_expression;
   TypeIdentifier m_type;
 };
 
-struct ReturnExpr : public HasLocation {
+struct ReturnExpr : public core::HasLocation {
   Expression m_return_expression;
 };
 
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public HasLocation {
+struct Block : public core::HasLocation {
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
 };
 
-struct IfExpr : public HasLocation {
+struct IfExpr : public core::HasLocation {
   Expression m_condition;
   Block m_then_block;
   std::optional<Block> m_else_block;
 };
 
 // TODO
-struct WhileExpr : public HasLocation {};
-struct ForExpr : public HasLocation {};
+struct WhileExpr : public core::HasLocation {};
+struct ForExpr : public core::HasLocation {};
 
 // --- Bindings & definitions ------------------------------------------------
 
-struct LetBinding : public HasLocation {
+struct LetBinding : public core::HasLocation {
   Identifier m_variable;
   Expression m_expression;
 };
 
-struct FunctionDef : public HasLocation {
+struct FunctionDef : public core::HasLocation {
   Identifier m_id;
   std::vector<Identifier> m_parameters;
   TypeIdentifier m_return_type;
   Block m_body;
 };
 
-struct LambdaExpr : public HasLocation {
+struct LambdaExpr : public core::HasLocation {
   std::vector<Identifier> m_parameters;
   std::optional<TypeIdentifier> m_return_type;
   Block m_body;
@@ -139,7 +137,7 @@ struct LambdaExpr : public HasLocation {
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public HasLocation {
+struct Program : public core::HasLocation {
   std::vector<TopItem> m_items;
 };
 

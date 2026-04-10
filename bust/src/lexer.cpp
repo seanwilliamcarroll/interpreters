@@ -70,8 +70,6 @@ bool is_hex_character(char character) {
          (character >= 'A' && character <= 'F');
 }
 
-using core::SourceLocation;
-
 struct Lexer : LexerInterface {
 
   Lexer(std::istream &in_stream, const char *hint)
@@ -82,12 +80,13 @@ struct Lexer : LexerInterface {
     return std::make_unique<Token>(get_current_loc(), t);
   }
 
-  auto make_token(const SourceLocation &l, TokenType t) const {
+  auto make_token(const core::SourceLocation &l, TokenType t) const {
     return std::make_unique<Token>(l, t);
   }
 
   template <class V>
-  auto make_token(const SourceLocation &l, TokenType t, const V &v) const {
+  auto make_token(const core::SourceLocation &l, TokenType t,
+                  const V &v) const {
     return std::make_unique<core::TokenOf<TokenType, V>>(l, t, v);
   }
 
@@ -297,7 +296,7 @@ struct Lexer : LexerInterface {
   }
 
   std::unique_ptr<Token> char_literal() {
-    const SourceLocation loc = get_current_loc();
+    const core::SourceLocation loc = get_current_loc();
     std::string lexeme;
 
     char character;
@@ -340,7 +339,7 @@ struct Lexer : LexerInterface {
   }
 
   std::unique_ptr<Token> int_literal() {
-    const SourceLocation loc = get_current_loc();
+    const core::SourceLocation loc = get_current_loc();
     std::string lexeme;
 
     char character;
@@ -371,8 +370,9 @@ struct Lexer : LexerInterface {
     return output;
   }
 
-  std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
-                                           const std::string &lexeme) {
+  std::unique_ptr<Token>
+  create_identifier(const core::SourceLocation &starting_loc,
+                    const std::string &lexeme) {
     if (lexeme.empty()) {
       on_error("Invalid usage of Lexer::create_identifier, did not find any "
                "characters to form the lexeme");
@@ -387,7 +387,7 @@ struct Lexer : LexerInterface {
   std::unique_ptr<Token> identifier() {
     std::string lexeme;
     char character;
-    SourceLocation starting_loc = get_current_loc();
+    core::SourceLocation starting_loc = get_current_loc();
     expect_peek(character, __FUNCTION__);
 
     if (!is_lower(character) && !is_upper(character) && character != '_') {
@@ -478,7 +478,7 @@ struct Lexer : LexerInterface {
              " (value: ", static_cast<int>(character), ")");
   }
 
-  SourceLocation get_current_loc() const {
+  core::SourceLocation get_current_loc() const {
     return {.file_name = m_hint, .line = m_line, .column = m_column};
   }
 

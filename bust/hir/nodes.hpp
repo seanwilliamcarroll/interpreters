@@ -15,9 +15,6 @@
 
 //****************************************************************************
 namespace bust::hir {
-using bust::BinaryOperator;
-using bust::UnaryOperator;
-using core::HasLocation;
 //****************************************************************************
 
 // --- Forward declarations --------------------------------------------------
@@ -38,38 +35,39 @@ struct ForExpr {};
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public HasLocation {
+struct Identifier : public core::HasLocation {
   std::string m_name;
   Type m_type;
 };
 
 // --- Literals --------------------------------------------------------------
 
-template <PrimitiveType InternalType> struct Literal : public HasLocation {
+template <PrimitiveType InternalType>
+struct Literal : public core::HasLocation {
   static constexpr PrimitiveType m_type = InternalType;
 };
 
-template <> struct Literal<PrimitiveType::BOOL> : public HasLocation {
+template <> struct Literal<PrimitiveType::BOOL> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::BOOL;
   bool m_value;
 };
 
-template <> struct Literal<PrimitiveType::CHAR> : public HasLocation {
+template <> struct Literal<PrimitiveType::CHAR> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::CHAR;
   char m_value;
 };
 
-template <> struct Literal<PrimitiveType::I8> : public HasLocation {
+template <> struct Literal<PrimitiveType::I8> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I8;
   int8_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I32> : public HasLocation {
+template <> struct Literal<PrimitiveType::I32> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I32;
   int32_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I64> : public HasLocation {
+template <> struct Literal<PrimitiveType::I64> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
@@ -91,7 +89,7 @@ using ExprKind =
                  std::unique_ptr<ReturnExpr>, std::unique_ptr<CastExpr>,
                  std::unique_ptr<LambdaExpr>>;
 
-struct Expression : public HasLocation {
+struct Expression : public core::HasLocation {
   Type m_type;
   ExprKind m_expression;
 };
@@ -129,7 +127,7 @@ struct CastExpr {
 
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public HasLocation {
+struct Block : public core::HasLocation {
   Type m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
@@ -143,7 +141,7 @@ struct IfExpr {
 
 // --- Bindings & definitions ------------------------------------------------
 
-struct LetBinding : public HasLocation {
+struct LetBinding : public core::HasLocation {
   Identifier m_variable;
   Expression m_expression;
 };
@@ -153,7 +151,7 @@ struct LambdaExpr {
   Block m_body;
 };
 
-struct FunctionDef : public HasLocation {
+struct FunctionDef : public core::HasLocation {
   std::string m_function_id;
   FunctionTypePtr m_type;
   std::vector<Identifier> m_parameters;
@@ -162,7 +160,7 @@ struct FunctionDef : public HasLocation {
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public HasLocation {
+struct Program : public core::HasLocation {
   std::vector<TopItem> m_top_items;
 };
 
