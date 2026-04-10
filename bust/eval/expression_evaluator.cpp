@@ -235,14 +235,30 @@ Value ExpressionEvaluator::operator()(
   std::unreachable();
 }
 
+template <template <typename> typename Function>
+Value apply_unary_op(const Value &value) {
+  return std::visit(
+      [](const auto &val) -> Value {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (requires {
+                        T{Function<decltype(val.m_value)>{}(val.m_value)};
+                      }) {
+          return T{Function<decltype(val.m_value)>{}(val.m_value)};
+        } else {
+          std::unreachable();
+        }
+      },
+      value);
+}
+
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
   auto value = (*this)(unary_expression->m_expression);
   switch (unary_expression->m_operator) {
   case bust::UnaryOperator::MINUS:
-    return I64{-std::get<I64>(value).m_value};
+    return apply_unary_op<std::negate>(value);
   case bust::UnaryOperator::NOT:
-    return Bool{!std::get<Bool>(value).m_value};
+    return apply_unary_op<std::logical_not>(value);
   }
   std::unreachable();
 }
