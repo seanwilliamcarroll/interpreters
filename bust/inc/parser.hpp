@@ -29,8 +29,6 @@ public:
   explicit Parser(std::unique_ptr<LexerInterface> lexer)
       : m_lexer(std::move(lexer)), m_current_token() {}
 
-  virtual ~Parser() = default;
-
   void reset() { m_current_token = nullptr; }
 
   ast::Program parse();
