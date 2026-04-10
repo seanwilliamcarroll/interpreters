@@ -93,14 +93,12 @@ struct SymbolTable {
     return {};
   }
 
-  static Handle next_ssa_temporary() {
-    static size_t count = 1;
-    return TemporaryHandle{count++};
-  }
+  Handle next_ssa_temporary() { return TemporaryHandle{m_ssa_count++}; }
 
 private:
   std::vector<Scope> m_scopes;
   UniqueNameTracker m_name_tracker{};
+  size_t m_ssa_count = 1;
 };
 
 struct ScopeGuard {

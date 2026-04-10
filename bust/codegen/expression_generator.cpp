@@ -45,7 +45,7 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
     return identifier_handle;
   }
 
-  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(
       LoadInstruction{.m_destination = ssa_temp,
@@ -174,7 +174,7 @@ Handle ExpressionGenerator::operator()(
                        .m_source = else_target,
                        .m_type = to_llvm_type(if_return_type)});
 
-  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
   starting_merge_block.add_instruction(
       LoadInstruction{.m_destination = ssa_temp,
                       .m_source = {result_handle},
@@ -207,7 +207,7 @@ Handle ExpressionGenerator::operator()(
     return {};
   }
 
-  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
   m_ctx.block().add_instruction(
       CallInstruction{.m_target = ssa_temp,
                       .m_callee = std::move(callee_handle),
@@ -314,7 +314,7 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
 
   auto rhs_handle = (*this)(binary_expression->m_rhs);
 
-  auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(IntegerCompareInstruction{
       .m_result = result_handle,
@@ -333,7 +333,7 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 
   auto rhs_handle = (*this)(binary_expression->m_rhs);
 
-  auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(BinaryInstruction{
       .m_result = result_handle,
@@ -400,7 +400,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_target = starting_merge_block.label(),
   });
 
-  auto final_result = SymbolTable::next_ssa_temporary();
+  auto final_result = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(LoadInstruction{
       .m_destination = final_result,
@@ -429,7 +429,7 @@ Handle ExpressionGenerator::operator()(
 
   auto input_handle = (*this)(unary_expression->m_expression);
 
-  auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(UnaryInstruction{
       .m_result = result_handle,
@@ -473,7 +473,7 @@ Handle ExpressionGenerator::operator()(
     cast_op = LLVMCastOperator::SEXT;
   }
 
-  auto ssa_temporary = SymbolTable::next_ssa_temporary();
+  auto ssa_temporary = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(CastInstruction{
       .m_destination = ssa_temporary,
