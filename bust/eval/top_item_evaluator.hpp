@@ -23,7 +23,7 @@ struct TopItemEvaluator {
   Value operator()(const hir::FunctionDef &);
   Value operator()(const hir::LetBinding &);
 
-  Context m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************

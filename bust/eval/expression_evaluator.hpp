@@ -66,7 +66,7 @@ struct ExpressionEvaluator {
                    std::move(current_scope)};
   }
 
-  Context m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************

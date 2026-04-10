@@ -22,6 +22,7 @@
 #include <utility>
 #include <variant>
 
+#include "eval/context.hpp"
 #include "eval/environment.hpp"
 #include "eval/statement_evaluator.hpp"
 #include "eval/values.hpp"
@@ -149,8 +150,13 @@ Value ExpressionEvaluator::operator()(
     new_closure_env->define(parameter, (*this)(argument));
   }
 
-  return ExpressionEvaluator{.m_ctx = {.m_env = Environment(new_closure_env)}}
-      .evaluate_function_body(*closure.m_expression);
+  auto new_environment = Environment(new_closure_env);
+  auto new_context = Context{.m_env = new_environment};
+
+  auto final_value =
+      ExpressionEvaluator{.m_ctx = new_context}.evaluate_function_body(
+          *closure.m_expression);
+  return final_value;
 }
 
 // The requires here is ensuring that we the expression within is well formed

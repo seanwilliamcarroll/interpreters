@@ -23,7 +23,7 @@ struct LetBindingEvaluator {
 
   Value operator()(const hir::LetBinding &);
 
-  Context m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************
