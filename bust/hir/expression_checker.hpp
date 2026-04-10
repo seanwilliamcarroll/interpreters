@@ -33,9 +33,9 @@ struct ExpressionChecker {
   Expression operator()(const std::unique_ptr<ast::LambdaExpr> &);
   Expression operator()(const std::unique_ptr<ast::WhileExpr> &);
   Expression operator()(const std::unique_ptr<ast::ForExpr> &);
-  Expression operator()(const ast::LiteralInt8 &);
-  Expression operator()(const ast::LiteralInt32 &);
-  Expression operator()(const ast::LiteralInt64 &);
+  Expression operator()(const ast::LiteralI8 &);
+  Expression operator()(const ast::LiteralI32 &);
+  Expression operator()(const ast::LiteralI64 &);
   Expression operator()(const ast::LiteralBool &);
   Expression operator()(const ast::LiteralChar &);
   Expression operator()(const ast::LiteralUnit &);

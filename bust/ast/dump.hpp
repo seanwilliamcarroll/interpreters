@@ -14,6 +14,7 @@
 #include <ast/nodes.hpp>
 #include <sstream>
 #include <string>
+#include <utility>
 
 //****************************************************************************
 namespace bust::ast {
@@ -159,12 +160,15 @@ private:
           if constexpr (std::is_same_v<T, Identifier>) {
             indent();
             m_out << "Ident(" << v.m_name << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralInt64>) {
+          } else if constexpr (std::is_same_v<T, LiteralI64>) {
             indent();
             m_out << "Int(" << v.m_value << ")\n";
           } else if constexpr (std::is_same_v<T, LiteralBool>) {
             indent();
             m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";
+          } else if constexpr (std::is_same_v<T, LiteralChar>) {
+            indent();
+            m_out << "Char('" << (v.m_value) << "')\n";
           } else if constexpr (std::is_same_v<T, LiteralUnit>) {
             line("Unit");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpr>>) {
@@ -187,6 +191,8 @@ private:
             line("While(TODO)");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ForExpr>>) {
             line("For(TODO)");
+          } else {
+            std::unreachable();
           }
         },
         e);

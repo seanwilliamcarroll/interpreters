@@ -568,8 +568,8 @@ Expression Parser::parse_literal() {
       on_error(token->get_location(), "Error casting token to TokenNumber");
     }
     try {
-      return LiteralInt64{{int_token_ptr->get_location()},
-                          std::stoll(int_token_ptr->get_value())};
+      return LiteralI64{{int_token_ptr->get_location()},
+                        std::stoll(int_token_ptr->get_value())};
     } catch (std::out_of_range &error) {
       on_error(int_token_ptr->get_location(),
                "Could not cast TokenNumber with lexeme: \"",

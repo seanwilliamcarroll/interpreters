@@ -46,9 +46,9 @@ template <typename LiteralType> struct AbstractLiteral : public HasLocation {
   LiteralType m_value;
 };
 
-using LiteralInt8 = AbstractLiteral<int8_t>;
-using LiteralInt32 = AbstractLiteral<int32_t>;
-using LiteralInt64 = AbstractLiteral<int64_t>;
+using LiteralI8 = AbstractLiteral<int8_t>;
+using LiteralI32 = AbstractLiteral<int32_t>;
+using LiteralI64 = AbstractLiteral<int64_t>;
 using LiteralBool = AbstractLiteral<bool>;
 using LiteralChar = AbstractLiteral<char>;
 struct LiteralUnit : public HasLocation {};
@@ -62,8 +62,8 @@ using Expression =
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
-                 std::unique_ptr<ForExpr>, LiteralInt8, LiteralInt32,
-                 LiteralInt64, LiteralBool, LiteralChar, LiteralUnit>;
+                 std::unique_ptr<ForExpr>, LiteralI8, LiteralI32, LiteralI64,
+                 LiteralBool, LiteralChar, LiteralUnit>;
 
 using Statement = std::variant<LetBinding, Expression>;
 
