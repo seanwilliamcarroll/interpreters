@@ -23,6 +23,9 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeConverter {
+
+  Type convert(const auto &type) { return std::visit(*this, type); }
+
   Type operator()(const ast::DefinedType &type) {
     throw core::CompilerException(
         "TypeChecker", std::string("UNIMPLEMENTED") + " " + __PRETTY_FUNCTION__,
@@ -37,9 +40,9 @@ struct TypeConverter {
     std::vector<Type> param_types;
     param_types.reserve(type->m_parameter_types.size());
     for (const auto &param : type->m_parameter_types) {
-      param_types.push_back(std::visit(*this, param));
+      param_types.push_back(convert(param));
     }
-    auto return_type = std::visit(*this, type->m_return_type);
+    auto return_type = convert(type->m_return_type);
     return std::make_shared<FunctionTypePtr::element_type>(FunctionType{
         {type->m_location}, std::move(param_types), std::move(return_type)});
   }

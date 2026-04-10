@@ -43,6 +43,8 @@ struct Formatter {
 
   constexpr static const char *INDENT = "  ";
 
+  void format(const auto &);
+
   void operator()(const Module &);
 
   void operator()(const Parameter &);

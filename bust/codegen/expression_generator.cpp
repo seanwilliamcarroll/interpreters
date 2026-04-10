@@ -35,6 +35,10 @@
 namespace bust::codegen {
 //****************************************************************************
 
+Handle ExpressionGenerator::generate(const auto &to_generate) {
+  return (*this)(to_generate);
+}
+
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   auto identifier_handle = m_ctx.symbols().lookup(identifier.m_name);
 
@@ -78,7 +82,7 @@ Handle ExpressionGenerator::operator()(const hir::LiteralChar &literal) {
 
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &block) {
-  return (*this)(*block);
+  return generate(*block);
 }
 
 Handle ExpressionGenerator::operator()(const hir::Block &block) {
@@ -88,7 +92,7 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
   }
 
   if (block.m_final_expression.has_value()) {
-    return (*this)(block.m_final_expression.value());
+    return generate(block.m_final_expression.value());
   }
 
   // Need to return a value here potentially
@@ -103,7 +107,7 @@ Handle ExpressionGenerator::operator()(
 
   // Get handle to current after condition target generated, so even with nested
   // blocks, we're still starting right after the condition
-  auto condition_target = (*this)(if_expression->m_condition);
+  auto condition_target = generate(if_expression->m_condition);
   auto &final_condition_block = function.current_basic_block();
 
   // Create starting blocks that will always exist, then and merge
@@ -112,7 +116,7 @@ Handle ExpressionGenerator::operator()(
 
   // Do then branch, capture the final block for later if needed
   function.set_insertion_point(starting_then_block);
-  auto then_target = (*this)(if_expression->m_then_block);
+  auto then_target = generate(if_expression->m_then_block);
   auto &final_then_block = function.current_basic_block();
   final_then_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
@@ -133,7 +137,7 @@ Handle ExpressionGenerator::operator()(
   // this branch
   auto &starting_else_block = function.new_basic_block("else");
   function.set_insertion_point(starting_else_block);
-  auto else_target = (*this)(if_expression->m_else_block.value());
+  auto else_target = generate(if_expression->m_else_block.value());
   auto &final_else_block = function.current_basic_block();
   final_else_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
@@ -184,14 +188,14 @@ Handle ExpressionGenerator::operator()(
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::CallExpr> &call_expression) {
 
-  auto callee_handle = (*this)(call_expression->m_callee);
+  auto callee_handle = generate(call_expression->m_callee);
 
   std::vector<Argument> arguments;
   std::transform(call_expression->m_arguments.begin(),
                  call_expression->m_arguments.end(),
                  std::back_inserter(arguments),
                  [this](const auto &argument_expression) -> Argument {
-                   auto handle = (*this)(argument_expression);
+                   auto handle = generate(argument_expression);
                    return {.m_name = handle,
                            .m_type = to_llvm_type(argument_expression.m_type)};
                  });
@@ -309,9 +313,9 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
   auto compare_condition = to_llvm_compare_condition(
       binary_expression->m_operator, binary_expression->m_lhs.m_type);
 
-  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression->m_lhs);
 
-  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression->m_rhs);
 
   auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
@@ -328,9 +332,9 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
 Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
-  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression->m_lhs);
 
-  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression->m_rhs);
 
   auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
@@ -359,7 +363,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = result_handle, .m_type = LLVMType::I1});
 
-  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression->m_lhs);
   auto &final_lhs_block = m_ctx.block();
   // Store lhs in result handle
   final_lhs_block.add_instruction(StoreInstruction{
@@ -370,7 +374,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
 
   auto &starting_rhs_block = m_ctx.function().new_basic_block("rhs");
   m_ctx.function().set_insertion_point(starting_rhs_block);
-  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression->m_rhs);
   auto &final_rhs_block = m_ctx.block();
 
   final_rhs_block.add_instruction(StoreInstruction{
@@ -426,7 +430,7 @@ Handle ExpressionGenerator::operator()(
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
 
-  auto input_handle = (*this)(unary_expression->m_expression);
+  auto input_handle = generate(unary_expression->m_expression);
 
   auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
@@ -449,7 +453,7 @@ Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expression) {
 
   // We've type checked, so we know it's a valid cast
-  auto input_handle = (*this)(cast_expression->m_expression);
+  auto input_handle = generate(cast_expression->m_expression);
 
   const auto &from = to_llvm_type(cast_expression->m_expression.m_type);
   const auto &to = to_llvm_type(cast_expression->m_new_type);

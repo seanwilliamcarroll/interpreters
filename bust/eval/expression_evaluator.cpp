@@ -19,8 +19,6 @@
 #include <operators.hpp>
 #include <optional>
 #include <ranges>
-#include <string_view>
-#include <tuple>
 #include <type_traits>
 #include <types.hpp>
 #include <utility>
@@ -35,6 +33,10 @@ namespace bust::eval {
 struct ReturnException {
   Value m_return_value;
 };
+
+Value ExpressionEvaluator::evaluate(const auto &to_evaluate) {
+  return (*this)(to_evaluate);
+}
 
 Value ExpressionEvaluator::operator()(const hir::Expression &expression) {
   return std::visit(*this, expression.m_expression);
@@ -80,7 +82,7 @@ Value ExpressionEvaluator::operator()(const hir::LiteralChar &literal) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::Block> &block) {
-  return (*this)(*block);
+  return evaluate(*block);
 }
 
 struct ScopeGuard {
@@ -99,7 +101,7 @@ Value ExpressionEvaluator::operator()(const hir::Block &block) {
   }
 
   auto final_value = block.m_final_expression.has_value()
-                         ? (*this)(block.m_final_expression.value())
+                         ? evaluate(block.m_final_expression.value())
                          : Unit{};
 
   return final_value;
@@ -108,14 +110,14 @@ Value ExpressionEvaluator::operator()(const hir::Block &block) {
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
 
-  auto condition_value = (*this)(if_expression->m_condition);
+  auto condition_value = evaluate(if_expression->m_condition);
 
   if (std::get<Bool>(condition_value).m_value) {
-    return (*this)(if_expression->m_then_block);
+    return evaluate(if_expression->m_then_block);
   }
 
   if (if_expression->m_else_block.has_value()) {
-    return (*this)(if_expression->m_else_block.value());
+    return evaluate(if_expression->m_else_block.value());
   }
 
   return Unit{};
@@ -123,7 +125,7 @@ Value ExpressionEvaluator::operator()(
 
 Value ExpressionEvaluator::evaluate_function_body(const hir::Block &block) {
   try {
-    return (*this)(block);
+    return evaluate(block);
   } catch (ReturnException &return_statement) {
     return return_statement.m_return_value;
   }
@@ -131,7 +133,7 @@ Value ExpressionEvaluator::evaluate_function_body(const hir::Block &block) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CallExpr> &call_expression) {
-  auto callee_value = (*this)(call_expression->m_callee);
+  auto callee_value = evaluate(call_expression->m_callee);
 
   auto closure = std::get<Closure>(callee_value);
 
@@ -139,7 +141,7 @@ Value ExpressionEvaluator::operator()(
 
   for (const auto &[parameter, argument] :
        std::views::zip(closure.m_parameters, call_expression->m_arguments)) {
-    new_closure_env->define(parameter, (*this)(argument));
+    new_closure_env->define(parameter, evaluate(argument));
   }
 
   auto new_environment = Environment(new_closure_env);
@@ -192,8 +194,8 @@ Value different_return_type_op(const Value &lhs, const Value &rhs) {
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
-  auto lhs = (*this)(binary_expression->m_lhs);
-  auto rhs = (*this)(binary_expression->m_rhs);
+  auto lhs = evaluate(binary_expression->m_lhs);
+  auto rhs = evaluate(binary_expression->m_rhs);
 
   switch (binary_expression->m_operator) {
   case BinaryOperator::LOGICAL_AND:
@@ -245,7 +247,7 @@ Value apply_unary_op(const Value &value) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
-  auto value = (*this)(unary_expression->m_expression);
+  auto value = evaluate(unary_expression->m_expression);
   switch (unary_expression->m_operator) {
   case UnaryOperator::MINUS:
     return apply_unary_op<std::negate>(value);
@@ -257,7 +259,7 @@ Value ExpressionEvaluator::operator()(
 
 [[noreturn]] Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expression) {
-  throw ReturnException{(*this)(return_expression->m_expression)};
+  throw ReturnException{evaluate(return_expression->m_expression)};
 }
 
 // The requires here is ensuring that we the expression within is well formed
@@ -289,7 +291,7 @@ Value cast_op(const Value &from, PrimitiveType to) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expression) {
-  auto value = (*this)(cast_expression->m_expression);
+  auto value = evaluate(cast_expression->m_expression);
   // Do cast, we already type checked
 
   return cast_op(

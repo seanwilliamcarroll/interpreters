@@ -113,6 +113,8 @@ inline Type get_return_type(const Type &type) {
 }
 
 struct TypeToStringConverter {
+  std::string convert(const auto &type) { return std::visit(*this, type); }
+
   std::string operator()(const PrimitiveTypeValue &type) {
     return to_string(type.m_type);
   }
@@ -127,10 +129,10 @@ struct TypeToStringConverter {
       if (i > 0) {
         result += ", ";
       }
-      result += std::visit(*this, type->m_argument_types[i]);
+      result += convert(type->m_argument_types[i]);
     }
     result += ") -> ";
-    result += std::visit(*this, type->m_return_type);
+    result += convert(type->m_return_type);
     return result;
   }
 
@@ -138,7 +140,7 @@ struct TypeToStringConverter {
 };
 
 inline std::string type_to_string(const Type &type) {
-  return std::visit(TypeToStringConverter{}, type);
+  return TypeToStringConverter{}.convert(type);
 }
 
 inline std::ostream &operator<<(std::ostream &out, const Type &type) {

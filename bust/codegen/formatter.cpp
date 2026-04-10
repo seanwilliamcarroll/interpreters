@@ -56,11 +56,13 @@ std::string HandleToString::operator()(const GlobalHandle &handle) {
   return "@" + handle.m_handle;
 }
 
+void Formatter::format(const auto &to_format) { (*this)(to_format); }
+
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
 
   for (const auto &function : mod.functions()) {
-    (*this)(*function);
+    format(*function);
   }
 }
 
@@ -74,10 +76,10 @@ void Formatter::function_parameters(const FunctionDeclaration &signature) {
   }
   for (size_t index = 0; index < signature.m_parameters.size() - 1; ++index) {
     const auto &parameter = signature.m_parameters[index];
-    (*this)(parameter);
+    format(parameter);
     m_out << ", ";
   }
-  (*this)(signature.m_parameters.back());
+  format(signature.m_parameters.back());
 }
 
 void Formatter::declare(const FunctionDeclaration &signature) {
@@ -114,7 +116,7 @@ void Formatter::operator()(const Function &function) {
   newline();
 
   for (const auto &basic_block : function.basic_blocks()) {
-    (*this)(*basic_block);
+    format(*basic_block);
   }
 
   m_out << "}";
@@ -224,10 +226,10 @@ void Formatter::function_arguments(const std::vector<Argument> &arguments) {
   }
   for (size_t index = 0; index < arguments.size() - 1; ++index) {
     const auto &argument = arguments[index];
-    (*this)(argument);
+    format(argument);
     m_out << ", ";
   }
-  (*this)(arguments.back());
+  format(arguments.back());
 }
 
 void Formatter::operator()(const CallVoidInstruction &instruction) {

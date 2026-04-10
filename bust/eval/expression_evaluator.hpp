@@ -25,6 +25,9 @@ namespace bust::eval {
 //****************************************************************************
 
 struct ExpressionEvaluator {
+
+  Value evaluate(const auto &);
+
   Value operator()(const hir::Identifier &);
   Value operator()(const hir::LiteralUnit &);
   Value operator()(const hir::LiteralI8 &);

@@ -19,6 +19,8 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct ExpressionGenerator {
+  Handle generate(const auto &);
+
   Handle operator()(const hir::Identifier &);
   Handle operator()(const hir::LiteralUnit &);
   Handle operator()(const hir::LiteralI8 &);

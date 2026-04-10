@@ -18,6 +18,9 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeVariableUpdater {
+
+  Type update(const auto &type) { return std::visit(*this, type); }
+
   Type operator()(const PrimitiveTypeValue &type) { return type; }
 
   Type operator()(const TypeVariable &type) {
@@ -34,13 +37,13 @@ struct TypeVariableUpdater {
     std::vector<Type> parameter_types;
     parameter_types.reserve(type->m_argument_types.size());
     for (const auto &parameter_type : type->m_argument_types) {
-      parameter_types.emplace_back(std::visit(*this, parameter_type));
+      parameter_types.emplace_back(update(parameter_type));
     }
 
     return std::make_shared<FunctionTypePtr::element_type>(
         FunctionType{{type->m_location},
                      std::move(parameter_types),
-                     std::visit(*this, type->m_return_type)});
+                     update(type->m_return_type)});
   }
 
   Type operator()(const NeverType &type) { return type; }
@@ -49,6 +52,9 @@ struct TypeVariableUpdater {
 };
 
 struct FreeTypeVariableCollector {
+
+  void collect(const auto &type) { std::visit(*this, type); }
+
   void operator()(const PrimitiveTypeValue &) {}
 
   void operator()(const TypeVariable &type) {
@@ -57,10 +63,10 @@ struct FreeTypeVariableCollector {
 
   void operator()(const FunctionTypePtr &type) {
     for (const auto &parameter_type : type->m_argument_types) {
-      std::visit(*this, parameter_type);
+      collect(parameter_type);
     }
 
-    std::visit(*this, type->m_return_type);
+    collect(type->m_return_type);
   }
 
   void operator()(const NeverType &) {}
