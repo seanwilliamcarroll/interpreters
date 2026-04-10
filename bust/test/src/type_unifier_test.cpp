@@ -447,6 +447,340 @@ TEST_SUITE("bust.type_unifier.function_types") {
   }
 }
 
+// --- Type class constraint tests ---------------------------------------------
+
+TEST_SUITE("bust.type_unifier.constraints") {
+
+  // Shorthand helpers
+  static hir::Type make_prim(PrimitiveType pt) {
+    return hir::PrimitiveTypeValue{{}, pt};
+  }
+
+  // --- constrain() basic behavior -------------------------------------------
+
+  TEST_CASE("constrain unresolved variable stores constraint") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+  }
+
+  TEST_CASE("constrain then resolve with compatible type succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I64)));
+  }
+
+  TEST_CASE("constrain then resolve with i8 succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I8)));
+  }
+
+  TEST_CASE("constrain then resolve with i32 succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I32)));
+  }
+
+  TEST_CASE("constrain NUMERIC then resolve with bool throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::BOOL)));
+  }
+
+  TEST_CASE("constrain NUMERIC then resolve with char throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::CHAR)));
+  }
+
+  TEST_CASE("constrain NUMERIC then resolve with unit throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::UNIT)));
+  }
+
+  TEST_CASE("constrain BOOL then resolve with bool succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::BOOL);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::BOOL)));
+  }
+
+  TEST_CASE("constrain BOOL then resolve with i64 throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::BOOL);
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::I64)));
+  }
+
+  TEST_CASE("constrain COMPARABLE then resolve with i64 succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I64)));
+  }
+
+  TEST_CASE("constrain COMPARABLE then resolve with bool succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::BOOL)));
+  }
+
+  TEST_CASE("constrain COMPARABLE then resolve with char succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::CHAR)));
+  }
+
+  TEST_CASE("constrain COMPARABLE then resolve with unit throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::UNIT)));
+  }
+
+  // --- constrain after resolve (reverse order) ------------------------------
+
+  TEST_CASE("resolve then constrain with compatible class succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.unify(t0, make_prim(PrimitiveType::I64));
+    CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+  }
+
+  TEST_CASE("resolve then constrain with incompatible class throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.unify(t0, make_prim(PrimitiveType::BOOL));
+    CHECK_THROWS(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+  }
+
+  TEST_CASE("resolve to char then constrain NUMERIC throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.unify(t0, make_prim(PrimitiveType::CHAR));
+    CHECK_THROWS(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+  }
+
+  TEST_CASE("resolve to char then constrain COMPARABLE succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.unify(t0, make_prim(PrimitiveType::CHAR));
+    CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE));
+  }
+
+  // --- multiple constraints on same variable --------------------------------
+
+  TEST_CASE("same constraint twice is idempotent") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+  }
+
+  TEST_CASE("NUMERIC then COMPARABLE keeps NUMERIC (tighter)") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE));
+    // NUMERIC is tighter; char should still be rejected
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::CHAR)));
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I32)));
+  }
+
+  TEST_CASE("COMPARABLE then NUMERIC tightens to NUMERIC") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
+    CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::BOOL)));
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I64)));
+  }
+
+  TEST_CASE("NUMERIC then BOOL throws (disjoint)") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    CHECK_THROWS(unifier.constrain(t0, PrimitiveTypeClass::BOOL));
+  }
+
+  TEST_CASE("BOOL then NUMERIC throws (disjoint)") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::BOOL);
+    CHECK_THROWS(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
+  }
+
+  // --- constraints through unify(TV, TV) ------------------------------------
+
+  TEST_CASE(
+      "constrained var unified with unconstrained propagates constraint") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.unify(t0, t1);
+    // t1 should now inherit NUMERIC; resolving to bool should fail
+    CHECK_THROWS(unifier.unify(t1, make_prim(PrimitiveType::BOOL)));
+    CHECK_NOTHROW(unifier.unify(t1, make_prim(PrimitiveType::I64)));
+  }
+
+  TEST_CASE("unconstrained unified with constrained inherits constraint") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t1, PrimitiveTypeClass::BOOL);
+    unifier.unify(t0, t1);
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::I64)));
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::BOOL)));
+  }
+
+  TEST_CASE("two NUMERIC vars unified then resolved") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.unify(t0, t1));
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I8)));
+    // Both should resolve
+    auto r0 = unifier.find(t0);
+    auto r1 = unifier.find(t1);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(r0));
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(r1));
+    CHECK(std::get<hir::PrimitiveTypeValue>(r0).m_type == PrimitiveType::I8);
+    CHECK(std::get<hir::PrimitiveTypeValue>(r1).m_type == PrimitiveType::I8);
+  }
+
+  TEST_CASE("NUMERIC and COMPARABLE vars unified keeps NUMERIC") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.constrain(t1, PrimitiveTypeClass::COMPARABLE);
+    CHECK_NOTHROW(unifier.unify(t0, t1));
+    // Merged constraint should be NUMERIC (tighter)
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::CHAR)));
+    CHECK_NOTHROW(unifier.unify(t0, make_prim(PrimitiveType::I32)));
+  }
+
+  TEST_CASE("COMPARABLE and NUMERIC vars unified keeps NUMERIC") {
+    // Same as above but reversed unify order
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
+    unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.unify(t0, t1));
+    CHECK_THROWS(unifier.unify(t1, make_prim(PrimitiveType::BOOL)));
+  }
+
+  TEST_CASE("NUMERIC and BOOL vars unified throws (disjoint)") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.constrain(t1, PrimitiveTypeClass::BOOL);
+    CHECK_THROWS(unifier.unify(t0, t1));
+  }
+
+  // --- constraints with concrete type on one side ---------------------------
+
+  TEST_CASE("constrained var unified with concrete-resolved var succeeds") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.unify(t1, make_prim(PrimitiveType::I64));
+    CHECK_NOTHROW(unifier.unify(t0, t1));
+  }
+
+  TEST_CASE("constrained var unified with incompatible concrete var throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.unify(t1, make_prim(PrimitiveType::BOOL));
+    CHECK_THROWS(unifier.unify(t0, t1));
+  }
+
+  TEST_CASE("concrete-resolved var unified with constrained var succeeds") {
+    // Reversed: concrete on left, constraint on right
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.unify(t0, make_prim(PrimitiveType::I32));
+    unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
+    CHECK_NOTHROW(unifier.unify(t0, t1));
+  }
+
+  TEST_CASE("concrete char unified with NUMERIC-constrained var throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.unify(t0, make_prim(PrimitiveType::CHAR));
+    unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
+    CHECK_THROWS(unifier.unify(t0, t1));
+  }
+
+  // --- transitive chains with constraints -----------------------------------
+
+  TEST_CASE("constraint propagates through chain of unified vars") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    auto t2 = unifier.new_type_var();
+    unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
+    unifier.unify(t0, t1);
+    unifier.unify(t1, t2);
+    // t2 should have inherited NUMERIC
+    CHECK_THROWS(unifier.unify(t2, make_prim(PrimitiveType::BOOL)));
+    CHECK_NOTHROW(unifier.unify(t2, make_prim(PrimitiveType::I64)));
+  }
+
+  TEST_CASE("constraint applied to end of chain affects whole chain") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    auto t2 = unifier.new_type_var();
+    unifier.unify(t0, t1);
+    unifier.unify(t1, t2);
+    unifier.constrain(t2, PrimitiveTypeClass::BOOL);
+    // Resolving t0 to i64 should fail
+    CHECK_THROWS(unifier.unify(t0, make_prim(PrimitiveType::I64)));
+  }
+
+  // --- constrain after unify with concrete ----------------------------------
+
+  TEST_CASE("constrain after chain is resolved checks concrete type") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.unify(t0, t1);
+    unifier.unify(t0, make_prim(PrimitiveType::I64));
+    // Adding compatible constraint after resolution is fine
+    CHECK_NOTHROW(unifier.constrain(t1, PrimitiveTypeClass::NUMERIC));
+  }
+
+  TEST_CASE("constrain after chain is resolved with wrong class throws") {
+    hir::TypeUnifier unifier;
+    auto t0 = unifier.new_type_var();
+    auto t1 = unifier.new_type_var();
+    unifier.unify(t0, t1);
+    unifier.unify(t0, make_prim(PrimitiveType::I64));
+    CHECK_THROWS(unifier.constrain(t1, PrimitiveTypeClass::BOOL));
+  }
+}
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
