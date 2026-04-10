@@ -247,9 +247,9 @@ Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
   auto value = (*this)(unary_expression->m_expression);
   switch (unary_expression->m_operator) {
-  case bust::UnaryOperator::MINUS:
+  case UnaryOperator::MINUS:
     return apply_unary_op<std::negate>(value);
-  case bust::UnaryOperator::NOT:
+  case UnaryOperator::NOT:
     return apply_unary_op<std::logical_not>(value);
   }
   std::unreachable();
@@ -267,17 +267,17 @@ Value cast_op(const Value &from, PrimitiveType to) {
       [&](const auto &value) -> Value {
         if constexpr (requires { value.m_value; }) {
           switch (to) {
-          case bust::PrimitiveType::CHAR:
+          case PrimitiveType::CHAR:
             return Char{static_cast<char>(value.m_value)};
-          case bust::PrimitiveType::I8:
+          case PrimitiveType::I8:
             return I8{static_cast<int8_t>(value.m_value)};
-          case bust::PrimitiveType::I32:
+          case PrimitiveType::I32:
             return I32{static_cast<int32_t>(value.m_value)};
-          case bust::PrimitiveType::I64:
+          case PrimitiveType::I64:
             return I64{static_cast<int64_t>(value.m_value)};
-          case bust::PrimitiveType::BOOL:
+          case PrimitiveType::BOOL:
             return Bool{static_cast<bool>(value.m_value)};
-          case bust::PrimitiveType::UNIT:
+          case PrimitiveType::UNIT:
             std::unreachable();
           }
         } else {

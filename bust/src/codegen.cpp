@@ -22,10 +22,10 @@ namespace bust {
 //****************************************************************************
 
 std::string CodeGen::operator()(const hir::Program &program) {
-  auto context = bust::codegen::Context{};
+  auto context = codegen::Context{};
 
-  auto collector = bust::codegen::TopItemDeclarationCollector{context};
-  auto generator = bust::codegen::TopItemGenerator{context};
+  auto collector = codegen::TopItemDeclarationCollector{context};
+  auto generator = codegen::TopItemGenerator{context};
 
   for (const auto &top_item : program.m_top_items) {
     std::visit(collector, (top_item));

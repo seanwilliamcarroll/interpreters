@@ -162,7 +162,7 @@ inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
     return false;
   }
   auto primitive = std::get<PrimitiveTypeValue>(type).m_type;
-  return bust::is_type_in_type_class(type_class, primitive);
+  return is_type_in_type_class(type_class, primitive);
 }
 
 //****************************************************************************

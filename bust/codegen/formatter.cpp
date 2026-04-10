@@ -154,12 +154,12 @@ void Formatter::operator()(const UnaryInstruction &instruction) {
   indent();
 
   switch (instruction.m_operator) {
-  case bust::UnaryOperator::MINUS:
+  case UnaryOperator::MINUS:
     m_out << std::visit(m_handle_converter, instruction.m_result) << " = sub "
           << " " << instruction.m_type << " 0, "
           << std::visit(m_handle_converter, instruction.m_input);
     break;
-  case bust::UnaryOperator::NOT:
+  case UnaryOperator::NOT:
     const char *true_equivalent =
         (instruction.m_type == LLVMType::I1) ? "true" : "-1";
     m_out << std::visit(m_handle_converter, instruction.m_result) << " = xor "

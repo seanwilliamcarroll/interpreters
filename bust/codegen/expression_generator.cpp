@@ -218,15 +218,15 @@ Handle ExpressionGenerator::operator()(
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
   switch (op) {
-  case bust::BinaryOperator::PLUS:
+  case BinaryOperator::PLUS:
     return LLVMBinaryOperator::ADD;
-  case bust::BinaryOperator::MINUS:
+  case BinaryOperator::MINUS:
     return LLVMBinaryOperator::SUB;
-  case bust::BinaryOperator::MULTIPLIES:
+  case BinaryOperator::MULTIPLIES:
     return LLVMBinaryOperator::MUL;
-  case bust::BinaryOperator::DIVIDES:
+  case BinaryOperator::DIVIDES:
     return LLVMBinaryOperator::SDIV;
-  case bust::BinaryOperator::MODULUS:
+  case BinaryOperator::MODULUS:
     return LLVMBinaryOperator::SREM;
 
   default:
@@ -244,30 +244,30 @@ bool is_signed_type(const hir::Type &type) {
 LLVMIntegerCompareCondition to_llvm_compare_condition(BinaryOperator op,
                                                       const hir::Type &type) {
   switch (op) {
-  case bust::BinaryOperator::EQ:
+  case BinaryOperator::EQ:
     return LLVMIntegerCompareCondition::EQ;
-  case bust::BinaryOperator::NOT_EQ:
+  case BinaryOperator::NOT_EQ:
     return LLVMIntegerCompareCondition::NE;
 
-  case bust::BinaryOperator::LT:
+  case BinaryOperator::LT:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SLT;
     } else {
       return LLVMIntegerCompareCondition::ULT;
     }
-  case bust::BinaryOperator::LT_EQ:
+  case BinaryOperator::LT_EQ:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SLE;
     } else {
       return LLVMIntegerCompareCondition::ULE;
     }
-  case bust::BinaryOperator::GT:
+  case BinaryOperator::GT:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SGT;
     } else {
       return LLVMIntegerCompareCondition::UGT;
     }
-  case bust::BinaryOperator::GT_EQ:
+  case BinaryOperator::GT_EQ:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SGE;
     } else {
@@ -281,12 +281,12 @@ LLVMIntegerCompareCondition to_llvm_compare_condition(BinaryOperator op,
 
 bool is_binary_compare(BinaryOperator op) {
   switch (op) {
-  case bust::BinaryOperator::EQ:
-  case bust::BinaryOperator::LT:
-  case bust::BinaryOperator::LT_EQ:
-  case bust::BinaryOperator::GT:
-  case bust::BinaryOperator::GT_EQ:
-  case bust::BinaryOperator::NOT_EQ:
+  case BinaryOperator::EQ:
+  case BinaryOperator::LT:
+  case BinaryOperator::LT_EQ:
+  case BinaryOperator::GT:
+  case BinaryOperator::GT_EQ:
+  case BinaryOperator::NOT_EQ:
     return true;
   default:
     return false;
@@ -295,8 +295,8 @@ bool is_binary_compare(BinaryOperator op) {
 
 bool is_logical_op(BinaryOperator op) {
   switch (op) {
-  case bust::BinaryOperator::LOGICAL_AND:
-  case bust::BinaryOperator::LOGICAL_OR:
+  case BinaryOperator::LOGICAL_AND:
+  case BinaryOperator::LOGICAL_OR:
     return true;
   default:
     return false;
@@ -386,7 +386,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
 
   // LHS always branches
   const auto is_and_op =
-      binary_expression->m_operator == bust::BinaryOperator::LOGICAL_AND;
+      binary_expression->m_operator == BinaryOperator::LOGICAL_AND;
   final_lhs_block.add_terminal(BranchInstruction{
       .m_condition = lhs_handle,
       .m_iftrue =

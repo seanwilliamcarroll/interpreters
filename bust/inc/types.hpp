@@ -34,12 +34,12 @@ enum class PrimitiveType : uint8_t {
 inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
                                   PrimitiveType type) {
   switch (type_class) {
-  case bust::PrimitiveTypeClass::BOOL:
+  case PrimitiveTypeClass::BOOL:
     return type == PrimitiveType::BOOL;
-  case bust::PrimitiveTypeClass::NUMERIC:
+  case PrimitiveTypeClass::NUMERIC:
     return type == PrimitiveType::I8 || type == PrimitiveType::I32 ||
            type == PrimitiveType::I64;
-  case bust::PrimitiveTypeClass::COMPARABLE:
+  case PrimitiveTypeClass::COMPARABLE:
     return type != PrimitiveType::UNIT;
   }
 }
@@ -47,13 +47,13 @@ inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
 inline bool resolves(PrimitiveTypeClass sub_class,
                      PrimitiveTypeClass super_class) {
   switch (super_class) {
-  case bust::PrimitiveTypeClass::BOOL:
+  case PrimitiveTypeClass::BOOL:
     // Bool is disjoint from Numeric, and is not a superset of Comparable
     return sub_class == PrimitiveTypeClass::BOOL;
-  case bust::PrimitiveTypeClass::NUMERIC:
+  case PrimitiveTypeClass::NUMERIC:
     // Numeric is disjoint from Bool, and is not a superset of Comparable
     return sub_class == PrimitiveTypeClass::NUMERIC;
-  case bust::PrimitiveTypeClass::COMPARABLE:
+  case PrimitiveTypeClass::COMPARABLE:
     // Comparable is a superset of Bool and Numeric
     return true;
   }
