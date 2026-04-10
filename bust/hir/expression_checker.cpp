@@ -83,19 +83,6 @@ PrimitiveTypeClass required_type_class_for_binary_op(BinaryOperator op) {
   }
 }
 
-bool is_type_in_type_class(PrimitiveTypeClass type_class, PrimitiveType type) {
-  switch (type_class) {
-  case bust::PrimitiveTypeClass::BOOL:
-    return type == PrimitiveType::BOOL;
-  case bust::PrimitiveTypeClass::NUMERIC:
-    return type == PrimitiveType::I8 || type == PrimitiveType::I32 ||
-           type == PrimitiveType::I64;
-  case bust::PrimitiveTypeClass::COMPARABLE:
-    return type == PrimitiveType::BOOL || type == PrimitiveType::I8 ||
-           type == PrimitiveType::I32 || type == PrimitiveType::I64;
-  }
-}
-
 bool is_type_allowed(PrimitiveType required, const hir::Type &type) {
   if (std::holds_alternative<hir::NeverType>(type)) {
     return true;
