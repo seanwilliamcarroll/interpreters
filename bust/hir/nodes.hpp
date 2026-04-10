@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Typed AST node definitions for bust.
 //*
 //*

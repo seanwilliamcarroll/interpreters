@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Instruction and terminator types for the codegen pass.
 //*
 //*

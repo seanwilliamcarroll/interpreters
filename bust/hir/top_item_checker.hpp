@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Top-level item checker — handles FunctionDef and top-level
 //*            LetBinding.
 //*
