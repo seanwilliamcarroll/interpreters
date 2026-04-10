@@ -219,13 +219,9 @@ struct Lexer : LexerInterface {
 
       return identifier();
     }
-    if (m_in_stream.eof()) {
-      auto current_loc = get_current_loc();
-      reset_eof();
-      return make_token(current_loc, TokenType::EOF_TOKEN);
-    }
-    std::cerr << "Unexpected error!\n";
-    return {};
+    auto current_loc = get_current_loc();
+    reset_eof();
+    return make_token(current_loc, TokenType::EOF_TOKEN);
   }
 
   std::unique_ptr<Token> slash_or_comment() {
@@ -433,11 +429,10 @@ struct Lexer : LexerInterface {
     }
   }
 
-  bool peek(char &character) {
+  bool peek(char &character) const {
     auto result = m_in_stream.peek();
 
     if (result == std::char_traits<char>::eof()) {
-      m_in_stream.get(character);
       return false;
     }
     character = static_cast<char>(result);
