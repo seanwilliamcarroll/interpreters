@@ -179,12 +179,12 @@ private:
             line("then:");
             {
               IndentGuard g2(*this);
-              dump_block(v->m_then_branch);
+              dump_block(v->m_then_block);
             }
-            if (v->m_else_branch.has_value()) {
+            if (v->m_else_block.has_value()) {
               line("else:");
               IndentGuard g2(*this);
-              dump_block(*v->m_else_branch);
+              dump_block(*v->m_else_block);
             }
           } else if constexpr (std::is_same_v<T, std::unique_ptr<Block>>) {
             m_out << "Block\n";

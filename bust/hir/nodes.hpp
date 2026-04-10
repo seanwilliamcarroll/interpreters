@@ -8,7 +8,9 @@
 #pragma once
 //****************************************************************************
 
+#include "ast/nodes.hpp"
 #include <hir/types.hpp>
+#include <nodes.hpp>
 #include <operators.hpp>
 #include <optional>
 #include <vector>
@@ -19,16 +21,10 @@ namespace bust::hir {
 
 // --- Forward declarations --------------------------------------------------
 
+struct Expression;
 struct FunctionDef;
 struct LetBinding;
 struct Block;
-struct IfExpr;
-struct CallExpr;
-struct CastExpr;
-struct BinaryExpr;
-struct UnaryExpr;
-struct ReturnExpr;
-struct LambdaExpr;
 // TODO
 struct WhileExpr {};
 struct ForExpr {};
@@ -81,6 +77,14 @@ using LiteralUnit = Literal<PrimitiveType::UNIT>;
 
 // --- Core type aliases -----------------------------------------------------
 
+using CallExpr = CallExprBase<Expression>;
+using BinaryExpr = BinaryExprBase<Expression>;
+using UnaryExpr = UnaryExprBase<Expression>;
+using ReturnExpr = ReturnExprBase<Expression>;
+using CastExpr = CastExprBase<Expression, Type>;
+using IfExpr = IfExprBase<Expression, Block>;
+using LambdaExpr = LambdaExprBase<Identifier, Block, Type>;
+
 using ExprKind =
     std::variant<Identifier, LiteralUnit, LiteralI8, LiteralI32, LiteralI64,
                  LiteralBool, LiteralChar, std::unique_ptr<Block>,
@@ -98,33 +102,6 @@ using Statement = std::variant<Expression, LetBinding>;
 
 using TopItem = std::variant<FunctionDef, LetBinding>;
 
-// --- Expressions -----------------------------------------------------------
-
-struct CallExpr {
-  Expression m_callee;
-  std::vector<Expression> m_arguments;
-};
-
-struct BinaryExpr {
-  BinaryOperator m_operator;
-  Expression m_lhs;
-  Expression m_rhs;
-};
-
-struct UnaryExpr {
-  UnaryOperator m_operator;
-  Expression m_expression;
-};
-
-struct ReturnExpr {
-  Expression m_expression;
-};
-
-struct CastExpr {
-  Expression m_expression;
-  Type m_new_type;
-};
-
 // --- Control flow ----------------------------------------------------------
 
 struct Block : public core::HasLocation {
@@ -133,22 +110,11 @@ struct Block : public core::HasLocation {
   std::optional<Expression> m_final_expression;
 };
 
-struct IfExpr {
-  Expression m_condition;
-  Block m_then_branch;
-  std::optional<Block> m_else_branch;
-};
-
 // --- Bindings & definitions ------------------------------------------------
 
 struct LetBinding : public core::HasLocation {
   Identifier m_variable;
   Expression m_expression;
-};
-
-struct LambdaExpr {
-  std::vector<Identifier> m_parameters;
-  Block m_body;
 };
 
 struct FunctionDef : public core::HasLocation {

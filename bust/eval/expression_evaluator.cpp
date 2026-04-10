@@ -111,11 +111,11 @@ Value ExpressionEvaluator::operator()(
   auto condition_value = (*this)(if_expression->m_condition);
 
   if (std::get<Bool>(condition_value).m_value) {
-    return (*this)(if_expression->m_then_branch);
+    return (*this)(if_expression->m_then_block);
   }
 
-  if (if_expression->m_else_branch.has_value()) {
-    return (*this)(if_expression->m_else_branch.value());
+  if (if_expression->m_else_block.has_value()) {
+    return (*this)(if_expression->m_else_block.value());
   }
 
   return Unit{};

@@ -99,7 +99,7 @@ Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
   auto &function = m_ctx.function();
 
-  const auto &if_return_type = if_expression->m_then_branch.m_type;
+  const auto &if_return_type = if_expression->m_then_block.m_type;
 
   // Get handle to current after condition target generated, so even with nested
   // blocks, we're still starting right after the condition
@@ -112,12 +112,12 @@ Handle ExpressionGenerator::operator()(
 
   // Do then branch, capture the final block for later if needed
   function.set_insertion_point(starting_then_block);
-  auto then_target = (*this)(if_expression->m_then_branch);
+  auto then_target = (*this)(if_expression->m_then_block);
   auto &final_then_block = function.current_basic_block();
   final_then_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
 
-  if (!if_expression->m_else_branch.has_value()) {
+  if (!if_expression->m_else_block.has_value()) {
     // Just bare if, else is merge
     final_condition_block.add_terminal(
         BranchInstruction{.m_condition = condition_target,
@@ -133,7 +133,7 @@ Handle ExpressionGenerator::operator()(
   // this branch
   auto &starting_else_block = function.new_basic_block("else");
   function.set_insertion_point(starting_else_block);
-  auto else_target = (*this)(if_expression->m_else_branch.value());
+  auto else_target = (*this)(if_expression->m_else_block.value());
   auto &final_else_block = function.current_basic_block();
   final_else_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
@@ -151,7 +151,7 @@ Handle ExpressionGenerator::operator()(
   // AND the types of the then and else expressions are NOT Unit
   const auto if_type_is_unit = hir::is_unit_type(if_return_type);
   auto if_statement_returns_value =
-      if_expression->m_else_branch.has_value() && !if_type_is_unit;
+      if_expression->m_else_block.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
     // Void, no handle to return
     return {};

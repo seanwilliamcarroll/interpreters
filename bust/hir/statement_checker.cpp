@@ -23,7 +23,7 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
 }
 
 Statement StatementChecker::operator()(const ast::Expression &expression) {
-  return std::visit(ExpressionChecker{m_ctx}, expression);
+  return ExpressionChecker{m_ctx}.check_expression(expression);
 }
 
 //****************************************************************************

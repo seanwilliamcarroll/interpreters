@@ -65,8 +65,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralI64>(expr));
-    CHECK(std::get<LiteralI64>(expr).m_value == 42);
+    REQUIRE(std::holds_alternative<LiteralI64>(expr.m_expression));
+    CHECK(std::get<LiteralI64>(expr.m_expression).m_value == 42);
   }
 
   TEST_CASE("bust::parse_zero") {
@@ -74,8 +74,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralI64>(expr));
-    CHECK(std::get<LiteralI64>(expr).m_value == 0);
+    REQUIRE(std::holds_alternative<LiteralI64>(expr.m_expression));
+    CHECK(std::get<LiteralI64>(expr.m_expression).m_value == 0);
   }
 
   TEST_CASE("bust::parse_bool_true") {
@@ -83,8 +83,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralBool>(expr));
-    CHECK(std::get<LiteralBool>(expr).m_value == true);
+    REQUIRE(std::holds_alternative<LiteralBool>(expr.m_expression));
+    CHECK(std::get<LiteralBool>(expr.m_expression).m_value == true);
   }
 
   TEST_CASE("bust::parse_bool_false") {
@@ -92,8 +92,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralBool>(expr));
-    CHECK(std::get<LiteralBool>(expr).m_value == false);
+    REQUIRE(std::holds_alternative<LiteralBool>(expr.m_expression));
+    CHECK(std::get<LiteralBool>(expr.m_expression).m_value == false);
   }
 
   TEST_CASE("bust::parse_unit_literal") {
@@ -101,7 +101,7 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    CHECK(std::holds_alternative<LiteralUnit>(expr));
+    CHECK(std::holds_alternative<LiteralUnit>(expr.m_expression));
   }
 
   // === Identifiers =========================================================
@@ -111,8 +111,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<Identifier>(expr));
-    CHECK(std::get<Identifier>(expr).m_name == "x");
+    REQUIRE(std::holds_alternative<Identifier>(expr.m_expression));
+    CHECK(std::get<Identifier>(expr.m_expression).m_name == "x");
   }
 
   // === Function definitions ================================================
@@ -169,7 +169,8 @@ TEST_SUITE("bust.parser") {
     CHECK(binding.m_variable.m_name == "x");
     REQUIRE(binding.m_variable.m_type.has_value());
     check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
-    REQUIRE(std::holds_alternative<LiteralI64>(binding.m_expression));
+    REQUIRE(
+        std::holds_alternative<LiteralI64>(binding.m_expression.m_expression));
   }
 
   TEST_CASE("bust::parse_let_without_type") {
@@ -195,8 +196,8 @@ TEST_SUITE("bust.parser") {
     CHECK(binding.m_variable.m_name == "x");
     // Final expression is x
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<Identifier>(expr));
-    CHECK(std::get<Identifier>(expr).m_name == "x");
+    REQUIRE(std::holds_alternative<Identifier>(expr.m_expression));
+    CHECK(std::get<Identifier>(expr.m_expression).m_name == "x");
   }
 
   // === Arithmetic ==========================================================
@@ -206,11 +207,12 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &bin = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &bin = *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(bin.m_operator == BinaryOperator::PLUS);
-    CHECK(std::holds_alternative<LiteralI64>(bin.m_lhs));
-    CHECK(std::holds_alternative<LiteralI64>(bin.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(bin.m_lhs.m_expression));
+    CHECK(std::holds_alternative<LiteralI64>(bin.m_rhs.m_expression));
   }
 
   TEST_CASE("bust::parse_binary_sub") {
@@ -218,9 +220,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::MINUS);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::MINUS);
   }
 
   TEST_CASE("bust::parse_precedence_mul_over_add") {
@@ -229,14 +233,17 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(add.m_operator == BinaryOperator::PLUS);
     // LHS is literal 1
-    CHECK(std::holds_alternative<LiteralI64>(add.m_lhs));
+    CHECK(std::holds_alternative<LiteralI64>(add.m_lhs.m_expression));
     // RHS is 2 * 3
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(add.m_rhs));
-    const auto &mul = *std::get<std::unique_ptr<BinaryExpr>>(add.m_rhs);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        add.m_rhs.m_expression));
+    const auto &mul =
+        *std::get<std::unique_ptr<BinaryExpr>>(add.m_rhs.m_expression);
     CHECK(mul.m_operator == BinaryOperator::MULTIPLIES);
   }
 
@@ -246,17 +253,21 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &outer = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &outer =
+        *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(outer.m_operator == BinaryOperator::MINUS);
     // LHS is (1 - 2)
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(outer.m_lhs));
-    const auto &inner = *std::get<std::unique_ptr<BinaryExpr>>(outer.m_lhs);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        outer.m_lhs.m_expression));
+    const auto &inner =
+        *std::get<std::unique_ptr<BinaryExpr>>(outer.m_lhs.m_expression);
     CHECK(inner.m_operator == BinaryOperator::MINUS);
-    CHECK(std::holds_alternative<LiteralI64>(inner.m_lhs));
-    CHECK(std::holds_alternative<LiteralI64>(inner.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(inner.m_lhs.m_expression));
+    CHECK(std::holds_alternative<LiteralI64>(inner.m_rhs.m_expression));
     // RHS is 3
-    CHECK(std::holds_alternative<LiteralI64>(outer.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(outer.m_rhs.m_expression));
   }
 
   TEST_CASE("bust::parse_parenthesized_expression") {
@@ -265,13 +276,15 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &mul = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &mul = *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(mul.m_operator == BinaryOperator::MULTIPLIES);
     // LHS is (1 + 2)
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(mul.m_lhs));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(mul.m_lhs)->m_operator ==
-          BinaryOperator::PLUS);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        mul.m_lhs.m_expression));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(mul.m_lhs.m_expression)
+              ->m_operator == BinaryOperator::PLUS);
   }
 
   TEST_CASE("bust::parse_modulus") {
@@ -279,9 +292,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::MODULUS);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::MODULUS);
   }
 
   TEST_CASE("bust::parse_division") {
@@ -289,9 +304,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::DIVIDES);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::DIVIDES);
   }
 
   // === Comparison ==========================================================
@@ -301,9 +318,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::LT);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::LT);
   }
 
   TEST_CASE("bust::parse_equality") {
@@ -311,9 +330,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::EQ);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::EQ);
   }
 
   TEST_CASE("bust::parse_not_equal") {
@@ -321,9 +342,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::NOT_EQ);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::NOT_EQ);
   }
 
   TEST_CASE("bust::parse_comparison_lower_than_arithmetic") {
@@ -332,15 +355,18 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &cmp = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &cmp = *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(cmp.m_operator == BinaryOperator::LT);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(cmp.m_lhs));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(cmp.m_lhs)->m_operator ==
-          BinaryOperator::PLUS);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(cmp.m_rhs));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(cmp.m_rhs)->m_operator ==
-          BinaryOperator::PLUS);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        cmp.m_lhs.m_expression));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(cmp.m_lhs.m_expression)
+              ->m_operator == BinaryOperator::PLUS);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        cmp.m_rhs.m_expression));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(cmp.m_rhs.m_expression)
+              ->m_operator == BinaryOperator::PLUS);
   }
 
   // === Logical =============================================================
@@ -350,9 +376,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::LOGICAL_AND);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::LOGICAL_AND);
   }
 
   TEST_CASE("bust::parse_logical_or") {
@@ -360,9 +388,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::LOGICAL_OR);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::LOGICAL_OR);
   }
 
   TEST_CASE("bust::parse_logical_precedence") {
@@ -371,13 +401,15 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &lor = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &lor = *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(lor.m_operator == BinaryOperator::LOGICAL_OR);
     // RHS should be b && c
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(lor.m_rhs));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(lor.m_rhs)->m_operator ==
-          BinaryOperator::LOGICAL_AND);
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        lor.m_rhs.m_expression));
+    CHECK(std::get<std::unique_ptr<BinaryExpr>>(lor.m_rhs.m_expression)
+              ->m_operator == BinaryOperator::LOGICAL_AND);
   }
 
   // === Unary ===============================================================
@@ -387,10 +419,12 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
-    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr.m_expression));
+    const auto &unary =
+        *std::get<std::unique_ptr<UnaryExpr>>(expr.m_expression);
     CHECK(unary.m_operator == UnaryOperator::MINUS);
-    CHECK(std::holds_alternative<LiteralI64>(unary.m_expression));
+    CHECK(std::holds_alternative<LiteralI64>(unary.m_expression.m_expression));
   }
 
   TEST_CASE("bust::parse_unary_not") {
@@ -398,10 +432,12 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
-    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr.m_expression));
+    const auto &unary =
+        *std::get<std::unique_ptr<UnaryExpr>>(expr.m_expression);
     CHECK(unary.m_operator == UnaryOperator::NOT);
-    CHECK(std::holds_alternative<LiteralBool>(unary.m_expression));
+    CHECK(std::holds_alternative<LiteralBool>(unary.m_expression.m_expression));
   }
 
   // === Function calls ======================================================
@@ -411,10 +447,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CallExpr>>(expr));
-    const auto &call = *std::get<std::unique_ptr<CallExpr>>(expr);
-    REQUIRE(std::holds_alternative<Identifier>(call.m_callee));
-    CHECK(std::get<Identifier>(call.m_callee).m_name == "foo");
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CallExpr>>(expr.m_expression));
+    const auto &call = *std::get<std::unique_ptr<CallExpr>>(expr.m_expression);
+    REQUIRE(std::holds_alternative<Identifier>(call.m_callee.m_expression));
+    CHECK(std::get<Identifier>(call.m_callee.m_expression).m_name == "foo");
     CHECK(call.m_arguments.empty());
   }
 
@@ -423,13 +460,14 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CallExpr>>(expr));
-    const auto &call = *std::get<std::unique_ptr<CallExpr>>(expr);
-    REQUIRE(std::holds_alternative<Identifier>(call.m_callee));
-    CHECK(std::get<Identifier>(call.m_callee).m_name == "add");
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CallExpr>>(expr.m_expression));
+    const auto &call = *std::get<std::unique_ptr<CallExpr>>(expr.m_expression);
+    REQUIRE(std::holds_alternative<Identifier>(call.m_callee.m_expression));
+    CHECK(std::get<Identifier>(call.m_callee.m_expression).m_name == "add");
     REQUIRE(call.m_arguments.size() == 2);
-    CHECK(std::holds_alternative<LiteralI64>(call.m_arguments[0]));
-    CHECK(std::holds_alternative<LiteralI64>(call.m_arguments[1]));
+    CHECK(std::holds_alternative<LiteralI64>(call.m_arguments[0].m_expression));
+    CHECK(std::holds_alternative<LiteralI64>(call.m_arguments[1].m_expression));
   }
 
   TEST_CASE("bust::parse_function_call_expression_args") {
@@ -437,12 +475,13 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CallExpr>>(expr));
-    const auto &call = *std::get<std::unique_ptr<CallExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CallExpr>>(expr.m_expression));
+    const auto &call = *std::get<std::unique_ptr<CallExpr>>(expr.m_expression);
     REQUIRE(call.m_arguments.size() == 2);
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
-        call.m_arguments[0]));
-    CHECK(std::holds_alternative<Identifier>(call.m_arguments[1]));
+        call.m_arguments[0].m_expression));
+    CHECK(std::holds_alternative<Identifier>(call.m_arguments[1].m_expression));
   }
 
   // === If expressions ======================================================
@@ -452,9 +491,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(expr));
-    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(expr);
-    CHECK(std::holds_alternative<LiteralBool>(if_expr.m_condition));
+    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(expr.m_expression));
+    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(expr.m_expression);
+    CHECK(
+        std::holds_alternative<LiteralBool>(if_expr.m_condition.m_expression));
     CHECK_FALSE(if_expr.m_else_block.has_value());
   }
 
@@ -464,18 +504,19 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(expr));
-    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(expr);
-    CHECK(std::holds_alternative<LiteralBool>(if_expr.m_condition));
+    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(expr.m_expression));
+    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(expr.m_expression);
+    CHECK(
+        std::holds_alternative<LiteralBool>(if_expr.m_condition.m_expression));
     REQUIRE(if_expr.m_else_block.has_value());
     // Then block has final expr 1
     REQUIRE(if_expr.m_then_block.m_final_expression.has_value());
     CHECK(std::holds_alternative<LiteralI64>(
-        *if_expr.m_then_block.m_final_expression));
+        if_expr.m_then_block.m_final_expression->m_expression));
     // Else block has final expr 2
     REQUIRE(if_expr.m_else_block->m_final_expression.has_value());
     CHECK(std::holds_alternative<LiteralI64>(
-        *if_expr.m_else_block->m_final_expression));
+        if_expr.m_else_block->m_final_expression->m_expression));
   }
 
   TEST_CASE("bust::parse_if_with_comparison") {
@@ -484,10 +525,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(expr));
-    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(expr);
+    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(expr.m_expression));
+    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(expr.m_expression);
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
-        if_expr.m_condition));
+        if_expr.m_condition.m_expression));
   }
 
   // === Return ==============================================================
@@ -497,9 +538,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(expr));
-    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(expr);
-    CHECK(std::holds_alternative<LiteralI64>(ret.m_return_expression));
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<ReturnExpr>>(expr.m_expression));
+    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(expr.m_expression);
+    CHECK(std::holds_alternative<LiteralI64>(ret.m_expression.m_expression));
   }
 
   TEST_CASE("bust::parse_return_as_only_statement") {
@@ -511,9 +553,11 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
     const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
-    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(stmt_expr));
-    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr);
-    CHECK(std::holds_alternative<LiteralI64>(ret.m_return_expression));
+    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(
+        stmt_expr.m_expression));
+    const auto &ret =
+        *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr.m_expression);
+    CHECK(std::holds_alternative<LiteralI64>(ret.m_expression.m_expression));
     CHECK_FALSE(func.m_body.m_final_expression.has_value());
   }
 
@@ -528,12 +572,15 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
     const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
-    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(stmt_expr));
-    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr);
-    CHECK(std::holds_alternative<LiteralI64>(ret.m_return_expression));
+    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(
+        stmt_expr.m_expression));
+    const auto &ret =
+        *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr.m_expression);
+    CHECK(std::holds_alternative<LiteralI64>(ret.m_expression.m_expression));
     // Final expression: 0
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   TEST_CASE("bust::parse_early_return_in_if") {
@@ -547,7 +594,8 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     // Final expression: 0
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   // === Block-like statements without semicolons ============================
@@ -562,9 +610,10 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
     CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
-        std::get<Expression>(func.m_body.m_statements[0])));
+        std::get<Expression>(func.m_body.m_statements[0]).m_expression));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   TEST_CASE("bust::parse_bare_block_as_statement_no_semicolon") {
@@ -577,9 +626,10 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(
-        std::get<Expression>(func.m_body.m_statements[0])));
+        std::get<Expression>(func.m_body.m_statements[0]).m_expression));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   TEST_CASE("bust::parse_multiple_block_like_no_semicolons") {
@@ -593,13 +643,14 @@ TEST_SUITE("bust.parser") {
     const auto &func = get_single_func(program);
     REQUIRE(func.m_body.m_statements.size() == 3);
     CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
-        std::get<Expression>(func.m_body.m_statements[0])));
+        std::get<Expression>(func.m_body.m_statements[0]).m_expression));
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(
-        std::get<Expression>(func.m_body.m_statements[1])));
+        std::get<Expression>(func.m_body.m_statements[1]).m_expression));
     CHECK(std::holds_alternative<std::unique_ptr<IfExpr>>(
-        std::get<Expression>(func.m_body.m_statements[2])));
+        std::get<Expression>(func.m_body.m_statements[2]).m_expression));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   // === Blocks ==============================================================
@@ -622,7 +673,8 @@ TEST_SUITE("bust.parser") {
     const auto &func = get_single_func(program);
     CHECK(func.m_body.m_statements.size() == 2);
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<Identifier>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<Identifier>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   TEST_CASE("bust::parse_block_expression_statements") {
@@ -636,7 +688,8 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<LiteralI64>(*func.m_body.m_final_expression));
+    CHECK(std::holds_alternative<LiteralI64>(
+        func.m_body.m_final_expression->m_expression));
   }
 
   TEST_CASE("bust::parse_block_as_expression") {
@@ -650,7 +703,8 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_body.m_statements.size() == 1);
     REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
     const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
-    CHECK(std::holds_alternative<std::unique_ptr<Block>>(binding.m_expression));
+    CHECK(std::holds_alternative<std::unique_ptr<Block>>(
+        binding.m_expression.m_expression));
   }
 
   // === Lambda ==============================================================
@@ -660,8 +714,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr));
-    const auto &lambda = *std::get<std::unique_ptr<LambdaExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     CHECK(lambda.m_parameters.empty());
     CHECK_FALSE(lambda.m_return_type.has_value());
   }
@@ -672,8 +728,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr));
-    const auto &lambda = *std::get<std::unique_ptr<LambdaExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     REQUIRE(lambda.m_parameters.size() == 2);
     CHECK(lambda.m_parameters[0].m_name == "x");
     CHECK(lambda.m_parameters[1].m_name == "y");
@@ -686,8 +744,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr));
-    const auto &lambda = *std::get<std::unique_ptr<LambdaExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     REQUIRE(lambda.m_parameters.size() == 2);
     CHECK_FALSE(lambda.m_parameters[0].m_type.has_value());
     CHECK_FALSE(lambda.m_parameters[1].m_type.has_value());
@@ -726,20 +786,23 @@ TEST_SUITE("bust.parser") {
 
     // Body is an if expression
     const auto &body_expr = get_final_expr(fib.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(body_expr));
-    const auto &if_expr = *std::get<std::unique_ptr<IfExpr>>(body_expr);
+    REQUIRE(std::holds_alternative<std::unique_ptr<IfExpr>>(
+        body_expr.m_expression));
+    const auto &if_expr =
+        *std::get<std::unique_ptr<IfExpr>>(body_expr.m_expression);
 
     // Condition: n <= 1
     REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
-        if_expr.m_condition));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(if_expr.m_condition)
-              ->m_operator == BinaryOperator::LT_EQ);
+        if_expr.m_condition.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(if_expr.m_condition.m_expression)
+            ->m_operator == BinaryOperator::LT_EQ);
 
     // Else branch: fib(n-1) + fib(n-2)
     REQUIRE(if_expr.m_else_block.has_value());
     REQUIRE(if_expr.m_else_block->m_final_expression.has_value());
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
-        *if_expr.m_else_block->m_final_expression));
+        if_expr.m_else_block->m_final_expression->m_expression));
   }
   // --- Function type annotations -------------------------------------------
 
@@ -840,9 +903,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::GT);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::GT);
   }
 
   TEST_CASE("bust::parse_greater_than_or_equal") {
@@ -850,9 +915,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::GT_EQ);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::GT_EQ);
   }
 
   TEST_CASE("bust::parse_less_than_or_equal") {
@@ -860,9 +927,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    CHECK(std::get<std::unique_ptr<BinaryExpr>>(expr)->m_operator ==
-          BinaryOperator::LT_EQ);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    CHECK(
+        std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression)->m_operator ==
+        BinaryOperator::LT_EQ);
   }
 
   // === Chained and nested calls ==============================================
@@ -873,11 +942,13 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CallExpr>>(expr));
-    const auto &outer_call = *std::get<std::unique_ptr<CallExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CallExpr>>(expr.m_expression));
+    const auto &outer_call =
+        *std::get<std::unique_ptr<CallExpr>>(expr.m_expression);
     REQUIRE(outer_call.m_arguments.size() == 1);
     CHECK(std::holds_alternative<std::unique_ptr<CallExpr>>(
-        outer_call.m_arguments[0]));
+        outer_call.m_arguments[0].m_expression));
   }
 
   // === Nested lambdas ========================================================
@@ -894,13 +965,13 @@ TEST_SUITE("bust.parser") {
     REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
     const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
     REQUIRE(std::holds_alternative<std::unique_ptr<LambdaExpr>>(
-        binding.m_expression));
-    const auto &outer_lambda =
-        *std::get<std::unique_ptr<LambdaExpr>>(binding.m_expression);
+        binding.m_expression.m_expression));
+    const auto &outer_lambda = *std::get<std::unique_ptr<LambdaExpr>>(
+        binding.m_expression.m_expression);
     // The body's final expression should be another lambda
     REQUIRE(outer_lambda.m_body.m_final_expression.has_value());
     CHECK(std::holds_alternative<std::unique_ptr<LambdaExpr>>(
-        *outer_lambda.m_body.m_final_expression));
+        outer_lambda.m_body.m_final_expression->m_expression));
   }
 
   // === Chained unary is not supported ========================================
@@ -928,11 +999,12 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<Block>>(expr));
-    const auto &outer_block = *std::get<std::unique_ptr<Block>>(expr);
+    REQUIRE(std::holds_alternative<std::unique_ptr<Block>>(expr.m_expression));
+    const auto &outer_block =
+        *std::get<std::unique_ptr<Block>>(expr.m_expression);
     REQUIRE(outer_block.m_final_expression.has_value());
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(
-        *outer_block.m_final_expression));
+        outer_block.m_final_expression->m_expression));
   }
 
   // === Multiple top-level let bindings =======================================
@@ -955,11 +1027,13 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
-    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr.m_expression));
+    const auto &unary =
+        *std::get<std::unique_ptr<UnaryExpr>>(expr.m_expression);
     CHECK(unary.m_operator == UnaryOperator::MINUS);
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
-        unary.m_expression));
+        unary.m_expression.m_expression));
   }
 
   // === Char literals =========================================================
@@ -969,8 +1043,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == 'A');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == 'A');
   }
 
   TEST_CASE("bust::parse_char_literal_digit") {
@@ -978,8 +1052,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '7');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '7');
   }
 
   TEST_CASE("bust::parse_char_literal_space") {
@@ -987,8 +1061,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == ' ');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == ' ');
   }
 
   TEST_CASE("bust::parse_char_literal_escape_newline") {
@@ -996,8 +1070,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '\n');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '\n');
   }
 
   TEST_CASE("bust::parse_char_literal_escape_tab") {
@@ -1005,8 +1079,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '\t');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '\t');
   }
 
   TEST_CASE("bust::parse_char_literal_escape_null") {
@@ -1014,8 +1088,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '\0');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '\0');
   }
 
   TEST_CASE("bust::parse_char_literal_escape_backslash") {
@@ -1023,8 +1097,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '\\');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '\\');
   }
 
   TEST_CASE("bust::parse_char_literal_escape_single_quote") {
@@ -1032,8 +1106,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '\'');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '\'');
   }
 
   TEST_CASE("bust::parse_char_literal_hex_escape") {
@@ -1042,8 +1116,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == 'A');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == 'A');
   }
 
   TEST_CASE("bust::parse_char_literal_hex_escape_null") {
@@ -1052,8 +1126,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<LiteralChar>(expr));
-    CHECK(std::get<LiteralChar>(expr).m_value == '\0');
+    REQUIRE(std::holds_alternative<LiteralChar>(expr.m_expression));
+    CHECK(std::get<LiteralChar>(expr.m_expression).m_value == '\0');
   }
 
   // === Type annotations (i8, i32, char) ======================================
@@ -1111,10 +1185,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
-    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
-    CHECK(std::holds_alternative<LiteralI64>(cast.m_expression));
-    check_primitive_type(cast.m_type, PrimitiveType::I8);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(expr.m_expression));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr.m_expression);
+    CHECK(std::holds_alternative<LiteralI64>(cast.m_expression.m_expression));
+    check_primitive_type(cast.m_new_type, PrimitiveType::I8);
   }
 
   TEST_CASE("bust::parse_cast_to_i32") {
@@ -1122,10 +1197,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
-    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
-    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
-    check_primitive_type(cast.m_type, PrimitiveType::I32);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(expr.m_expression));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr.m_expression);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression.m_expression));
+    check_primitive_type(cast.m_new_type, PrimitiveType::I32);
   }
 
   TEST_CASE("bust::parse_cast_to_char") {
@@ -1133,9 +1209,10 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
-    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
-    check_primitive_type(cast.m_type, PrimitiveType::CHAR);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(expr.m_expression));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr.m_expression);
+    check_primitive_type(cast.m_new_type, PrimitiveType::CHAR);
   }
 
   TEST_CASE("bust::parse_cast_chained") {
@@ -1144,16 +1221,17 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
-    const auto &outer = *std::get<std::unique_ptr<CastExpr>>(expr);
-    check_primitive_type(outer.m_type, PrimitiveType::I64);
-    // Inner is also a cast
     REQUIRE(
-        std::holds_alternative<std::unique_ptr<CastExpr>>(outer.m_expression));
+        std::holds_alternative<std::unique_ptr<CastExpr>>(expr.m_expression));
+    const auto &outer = *std::get<std::unique_ptr<CastExpr>>(expr.m_expression);
+    check_primitive_type(outer.m_new_type, PrimitiveType::I64);
+    // Inner is also a cast
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(
+        outer.m_expression.m_expression));
     const auto &inner =
-        *std::get<std::unique_ptr<CastExpr>>(outer.m_expression);
-    CHECK(std::holds_alternative<Identifier>(inner.m_expression));
-    check_primitive_type(inner.m_type, PrimitiveType::I32);
+        *std::get<std::unique_ptr<CastExpr>>(outer.m_expression.m_expression);
+    CHECK(std::holds_alternative<Identifier>(inner.m_expression.m_expression));
+    check_primitive_type(inner.m_new_type, PrimitiveType::I32);
   }
 
   TEST_CASE("bust::parse_cast_lower_precedence_than_arithmetic") {
@@ -1162,16 +1240,19 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr));
-    const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<BinaryExpr>>(expr.m_expression));
+    const auto &add = *std::get<std::unique_ptr<BinaryExpr>>(expr.m_expression);
     CHECK(add.m_operator == BinaryOperator::PLUS);
     // LHS is the cast
-    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(add.m_lhs));
-    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(add.m_lhs);
-    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
-    check_primitive_type(cast.m_type, PrimitiveType::I32);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(
+        add.m_lhs.m_expression));
+    const auto &cast =
+        *std::get<std::unique_ptr<CastExpr>>(add.m_lhs.m_expression);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression.m_expression));
+    check_primitive_type(cast.m_new_type, PrimitiveType::I32);
     // RHS is literal 1
-    CHECK(std::holds_alternative<LiteralI64>(add.m_rhs));
+    CHECK(std::holds_alternative<LiteralI64>(add.m_rhs.m_expression));
   }
 
   TEST_CASE("bust::parse_cast_with_unary") {
@@ -1180,14 +1261,17 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr));
-    const auto &unary = *std::get<std::unique_ptr<UnaryExpr>>(expr);
-    CHECK(unary.m_operator == UnaryOperator::MINUS);
     REQUIRE(
-        std::holds_alternative<std::unique_ptr<CastExpr>>(unary.m_expression));
-    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(unary.m_expression);
-    CHECK(std::holds_alternative<Identifier>(cast.m_expression));
-    check_primitive_type(cast.m_type, PrimitiveType::I32);
+        std::holds_alternative<std::unique_ptr<UnaryExpr>>(expr.m_expression));
+    const auto &unary =
+        *std::get<std::unique_ptr<UnaryExpr>>(expr.m_expression);
+    CHECK(unary.m_operator == UnaryOperator::MINUS);
+    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(
+        unary.m_expression.m_expression));
+    const auto &cast =
+        *std::get<std::unique_ptr<CastExpr>>(unary.m_expression.m_expression);
+    CHECK(std::holds_alternative<Identifier>(cast.m_expression.m_expression));
+    check_primitive_type(cast.m_new_type, PrimitiveType::I32);
   }
 
   TEST_CASE("bust::parse_cast_on_call_result") {
@@ -1196,10 +1280,12 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     const auto &expr = get_final_expr(func.m_body);
-    REQUIRE(std::holds_alternative<std::unique_ptr<CastExpr>>(expr));
-    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr);
-    CHECK(std::holds_alternative<std::unique_ptr<CallExpr>>(cast.m_expression));
-    check_primitive_type(cast.m_type, PrimitiveType::I8);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<CastExpr>>(expr.m_expression));
+    const auto &cast = *std::get<std::unique_ptr<CastExpr>>(expr.m_expression);
+    CHECK(std::holds_alternative<std::unique_ptr<CallExpr>>(
+        cast.m_expression.m_expression));
+    check_primitive_type(cast.m_new_type, PrimitiveType::I8);
   }
 
   TEST_CASE("bust::parse_cast_in_let_binding") {
@@ -1215,7 +1301,7 @@ TEST_SUITE("bust.parser") {
     REQUIRE(binding.m_variable.m_type.has_value());
     check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I8);
     CHECK(std::holds_alternative<std::unique_ptr<CastExpr>>(
-        binding.m_expression));
+        binding.m_expression.m_expression));
   }
 }
 //****************************************************************************

@@ -44,8 +44,8 @@ Block BlockChecker::check_block(const ast::Block &block) {
 
   auto final_expression =
       block.m_final_expression.has_value()
-          ? std::optional<Expression>(std::visit(
-                ExpressionChecker{m_ctx}, block.m_final_expression.value()))
+          ? std::optional<Expression>(ExpressionChecker{m_ctx}.check_expression(
+                block.m_final_expression.value()))
           : std::nullopt;
 
   auto type = final_expression.has_value() ? final_expression.value().m_type

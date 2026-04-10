@@ -192,7 +192,7 @@ private:
             std::unreachable();
           }
         },
-        e);
+        e.m_expression);
   }
 
   const char *binary_op_str(BinaryOperator op) {
@@ -292,13 +292,13 @@ private:
     IndentGuard g(*this);
     dump_expression(c.m_expression);
     m_out << " AS ";
-    dump_type_id(c.m_type);
+    dump_type_id(c.m_new_type);
   }
 
   void dump_return(const ReturnExpr &r) {
     line("Return");
     IndentGuard g(*this);
-    dump_expression(r.m_return_expression);
+    dump_expression(r.m_expression);
   }
 
   void dump_lambda(const LambdaExpr &l) {

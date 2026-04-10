@@ -34,7 +34,8 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
   // Compare with a type annotation if one is provided
   // Create new LetBinding
 
-  auto body = std::visit(ExpressionChecker{m_ctx}, let_binding.m_expression);
+  auto body =
+      ExpressionChecker{m_ctx}.check_expression(let_binding.m_expression);
 
   auto annotated_type = TypeConverter{m_ctx}.get_type(let_binding.m_variable);
 

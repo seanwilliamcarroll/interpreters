@@ -20,9 +20,9 @@ struct SourceLocation {
 
   bool operator==(const SourceLocation &) const = default;
 
-  const char *const file_name{};
-  const unsigned int line{1};
-  const unsigned int column{0};
+  const char *file_name{};
+  unsigned int line{1};
+  unsigned int column{0};
 };
 
 inline std::ostream &operator<<(std::ostream &out, const SourceLocation &loc) {
