@@ -66,6 +66,14 @@ struct StoreInstruction {
   LLVMType m_type;
 };
 
+struct CastInstruction {
+  Handle m_destination;
+  Handle m_source;
+  LLVMCastOperator m_operator;
+  LLVMType m_from;
+  LLVMType m_to;
+};
+
 struct CallVoidInstruction {
   Handle m_callee;
   std::vector<Argument> m_arguments;
@@ -92,8 +100,8 @@ struct ReturnVoidInstruction {};
 
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
-                 LoadInstruction, StoreInstruction, CallVoidInstruction,
-                 CallInstruction, AllocaInstruction>;
+                 LoadInstruction, StoreInstruction, CastInstruction,
+                 CallVoidInstruction, CallInstruction, AllocaInstruction>;
 
 using Terminator = std::variant<BranchInstruction, JumpInstruction,
                                 ReturnInstruction, ReturnVoidInstruction>;

@@ -53,20 +53,20 @@ bool is_comparison_op(BinaryOperator op) {
   }
 }
 
-PrimitiveType required_type_for_unary_op(UnaryOperator op) {
+PrimitiveTypeClass required_type_class_for_unary_op(UnaryOperator op) {
   switch (op) {
   case UnaryOperator::MINUS:
-    return PrimitiveType::I64;
+    return PrimitiveTypeClass::NUMERIC;
   case UnaryOperator::NOT:
-    return PrimitiveType::BOOL;
+    return PrimitiveTypeClass::BOOL;
   }
 }
 
-std::optional<PrimitiveType> required_type_for_binary_op(BinaryOperator op) {
+PrimitiveTypeClass required_type_class_for_binary_op(BinaryOperator op) {
   switch (op) {
   case BinaryOperator::LOGICAL_AND:
   case BinaryOperator::LOGICAL_OR:
-    return PrimitiveType::BOOL;
+    return PrimitiveTypeClass::BOOL;
   case BinaryOperator::PLUS:
   case BinaryOperator::MINUS:
   case BinaryOperator::MULTIPLIES:
@@ -76,10 +76,23 @@ std::optional<PrimitiveType> required_type_for_binary_op(BinaryOperator op) {
   case BinaryOperator::LT_EQ:
   case BinaryOperator::GT:
   case BinaryOperator::GT_EQ:
-    return PrimitiveType::I64;
+    return PrimitiveTypeClass::NUMERIC;
   case BinaryOperator::EQ:
   case BinaryOperator::NOT_EQ:
-    return std::nullopt;
+    return PrimitiveTypeClass::COMPARABLE;
+  }
+}
+
+bool is_type_in_type_class(PrimitiveTypeClass type_class, PrimitiveType type) {
+  switch (type_class) {
+  case bust::PrimitiveTypeClass::BOOL:
+    return type == PrimitiveType::BOOL;
+  case bust::PrimitiveTypeClass::NUMERIC:
+    return type == PrimitiveType::I8 || type == PrimitiveType::I32 ||
+           type == PrimitiveType::I64;
+  case bust::PrimitiveTypeClass::COMPARABLE:
+    return type == PrimitiveType::BOOL || type == PrimitiveType::I8 ||
+           type == PrimitiveType::I32 || type == PrimitiveType::I64;
   }
 }
 
@@ -185,24 +198,22 @@ Expression ExpressionChecker::operator()(
   auto type = m_ctx.m_type_unifier.find(lhs.m_type);
 
   // Apply operator constraint
-  auto required = required_type_for_binary_op(binary_expression->m_operator);
-  if (required.has_value()) {
-    Type required_type = PrimitiveTypeValue{{}, required.value()};
-    try {
-      if (std::holds_alternative<TypeVariable>(type)) {
-        m_ctx.m_type_unifier.unify(std::get<TypeVariable>(type), required_type);
-      } else if (!is_type_allowed(required.value(), type)) {
-        throw core::CompilerException(
-            "TypeChecker",
-            "Type " + type + " is disallowed by binary operator: " +
-                binary_expression->m_operator,
-            binary_expression->m_location);
-      }
-    } catch (std::runtime_error &error) {
-      throw core::CompilerException(
-          "TypeChecker", std::string("Type unification error: ") + error.what(),
-          binary_expression->m_location);
+  auto required =
+      required_type_class_for_binary_op(binary_expression->m_operator);
+  try {
+    if (std::holds_alternative<TypeVariable>(type)) {
+      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(type), required);
+    } else if (!is_type_in_type_class(required, type)) {
+      throw core::CompilerException("TypeChecker",
+                                    "Type " + type +
+                                        " is disallowed by binary operator: " +
+                                        binary_expression->m_operator,
+                                    binary_expression->m_location);
     }
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException(
+        "TypeChecker", std::string("Type unification error: ") + error.what(),
+        binary_expression->m_location);
   }
 
   auto final_type = is_comparison_op(binary_expression->m_operator)
@@ -223,13 +234,13 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::UnaryExpr> &unary_expression) {
   auto expression = std::visit((*this), unary_expression->m_expression);
 
-  auto required = required_type_for_unary_op(unary_expression->m_operator);
-  Type required_type = PrimitiveTypeValue{{}, required};
+  auto required_type_class =
+      required_type_class_for_unary_op(unary_expression->m_operator);
   try {
     if (std::holds_alternative<TypeVariable>(expression.m_type)) {
-      m_ctx.m_type_unifier.unify(std::get<TypeVariable>(expression.m_type),
-                                 required_type);
-    } else if (!is_type_allowed(required, expression.m_type)) {
+      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(expression.m_type),
+                                     required_type_class);
+    } else if (!is_type_in_type_class(required_type_class, expression.m_type)) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +

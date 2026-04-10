@@ -13,6 +13,7 @@
 
 #include "hir/types.hpp"
 #include "hir/union_find.hpp"
+#include "types.hpp"
 #include <ranges>
 #include <stdexcept>
 #include <unordered_map>
@@ -101,12 +102,71 @@ struct TypeUnifier {
         throw std::runtime_error("Could not resolve type variable " + type_a +
                                  " (" + concrete_a + ") and " + type_b);
       }
-      // We're good then
+      // This root has already been unified, satisfying all constraints
       return;
+    }
+
+    // We've not unified this root with a concrete type yet, does it have a type
+    // class constraint?
+    auto class_iter = m_resolved_type_class.find(root_a);
+    if (class_iter != m_resolved_type_class.end()) {
+      const auto &resolved_type_class = class_iter->second;
+      if (!is_type_in_type_class(resolved_type_class, type_b)) {
+        throw std::runtime_error("Could not resolve type class constraints "
+                                 "from resolved type_class: " +
+                                 resolved_type_class +
+                                 " and concrete type: " + type_b);
+      }
+      // We satisfied the constraint, move to add new concrete type
     }
 
     // No entry
     m_resolved_type.emplace(root_a, clone_type(type_b));
+  }
+
+  void constrain(const TypeVariable &type,
+                 const PrimitiveTypeClass &type_class) {
+    auto root = m_union_find.find(type.m_id);
+
+    // Do we already have a concrete type for this var?
+    auto iter = m_resolved_type.find(root);
+    if (iter != m_resolved_type.end()) {
+      const auto &resolved_type = iter->second;
+      if (!is_type_in_type_class(type_class, resolved_type)) {
+        throw std::runtime_error(
+            "Could not resolve concrete type: " + resolved_type +
+            " and type_class: " + type_class);
+      }
+      // All good, constraint satisfied
+      return;
+    }
+
+    // Have we constrained this root before?
+    auto class_iter = m_resolved_type_class.find(root);
+    if (class_iter != m_resolved_type_class.end()) {
+      auto &resolved_type_class = class_iter->second;
+      if (!resolves(type_class, resolved_type_class) &&
+          !resolves(resolved_type_class, type_class)) {
+        // Cannot resolve one with the other? they are disjoint
+        throw std::runtime_error("Could not resolve type class constraints "
+                                 "from resolved type_class: " +
+                                 resolved_type_class +
+                                 " and type_class: " + type_class);
+      }
+      // Constraint satisfied, do we need to update it? Did we tighten the
+      // constraint?
+      if (!resolves(resolved_type_class, type_class)) {
+        // type_class is more constraining or equal
+        resolved_type_class = type_class;
+      } else {
+        // Original was more constraining
+      }
+      // All good, constraints satified
+      return;
+    }
+
+    // Need to enforce that we end up with a type in this type class
+    m_resolved_type_class.emplace(root, type_class);
   }
 
   void unify(const TypeVariable &type_a, const TypeVariable &type_b) {
@@ -135,9 +195,59 @@ struct TypeUnifier {
 
     m_union_find.unite(type_a.m_id, type_b.m_id);
 
+    auto new_root = m_union_find.find(type_a.m_id);
+
+    // Merge constraints
+    auto class_iter_a = m_resolved_type_class.find(root_a);
+    auto class_iter_b = m_resolved_type_class.find(root_b);
+    if (class_iter_a != m_resolved_type_class.end() &&
+        class_iter_b != m_resolved_type_class.end()) {
+      const auto type_class_a = class_iter_a->second;
+      const auto type_class_b = class_iter_b->second;
+      if (!resolves(type_class_a, type_class_b) &&
+          !resolves(type_class_b, type_class_a)) {
+        // Can't resolve one with the other, they are disjoint
+        throw std::runtime_error("Could not resolve type class constraints "
+                                 "from type_class: " +
+                                 type_class_a +
+                                 " and type_class: " + type_class_b);
+      }
+      if (resolves(type_class_a, type_class_b)) {
+        // Take type_class_a because it is more constraining, or they are the
+        // same
+        m_resolved_type_class[new_root] = type_class_a;
+      } else {
+        m_resolved_type_class[new_root] = type_class_b;
+      }
+    } else if (class_iter_a != m_resolved_type_class.end()) {
+      const auto type_class_a = class_iter_a->second;
+      m_resolved_type_class[new_root] = type_class_a;
+    } else if (class_iter_b != m_resolved_type_class.end()) {
+      const auto type_class_b = class_iter_b->second;
+      m_resolved_type_class[new_root] = type_class_b;
+    } else {
+      // No type class constraints
+    }
+
+    auto merged_type_class_iter = m_resolved_type_class.find(new_root);
+    if (merged_type_class_iter != m_resolved_type_class.end()) {
+      const auto merged_type_class = merged_type_class_iter->second;
+      // Need to validate the concrete type
+      const auto &concrete_type =
+          (iter_a != m_resolved_type.end()) ? iter_a->second : iter_b->second;
+      if (iter_a != m_resolved_type.end() || iter_b != m_resolved_type.end()) {
+        if (!is_type_in_type_class(merged_type_class, concrete_type)) {
+          // We can't satisfy the merged constraint with this concrete class
+          throw std::runtime_error("Could not resolve type class constraints "
+                                   "from merged type_class: " +
+                                   merged_type_class +
+                                   " and concrete type: " + concrete_type);
+        }
+      }
+    }
+
     if (iter_a != m_resolved_type.end() || iter_b != m_resolved_type.end()) {
       // Need to update the resolved types since someone was already concrete
-      auto new_root = m_union_find.find(type_a.m_id);
       if (iter_a != m_resolved_type.end()) {
         // A is concrete, B is not
         const auto &concrete_a = iter_a->second;
@@ -162,7 +272,8 @@ struct TypeUnifier {
 
     auto iter = m_resolved_type.find(root);
     if (iter != m_resolved_type.end()) {
-      return clone_type(iter->second);
+      const auto &resolved_type = iter->second;
+      return clone_type(resolved_type);
     }
 
     // Not a concrete type yet
@@ -171,6 +282,7 @@ struct TypeUnifier {
 
   UnionFind m_union_find{};
   std::unordered_map<size_t, Type> m_resolved_type;
+  std::unordered_map<size_t, PrimitiveTypeClass> m_resolved_type_class;
 };
 
 //****************************************************************************

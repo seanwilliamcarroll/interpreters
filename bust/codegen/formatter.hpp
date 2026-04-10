@@ -61,6 +61,7 @@ struct Formatter {
   void operator()(const IntegerCompareInstruction &);
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
+  void operator()(const CastInstruction &);
 
   void operator()(const Argument &);
   void function_arguments(const std::vector<Argument> &);

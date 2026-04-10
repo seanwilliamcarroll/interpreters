@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <source_location.hpp>
 #include <string>
@@ -173,6 +174,18 @@ inline std::string operator+(const std::string &lhs, const Type &type) {
 
 inline std::string operator+(const Type &type, const std::string &rhs) {
   return type_to_string(type) + rhs;
+}
+
+inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
+                                  const hir::Type &type) {
+  if (std::holds_alternative<NeverType>(type)) {
+    return true;
+  }
+  if (!std::holds_alternative<PrimitiveTypeValue>(type)) {
+    return false;
+  }
+  auto primitive = std::get<PrimitiveTypeValue>(type).m_type;
+  return bust::is_type_in_type_class(type_class, primitive);
 }
 
 //****************************************************************************

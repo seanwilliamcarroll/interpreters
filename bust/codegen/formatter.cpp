@@ -204,6 +204,17 @@ void Formatter::operator()(const StoreInstruction &instruction) {
   newline();
 }
 
+void Formatter::operator()(const CastInstruction &instruction) {
+  indent();
+
+  m_out << std::visit(m_handle_converter, instruction.m_destination) << " = "
+        << instruction.m_operator << " " << instruction.m_from << " "
+        << std::visit(m_handle_converter, instruction.m_source) << " to "
+        << instruction.m_to;
+
+  newline();
+}
+
 void Formatter::operator()(const Argument &argument) {
   m_out << argument.m_type << " "
         << std::visit(m_handle_converter, argument.m_name);
