@@ -11,7 +11,6 @@
 #include <functional>
 #include <memory>
 #include <ostream>
-#include <source_location.hpp>
 #include <string>
 #include <types.hpp>
 #include <variant>
@@ -21,11 +20,11 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct PrimitiveTypeValue : public core::HasLocation {
+struct PrimitiveTypeValue {
   PrimitiveType m_type;
 };
 
-struct TypeVariable : public core::HasLocation {
+struct TypeVariable {
   // Not sure on needing a location
   size_t m_id;
 };
@@ -34,29 +33,16 @@ struct FunctionType;
 
 using FunctionTypePtr = std::shared_ptr<const FunctionType>;
 
-struct NeverType : public core::HasLocation {};
+struct NeverType {};
 
 // TODO: User defined types of some kind
 using Type =
     std::variant<PrimitiveTypeValue, TypeVariable, FunctionTypePtr, NeverType>;
 
-struct FunctionType : public core::HasLocation {
+struct FunctionType {
   std::vector<Type> m_argument_types;
   Type m_return_type;
 };
-
-inline core::SourceLocation type_location(const Type &type) {
-  return std::visit(
-      [](const auto &t) -> core::SourceLocation {
-        using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, FunctionTypePtr>) {
-          return t->m_location;
-        } else {
-          return t.m_location;
-        }
-      },
-      type);
-}
 
 inline bool is_unit_type(const Type &type) {
   return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&

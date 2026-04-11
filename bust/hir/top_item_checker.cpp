@@ -37,9 +37,7 @@ void TopItemChecker::collect_function_signature(
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            function_def.m_id.m_name +
-            " with type: " + other_id.value().m_type + " at " +
-            type_location(other_id.value().m_type),
+            function_def.m_id.m_name + " with type: " + other_id.value().m_type,
         function_def.m_id.m_location);
   }
 
@@ -48,16 +46,14 @@ void TopItemChecker::collect_function_signature(
     // Currently illegal
     throw core::CompilerException(
         "TypeChecker", std::string("UNIMPLEMENTED") + " " + __PRETTY_FUNCTION__,
-        type_location(return_type));
+        function_def.m_location);
   }
 
   auto [_, parameter_types] =
       TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
 
   auto function_type = std::make_shared<FunctionTypePtr::element_type>(
-      FunctionType{{function_def.m_location},
-                   std::move(parameter_types),
-                   std::move(return_type)});
+      FunctionType{std::move(parameter_types), std::move(return_type)});
 
   Type function_type_as_type = std::move(function_type);
   m_ctx.m_env.define(function_def.m_id.m_name, function_type_as_type);

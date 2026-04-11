@@ -75,11 +75,9 @@ private:
   void dump_func_def(const FunctionDef &f) {
     indent();
     m_out << "FunctionDef " << f.m_function_id << ": "
-          << type_to_string(
-                 Type(std::make_shared<FunctionTypePtr::element_type>(
-                     FunctionType{{f.m_type->m_location},
-                                  f.m_type->m_argument_types,
-                                  f.m_type->m_return_type})))
+          << type_to_string(Type(
+                 std::make_shared<FunctionTypePtr::element_type>(FunctionType{
+                     f.m_type->m_argument_types, f.m_type->m_return_type})))
           << "\n";
     IndentGuard g(*this);
     indent();

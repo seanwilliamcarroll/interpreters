@@ -41,9 +41,7 @@ struct TypeVariableUpdater {
     }
 
     return std::make_shared<FunctionTypePtr::element_type>(
-        FunctionType{{type->m_location},
-                     std::move(parameter_types),
-                     update(type->m_return_type)});
+        FunctionType{std::move(parameter_types), update(type->m_return_type)});
   }
 
   Type operator()(const NeverType &type) { return type; }

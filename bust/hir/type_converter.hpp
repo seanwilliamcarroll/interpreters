@@ -33,7 +33,7 @@ struct TypeConverter {
   }
 
   Type operator()(const ast::PrimitiveTypeIdentifier &type) {
-    return PrimitiveTypeValue{{type.m_location}, type.m_type};
+    return PrimitiveTypeValue{type.m_type};
   }
 
   Type operator()(const std::unique_ptr<ast::FunctionTypeIdentifier> &type) {
@@ -43,8 +43,8 @@ struct TypeConverter {
       param_types.push_back(convert(param));
     }
     auto return_type = convert(type->m_return_type);
-    return std::make_shared<FunctionTypePtr::element_type>(FunctionType{
-        {type->m_location}, std::move(param_types), std::move(return_type)});
+    return std::make_shared<FunctionTypePtr::element_type>(
+        FunctionType{std::move(param_types), std::move(return_type)});
   }
 
   Type get_type(const ast::TypeIdentifier &identifier) {

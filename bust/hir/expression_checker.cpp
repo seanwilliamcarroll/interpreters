@@ -206,7 +206,7 @@ Expression ExpressionChecker::operator()(
   }
 
   auto final_type = is_comparison_op(binary_expression->m_operator)
-                        ? PrimitiveTypeValue{{location}, PrimitiveType::BOOL}
+                        ? PrimitiveTypeValue{PrimitiveType::BOOL}
                         : m_ctx.m_type_unifier.find(type);
 
   return {{location},
@@ -259,7 +259,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
 
   try {
     m_ctx.m_type_unifier.unify(condition.m_type,
-                               PrimitiveTypeValue{{}, PrimitiveType::BOOL});
+                               PrimitiveTypeValue{PrimitiveType::BOOL});
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
@@ -279,7 +279,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
     // auto type = m_ctx.m_type_unifier.find(then_block.m_type);
 
     // Just then branch
-    auto type = PrimitiveTypeValue{{location}, PrimitiveType::UNIT};
+    auto type = PrimitiveTypeValue{PrimitiveType::UNIT};
 
     try {
       m_ctx.m_type_unifier.unify(type, then_block.m_type);
@@ -391,7 +391,7 @@ Expression ExpressionChecker::operator()(
 
   return {
       {location},
-      NeverType{{location}},
+      NeverType{},
       std::make_unique<ReturnExpr>(ReturnExpr{std::move(final_expression)})};
 }
 
@@ -451,9 +451,8 @@ Expression ExpressionChecker::operator()(
     unified_parameter_types.push_back(std::move(unified_type));
   }
 
-  auto function_type =
-      std::make_shared<FunctionTypePtr::element_type>(FunctionType{
-          {location}, std::move(unified_parameter_types), return_type});
+  auto function_type = std::make_shared<FunctionTypePtr::element_type>(
+      FunctionType{std::move(unified_parameter_types), return_type});
 
   return {{location},
           std::move(function_type),
@@ -476,42 +475,42 @@ Expression ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &,
 Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          PrimitiveTypeValue{{location}, PrimitiveType::I8},
+          PrimitiveTypeValue{PrimitiveType::I8},
           LiteralI8{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI32 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          PrimitiveTypeValue{{location}, PrimitiveType::I32},
+          PrimitiveTypeValue{PrimitiveType::I32},
           LiteralI32{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI64 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          PrimitiveTypeValue{{location}, PrimitiveType::I64},
+          PrimitiveTypeValue{PrimitiveType::I64},
           LiteralI64{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralBool &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          PrimitiveTypeValue{{location}, PrimitiveType::BOOL},
+          PrimitiveTypeValue{PrimitiveType::BOOL},
           LiteralBool{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralChar &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          PrimitiveTypeValue{{location}, PrimitiveType::CHAR},
+          PrimitiveTypeValue{PrimitiveType::CHAR},
           LiteralChar{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralUnit &,
                                          const core::SourceLocation &location) {
   return {{location},
-          PrimitiveTypeValue{{location}, PrimitiveType::UNIT},
+          PrimitiveTypeValue{PrimitiveType::UNIT},
           LiteralUnit{{location}}};
 }
 

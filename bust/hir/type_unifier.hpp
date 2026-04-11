@@ -273,7 +273,7 @@ struct TypeUnifier {
     }
 
     // Not a concrete type yet
-    return TypeVariable{{}, root};
+    return TypeVariable{root};
   }
 
   UnionFind m_union_find{};

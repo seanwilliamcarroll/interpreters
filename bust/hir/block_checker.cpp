@@ -29,8 +29,7 @@ Type BlockChecker::get_statement_type(const Statement &statement) {
   if (std::holds_alternative<Expression>(statement)) {
     return std::get<Expression>(statement).m_type;
   }
-  const auto &let_binding = std::get<LetBinding>(statement);
-  return PrimitiveTypeValue{{let_binding.m_location}, PrimitiveType::UNIT};
+  return PrimitiveTypeValue{PrimitiveType::UNIT};
 }
 
 Block BlockChecker::check_block(const ast::Block &block) {
@@ -49,9 +48,8 @@ Block BlockChecker::check_block(const ast::Block &block) {
           : std::nullopt;
 
   auto type = final_expression.has_value() ? final_expression.value().m_type
-              : !statements.empty()
-                  ? get_statement_type(statements.back())
-                  : PrimitiveTypeValue{{block.m_location}, PrimitiveType::UNIT};
+              : !statements.empty() ? get_statement_type(statements.back())
+                                    : PrimitiveTypeValue{PrimitiveType::UNIT};
 
   m_ctx.m_env.pop_scope();
   return {{block.m_location},
