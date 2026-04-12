@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/type_arena.hpp"
 #include <hir/types.hpp>
 #include <unordered_map>
 #include <variant>
@@ -19,39 +20,45 @@ namespace bust::hir {
 
 struct TypeVariableUpdater {
 
-  Type update(const auto &type) { return std::visit(*this, type); }
+  TypeId update(const TypeKind &type) { return std::visit(*this, type); }
 
-  Type operator()(const PrimitiveTypeValue &type) { return type; }
+  TypeId update(const TypeId &type) { return update(m_type_arena.get(type)); }
 
-  Type operator()(const TypeVariable &type) {
+  TypeId operator()(const PrimitiveTypeValue &type) {
+    return m_type_arena.intern(type);
+  }
+
+  TypeId operator()(const TypeVariable &type) {
     auto iter = m_new_mapping.find(type);
 
     if (iter == m_new_mapping.end()) {
-      return type;
+      return m_type_arena.intern(type);
     }
 
-    return iter->second;
+    return m_type_arena.intern(iter->second);
   }
 
-  Type operator()(const FunctionTypePtr &type) {
-    std::vector<Type> parameter_types;
-    parameter_types.reserve(type->m_argument_types.size());
-    for (const auto &parameter_type : type->m_argument_types) {
-      parameter_types.emplace_back(update(parameter_type));
+  TypeId operator()(const FunctionType &type) {
+    std::vector<TypeId> parameters;
+    parameters.reserve(type.m_parameters.size());
+    for (const auto &parameter : type.m_parameters) {
+      parameters.emplace_back(update(m_type_arena.get(parameter)));
     }
 
-    return std::make_shared<FunctionTypePtr::element_type>(
-        FunctionType{std::move(parameter_types), update(type->m_return_type)});
+    return m_type_arena.intern(FunctionType{
+        std::move(parameters), update(m_type_arena.get(type.m_return_type))});
   }
 
-  Type operator()(const NeverType &type) { return type; }
+  TypeId operator()(const NeverType &) { return m_type_arena.m_never; }
 
+  TypeArena &m_type_arena;
   const std::unordered_map<TypeVariable, TypeVariable> &m_new_mapping;
 };
 
 struct FreeTypeVariableCollector {
 
-  void collect(const auto &type) { std::visit(*this, type); }
+  void collect(const TypeKind &type) { std::visit(*this, type); }
+  void collect(const TypeId &type) { collect(m_type_arena.get(type)); }
 
   void operator()(const PrimitiveTypeValue &) {}
 
@@ -59,17 +66,18 @@ struct FreeTypeVariableCollector {
     m_free_type_variables.emplace_back(type);
   }
 
-  void operator()(const FunctionTypePtr &type) {
-    for (const auto &parameter_type : type->m_argument_types) {
-      collect(parameter_type);
+  void operator()(const FunctionType &type) {
+    for (const auto &parameter : type.m_parameters) {
+      collect(m_type_arena.get(parameter));
     }
 
-    collect(type->m_return_type);
+    collect(m_type_arena.get(type.m_return_type));
   }
 
   void operator()(const NeverType &) {}
 
-  std::vector<TypeVariable> m_free_type_variables;
+  TypeArena &m_type_arena;
+  std::vector<TypeVariable> m_free_type_variables{};
 };
 
 //****************************************************************************

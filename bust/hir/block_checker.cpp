@@ -25,11 +25,11 @@
 namespace bust::hir {
 //****************************************************************************
 
-Type BlockChecker::get_statement_type(const Statement &statement) {
+TypeId BlockChecker::get_statement_type(const Statement &statement) {
   if (std::holds_alternative<Expression>(statement)) {
     return std::get<Expression>(statement).m_type;
   }
-  return PrimitiveTypeValue{PrimitiveType::UNIT};
+  return m_ctx.m_type_arena.m_unit;
 }
 
 Block BlockChecker::check_block(const ast::Block &block) {
@@ -49,11 +49,11 @@ Block BlockChecker::check_block(const ast::Block &block) {
 
   auto type = final_expression.has_value() ? final_expression.value().m_type
               : !statements.empty() ? get_statement_type(statements.back())
-                                    : PrimitiveTypeValue{PrimitiveType::UNIT};
+                                    : m_ctx.m_type_arena.m_unit;
 
   m_ctx.m_env.pop_scope();
   return {{block.m_location},
-          std::move(type),
+          type,
           std::move(statements),
           std::move(final_expression)};
 }
@@ -71,7 +71,7 @@ Block BlockChecker::check_block_with_parameters(
 }
 
 Block BlockChecker::check_callable_body(
-    const std::vector<Identifier> &parameters, const Type &return_type,
+    const std::vector<Identifier> &parameters, const TypeId &return_type,
     const ast::Block &ast_body) {
   m_ctx.m_return_type_stack.push_back(return_type);
   auto body = check_block_with_parameters(parameters, ast_body);

@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include "ast/nodes.hpp"
+#include "hir/type_arena.hpp"
 #include <hir/types.hpp>
 #include <nodes.hpp>
 #include <operators.hpp>
@@ -33,7 +34,7 @@ struct ForExpr {};
 
 struct Identifier : public core::HasLocation {
   std::string m_name;
-  Type m_type;
+  TypeId m_type;
 };
 
 // --- Literals --------------------------------------------------------------
@@ -81,9 +82,9 @@ using CallExpr = CallExprBase<Expression>;
 using BinaryExpr = BinaryExprBase<Expression>;
 using UnaryExpr = UnaryExprBase<Expression>;
 using ReturnExpr = ReturnExprBase<Expression>;
-using CastExpr = CastExprBase<Expression, Type>;
+using CastExpr = CastExprBase<Expression, TypeId>;
 using IfExpr = IfExprBase<Expression, Block>;
-using LambdaExpr = LambdaExprBase<Identifier, Block, Type>;
+using LambdaExpr = LambdaExprBase<Identifier, Block, TypeId>;
 
 using ExprKind =
     std::variant<Identifier, LiteralUnit, LiteralI8, LiteralI32, LiteralI64,
@@ -94,7 +95,7 @@ using ExprKind =
                  std::unique_ptr<LambdaExpr>>;
 
 struct Expression : public core::HasLocation {
-  Type m_type;
+  TypeId m_type;
   ExprKind m_expression;
 };
 
@@ -105,7 +106,7 @@ using TopItem = std::variant<FunctionDef, LetBinding>;
 // --- Control flow ----------------------------------------------------------
 
 struct Block : public core::HasLocation {
-  Type m_type;
+  TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
 };
@@ -119,7 +120,7 @@ struct LetBinding : public core::HasLocation {
 
 struct FunctionDef : public core::HasLocation {
   std::string m_function_id;
-  FunctionTypePtr m_type;
+  TypeId m_type;
   std::vector<Identifier> m_parameters;
   Block m_body;
 };
@@ -127,7 +128,8 @@ struct FunctionDef : public core::HasLocation {
 // --- Program ---------------------------------------------------------------
 
 struct Program : public core::HasLocation {
-  std::vector<TopItem> m_top_items;
+  TypeArena m_type_arena{};
+  std::vector<TopItem> m_top_items{};
 };
 
 //****************************************************************************

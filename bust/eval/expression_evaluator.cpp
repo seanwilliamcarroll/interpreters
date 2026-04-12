@@ -145,7 +145,8 @@ Value ExpressionEvaluator::operator()(
   }
 
   auto new_environment = Environment(new_closure_env);
-  auto new_context = Context{.m_env = new_environment};
+  auto new_context =
+      Context{.m_env = new_environment, .m_type_arena = m_ctx.m_type_arena};
 
   auto final_value =
       ExpressionEvaluator{.m_ctx = new_context}.evaluate_function_body(
@@ -294,9 +295,9 @@ Value ExpressionEvaluator::operator()(
   auto value = evaluate(cast_expression->m_expression);
   // Do cast, we already type checked
 
-  return cast_op(
-      value,
-      std::get<hir::PrimitiveTypeValue>(cast_expression->m_new_type).m_type);
+  return cast_op(value, std::get<hir::PrimitiveTypeValue>(
+                            m_ctx.m_type_arena.get(cast_expression->m_new_type))
+                            .m_type);
 }
 
 Value ExpressionEvaluator::operator()(

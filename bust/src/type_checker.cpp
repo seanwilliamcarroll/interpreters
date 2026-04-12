@@ -6,13 +6,13 @@
 //*
 //****************************************************************************
 
+#include "hir/type_arena.hpp"
 #include <ast/nodes.hpp>
 #include <hir/context.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
 #include <source_location.hpp>
 #include <type_checker.hpp>
-#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -22,8 +22,11 @@ namespace bust {
 //****************************************************************************
 
 hir::Program TypeChecker::operator()(const ast::Program &program) {
-  auto context =
-      hir::Context{.m_env = m_env, .m_return_type_stack{}, .m_type_unifier{}};
+  auto type_arena = hir::TypeArena{};
+  auto context = hir::Context{.m_env = m_env,
+                              .m_type_arena = type_arena,
+                              .m_return_type_stack{},
+                              .m_type_unifier{type_arena}};
 
   // First pass to collect function signatures
   for (const auto &top_item : program.m_items) {
@@ -41,7 +44,7 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
     typed_items.push_back(std::visit(hir::TopItemChecker{context}, top_item));
   }
 
-  return {{program.m_location}, std::move(typed_items)};
+  return {{program.m_location}, std::move(type_arena), std::move(typed_items)};
 }
 
 //****************************************************************************

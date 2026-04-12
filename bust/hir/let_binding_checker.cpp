@@ -53,10 +53,10 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
 
   auto new_identifier = Identifier{{let_binding.m_variable.m_location},
                                    let_binding.m_variable.m_name,
-                                   std::move(unified_type)};
+                                   unified_type};
 
-  FreeTypeVariableCollector collector{};
-  std::visit(collector, new_identifier.m_type);
+  FreeTypeVariableCollector collector{m_ctx.m_type_arena};
+  collector.collect(new_identifier.m_type);
 
   // Store the new let binding
   m_ctx.m_env.define(new_identifier.m_name,

@@ -68,28 +68,30 @@ private:
         item);
   }
 
-  void dump_identifier(const Identifier &id) {
-    m_out << id.m_name << ": " << type_to_string(id.m_type);
+  void dump_identifier(const Identifier & // id
+  ) {
+    // m_out << id.m_name << ": " << type_to_string(id.m_type);
   }
 
-  void dump_func_def(const FunctionDef &f) {
-    indent();
-    m_out << "FunctionDef " << f.m_function_id << ": "
-          << type_to_string(Type(
-                 std::make_shared<FunctionTypePtr::element_type>(FunctionType{
-                     f.m_type->m_argument_types, f.m_type->m_return_type})))
-          << "\n";
-    IndentGuard g(*this);
-    indent();
-    m_out << "params(";
-    for (size_t i = 0; i < f.m_parameters.size(); ++i) {
-      if (i > 0) {
-        m_out << ", ";
-      }
-      dump_identifier(f.m_parameters[i]);
-    }
-    m_out << ")\n";
-    dump_block(f.m_body);
+  void dump_func_def(const FunctionDef & // f
+  ) {
+    // indent();
+    // m_out << "FunctionDef " << f.m_function_id << ": "
+    //       << type_to_string(Type(
+    //              std::make_shared<FunctionTypePtr::element_type>(FunctionType{
+    //                  f.m_type->m_argument_types, f.m_type->m_return_type})))
+    //       << "\n";
+    // IndentGuard g(*this);
+    // indent();
+    // m_out << "params(";
+    // for (size_t i = 0; i < f.m_parameters.size(); ++i) {
+    //   if (i > 0) {
+    //     m_out << ", ";
+    //   }
+    //   dump_identifier(f.m_parameters[i]);
+    // }
+    // m_out << ")\n";
+    // dump_block(f.m_body);
   }
 
   void dump_let_binding(const LetBinding &lb) {
@@ -127,90 +129,97 @@ private:
         s);
   }
 
-  void dump_expression(const Expression &e) {
-    indent();
-    m_out << "[" << type_to_string(e.m_type) << "] ";
-    // Reset indent for the inner content since we already indented
-    std::visit(
-        [this](const auto &v) {
-          using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, Identifier>) {
-            m_out << "Ident(" << v.m_name << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralI64>) {
-            m_out << "Int(" << v.m_value << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralBool>) {
-            m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralUnit>) {
-            m_out << "Unit\n";
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpr>>) {
-            m_out << "Binary(" << v->m_operator << ")\n";
-            IndentGuard g(*this);
-            dump_expression(v->m_lhs);
-            dump_expression(v->m_rhs);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<UnaryExpr>>) {
-            m_out << "Unary(" << v->m_operator << ")\n";
-            IndentGuard g(*this);
-            dump_expression(v->m_expression);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<CallExpr>>) {
-            m_out << "Call\n";
-            IndentGuard g(*this);
-            line("callee:");
-            {
-              IndentGuard g2(*this);
-              dump_expression(v->m_callee);
-            }
-            if (!v->m_arguments.empty()) {
-              line("args:");
-              IndentGuard g2(*this);
-              for (const auto &arg : v->m_arguments) {
-                dump_expression(arg);
-              }
-            }
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<IfExpr>>) {
-            m_out << "If\n";
-            IndentGuard g(*this);
-            line("cond:");
-            {
-              IndentGuard g2(*this);
-              dump_expression(v->m_condition);
-            }
-            line("then:");
-            {
-              IndentGuard g2(*this);
-              dump_block(v->m_then_block);
-            }
-            if (v->m_else_block.has_value()) {
-              line("else:");
-              IndentGuard g2(*this);
-              dump_block(*v->m_else_block);
-            }
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<Block>>) {
-            m_out << "Block\n";
-            IndentGuard g(*this);
-            dump_block(*v);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<ReturnExpr>>) {
-            m_out << "Return\n";
-            IndentGuard g(*this);
-            dump_expression(v->m_expression);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<CastExpr>>) {
-            m_out << "Cast\n";
-            IndentGuard g(*this);
-            dump_expression(v->m_expression);
-            m_out << " AS " << type_to_string(v->m_new_type);
-          } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
-            m_out << "Lambda(";
-            for (size_t i = 0; i < v->m_parameters.size(); ++i) {
-              if (i > 0) {
-                m_out << ", ";
-              }
-              dump_identifier(v->m_parameters[i]);
-            }
-            m_out << ")\n";
-            IndentGuard g(*this);
-            dump_block(v->m_body);
-          }
-        },
-        e.m_expression);
+  void dump_expression(const Expression & // e
+  ) {
+    // indent();
+    // m_out << "[" << type_to_string(e.m_type) << "] ";
+    // // Reset indent for the inner content since we already indented
+    // std::visit(
+    //     [this](const auto &v) {
+    //       using T = std::decay_t<decltype(v)>;
+    //       if constexpr (std::is_same_v<T, Identifier>) {
+    //         m_out << "Ident(" << v.m_name << ")\n";
+    //       } else if constexpr (std::is_same_v<T, LiteralI64>) {
+    //         m_out << "Int(" << v.m_value << ")\n";
+    //       } else if constexpr (std::is_same_v<T, LiteralBool>) {
+    //         m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";
+    //       } else if constexpr (std::is_same_v<T, LiteralUnit>) {
+    //         m_out << "Unit\n";
+    //       } else if constexpr (std::is_same_v<T,
+    //       std::unique_ptr<BinaryExpr>>) {
+    //         m_out << "Binary(" << v->m_operator << ")\n";
+    //         IndentGuard g(*this);
+    //         dump_expression(v->m_lhs);
+    //         dump_expression(v->m_rhs);
+    //       } else if constexpr (std::is_same_v<T, std::unique_ptr<UnaryExpr>>)
+    //       {
+    //         m_out << "Unary(" << v->m_operator << ")\n";
+    //         IndentGuard g(*this);
+    //         dump_expression(v->m_expression);
+    //       } else if constexpr (std::is_same_v<T, std::unique_ptr<CallExpr>>)
+    //       {
+    //         m_out << "Call\n";
+    //         IndentGuard g(*this);
+    //         line("callee:");
+    //         {
+    //           IndentGuard g2(*this);
+    //           dump_expression(v->m_callee);
+    //         }
+    //         if (!v->m_arguments.empty()) {
+    //           line("args:");
+    //           IndentGuard g2(*this);
+    //           for (const auto &arg : v->m_arguments) {
+    //             dump_expression(arg);
+    //           }
+    //         }
+    //       } else if constexpr (std::is_same_v<T, std::unique_ptr<IfExpr>>) {
+    //         m_out << "If\n";
+    //         IndentGuard g(*this);
+    //         line("cond:");
+    //         {
+    //           IndentGuard g2(*this);
+    //           dump_expression(v->m_condition);
+    //         }
+    //         line("then:");
+    //         {
+    //           IndentGuard g2(*this);
+    //           dump_block(v->m_then_block);
+    //         }
+    //         if (v->m_else_block.has_value()) {
+    //           line("else:");
+    //           IndentGuard g2(*this);
+    //           dump_block(*v->m_else_block);
+    //         }
+    //       } else if constexpr (std::is_same_v<T, std::unique_ptr<Block>>) {
+    //         m_out << "Block\n";
+    //         IndentGuard g(*this);
+    //         dump_block(*v);
+    //       } else if constexpr (std::is_same_v<T,
+    //       std::unique_ptr<ReturnExpr>>) {
+    //         m_out << "Return\n";
+    //         IndentGuard g(*this);
+    //         dump_expression(v->m_expression);
+    //       } else if constexpr (std::is_same_v<T, std::unique_ptr<CastExpr>>)
+    //       {
+    //         m_out << "Cast\n";
+    //         IndentGuard g(*this);
+    //         dump_expression(v->m_expression);
+    //         m_out << " AS " << type_to_string(v->m_new_type);
+    //       } else if constexpr (std::is_same_v<T,
+    //       std::unique_ptr<LambdaExpr>>) {
+    //         m_out << "Lambda(";
+    //         for (size_t i = 0; i < v->m_parameters.size(); ++i) {
+    //           if (i > 0) {
+    //             m_out << ", ";
+    //           }
+    //           dump_identifier(v->m_parameters[i]);
+    //         }
+    //         m_out << ")\n";
+    //         IndentGuard g(*this);
+    //         dump_block(v->m_body);
+    //       }
+    //     },
+    //     e.m_expression);
   }
 };
 

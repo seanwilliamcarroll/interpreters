@@ -48,7 +48,7 @@ inline size_t width_bits(LLVMType type) {
   }
 }
 
-inline LLVMType to_llvm_type(const hir::Type &type) {
+inline LLVMType to_llvm_type(const hir::TypeKind &type) {
   const auto *prim = std::get_if<hir::PrimitiveTypeValue>(&type);
   assert(prim && "codegen only handles primitive types for now");
   switch (prim->m_type) {

@@ -9,9 +9,6 @@
 //****************************************************************************
 
 #include <functional>
-#include <memory>
-#include <ostream>
-#include <string>
 #include <types.hpp>
 #include <variant>
 #include <vector>
@@ -20,137 +17,52 @@
 namespace bust::hir {
 //****************************************************************************
 
+template <typename T> inline void hash_combine(std::size_t &seed, const T &v) {
+  seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+using InnerTypeIdType = size_t;
+
+struct TypeId {
+  InnerTypeIdType m_id;
+  auto operator<=>(const TypeId &) const = default;
+};
+
 struct PrimitiveTypeValue {
   PrimitiveType m_type;
+  bool operator==(const PrimitiveTypeValue &) const = default;
 };
 
 struct TypeVariable {
-  // Not sure on needing a location
   size_t m_id;
+  bool operator==(const TypeVariable &) const = default;
 };
-
-struct FunctionType;
-
-using FunctionTypePtr = std::shared_ptr<const FunctionType>;
-
-struct NeverType {};
-
-// TODO: User defined types of some kind
-using Type =
-    std::variant<PrimitiveTypeValue, TypeVariable, FunctionTypePtr, NeverType>;
 
 struct FunctionType {
-  std::vector<Type> m_argument_types;
-  Type m_return_type;
+  std::vector<TypeId> m_parameters;
+  TypeId m_return_type;
+  bool operator==(const FunctionType &) const = default;
 };
 
-inline bool is_unit_type(const Type &type) {
-  return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
-         std::get<hir::PrimitiveTypeValue>(type).m_type == PrimitiveType::UNIT;
-}
+struct NeverType {
+  bool operator==(const NeverType &) const = default;
+};
 
-inline bool types_equal(const Type &lhs, const Type &rhs);
+using TypeKind =
+    std::variant<PrimitiveTypeValue, TypeVariable, FunctionType, NeverType>;
 
-inline bool operator==(const Type &lhs, const Type &rhs) {
-  return types_equal(lhs, rhs);
-}
-
-inline bool types_equal(const Type &lhs, const Type &rhs) {
-  if (lhs.index() != rhs.index()) {
-    return false;
-  }
+inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
+                                  const TypeKind &type) {
   return std::visit(
-      [&rhs](const auto &l) -> bool {
-        using T = std::decay_t<decltype(l)>;
-        const auto &r = std::get<T>(rhs);
+      [&](const auto &tk) -> bool {
+        using T = std::decay_t<decltype(tk)>;
         if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
-          return l.m_type == r.m_type;
-        } else if constexpr (std::is_same_v<T, TypeVariable>) {
-          return l.m_id == r.m_id;
-        } else if constexpr (std::is_same_v<T, FunctionTypePtr>) {
-          if (l->m_argument_types.size() != r->m_argument_types.size()) {
-            return false;
-          }
-          for (size_t i = 0; i < l->m_argument_types.size(); ++i) {
-            if (l->m_argument_types[i] != r->m_argument_types[i]) {
-              return false;
-            }
-          }
-          return l->m_return_type == r->m_return_type;
+          return bust::is_type_in_type_class(type_class, tk.m_type);
         } else {
-          // NeverType — same variant alternative means equal
-          return true;
-        }
-      },
-      lhs);
-}
-
-inline Type get_return_type(const Type &type) {
-  return std::visit(
-      [](const auto &t) -> Type {
-        using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, FunctionTypePtr>) {
-          return t->m_return_type;
-        } else {
-          return t;
+          return false;
         }
       },
       type);
-}
-
-struct TypeToStringConverter {
-  std::string convert(const auto &type) { return std::visit(*this, type); }
-
-  std::string operator()(const PrimitiveTypeValue &type) {
-    return to_string(type.m_type);
-  }
-
-  std::string operator()(const TypeVariable &type) {
-    return "?T" + std::to_string(type.m_id);
-  }
-
-  std::string operator()(const FunctionTypePtr &type) {
-    std::string result = "fn(";
-    for (size_t i = 0; i < type->m_argument_types.size(); ++i) {
-      if (i > 0) {
-        result += ", ";
-      }
-      result += convert(type->m_argument_types[i]);
-    }
-    result += ") -> ";
-    result += convert(type->m_return_type);
-    return result;
-  }
-
-  std::string operator()(const NeverType &) { return "!"; }
-};
-
-inline std::string type_to_string(const Type &type) {
-  return TypeToStringConverter{}.convert(type);
-}
-
-inline std::ostream &operator<<(std::ostream &out, const Type &type) {
-  return out << type_to_string(type);
-}
-
-inline std::string operator+(const std::string &lhs, const Type &type) {
-  return lhs + type_to_string(type);
-}
-
-inline std::string operator+(const Type &type, const std::string &rhs) {
-  return type_to_string(type) + rhs;
-}
-
-inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
-                                  const hir::Type &type) {
-  if (std::holds_alternative<NeverType>(type)) {
-    return true;
-  }
-  if (!std::holds_alternative<PrimitiveTypeValue>(type)) {
-    return false;
-  }
-  auto primitive = std::get<PrimitiveTypeValue>(type).m_type;
-  return is_type_in_type_class(type_class, primitive);
 }
 
 //****************************************************************************
@@ -159,9 +71,39 @@ inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
 
 namespace std {
 
+template <> struct hash<bust::hir::TypeId> {
+  size_t operator()(const bust::hir::TypeId &id) const noexcept {
+    return hash<bust::hir::InnerTypeIdType>{}(id.m_id);
+  }
+};
+
+template <> struct hash<bust::hir::PrimitiveTypeValue> {
+  size_t operator()(const bust::hir::PrimitiveTypeValue &id) const noexcept {
+    using InnerType = std::underlying_type_t<bust::PrimitiveType>;
+    return hash<InnerType>{}(static_cast<InnerType>(id.m_type));
+  }
+};
+
 template <> struct hash<bust::hir::TypeVariable> {
-  size_t operator()(const bust::hir::TypeVariable &type) const {
-    return std::hash<size_t>{}(type.m_id);
+  size_t operator()(const bust::hir::TypeVariable &id) const noexcept {
+    return hash<size_t>{}(id.m_id);
+  }
+};
+
+template <> struct hash<bust::hir::FunctionType> {
+  size_t operator()(const bust::hir::FunctionType &id) const noexcept {
+    size_t seed = 0;
+    for (const auto &parameter : id.m_parameters) {
+      bust::hir::hash_combine(seed, parameter);
+    }
+    bust::hir::hash_combine(seed, id.m_return_type);
+    return seed;
+  }
+};
+
+template <> struct hash<bust::hir::NeverType> {
+  size_t operator()(const bust::hir::NeverType &) const noexcept {
+    return hash<size_t>{}(0);
   }
 };
 

@@ -37,11 +37,14 @@ void TopItemChecker::collect_function_signature(
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            function_def.m_id.m_name + " with type: " + other_id.value().m_type,
+            function_def.m_id.m_name + " with type: " +
+            m_ctx.m_type_arena.to_string(other_id.value().m_type),
         function_def.m_id.m_location);
   }
 
-  auto return_type = TypeConverter{m_ctx}.get_type(function_def.m_return_type);
+  auto return_type_id =
+      TypeConverter{m_ctx}.get_type(function_def.m_return_type);
+  const auto &return_type = m_ctx.m_type_arena.get(return_type_id);
   if (std::holds_alternative<TypeVariable>(return_type)) {
     // Currently illegal
     throw core::CompilerException(
@@ -52,11 +55,10 @@ void TopItemChecker::collect_function_signature(
   auto [_, parameter_types] =
       TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
 
-  auto function_type = std::make_shared<FunctionTypePtr::element_type>(
-      FunctionType{std::move(parameter_types), std::move(return_type)});
+  auto function_type_id = m_ctx.m_type_arena.intern(
+      FunctionType{std::move(parameter_types), return_type_id});
 
-  Type function_type_as_type = std::move(function_type);
-  m_ctx.m_env.define(function_def.m_id.m_name, function_type_as_type);
+  m_ctx.m_env.define(function_def.m_id.m_name, function_type_id);
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
@@ -69,15 +71,16 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
                                       " in first pass!",
                                   function_def.m_location);
   }
-  auto function_type = maybe_function_type.value().m_type;
+  auto function_type_id = maybe_function_type.value().m_type;
 
   auto [parameters, _] =
       TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
 
   // Define the function in the environment before checking its body
   // (allows recursion)
-  const auto &expected_return_type =
-      std::get<FunctionTypePtr>(function_type)->m_return_type;
+  auto expected_return_type =
+      std::get<FunctionType>(m_ctx.m_type_arena.get(function_type_id))
+          .m_return_type;
 
   auto body = BlockChecker{m_ctx}.check_callable_body(
       parameters, expected_return_type, function_def.m_body);
@@ -92,7 +95,7 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
 
   return FunctionDef{{function_def.m_location},
                      function_def.m_id.m_name,
-                     std::move(std::get<FunctionTypePtr>(function_type)),
+                     function_type_id,
                      std::move(parameters),
                      std::move(body)};
 }

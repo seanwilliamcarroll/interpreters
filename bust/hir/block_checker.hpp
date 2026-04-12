@@ -20,12 +20,12 @@ namespace bust::hir {
 //****************************************************************************
 
 struct BlockChecker {
-  Type get_statement_type(const Statement &);
+  TypeId get_statement_type(const Statement &);
   Block check_block(const ast::Block &);
   Block check_block_with_parameters(const std::vector<Identifier> &parameters,
                                     const ast::Block &ast_block);
   Block check_callable_body(const std::vector<Identifier> &parameters,
-                            const Type &return_type,
+                            const TypeId &return_type,
                             const ast::Block &ast_body);
 
   Context &m_ctx;

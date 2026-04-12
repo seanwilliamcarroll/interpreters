@@ -22,7 +22,7 @@ namespace bust {
 //****************************************************************************
 
 std::string CodeGen::operator()(const hir::Program &program) {
-  auto context = codegen::Context{};
+  auto context = codegen::Context(program.m_type_arena);
 
   auto collector = codegen::TopItemDeclarationCollector{context};
   auto generator = codegen::TopItemGenerator{context};

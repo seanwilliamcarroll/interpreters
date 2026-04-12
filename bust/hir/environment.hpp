@@ -21,19 +21,7 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeScheme {
-  TypeScheme(Type type, std::vector<TypeVariable> free_variables)
-      : m_type(std::move(type)),
-        m_free_type_variables(std::move(free_variables)) {}
-
-  TypeScheme(const TypeScheme &to_copy)
-      : m_type(to_copy.m_type),
-        m_free_type_variables(to_copy.m_free_type_variables) {}
-
-  TypeScheme(TypeScheme &&to_move) noexcept
-      : m_type(std::move(to_move.m_type)),
-        m_free_type_variables(std::move(to_move.m_free_type_variables)) {}
-
-  Type m_type;
+  TypeId m_type;
   std::vector<TypeVariable> m_free_type_variables;
 };
 
@@ -51,12 +39,12 @@ struct Scope {
     return {iter->second};
   }
 
-  void define(const std::string &name, Type type) {
+  void define(const std::string &name, TypeId type_id) {
     auto iter = m_identifier_to_type.find(name);
     if (iter != m_identifier_to_type.end()) {
       m_identifier_to_type.erase(iter);
     }
-    m_identifier_to_type.emplace(name, TypeScheme{std::move(type), {}});
+    m_identifier_to_type.emplace(name, TypeScheme{type_id, {}});
   }
 
   void define(const std::string &name, TypeScheme type_scheme) {
@@ -99,8 +87,8 @@ struct Environment {
     return {};
   }
 
-  void define(const std::string &name, Type type) {
-    m_scopes.back().define(name, std::move(type));
+  void define(const std::string &name, TypeId type_id) {
+    m_scopes.back().define(name, type_id);
   }
 
   void define(const std::string &name, TypeScheme type_scheme) {
