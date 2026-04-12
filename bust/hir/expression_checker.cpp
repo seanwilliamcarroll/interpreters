@@ -369,9 +369,8 @@ Expression ExpressionChecker::operator()(
   auto expression = check_expression(return_expression->m_expression);
 
   if (m_ctx.m_return_type_stack.empty()) {
-    // Should never happen?
-    throw core::CompilerException("TypeChecker", "Shouldn't happen, right?",
-                                  location);
+    throw core::InternalCompilerError(
+        "return expression outside function body");
   }
 
   try {

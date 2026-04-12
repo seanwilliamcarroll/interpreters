@@ -15,6 +15,7 @@
 #include <codegen/parameter.hpp>
 #include <codegen/statement_generator.hpp>
 #include <codegen/symbol_table.hpp>
+#include <exceptions.hpp>
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
 #include <iterator>
@@ -240,13 +241,14 @@ LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
     return LLVMBinaryOperator::SREM;
 
   default:
-    throw std::runtime_error("UNIMPLEMENTED");
+    throw core::InternalCompilerError(
+        "unsupported binary operator in LLVM lowering");
   }
 }
 
 bool is_signed_type(const hir::TypeKind &type) {
   if (!std::holds_alternative<hir::PrimitiveTypeValue>(type)) {
-    throw std::runtime_error("UNIMPLEMENTED");
+    throw core::InternalCompilerError("signedness check on non-primitive type");
   }
   return true;
 }
@@ -285,7 +287,8 @@ to_llvm_compare_condition(BinaryOperator op, const hir::TypeKind &type) {
     }
 
   default:
-    throw std::runtime_error("UNIMPLEMENTED");
+    throw core::InternalCompilerError(
+        "unsupported compare operator in LLVM lowering");
   }
 }
 

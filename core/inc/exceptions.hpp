@@ -8,8 +8,10 @@
 #pragma once
 //****************************************************************************
 
+#include <source_location>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
 #include <source_location.hpp>
@@ -37,6 +39,15 @@ auto promote_to_compiler_exception(const char *phase,
     throw CompilerException(phase, error.what(), location);
   }
 }
+
+struct InternalCompilerError : std::logic_error {
+  InternalCompilerError(
+      std::string_view message,
+      std::source_location loc = std::source_location::current())
+      : std::logic_error(
+            std::string(loc.file_name()) + ":" + std::to_string(loc.line()) +
+            " in " + loc.function_name() + ": ICE: " + std::string(message)) {}
+};
 
 //****************************************************************************
 } // namespace core

@@ -39,9 +39,8 @@ int64_t Evaluator::operator()(const hir::Program &program) {
 
   if (!main_expr.has_value() ||
       !std::holds_alternative<eval::Closure>(main_expr.value())) {
-    throw core::CompilerException(
-        "Evaluator", "Compiler error, main should have been found in the env!",
-        program.m_location);
+    throw core::InternalCompilerError(
+        "main not found in environment after type checking");
   }
 
   auto main_closure = std::get<eval::Closure>(main_expr.value());
@@ -50,10 +49,8 @@ int64_t Evaluator::operator()(const hir::Program &program) {
       *main_closure.m_expression);
 
   if (!std::holds_alternative<eval::I64>(final_value)) {
-    throw core::CompilerException(
-        "Evaluator",
-        "Compiler error, main should have been type checked to return i64!",
-        program.m_location);
+    throw core::InternalCompilerError(
+        "main does not return i64 after type checking");
   }
 
   auto i64_value = std::get<eval::I64>(final_value);

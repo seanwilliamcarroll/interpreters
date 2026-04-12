@@ -46,10 +46,8 @@ void TopItemChecker::collect_function_signature(
       TypeConverter{m_ctx}.get_type(function_def.m_return_type);
   const auto &return_type = m_ctx.m_type_registry.get(return_type_id);
   if (std::holds_alternative<TypeVariable>(return_type)) {
-    // Currently illegal
-    throw core::CompilerException(
-        "TypeChecker", std::string("UNIMPLEMENTED") + " " + __PRETTY_FUNCTION__,
-        function_def.m_location);
+    throw core::InternalCompilerError(
+        "return type inference for top-level functions not yet implemented");
   }
 
   auto [_, parameter_types] =
@@ -65,11 +63,9 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
   // Should throw, this would be an error of the type checker itself
   auto maybe_function_type = m_ctx.m_env.lookup(function_def.m_id.m_name);
   if (!maybe_function_type.has_value()) {
-    throw core::CompilerException("TypeChecker",
-                                  "Compiler error: should have defined " +
-                                      function_def.m_id.m_name +
-                                      " in first pass!",
-                                  function_def.m_location);
+    throw core::InternalCompilerError(
+        "function '" + function_def.m_id.m_name +
+        "' not found after first pass signature collection");
   }
   auto function_type_id = maybe_function_type.value().m_type;
 

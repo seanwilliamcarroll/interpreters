@@ -46,8 +46,7 @@ std::string TypeRegistry::to_string(const TypeKind &type_kind) {
 }
 
 std::string TypeRegistry::to_string(TypeId type_id) {
-  return to_string(m_types.at(type_id.m_id)) +
-         " : ID: " + std::to_string(type_id.m_id);
+  return to_string(m_types.at(type_id.m_id));
 }
 
 //****************************************************************************

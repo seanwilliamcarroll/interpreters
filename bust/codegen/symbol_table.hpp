@@ -8,8 +8,7 @@
 #pragma once
 //****************************************************************************
 
-#include <cassert>
-#include <iostream>
+#include <exceptions.hpp>
 #include <ranges>
 #include <string>
 #include <unordered_map>
@@ -86,8 +85,8 @@ struct SymbolTable {
         return maybe_handle.value();
       }
     }
-    assert(false && "Shouldn't happen");
-    return {};
+    throw core::InternalCompilerError("symbol lookup failed for '" + name +
+                                      "'");
   }
 
   Handle next_ssa_temporary() { return TemporaryHandle{m_ssa_count++}; }

@@ -28,10 +28,8 @@ struct TypeConverter {
     return std::visit(*this, type);
   }
 
-  TypeId operator()(const ast::DefinedType &type) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("UNIMPLEMENTED") + " " + __PRETTY_FUNCTION__,
-        type.m_location);
+  TypeId operator()(const ast::DefinedType & /*type*/) {
+    throw core::InternalCompilerError("user-defined types not yet implemented");
   }
 
   TypeId operator()(const ast::PrimitiveTypeIdentifier &type) {
