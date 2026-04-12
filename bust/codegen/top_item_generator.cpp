@@ -48,16 +48,16 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
       std::back_inserter(parameters),
       [this](const hir::Identifier &parameter) -> Parameter {
         auto handle = m_ctx.symbols().define_parameter(parameter.m_name);
-        return Parameter{
-            .m_name = std::move(handle),
-            .m_type = to_llvm_type(m_ctx.type_arena().get(parameter.m_type))};
+        return Parameter{.m_name = std::move(handle),
+                         .m_type = to_llvm_type(
+                             m_ctx.type_registry().get(parameter.m_type))};
       });
 
   auto &function = m_ctx.module().new_function(FunctionDeclaration{
       .m_function_id = GlobalHandle{function_def.m_function_id},
-      .m_return_type = to_llvm_type(m_ctx.type_arena().get(
+      .m_return_type = to_llvm_type(m_ctx.type_registry().get(
           std::get<hir::FunctionType>(
-              m_ctx.type_arena().get(function_def.m_type))
+              m_ctx.type_registry().get(function_def.m_type))
               .m_return_type)),
       .m_parameters = std::move(parameters)});
   m_ctx.module().set_current_function(function);
@@ -67,9 +67,9 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
   // Wherever we are, we need to add this terminal to the final
   function.current_basic_block().add_terminal(
       ReturnInstruction{.m_value = return_value,
-                        .m_type = to_llvm_type(m_ctx.type_arena().get(
+                        .m_type = to_llvm_type(m_ctx.type_registry().get(
                             std::get<hir::FunctionType>(
-                                m_ctx.type_arena().get(function_def.m_type))
+                                m_ctx.type_registry().get(function_def.m_type))
                                 .m_return_type))});
 }
 

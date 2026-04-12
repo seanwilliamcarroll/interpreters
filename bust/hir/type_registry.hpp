@@ -1,7 +1,7 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Interning arena for HIR types.
+//*  Purpose : Interning registry for HIR types.
 //*
 //*
 //****************************************************************************
@@ -18,8 +18,8 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct TypeArena {
-  TypeArena()
+struct TypeRegistry {
+  TypeRegistry()
       : m_unit(intern(PrimitiveTypeValue{PrimitiveType::UNIT})),
         m_i8(intern(PrimitiveTypeValue{PrimitiveType::I8})),
         m_i32(intern(PrimitiveTypeValue{PrimitiveType::I32})),
@@ -27,13 +27,6 @@ struct TypeArena {
         m_char(intern(PrimitiveTypeValue{PrimitiveType::CHAR})),
         m_bool(intern(PrimitiveTypeValue{PrimitiveType::BOOL})),
         m_never(intern(NeverType{})) {}
-
-  // TypeId intern(const TypeKind& kind) const {
-  //   if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {
-  //     return iter->second;
-  //   }
-  //   throw std::runtime_error("Bad Lookup!");
-  // }
 
   TypeId intern(const TypeKind &kind) {
     if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {

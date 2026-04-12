@@ -55,7 +55,7 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
                                    let_binding.m_variable.m_name,
                                    unified_type};
 
-  FreeTypeVariableCollector collector{m_ctx.m_type_arena};
+  FreeTypeVariableCollector collector{m_ctx.m_type_registry};
   collector.collect(new_identifier.m_type);
 
   // Store the new let binding

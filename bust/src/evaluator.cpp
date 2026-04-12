@@ -26,7 +26,7 @@ namespace bust {
 //****************************************************************************
 
 int64_t Evaluator::operator()(const hir::Program &program) {
-  auto context = eval::Context{{}, program.m_type_arena};
+  auto context = eval::Context{{}, program.m_type_registry};
 
   // Essentially go through program and load functions into env
   for (const auto &top_item : program.m_top_items) {

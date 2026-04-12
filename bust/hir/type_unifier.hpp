@@ -8,7 +8,7 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/type_arena.hpp"
+#include "hir/type_registry.hpp"
 #include <hir/types.hpp>
 #include <hir/union_find.hpp>
 #include <ranges>
@@ -25,15 +25,15 @@ struct TypeUnifier {
   TypeVariable new_type_var() {
     auto new_id = m_union_find.add_node();
     auto new_type_var = TypeVariable{.m_id = new_id};
-    m_type_arena.intern(new_type_var);
+    m_type_registry.intern(new_type_var);
     return new_type_var;
   }
 
   void unify(const TypeId &type_id_a, const TypeId &type_id_b) {
-    const auto &type_a = m_type_arena.get(type_id_a);
-    const auto &type_b = m_type_arena.get(type_id_b);
-    if (type_id_a == m_type_arena.m_never ||
-        type_id_b == m_type_arena.m_never) {
+    const auto &type_a = m_type_registry.get(type_id_a);
+    const auto &type_b = m_type_registry.get(type_id_b);
+    if (type_id_a == m_type_registry.m_never ||
+        type_id_b == m_type_registry.m_never) {
       return;
     }
 
@@ -61,15 +61,15 @@ struct TypeUnifier {
     }
 
     throw std::runtime_error(
-        "Tried to unify concrete types: " + m_type_arena.to_string(type_a) +
-        " and " + m_type_arena.to_string(type_b));
+        "Tried to unify concrete types: " + m_type_registry.to_string(type_a) +
+        " and " + m_type_registry.to_string(type_b));
   }
 
   void unify(const FunctionType &type_a, const FunctionType &type_b) {
     if (type_a.m_parameters.size() != type_b.m_parameters.size()) {
       throw std::runtime_error(std::string("Tried to unify concrete types: ") +
-                               m_type_arena.to_string(type_a) + " and " +
-                               m_type_arena.to_string(type_b));
+                               m_type_registry.to_string(type_a) + " and " +
+                               m_type_registry.to_string(type_b));
     }
 
     for (const auto &[parameter_type_a, parameter_type_b] :
@@ -86,13 +86,13 @@ struct TypeUnifier {
   }
 
   void unify(const TypeVariable &type_a, const TypeId &type_id_b) {
-    const auto &type_b = m_type_arena.get(type_id_b);
+    const auto &type_b = m_type_registry.get(type_id_b);
     if (std::holds_alternative<TypeVariable>(type_b)) {
       unify(type_a, std::get<TypeVariable>(type_b));
       return;
     }
 
-    if (type_id_b == m_type_arena.m_never) {
+    if (type_id_b == m_type_registry.m_never) {
       return;
     }
 
@@ -105,9 +105,9 @@ struct TypeUnifier {
       const auto &concrete_a = iter_a->second;
       if (concrete_a != type_id_b) {
         throw std::runtime_error("Could not resolve type variable " +
-                                 m_type_arena.to_string(type_a) + " (" +
-                                 m_type_arena.to_string(concrete_a) + ") and " +
-                                 m_type_arena.to_string(type_b));
+                                 m_type_registry.to_string(type_a) + " (" +
+                                 m_type_registry.to_string(concrete_a) +
+                                 ") and " + m_type_registry.to_string(type_b));
       }
       // This root has already been unified, satisfying all constraints
       return;
@@ -122,7 +122,7 @@ struct TypeUnifier {
         throw std::runtime_error("Could not resolve type class constraints "
                                  "from resolved type_class: " +
                                  resolved_type_class + " and concrete type: " +
-                                 m_type_arena.to_string(type_b));
+                                 m_type_registry.to_string(type_b));
       }
       // We satisfied the constraint, move to add new concrete type
     }
@@ -139,10 +139,10 @@ struct TypeUnifier {
     auto iter = m_resolved_type_id.find(root);
     if (iter != m_resolved_type_id.end()) {
       const auto &resolved_type_id = iter->second;
-      const auto &resolved_type = m_type_arena.get(resolved_type_id);
+      const auto &resolved_type = m_type_registry.get(resolved_type_id);
       if (!is_type_in_type_class(type_class, resolved_type)) {
         throw std::runtime_error("Could not resolve concrete type: " +
-                                 m_type_arena.to_string(resolved_type) +
+                                 m_type_registry.to_string(resolved_type) +
                                  " and type_class: " + type_class);
       }
       // All good, constraint satisfied
@@ -195,10 +195,11 @@ struct TypeUnifier {
       const auto &concrete_b = iter_b->second;
       if (concrete_a != concrete_b) {
         throw std::runtime_error("Could not resolve type variables " +
-                                 m_type_arena.to_string(type_a) + " (" +
-                                 m_type_arena.to_string(concrete_a) + ") and " +
-                                 m_type_arena.to_string(type_b) + "(" +
-                                 m_type_arena.to_string(concrete_b) + ")");
+                                 m_type_registry.to_string(type_a) + " (" +
+                                 m_type_registry.to_string(concrete_a) +
+                                 ") and " + m_type_registry.to_string(type_b) +
+                                 "(" + m_type_registry.to_string(concrete_b) +
+                                 ")");
       }
       // Their concrete types must match, not sure if a bug or not
       return;
@@ -249,13 +250,13 @@ struct TypeUnifier {
         const auto &concrete_type_id = (iter_a != m_resolved_type_id.end())
                                            ? iter_a->second
                                            : iter_b->second;
-        const auto &concrete_type = m_type_arena.get(concrete_type_id);
+        const auto &concrete_type = m_type_registry.get(concrete_type_id);
         if (!is_type_in_type_class(merged_type_class, concrete_type)) {
           // We can't satisfy the merged constraint with this concrete class
           throw std::runtime_error("Could not resolve type class constraints "
                                    "from merged type_class: " +
                                    merged_type_class + " and concrete type: " +
-                                   m_type_arena.to_string(concrete_type));
+                                   m_type_registry.to_string(concrete_type));
         }
       }
     }
@@ -276,7 +277,7 @@ struct TypeUnifier {
   }
 
   TypeId find(const TypeId &type_id) {
-    const auto &type = m_type_arena.get(type_id);
+    const auto &type = m_type_registry.get(type_id);
     if (std::holds_alternative<TypeVariable>(type)) {
       return find(std::get<TypeVariable>(type));
     }
@@ -293,10 +294,10 @@ struct TypeUnifier {
     }
 
     // Not a concrete type yet
-    return m_type_arena.intern(TypeVariable{root});
+    return m_type_registry.intern(TypeVariable{root});
   }
 
-  TypeArena &m_type_arena;
+  TypeRegistry &m_type_registry;
   UnionFind m_union_find{};
   std::unordered_map<size_t, TypeId> m_resolved_type_id{};
   std::unordered_map<size_t, PrimitiveTypeClass> m_resolved_type_class{};

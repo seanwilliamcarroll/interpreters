@@ -35,7 +35,7 @@ struct TypeConverter {
   }
 
   TypeId operator()(const ast::PrimitiveTypeIdentifier &type) {
-    return m_ctx.m_type_arena.intern(PrimitiveTypeValue{type.m_type});
+    return m_ctx.m_type_registry.intern(PrimitiveTypeValue{type.m_type});
   }
 
   TypeId operator()(const std::unique_ptr<ast::FunctionTypeIdentifier> &type) {
@@ -45,7 +45,7 @@ struct TypeConverter {
       param_types.push_back(convert(param));
     }
     auto return_type = convert(type->m_return_type);
-    return m_ctx.m_type_arena.intern(
+    return m_ctx.m_type_registry.intern(
         FunctionType{std::move(param_types), return_type});
   }
 
@@ -57,7 +57,7 @@ struct TypeConverter {
     if (identifier.m_type.has_value()) {
       return std::visit((*this), identifier.m_type.value());
     }
-    return m_ctx.m_type_arena.intern(m_ctx.m_type_unifier.new_type_var());
+    return m_ctx.m_type_registry.intern(m_ctx.m_type_unifier.new_type_var());
   }
 
   Identifier convert_parameter(const ast::Identifier &identifier) {

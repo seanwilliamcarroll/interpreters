@@ -8,7 +8,7 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/type_arena.hpp"
+#include "hir/type_registry.hpp"
 #include <hir/environment.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/type_visitors.hpp>
@@ -26,14 +26,14 @@ struct Context {
       new_mapping.emplace(old_type_variable, m_type_unifier.new_type_var());
     }
 
-    return TypeVariableUpdater{m_type_arena, new_mapping}.update(
+    return TypeVariableUpdater{m_type_registry, new_mapping}.update(
         type_scheme.m_type);
   }
 
   Environment &m_env;
-  TypeArena &m_type_arena;
+  TypeRegistry &m_type_registry;
   std::vector<TypeId> m_return_type_stack{};
-  TypeUnifier m_type_unifier{m_type_arena};
+  TypeUnifier m_type_unifier{m_type_registry};
 };
 
 //****************************************************************************

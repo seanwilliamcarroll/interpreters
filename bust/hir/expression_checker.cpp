@@ -86,16 +86,6 @@ PrimitiveTypeClass required_type_class_for_binary_op(BinaryOperator op) {
   }
 }
 
-bool ExpressionChecker::is_type_allowed(PrimitiveType required,
-                                        const hir::TypeId &type_id) const {
-  if (type_id == m_ctx.m_type_arena.m_never) {
-    return true;
-  }
-  const auto &type = m_ctx.m_type_arena.get(type_id);
-  return std::holds_alternative<hir::PrimitiveTypeValue>(type) &&
-         std::get<hir::PrimitiveTypeValue>(type).m_type == required;
-}
-
 Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
                                          const core::SourceLocation &location) {
   auto maybe_type = m_ctx.m_env.lookup(identifier.m_name);
@@ -123,10 +113,11 @@ Expression ExpressionChecker::operator()(
 
   auto callee_type_id = callee.m_type;
   if (!std::holds_alternative<FunctionType>(
-          m_ctx.m_type_arena.get(callee_type_id))) {
+          m_ctx.m_type_registry.get(callee_type_id))) {
     throw core::CompilerException(
         "TypeChecker",
-        "Expression of type: " + m_ctx.m_type_arena.to_string(callee_type_id) +
+        "Expression of type: " +
+            m_ctx.m_type_registry.to_string(callee_type_id) +
             " is not callable!",
         callee.m_location);
   }
@@ -141,7 +132,7 @@ Expression ExpressionChecker::operator()(
   // check the body
 
   auto function_type =
-      std::get<FunctionType>(m_ctx.m_type_arena.get(callee_type_id));
+      std::get<FunctionType>(m_ctx.m_type_registry.get(callee_type_id));
 
   if (function_type.m_parameters.size() != arguments.size()) {
     throw core::CompilerException(
@@ -159,8 +150,8 @@ Expression ExpressionChecker::operator()(
       throw core::CompilerException(
           "TypeChecker",
           "Type unification error!\n Parameter at index: " +
-              std::to_string(index) +
-              " expects type: " + m_ctx.m_type_arena.to_string(parameter_type) +
+              std::to_string(index) + " expects type: " +
+              m_ctx.m_type_registry.to_string(parameter_type) +
               " Unification error: " + error.what(),
           argument.m_location);
     }
@@ -191,7 +182,7 @@ Expression ExpressionChecker::operator()(
   }
 
   auto type_id = m_ctx.m_type_unifier.find(lhs.m_type);
-  const auto &type = m_ctx.m_type_arena.get(type_id);
+  const auto &type = m_ctx.m_type_registry.get(type_id);
 
   // Apply operator constraint
   auto required =
@@ -202,7 +193,7 @@ Expression ExpressionChecker::operator()(
     } else if (!is_type_in_type_class(required, type)) {
       throw core::CompilerException("TypeChecker",
                                     "Type " +
-                                        m_ctx.m_type_arena.to_string(type) +
+                                        m_ctx.m_type_registry.to_string(type) +
                                         " is disallowed by binary operator: " +
                                         binary_expression->m_operator,
                                     location);
@@ -214,7 +205,7 @@ Expression ExpressionChecker::operator()(
   }
 
   auto final_type = is_comparison_op(binary_expression->m_operator)
-                        ? m_ctx.m_type_arena.m_bool
+                        ? m_ctx.m_type_registry.m_bool
                         : m_ctx.m_type_unifier.find(type_id);
 
   return {{location},
@@ -227,7 +218,7 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::UnaryExpr> &unary_expression,
     const core::SourceLocation &location) {
   auto expression = check_expression(unary_expression->m_expression);
-  const auto &expression_type = m_ctx.m_type_arena.get(expression.m_type);
+  const auto &expression_type = m_ctx.m_type_registry.get(expression.m_type);
 
   auto required_type_class =
       required_type_class_for_unary_op(unary_expression->m_operator);
@@ -240,7 +231,7 @@ Expression ExpressionChecker::operator()(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
               " does not accept type: " +
-              m_ctx.m_type_arena.to_string(expression.m_type),
+              m_ctx.m_type_registry.to_string(expression.m_type),
           location);
     }
   } catch (std::runtime_error &error) {
@@ -267,7 +258,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   auto condition = check_expression(if_expression->m_condition);
 
   try {
-    m_ctx.m_type_unifier.unify(condition.m_type, m_ctx.m_type_arena.m_bool);
+    m_ctx.m_type_unifier.unify(condition.m_type, m_ctx.m_type_registry.m_bool);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
@@ -287,7 +278,8 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
     // Just then branch
 
     try {
-      m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, then_block.m_type);
+      m_ctx.m_type_unifier.unify(m_ctx.m_type_registry.m_unit,
+                                 then_block.m_type);
     } catch (std::runtime_error &error) {
       throw core::CompilerException(
           "TypeChecker",
@@ -295,7 +287,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
     }
 
     return {{location},
-            m_ctx.m_type_arena.m_unit,
+            m_ctx.m_type_registry.m_unit,
             std::make_unique<IfExpr>(IfExpr{
                 std::move(resolved_condition), std::move(then_block), {}})};
   }
@@ -311,7 +303,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
         location);
   }
 
-  auto type = m_ctx.m_type_arena.m_never == then_block.m_type
+  auto type = m_ctx.m_type_registry.m_never == then_block.m_type
                   ? m_ctx.m_type_unifier.find(else_block.m_type)
                   : m_ctx.m_type_unifier.find(then_block.m_type);
 
@@ -338,19 +330,19 @@ Expression ExpressionChecker::operator()(
   auto hir_expression = check_expression(cast_expression->m_expression);
 
   auto original_type_id = m_ctx.m_type_unifier.find(hir_expression.m_type);
-  const auto &original_type = m_ctx.m_type_arena.get(original_type_id);
+  const auto &original_type = m_ctx.m_type_registry.get(original_type_id);
 
   auto new_type_id =
       std::visit(TypeConverter{m_ctx}, cast_expression->m_new_type);
-  const auto &new_type = m_ctx.m_type_arena.get(new_type_id);
+  const auto &new_type = m_ctx.m_type_registry.get(new_type_id);
 
   if (!std::holds_alternative<PrimitiveTypeValue>(original_type) ||
       !std::holds_alternative<PrimitiveTypeValue>(new_type)) {
     throw core::CompilerException(
         "TypeChecker",
         "Cannot cast an expression with type: " +
-            m_ctx.m_type_arena.to_string(original_type) +
-            " to type: " + m_ctx.m_type_arena.to_string(new_type),
+            m_ctx.m_type_registry.to_string(original_type) +
+            " to type: " + m_ctx.m_type_registry.to_string(new_type),
         location);
   }
 
@@ -401,7 +393,7 @@ Expression ExpressionChecker::operator()(
 
   return {
       {location},
-      m_ctx.m_type_arena.m_never,
+      m_ctx.m_type_registry.m_never,
       std::make_unique<ReturnExpr>(ReturnExpr{std::move(final_expression)})};
 }
 
@@ -416,7 +408,7 @@ Expression ExpressionChecker::operator()(
       lambda_expression->m_return_type.has_value()
           ? TypeConverter{m_ctx}.get_type(
                 lambda_expression->m_return_type.value())
-          : m_ctx.m_type_arena.intern(m_ctx.m_type_unifier.new_type_var());
+          : m_ctx.m_type_registry.intern(m_ctx.m_type_unifier.new_type_var());
 
   auto body =
       lambda_expression->m_return_type.has_value()
@@ -446,7 +438,7 @@ Expression ExpressionChecker::operator()(
   unified_parameter_types.reserve(parameter_types.size());
   for (const auto &[parameter, parameter_type_id] :
        std::views::zip(parameters, parameter_types)) {
-    const auto &parameter_type = m_ctx.m_type_arena.get(parameter_type_id);
+    const auto &parameter_type = m_ctx.m_type_registry.get(parameter_type_id);
     if (!std::holds_alternative<TypeVariable>(parameter_type)) {
       // TODO Could be more efficient than reconstructing
       unified_parameters.emplace_back(Identifier{
@@ -462,7 +454,7 @@ Expression ExpressionChecker::operator()(
     unified_parameter_types.push_back(unified_type);
   }
 
-  auto function_type_id = m_ctx.m_type_arena.intern(
+  auto function_type_id = m_ctx.m_type_registry.intern(
       FunctionType{std::move(unified_parameter_types), return_type_id});
 
   return {{location},
@@ -486,41 +478,41 @@ Expression ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &,
 Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_arena.m_i8,
+          m_ctx.m_type_registry.m_i8,
           LiteralI8{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI32 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_arena.m_i32,
+          m_ctx.m_type_registry.m_i32,
           LiteralI32{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI64 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_arena.m_i64,
+          m_ctx.m_type_registry.m_i64,
           LiteralI64{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralBool &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_arena.m_bool,
+          m_ctx.m_type_registry.m_bool,
           LiteralBool{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralChar &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_arena.m_char,
+          m_ctx.m_type_registry.m_char,
           LiteralChar{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralUnit &,
                                          const core::SourceLocation &location) {
-  return {{location}, m_ctx.m_type_arena.m_unit, LiteralUnit{{location}}};
+  return {{location}, m_ctx.m_type_registry.m_unit, LiteralUnit{{location}}};
 }
 
 //****************************************************************************

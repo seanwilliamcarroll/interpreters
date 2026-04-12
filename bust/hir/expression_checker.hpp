@@ -49,8 +49,6 @@ struct ExpressionChecker {
   Expression operator()(const ast::LiteralChar &, const core::SourceLocation &);
   Expression operator()(const ast::LiteralUnit &, const core::SourceLocation &);
 
-  bool is_type_allowed(PrimitiveType, const hir::TypeId &) const;
-
   Context &m_ctx;
 };
 

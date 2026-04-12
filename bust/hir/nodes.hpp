@@ -9,7 +9,7 @@
 //****************************************************************************
 
 #include "ast/nodes.hpp"
-#include "hir/type_arena.hpp"
+#include "hir/type_registry.hpp"
 #include <hir/types.hpp>
 #include <nodes.hpp>
 #include <operators.hpp>
@@ -128,7 +128,7 @@ struct FunctionDef : public core::HasLocation {
 // --- Program ---------------------------------------------------------------
 
 struct Program : public core::HasLocation {
-  TypeArena m_type_arena{};
+  TypeRegistry m_type_registry{};
   std::vector<TopItem> m_top_items{};
 };
 

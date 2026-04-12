@@ -6,7 +6,7 @@
 //*
 //****************************************************************************
 
-#include "hir/type_arena.hpp"
+#include "hir/type_registry.hpp"
 #include <ast/nodes.hpp>
 #include <hir/context.hpp>
 #include <hir/nodes.hpp>
@@ -22,11 +22,11 @@ namespace bust {
 //****************************************************************************
 
 hir::Program TypeChecker::operator()(const ast::Program &program) {
-  auto type_arena = hir::TypeArena{};
+  auto type_registry = hir::TypeRegistry{};
   auto context = hir::Context{.m_env = m_env,
-                              .m_type_arena = type_arena,
+                              .m_type_registry = type_registry,
                               .m_return_type_stack{},
-                              .m_type_unifier{type_arena}};
+                              .m_type_unifier{type_registry}};
 
   // First pass to collect function signatures
   for (const auto &top_item : program.m_items) {
@@ -44,7 +44,8 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
     typed_items.push_back(std::visit(hir::TopItemChecker{context}, top_item));
   }
 
-  return {{program.m_location}, std::move(type_arena), std::move(typed_items)};
+  return {
+      {program.m_location}, std::move(type_registry), std::move(typed_items)};
 }
 
 //****************************************************************************

@@ -8,7 +8,7 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/type_arena.hpp"
+#include "hir/type_registry.hpp"
 #include <eval/environment.hpp>
 
 //****************************************************************************
@@ -17,7 +17,7 @@ namespace bust::eval {
 
 struct Context {
   Environment m_env{};
-  const hir::TypeArena &m_type_arena;
+  const hir::TypeRegistry &m_type_registry;
 };
 
 //****************************************************************************

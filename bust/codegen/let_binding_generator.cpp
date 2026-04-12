@@ -29,14 +29,14 @@ void LetBindingGenerator::operator()(const hir::LetBinding &let_binding) {
 
   m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = identifier_handle,
-                        .m_type = to_llvm_type(m_ctx.type_arena().get(
+                        .m_type = to_llvm_type(m_ctx.type_registry().get(
                             let_binding.m_expression.m_type))});
 
   m_ctx.block().add_instruction(StoreInstruction{
       .m_destination = identifier_handle,
       .m_source = value_handle,
-      .m_type =
-          to_llvm_type(m_ctx.type_arena().get(let_binding.m_expression.m_type)),
+      .m_type = to_llvm_type(
+          m_ctx.type_registry().get(let_binding.m_expression.m_type)),
   });
 }
 
