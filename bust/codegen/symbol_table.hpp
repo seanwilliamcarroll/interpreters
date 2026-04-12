@@ -10,6 +10,7 @@
 
 #include <exceptions.hpp>
 #include <ranges>
+#include <scope_guard.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -97,12 +98,7 @@ private:
   size_t m_ssa_count = 1;
 };
 
-struct ScopeGuard {
-  ScopeGuard(SymbolTable &table) : m_table(table) { m_table.push_scope(); }
-  ~ScopeGuard() { m_table.pop_scope(); }
-
-  SymbolTable &m_table;
-};
+using ScopeGuard = core::ScopeGuard<SymbolTable>;
 
 //****************************************************************************
 } // namespace bust::codegen

@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <scope_guard.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -72,6 +73,8 @@ struct Environment {
 private:
   std::shared_ptr<Scope> m_scope;
 };
+
+using ScopeGuard = core::ScopeGuard<Environment>;
 
 //****************************************************************************
 } // namespace bust::eval

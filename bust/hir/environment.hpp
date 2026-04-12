@@ -11,6 +11,7 @@
 #include <hir/types.hpp>
 #include <optional>
 #include <ranges>
+#include <scope_guard.hpp>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -98,6 +99,8 @@ struct Environment {
 private:
   std::vector<Scope> m_scopes{};
 };
+
+using ScopeGuard = core::ScopeGuard<Environment>;
 
 //****************************************************************************
 } // namespace bust::hir

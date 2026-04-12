@@ -85,14 +85,6 @@ Value ExpressionEvaluator::operator()(
   return evaluate(*block);
 }
 
-struct ScopeGuard {
-  // More standard way of protecting the environment from leaking from return
-  // statements throwing
-  ScopeGuard(Environment &env) : m_env(env) { m_env.push_scope(); }
-  ~ScopeGuard() { m_env.pop_scope(); }
-  Environment &m_env;
-};
-
 Value ExpressionEvaluator::operator()(const hir::Block &block) {
   ScopeGuard guard(m_ctx.m_env);
 

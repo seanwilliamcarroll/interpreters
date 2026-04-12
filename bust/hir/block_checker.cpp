@@ -33,7 +33,7 @@ TypeId BlockChecker::get_statement_type(const Statement &statement) {
 }
 
 Block BlockChecker::check_block(const ast::Block &block) {
-  m_ctx.m_env.push_scope();
+  ScopeGuard guard(m_ctx.m_env);
 
   std::vector<Statement> statements;
   statements.reserve(block.m_statements.size());
@@ -51,7 +51,6 @@ Block BlockChecker::check_block(const ast::Block &block) {
               : !statements.empty() ? get_statement_type(statements.back())
                                     : m_ctx.m_type_registry.m_unit;
 
-  m_ctx.m_env.pop_scope();
   return {{block.m_location},
           type,
           std::move(statements),
@@ -60,14 +59,11 @@ Block BlockChecker::check_block(const ast::Block &block) {
 
 Block BlockChecker::check_block_with_parameters(
     const std::vector<Identifier> &parameters, const ast::Block &ast_block) {
-  m_ctx.m_env.push_scope();
+  ScopeGuard guard(m_ctx.m_env);
   for (const auto &parameter : parameters) {
     m_ctx.m_env.define(parameter.m_name, parameter.m_type);
   }
-  auto block = check_block(ast_block);
-  m_ctx.m_env.pop_scope();
-
-  return block;
+  return check_block(ast_block);
 }
 
 Block BlockChecker::check_callable_body(
