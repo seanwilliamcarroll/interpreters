@@ -250,7 +250,18 @@ bool is_signed_type(const hir::TypeKind &type) {
   if (!std::holds_alternative<hir::PrimitiveTypeValue>(type)) {
     throw core::InternalCompilerError("signedness check on non-primitive type");
   }
-  return true;
+  auto primitive_type = std::get<hir::PrimitiveTypeValue>(type).m_type;
+  switch (primitive_type) {
+  case PrimitiveType::I8:
+  case PrimitiveType::I32:
+  case PrimitiveType::I64:
+    return true;
+  case PrimitiveType::BOOL:
+  case PrimitiveType::CHAR:
+  case PrimitiveType::UNIT:
+    throw core::InternalCompilerError(
+        "Should never had checked signedness on non numeric type");
+  }
 }
 
 LLVMIntegerCompareCondition
