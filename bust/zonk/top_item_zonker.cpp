@@ -42,8 +42,11 @@ TopItemZonker::zonk(hir::FunctionDeclaration function_declaration) {
   }
 
   // Insert the return value into the new type registry
-  auto zonked_return_type_id =
-      m_ctx.find_and_register(function_declaration.m_type);
+  auto zonked_type_id = m_ctx.find_and_register(function_declaration.m_type);
+
+  const auto &zonked_return_type_id =
+      std::get<hir::FunctionType>(m_ctx.m_new_type_registry.get(zonked_type_id))
+          .m_return_type;
 
   // Reconstruct the zonked function type
   auto zonked_function_type =
@@ -71,7 +74,10 @@ hir::TopItem TopItemZonker::operator()(hir::FunctionDef function_def) {
 
 hir::TopItem
 TopItemZonker::operator()(hir::ExternFunctionDeclaration extern_func) {
-  return extern_func;
+  auto zonked_signature = zonk(std::move(extern_func.m_signature));
+
+  return hir::ExternFunctionDeclaration{{extern_func.m_location},
+                                        std::move(zonked_signature)};
 }
 
 hir::TopItem TopItemZonker::operator()(hir::LetBinding let_binding) {
