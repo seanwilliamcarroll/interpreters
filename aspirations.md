@@ -20,16 +20,27 @@ on each other are marked with arrows (→ means "enables").
 ## New Types and FFI
 
 - [x] char, i8, i32, and cast expressions (landed)
-- [ ] Extern function declarations (syntax, parsing, type checking)
-- [ ] `putchar` via libc
+- [x] Extern function declarations (syntax, parsing, type checking, codegen)
+- [x] `putchar` via libc
 
   Extern declarations → putchar
+
+## Aggregate Types
+
+- [ ] Arrays (fixed-size)
+- [ ] Tuples
+- [ ] Strings (likely built on arrays or a dedicated type)
+
+## User-Defined Types
+
+- [ ] Structs (declaration, field access, construction)
+- [ ] Enums / tagged unions
 
 ## Codegen (LLVM IR)
 
 - [ ] Lambda expressions in LLVM IR generation
-- [ ] Non-i64 integer types in codegen
-- [ ] Cast expressions in codegen
+- [x] Non-i64 integer types in codegen
+- [x] Cast expressions in codegen
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
 
 ## HIR Representation
