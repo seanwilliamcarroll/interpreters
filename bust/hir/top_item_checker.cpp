@@ -1,34 +1,31 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Top-level item checker implementation.
 //*
 //*
 //****************************************************************************
 
-#include "hir/top_item_checker.hpp"
-
+#include <exceptions.hpp>
+#include <hir/block_checker.hpp>
+#include <hir/context.hpp>
+#include <hir/environment.hpp>
+#include <hir/let_binding_checker.hpp>
+#include <hir/nodes.hpp>
+#include <hir/top_item_checker.hpp>
+#include <hir/type_converter.hpp>
+#include <hir/type_unifier.hpp>
+#include <hir/types.hpp>
 #include <memory>
 #include <optional>
+#include <source_location.hpp>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include "exceptions.hpp"
-#include "hir/block_checker.hpp"
-#include "hir/context.hpp"
-#include "hir/environment.hpp"
-#include "hir/let_binding_checker.hpp"
-#include "hir/nodes.hpp"
-#include "hir/type_converter.hpp"
-#include "hir/type_unifier.hpp"
-#include "hir/types.hpp"
-#include "source_location.hpp"
+#include <ast/nodes.hpp>
 
 //****************************************************************************
 namespace bust::hir {
@@ -40,52 +37,46 @@ void TopItemChecker::collect_function_signature(
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            function_def.m_id.m_name +
-            " with type: " + other_id.value().m_type + " at " +
-            type_location(other_id.value().m_type),
+            function_def.m_id.m_name + " with type: " +
+            m_ctx.m_type_registry.to_string(other_id.value().m_type),
         function_def.m_id.m_location);
   }
 
-  auto return_type = TypeConverter{m_ctx}.get_type(function_def.m_return_type);
+  auto return_type_id =
+      TypeConverter{m_ctx}.get_type(function_def.m_return_type);
+  const auto &return_type = m_ctx.m_type_registry.get(return_type_id);
   if (std::holds_alternative<TypeVariable>(return_type)) {
-    // Currently illegal
-    throw core::CompilerException(
-        "TypeChecker", std::string("UNIMPLEMENTED") + " " + __PRETTY_FUNCTION__,
-        type_location(return_type));
+    throw core::InternalCompilerError(
+        "return type inference for top-level functions not yet implemented");
   }
 
   auto [_, parameter_types] =
       TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
 
-  auto function_type =
-      std::make_unique<FunctionType>(FunctionType{{function_def.m_location},
-                                                  std::move(parameter_types),
-                                                  std::move(return_type)});
+  auto function_type_id = m_ctx.m_type_registry.intern(
+      FunctionType{std::move(parameter_types), return_type_id});
 
-  Type function_type_as_type = std::move(function_type);
-  m_ctx.m_env.define(function_def.m_id.m_name,
-                     clone_type(function_type_as_type));
+  m_ctx.m_env.define(function_def.m_id.m_name, function_type_id);
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
   // Should throw, this would be an error of the type checker itself
   auto maybe_function_type = m_ctx.m_env.lookup(function_def.m_id.m_name);
   if (!maybe_function_type.has_value()) {
-    throw core::CompilerException("TypeChecker",
-                                  "Compiler error: should have defined " +
-                                      function_def.m_id.m_name +
-                                      " in first pass!",
-                                  function_def.m_location);
+    throw core::InternalCompilerError(
+        "function '" + function_def.m_id.m_name +
+        "' not found after first pass signature collection");
   }
-  auto function_type = clone_type(maybe_function_type.value().m_type);
+  auto function_type_id = maybe_function_type.value().m_type;
 
   auto [parameters, _] =
       TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
 
   // Define the function in the environment before checking its body
   // (allows recursion)
-  const auto &expected_return_type =
-      std::get<std::unique_ptr<FunctionType>>(function_type)->m_return_type;
+  auto expected_return_type =
+      std::get<FunctionType>(m_ctx.m_type_registry.get(function_type_id))
+          .m_return_type;
 
   auto body = BlockChecker{m_ctx}.check_callable_body(
       parameters, expected_return_type, function_def.m_body);
@@ -98,12 +89,11 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
         function_def.m_location);
   }
 
-  return FunctionDef{
-      {function_def.m_location},
-      function_def.m_id.m_name,
-      std::move(std::get<std::unique_ptr<FunctionType>>(function_type)),
-      std::move(parameters),
-      std::move(body)};
+  return FunctionDef{{function_def.m_location},
+                     function_def.m_id.m_name,
+                     function_type_id,
+                     std::move(parameters),
+                     std::move(body)};
 }
 
 TopItem TopItemChecker::operator()(const ast::LetBinding &let_binding) {

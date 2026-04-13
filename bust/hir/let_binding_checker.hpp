@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Let binding checker.
 //*
 //*
@@ -11,9 +8,9 @@
 #pragma once
 //****************************************************************************
 
-#include "ast/nodes.hpp"
-#include "hir/context.hpp"
-#include "hir/nodes.hpp"
+#include <ast/nodes.hpp>
+#include <hir/context.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::hir {

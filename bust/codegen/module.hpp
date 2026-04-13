@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Module representation for the codegen pass.
 //*
 //*
@@ -11,7 +8,7 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/function.hpp"
+#include <codegen/function.hpp>
 #include <memory>
 #include <vector>
 

@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Typed AST node definitions for bust.
 //*
 //*
@@ -11,68 +8,63 @@
 #pragma once
 //****************************************************************************
 
+#include "ast/nodes.hpp"
+#include "hir/type_registry.hpp"
 #include <hir/types.hpp>
+#include <nodes.hpp>
 #include <operators.hpp>
 #include <optional>
 #include <vector>
 
 //****************************************************************************
 namespace bust::hir {
-using bust::BinaryOperator;
-using bust::UnaryOperator;
-using core::HasLocation;
 //****************************************************************************
 
 // --- Forward declarations --------------------------------------------------
 
+struct Expression;
 struct FunctionDef;
 struct LetBinding;
 struct Block;
-struct IfExpr;
-struct CallExpr;
-struct CastExpr;
-struct BinaryExpr;
-struct UnaryExpr;
-struct ReturnExpr;
-struct LambdaExpr;
 // TODO
 struct WhileExpr {};
 struct ForExpr {};
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public HasLocation {
+struct Identifier : public core::HasLocation {
   std::string m_name;
-  Type m_type;
+  TypeId m_type;
 };
 
 // --- Literals --------------------------------------------------------------
 
-template <PrimitiveType InternalType> struct Literal : public HasLocation {
+template <PrimitiveType InternalType>
+struct Literal : public core::HasLocation {
   static constexpr PrimitiveType m_type = InternalType;
 };
 
-template <> struct Literal<PrimitiveType::BOOL> : public HasLocation {
+template <> struct Literal<PrimitiveType::BOOL> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::BOOL;
   bool m_value;
 };
 
-template <> struct Literal<PrimitiveType::CHAR> : public HasLocation {
+template <> struct Literal<PrimitiveType::CHAR> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::CHAR;
   char m_value;
 };
 
-template <> struct Literal<PrimitiveType::I8> : public HasLocation {
+template <> struct Literal<PrimitiveType::I8> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I8;
   int8_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I32> : public HasLocation {
+template <> struct Literal<PrimitiveType::I32> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I32;
   int32_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I64> : public HasLocation {
+template <> struct Literal<PrimitiveType::I64> : public core::HasLocation {
   static constexpr PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
@@ -86,6 +78,14 @@ using LiteralUnit = Literal<PrimitiveType::UNIT>;
 
 // --- Core type aliases -----------------------------------------------------
 
+using CallExpr = CallExprBase<Expression>;
+using BinaryExpr = BinaryExprBase<Expression>;
+using UnaryExpr = UnaryExprBase<Expression>;
+using ReturnExpr = ReturnExprBase<Expression>;
+using CastExpr = CastExprBase<Expression, TypeId>;
+using IfExpr = IfExprBase<Expression, Block>;
+using LambdaExpr = LambdaExprBase<Identifier, Block, TypeId>;
+
 using ExprKind =
     std::variant<Identifier, LiteralUnit, LiteralI8, LiteralI32, LiteralI64,
                  LiteralBool, LiteralChar, std::unique_ptr<Block>,
@@ -94,8 +94,8 @@ using ExprKind =
                  std::unique_ptr<ReturnExpr>, std::unique_ptr<CastExpr>,
                  std::unique_ptr<LambdaExpr>>;
 
-struct Expression : public HasLocation {
-  Type m_type;
+struct Expression : public core::HasLocation {
+  TypeId m_type;
   ExprKind m_expression;
 };
 
@@ -103,70 +103,33 @@ using Statement = std::variant<Expression, LetBinding>;
 
 using TopItem = std::variant<FunctionDef, LetBinding>;
 
-// --- Expressions -----------------------------------------------------------
-
-struct CallExpr : public HasLocation {
-  Expression m_callee;
-  std::vector<Expression> m_arguments;
-};
-
-struct BinaryExpr : public HasLocation {
-  BinaryOperator m_operator;
-  Expression m_lhs;
-  Expression m_rhs;
-};
-
-struct UnaryExpr : public HasLocation {
-  UnaryOperator m_operator;
-  Expression m_expression;
-};
-
-struct ReturnExpr : public HasLocation {
-  Expression m_expression;
-};
-
-struct CastExpr : public HasLocation {
-  Expression m_expression;
-  Type m_new_type;
-};
-
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public HasLocation {
-  Type m_type;
+struct Block : public core::HasLocation {
+  TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
 };
 
-struct IfExpr : public HasLocation {
-  Expression m_condition;
-  Block m_then_branch;
-  std::optional<Block> m_else_branch;
-};
-
 // --- Bindings & definitions ------------------------------------------------
 
-struct LetBinding : public HasLocation {
+struct LetBinding : public core::HasLocation {
   Identifier m_variable;
   Expression m_expression;
 };
 
-struct LambdaExpr : public HasLocation {
-  std::vector<Identifier> m_parameters;
-  Block m_body;
-};
-
-struct FunctionDef : public HasLocation {
+struct FunctionDef : public core::HasLocation {
   std::string m_function_id;
-  std::unique_ptr<FunctionType> m_type;
+  TypeId m_type;
   std::vector<Identifier> m_parameters;
   Block m_body;
 };
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public HasLocation {
-  std::vector<TopItem> m_top_items;
+struct Program : public core::HasLocation {
+  TypeRegistry m_type_registry{};
+  std::vector<TopItem> m_top_items{};
 };
 
 //****************************************************************************

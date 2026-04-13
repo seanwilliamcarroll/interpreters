@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Runtime environment for bust tree-walking evaluator.
 //*
 //*
@@ -11,11 +8,12 @@
 #pragma once
 //****************************************************************************
 
-#include "eval/values.hpp"
 #include <cassert>
+#include <eval/values.hpp>
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <scope_guard.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -56,7 +54,7 @@ struct Environment {
 
   void push_scope() { m_scope = std::make_shared<Scope>(m_scope); }
 
-  void pop_scope() {
+  void pop_scope() noexcept {
     assert(m_scope->m_parent_scope != nullptr &&
            "Cannot pop scope, already at global scope!");
     m_scope = m_scope->m_parent_scope;
@@ -75,6 +73,8 @@ struct Environment {
 private:
   std::shared_ptr<Scope> m_scope;
 };
+
+using ScopeGuard = core::ScopeGuard<Environment>;
 
 //****************************************************************************
 } // namespace bust::eval

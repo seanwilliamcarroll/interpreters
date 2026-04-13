@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Implementation of the bust driver class.
 //*
 //*
@@ -28,7 +25,7 @@
 #include <utility>
 #include <validate_main.hpp>
 
-#include "lexer.hpp"
+#include <lexer.hpp>
 
 //****************************************************************************
 

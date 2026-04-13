@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Type environment for bust type checker.
 //*
 //*
@@ -11,10 +8,11 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/types.hpp"
+#include <cassert>
+#include <hir/types.hpp>
 #include <optional>
 #include <ranges>
-#include <stdexcept>
+#include <scope_guard.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -24,19 +22,7 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeScheme {
-  TypeScheme(Type type, std::vector<TypeVariable> free_variables)
-      : m_type(std::move(type)),
-        m_free_type_variables(std::move(free_variables)) {}
-
-  TypeScheme(const TypeScheme &to_copy)
-      : m_type(clone_type(to_copy.m_type)),
-        m_free_type_variables(to_copy.m_free_type_variables) {}
-
-  TypeScheme(TypeScheme &&to_move) noexcept
-      : m_type(std::move(to_move.m_type)),
-        m_free_type_variables(std::move(to_move.m_free_type_variables)) {}
-
-  Type m_type;
+  TypeId m_type;
   std::vector<TypeVariable> m_free_type_variables;
 };
 
@@ -54,20 +40,12 @@ struct Scope {
     return {iter->second};
   }
 
-  void define(const std::string &name, Type type) {
-    auto iter = m_identifier_to_type.find(name);
-    if (iter != m_identifier_to_type.end()) {
-      m_identifier_to_type.erase(iter);
-    }
-    m_identifier_to_type.emplace(name, TypeScheme{std::move(type), {}});
+  void define(const std::string &name, TypeId type_id) {
+    m_identifier_to_type.insert_or_assign(name, TypeScheme{type_id, {}});
   }
 
   void define(const std::string &name, TypeScheme type_scheme) {
-    auto iter = m_identifier_to_type.find(name);
-    if (iter != m_identifier_to_type.end()) {
-      m_identifier_to_type.erase(iter);
-    }
-    m_identifier_to_type.emplace(name, std::move(type_scheme));
+    m_identifier_to_type.insert_or_assign(name, std::move(type_scheme));
   }
 
 private:
@@ -85,10 +63,8 @@ struct Environment {
   Environment() { m_scopes.emplace_back(); }
 
   void push_scope() { m_scopes.emplace_back(); }
-  void pop_scope() {
-    if (m_scopes.size() == 1) {
-      throw std::runtime_error("Cannot pop scope, already at global scope!");
-    }
+  void pop_scope() noexcept {
+    assert(m_scopes.size() > 1 && "Cannot pop scope, already at global scope!");
     m_scopes.pop_back();
   }
 
@@ -102,8 +78,8 @@ struct Environment {
     return {};
   }
 
-  void define(const std::string &name, Type type) {
-    m_scopes.back().define(name, std::move(type));
+  void define(const std::string &name, TypeId type_id) {
+    m_scopes.back().define(name, type_id);
   }
 
   void define(const std::string &name, TypeScheme type_scheme) {
@@ -113,6 +89,8 @@ struct Environment {
 private:
   std::vector<Scope> m_scopes{};
 };
+
+using ScopeGuard = core::ScopeGuard<Environment>;
 
 //****************************************************************************
 } // namespace bust::hir

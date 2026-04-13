@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : bust::Parser implementation
 //*
 //*
@@ -20,30 +17,29 @@
 #include <variant>
 #include <vector>
 
-#include "ast/types.hpp"
-#include "lexer_interface.hpp"
-#include "operators.hpp"
-#include "source_location.hpp"
-#include "token.hpp"
-#include "tokens.hpp"
-#include "types.hpp"
+#include <ast/types.hpp>
+#include <lexer_interface.hpp>
+#include <operators.hpp>
+#include <source_location.hpp>
+#include <token.hpp>
+#include <tokens.hpp>
+#include <types.hpp>
 
 //****************************************************************************
 namespace bust {
-using namespace ast;
 //****************************************************************************
 
 // --- Public ----------------------------------------------------------------
 
-Program Parser::parse() { return parse_program(); }
+ast::Program Parser::parse() { return parse_program(); }
 
 // --- Top-level -------------------------------------------------------------
 
-Program Parser::parse_program() {
+ast::Program Parser::parse_program() {
 
   auto starting_location = peek().get_location();
 
-  std::vector<TopItem> top_items;
+  std::vector<ast::TopItem> top_items;
 
   while (peek().get_token_type() != TokenType::EOF_TOKEN) {
     top_items.push_back(parse_top_item());
@@ -52,7 +48,7 @@ Program Parser::parse_program() {
   return {{.m_location = starting_location}, std::move(top_items)};
 }
 
-TopItem Parser::parse_top_item() {
+ast::TopItem Parser::parse_top_item() {
   if (peek().get_token_type() == TokenType::FN) {
     return parse_func_def();
   }
@@ -85,12 +81,12 @@ Parser::parse_location_name_from_identifier(const char *error_message) {
   };
 }
 
-std::unique_ptr<FunctionTypeIdentifier>
+std::unique_ptr<ast::FunctionTypeIdentifier>
 Parser::parse_function_type_identifier() {
   auto original_location = peek().get_location();
   expect(TokenType::FN, __FUNCTION__);
 
-  std::vector<TypeIdentifier> argument_types;
+  std::vector<ast::TypeIdentifier> argument_types;
   if (peek().get_token_type() == TokenType::LPAREN) {
     expect(TokenType::LPAREN, __FUNCTION__);
 
@@ -110,54 +106,56 @@ Parser::parse_function_type_identifier() {
 
   auto return_type = parse_type_identifier();
 
-  return std::make_unique<FunctionTypeIdentifier>(FunctionTypeIdentifier{
-      {original_location}, std::move(argument_types), std::move(return_type)});
+  return std::make_unique<ast::FunctionTypeIdentifier>(
+      ast::FunctionTypeIdentifier{{original_location},
+                                  std::move(argument_types),
+                                  std::move(return_type)});
 }
 
-TypeIdentifier Parser::parse_type_identifier() {
+ast::TypeIdentifier Parser::parse_type_identifier() {
   switch (peek().get_token_type()) {
   case TokenType::UNIT:
-    return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::UNIT};
+    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
+                                        PrimitiveType::UNIT};
   case TokenType::BOOL:
-    return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::BOOL};
+    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
+                                        PrimitiveType::BOOL};
   case TokenType::CHAR:
-    return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::CHAR};
+    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
+                                        PrimitiveType::CHAR};
   case TokenType::I8:
-    return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::I8};
+    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
+                                        PrimitiveType::I8};
   case TokenType::I32:
-    return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::I32};
+    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
+                                        PrimitiveType::I32};
   case TokenType::I64:
-    return PrimitiveTypeIdentifier{{advance()->get_location()},
-                                   PrimitiveType::I64};
+    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
+                                        PrimitiveType::I64};
   case TokenType::FN:
     return parse_function_type_identifier();
   default:
     const auto [location, identifier_name] =
         parse_location_name_from_identifier("Malformed type annotation");
 
-    return DefinedType{
+    return ast::DefinedType{
         {location},
         identifier_name,
     };
   }
 }
 
-TypeIdentifier Parser::parse_type_annotation() {
+ast::TypeIdentifier Parser::parse_type_annotation() {
   expect(TokenType::COLON, __FUNCTION__);
   return parse_type_identifier();
 }
 
-TypeIdentifier Parser::parse_function_return_type() {
+ast::TypeIdentifier Parser::parse_function_return_type() {
   expect(TokenType::ARROW, __FUNCTION__);
   return parse_type_identifier();
 }
 
-Identifier Parser::parse_non_annotated_identifier() {
+ast::Identifier Parser::parse_non_annotated_identifier() {
   const auto [location, identifier_name] =
       parse_location_name_from_identifier("Malformed parameter");
 
@@ -169,7 +167,7 @@ Identifier Parser::parse_non_annotated_identifier() {
   return {{location}, identifier_name, std::nullopt};
 }
 
-Identifier Parser::parse_possibly_annotated_identifier() {
+ast::Identifier Parser::parse_possibly_annotated_identifier() {
   const auto [location, identifier_name] =
       parse_location_name_from_identifier("Malformed parameter");
 
@@ -180,23 +178,22 @@ Identifier Parser::parse_possibly_annotated_identifier() {
   return {{location}, identifier_name, std::move(type)};
 }
 
-Identifier Parser::parse_annotated_identifier() {
+ast::Identifier Parser::parse_annotated_identifier() {
   const auto [location, identifier_name] =
       parse_location_name_from_identifier("Malformed parameter");
 
   auto type = parse_type_annotation();
-  ;
 
   return {{location}, identifier_name, std::move(type)};
 }
 
-FunctionDef Parser::parse_func_def() {
+ast::FunctionDef Parser::parse_func_def() {
   auto original_location = peek().get_location();
   expect(TokenType::FN, __FUNCTION__);
 
   auto function_id = parse_non_annotated_identifier();
 
-  std::vector<Identifier> parameters{};
+  std::vector<ast::Identifier> parameters{};
   if (peek().get_token_type() == TokenType::UNIT) {
     advance();
   } else {
@@ -209,7 +206,7 @@ FunctionDef Parser::parse_func_def() {
 
   auto return_type = (peek().get_token_type() == TokenType::ARROW)
                          ? parse_function_return_type()
-                         : PrimitiveTypeIdentifier{
+                         : ast::PrimitiveTypeIdentifier{
                                {function_id.m_location},
                                PrimitiveType::UNIT,
                            };
@@ -223,7 +220,7 @@ FunctionDef Parser::parse_func_def() {
           std::move(body)};
 }
 
-LetBinding Parser::parse_let_binding() {
+ast::LetBinding Parser::parse_let_binding() {
   auto original_location = peek().get_location();
   expect(TokenType::LET, __FUNCTION__);
 
@@ -238,8 +235,8 @@ LetBinding Parser::parse_let_binding() {
   return {{original_location}, std::move(identifier), std::move(body)};
 }
 
-std::vector<Identifier> Parser::parse_param_list() {
-  std::vector<Identifier> parameters;
+std::vector<ast::Identifier> Parser::parse_param_list() {
+  std::vector<ast::Identifier> parameters;
   while (peek().get_token_type() != TokenType::RPAREN) {
     parameters.push_back(parse_annotated_identifier());
     if (peek().get_token_type() != TokenType::RPAREN) {
@@ -249,8 +246,8 @@ std::vector<Identifier> Parser::parse_param_list() {
   return parameters;
 }
 
-std::vector<Identifier> Parser::parse_lambda_param_list() {
-  std::vector<Identifier> parameters;
+std::vector<ast::Identifier> Parser::parse_lambda_param_list() {
+  std::vector<ast::Identifier> parameters;
   while (peek().get_token_type() != TokenType::PIPE) {
     // Could force all or nothing, either they all have an annotation or none of
     // them
@@ -265,18 +262,22 @@ std::vector<Identifier> Parser::parse_lambda_param_list() {
 
 // --- Blocks ----------------------------------------------------------------
 
-bool is_expression_no_semicolon(const Expression &expression) {
-  return std::holds_alternative<std::unique_ptr<IfExpr>>(expression) ||
-         std::holds_alternative<std::unique_ptr<Block>>(expression) ||
-         std::holds_alternative<std::unique_ptr<WhileExpr>>(expression) ||
-         std::holds_alternative<std::unique_ptr<ForExpr>>(expression);
+bool is_expression_no_semicolon(const ast::Expression &expression) {
+  return std::holds_alternative<std::unique_ptr<ast::IfExpr>>(
+             expression.m_expression) ||
+         std::holds_alternative<std::unique_ptr<ast::Block>>(
+             expression.m_expression) ||
+         std::holds_alternative<std::unique_ptr<ast::WhileExpr>>(
+             expression.m_expression) ||
+         std::holds_alternative<std::unique_ptr<ast::ForExpr>>(
+             expression.m_expression);
 }
 
-Block Parser::parse_block() {
+ast::Block Parser::parse_block() {
   auto original_location = peek().get_location();
   expect(TokenType::LBRACE, __FUNCTION__);
 
-  std::vector<Statement> statements;
+  std::vector<ast::Statement> statements;
   while (peek().get_token_type() != TokenType::RBRACE) {
     if (peek().get_token_type() == TokenType::LET) {
       auto let_binding = parse_let_binding();
@@ -311,9 +312,9 @@ Block Parser::parse_block() {
 
 // --- Expression precedence chain -------------------------------------------
 
-Expression Parser::parse_expression() { return parse_logic_or(); }
+ast::Expression Parser::parse_expression() { return parse_logic_or(); }
 
-Expression Parser::parse_binary_expression(
+ast::Expression Parser::parse_binary_expression(
     const std::unordered_map<TokenType, BinaryOperator> &possible_mappings,
     auto next_clause_to_parse) {
   auto original_location = peek().get_location();
@@ -325,30 +326,28 @@ Expression Parser::parse_binary_expression(
   while (iter != possible_mappings.end()) {
     auto op = iter->second;
     advance();
-    expression =
-        std::make_unique<BinaryExpr>(BinaryExpr{{original_location},
-                                                op,
-                                                std::move(expression),
-                                                next_clause_to_parse()});
+    expression = {{{original_location}},
+                  std::make_unique<ast::BinaryExpr>(ast::BinaryExpr{
+                      op, std::move(expression), next_clause_to_parse()})};
     iter = possible_mappings.find(peek().get_token_type());
   }
 
   return expression;
 }
 
-Expression Parser::parse_logic_or() {
+ast::Expression Parser::parse_logic_or() {
   return parse_binary_expression(
       {{TokenType::OR_OR, BinaryOperator::LOGICAL_OR}},
       [this] { return parse_logic_and(); });
 }
 
-Expression Parser::parse_logic_and() {
+ast::Expression Parser::parse_logic_and() {
   return parse_binary_expression(
       {{TokenType::AND_AND, BinaryOperator::LOGICAL_AND}},
       [this] { return parse_equality(); });
 }
 
-Expression Parser::parse_equality() {
+ast::Expression Parser::parse_equality() {
   return parse_binary_expression(
       {
           {TokenType::EQ_EQ, BinaryOperator::EQ},
@@ -357,7 +356,7 @@ Expression Parser::parse_equality() {
       [this] { return parse_comparison(); });
 }
 
-Expression Parser::parse_comparison() {
+ast::Expression Parser::parse_comparison() {
   return parse_binary_expression(
       {
           {TokenType::LESS, BinaryOperator::LT},
@@ -368,7 +367,7 @@ Expression Parser::parse_comparison() {
       [this] { return parse_add_sub(); });
 }
 
-Expression Parser::parse_add_sub() {
+ast::Expression Parser::parse_add_sub() {
   return parse_binary_expression(
       {
           {TokenType::PLUS, BinaryOperator::PLUS},
@@ -377,7 +376,7 @@ Expression Parser::parse_add_sub() {
       [this] { return parse_mult_div_mod(); });
 }
 
-Expression Parser::parse_mult_div_mod() {
+ast::Expression Parser::parse_mult_div_mod() {
   return parse_binary_expression(
       {
           {TokenType::STAR, BinaryOperator::MULTIPLIES},
@@ -387,7 +386,7 @@ Expression Parser::parse_mult_div_mod() {
       [this] { return parse_unary_pre(); });
 }
 
-Expression Parser::parse_unary_pre() {
+ast::Expression Parser::parse_unary_pre() {
   const static std::unordered_map<TokenType, UnaryOperator> possible_mappings =
       {
           {TokenType::MINUS, UnaryOperator::MINUS},
@@ -399,14 +398,15 @@ Expression Parser::parse_unary_pre() {
     auto original_location = peek().get_location();
     auto op = iter->second;
     advance();
-    return std::make_unique<UnaryExpr>(
-        UnaryExpr{{original_location}, op, parse_cast_expr()});
+    return {{original_location},
+            std::make_unique<ast::UnaryExpr>(
+                ast::UnaryExpr{op, parse_cast_expr()})};
   }
 
   return parse_cast_expr();
 }
 
-Expression Parser::parse_cast_expr() {
+ast::Expression Parser::parse_cast_expr() {
   auto original_location = peek().get_location();
 
   auto postfix = parse_postfix();
@@ -416,14 +416,16 @@ Expression Parser::parse_cast_expr() {
 
     auto casting_type = parse_type_identifier();
 
-    postfix = std::make_unique<CastExpr>(CastExpr{
-        {original_location}, std::move(postfix), std::move(casting_type)});
+    postfix =
+        ast::Expression{{original_location},
+                        std::make_unique<ast::CastExpr>(ast::CastExpr{
+                            std::move(postfix), std::move(casting_type)})};
   }
 
   return postfix;
 }
 
-Expression Parser::parse_postfix() {
+ast::Expression Parser::parse_postfix() {
   auto original_location = peek().get_location();
 
   auto expression = parse_primary();
@@ -432,14 +434,16 @@ Expression Parser::parse_postfix() {
          peek().get_token_type() == TokenType::UNIT) {
     if (peek().get_token_type() == TokenType::UNIT) {
       advance();
-      expression = std::make_unique<CallExpr>(
-          CallExpr{{original_location}, std::move(expression), {}});
+      expression =
+          ast::Expression{{original_location},
+                          std::make_unique<ast::CallExpr>(
+                              ast::CallExpr{std::move(expression), {}})};
       continue;
     }
 
     expect(TokenType::LPAREN, __FUNCTION__);
 
-    std::vector<Expression> arguments;
+    std::vector<ast::Expression> arguments;
     while (peek().get_token_type() != TokenType::RPAREN) {
       arguments.push_back(parse_expression());
 
@@ -449,14 +453,16 @@ Expression Parser::parse_postfix() {
     }
 
     expect(TokenType::RPAREN, __FUNCTION__);
-    expression = std::make_unique<CallExpr>(CallExpr{
-        {original_location}, std::move(expression), std::move(arguments)});
+    expression =
+        ast::Expression{{original_location},
+                        std::make_unique<ast::CallExpr>(ast::CallExpr{
+                            std::move(expression), std::move(arguments)})};
   }
 
   return expression;
 }
 
-Expression Parser::parse_primary() {
+ast::Expression Parser::parse_primary() {
   switch (peek().get_token_type()) {
   case TokenType::INT_LITERAL:
   case TokenType::CHAR_LITERAL:
@@ -464,16 +470,20 @@ Expression Parser::parse_primary() {
   case TokenType::FALSE:
   case TokenType::UNIT:
     return parse_literal();
-  case TokenType::IDENTIFIER:
-    return parse_non_annotated_identifier();
+  case TokenType::IDENTIFIER: {
+    auto identifier = parse_non_annotated_identifier();
+    return {{identifier.m_location}, std::move(identifier)};
+  }
   case TokenType::LPAREN: {
     expect(TokenType::LPAREN, __FUNCTION__);
     auto expression = parse_expression();
     expect(TokenType::RPAREN, __FUNCTION__);
     return expression;
   }
-  case TokenType::LBRACE:
-    return std::make_unique<Block>(parse_block());
+  case TokenType::LBRACE: {
+    auto block = std::make_unique<ast::Block>(parse_block());
+    return {{block->m_location}, std::move(block)};
+  }
   case TokenType::IF:
     return parse_if_expr();
   case TokenType::PIPE:
@@ -492,40 +502,41 @@ Expression Parser::parse_primary() {
 
 // --- Compound expressions --------------------------------------------------
 
-Expression Parser::parse_if_expr() {
+ast::Expression Parser::parse_if_expr() {
   auto original_location = peek().get_location();
   expect(TokenType::IF, __FUNCTION__);
 
   auto condition = parse_expression();
 
-  auto then_branch = parse_block();
+  auto then_block = parse_block();
 
   if (peek().get_token_type() == TokenType::ELSE) {
     expect(TokenType::ELSE, __FUNCTION__);
-    auto else_branch = std::optional<Block>(parse_block());
+    auto else_block = std::optional<ast::Block>(parse_block());
 
-    return std::make_unique<IfExpr>(IfExpr{{original_location},
-                                           std::move(condition),
-                                           std::move(then_branch),
-                                           std::move(else_branch)});
+    return ast::Expression{{original_location},
+                           std::make_unique<ast::IfExpr>(ast::IfExpr{
+                               std::move(condition), std::move(then_block),
+                               std::move(else_block)})};
   }
 
-  return std::make_unique<IfExpr>(IfExpr{{original_location},
-                                         std::move(condition),
-                                         std::move(then_branch),
-                                         std::nullopt});
+  return ast::Expression{
+      {original_location},
+      std::make_unique<ast::IfExpr>(ast::IfExpr{
+          std::move(condition), std::move(then_block), std::nullopt})};
 }
 
-Expression Parser::parse_return_expr() {
+ast::Expression Parser::parse_return_expr() {
   auto original_location = peek().get_location();
   expect(TokenType::RETURN, __FUNCTION__);
-  return std::make_unique<ReturnExpr>(
-      ReturnExpr{{original_location}, parse_expression()});
+  return ast::Expression{
+      {original_location},
+      std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{parse_expression()})};
 }
 
-Expression Parser::parse_lambda_expr() {
+ast::Expression Parser::parse_lambda_expr() {
   auto original_location = peek().get_location();
-  std::vector<Identifier> arguments;
+  std::vector<ast::Identifier> arguments;
   if (peek().get_token_type() == TokenType::PIPE) {
     // May have arguments
     expect(TokenType::PIPE, __FUNCTION__);
@@ -542,25 +553,27 @@ Expression Parser::parse_lambda_expr() {
 
   auto function_type =
       (peek().get_token_type() == TokenType::ARROW)
-          ? std::optional<TypeIdentifier>(parse_function_return_type())
+          ? std::optional<ast::TypeIdentifier>(parse_function_return_type())
           : std::nullopt;
 
   auto body = parse_block();
 
-  return std::make_unique<LambdaExpr>(LambdaExpr{{original_location},
-                                                 std::move(arguments),
-                                                 std::move(function_type),
-                                                 std::move(body)});
+  return ast::Expression{{original_location},
+                         std::make_unique<ast::LambdaExpr>(ast::LambdaExpr{
+                             std::move(arguments),
+
+                             std::move(body), std::move(function_type)})};
 }
 
-Expression Parser::parse_literal() {
+ast::Expression Parser::parse_literal() {
+  const auto original_location = peek().get_location();
   switch (peek().get_token_type()) {
   case TokenType::TRUE:
-    return LiteralBool{{advance()->get_location()}, true};
+    return {{advance()->get_location()}, ast::LiteralBool{true}};
   case TokenType::FALSE:
-    return LiteralBool{{advance()->get_location()}, false};
+    return {{advance()->get_location()}, ast::LiteralBool{false}};
   case TokenType::UNIT:
-    return LiteralUnit{{advance()->get_location()}};
+    return {{advance()->get_location()}, ast::LiteralUnit{}};
   case TokenType::INT_LITERAL: {
     const auto token = advance();
     const auto *int_token_ptr = dynamic_cast<const TokenNumber *>(token.get());
@@ -568,8 +581,8 @@ Expression Parser::parse_literal() {
       on_error(token->get_location(), "Error casting token to TokenNumber");
     }
     try {
-      return LiteralI64{{int_token_ptr->get_location()},
-                        std::stoll(int_token_ptr->get_value())};
+      return {{original_location},
+              ast::LiteralI64{std::stoll(int_token_ptr->get_value())}};
     } catch (std::out_of_range &error) {
       on_error(int_token_ptr->get_location(),
                "Could not cast TokenNumber with lexeme: \"",
@@ -592,15 +605,15 @@ Expression Parser::parse_literal() {
       };
       auto iter = escaped_chars.find(lexeme[2]);
       if (iter != escaped_chars.end()) {
-        return LiteralChar{{char_token_ptr->get_location()}, iter->second};
+        return {{original_location}, ast::LiteralChar{iter->second}};
       }
       // Must be \x, want indices 3 and 4
-      return LiteralChar{
-          {char_token_ptr->get_location()},
-          static_cast<char>(std::stoi(lexeme.substr(3, 2), nullptr, 16))};
+      return {{original_location},
+              ast::LiteralChar{static_cast<char>(
+                  std::stoi(lexeme.substr(3, 2), nullptr, 16))}};
     }
     // Must have been printable
-    return LiteralChar{{char_token_ptr->get_location()}, lexeme[1]};
+    return {{original_location}, ast::LiteralChar{lexeme[1]}};
   }
   default:
     on_error(peek().get_location(),

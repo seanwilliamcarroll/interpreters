@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Formatter that serializes the in-memory IR to LLVM IR text.
 //*
 //*
@@ -18,13 +15,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "codegen/basic_block.hpp"
-#include "codegen/function.hpp"
-#include "codegen/function_declaration.hpp"
-#include "codegen/handle.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/module.hpp"
-#include "codegen/parameter.hpp"
+#include <codegen/basic_block.hpp>
+#include <codegen/function.hpp>
+#include <codegen/function_declaration.hpp>
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
+#include <codegen/module.hpp>
+#include <codegen/parameter.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -45,6 +42,8 @@ struct Formatter {
   Formatter(std::ostream &out) : m_out(out) {}
 
   constexpr static const char *INDENT = "  ";
+
+  void format(const auto &);
 
   void operator()(const Module &);
 

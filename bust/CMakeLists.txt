@@ -29,6 +29,7 @@ add_library(bust-lib STATIC
   src/parser.cpp
   hir/statement_checker.cpp
   hir/top_item_checker.cpp
+  hir/type_registry.cpp
   eval/expression_evaluator.cpp
   eval/let_binding_evaluator.cpp
   eval/statement_evaluator.cpp

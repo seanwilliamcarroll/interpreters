@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Instruction and terminator types for the codegen pass.
 //*
 //*
@@ -11,10 +8,10 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/handle.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
-#include "operators.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
+#include <operators.hpp>
 #include <variant>
 
 //****************************************************************************

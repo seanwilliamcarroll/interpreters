@@ -1,34 +1,30 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Implementation of expression evaluator.
 //*
 //*
 //****************************************************************************
 
-#include "eval/expression_evaluator.hpp"
-
 #include <cstdint>
+#include <eval/context.hpp>
+#include <eval/environment.hpp>
+#include <eval/expression_evaluator.hpp>
+#include <eval/statement_evaluator.hpp>
+#include <eval/values.hpp>
+#include <exceptions.hpp>
 #include <functional>
+#include <hir/types.hpp>
 #include <memory>
+#include <operators.hpp>
 #include <optional>
 #include <ranges>
-#include <stdexcept>
-#include <string_view>
 #include <type_traits>
+#include <types.hpp>
 #include <utility>
 #include <variant>
 
-#include "eval/environment.hpp"
-#include "eval/statement_evaluator.hpp"
-#include "eval/values.hpp"
-#include "exceptions.hpp"
-#include "hir/types.hpp"
-#include "operators.hpp"
-#include "types.hpp"
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::eval {
@@ -37,6 +33,10 @@ namespace bust::eval {
 struct ReturnException {
   Value m_return_value;
 };
+
+Value ExpressionEvaluator::evaluate(const auto &to_evaluate) {
+  return (*this)(to_evaluate);
+}
 
 Value ExpressionEvaluator::operator()(const hir::Expression &expression) {
   return std::visit(*this, expression.m_expression);
@@ -82,16 +82,8 @@ Value ExpressionEvaluator::operator()(const hir::LiteralChar &literal) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::Block> &block) {
-  return (*this)(*block);
+  return evaluate(*block);
 }
-
-struct ScopeGuard {
-  // More standard way of protecting the environment from leaking from return
-  // statements throwing
-  ScopeGuard(Environment &env) : m_env(env) { m_env.push_scope(); }
-  ~ScopeGuard() { m_env.pop_scope(); }
-  Environment &m_env;
-};
 
 Value ExpressionEvaluator::operator()(const hir::Block &block) {
   ScopeGuard guard(m_ctx.m_env);
@@ -101,7 +93,7 @@ Value ExpressionEvaluator::operator()(const hir::Block &block) {
   }
 
   auto final_value = block.m_final_expression.has_value()
-                         ? (*this)(block.m_final_expression.value())
+                         ? evaluate(block.m_final_expression.value())
                          : Unit{};
 
   return final_value;
@@ -110,19 +102,14 @@ Value ExpressionEvaluator::operator()(const hir::Block &block) {
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
 
-  auto condition_value = (*this)(if_expression->m_condition);
-
-  if (!std::holds_alternative<Bool>(condition_value)) {
-    throw core::CompilerException("Evaluator", "Condition must be bool",
-                                  if_expression->m_location);
-  }
+  auto condition_value = evaluate(if_expression->m_condition);
 
   if (std::get<Bool>(condition_value).m_value) {
-    return (*this)(if_expression->m_then_branch);
+    return evaluate(if_expression->m_then_block);
   }
 
-  if (if_expression->m_else_branch.has_value()) {
-    return (*this)(if_expression->m_else_branch.value());
+  if (if_expression->m_else_block.has_value()) {
+    return evaluate(if_expression->m_else_block.value());
   }
 
   return Unit{};
@@ -130,7 +117,7 @@ Value ExpressionEvaluator::operator()(
 
 Value ExpressionEvaluator::evaluate_function_body(const hir::Block &block) {
   try {
-    return (*this)(block);
+    return evaluate(block);
   } catch (ReturnException &return_statement) {
     return return_statement.m_return_value;
   }
@@ -138,7 +125,7 @@ Value ExpressionEvaluator::evaluate_function_body(const hir::Block &block) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CallExpr> &call_expression) {
-  auto callee_value = (*this)(call_expression->m_callee);
+  auto callee_value = evaluate(call_expression->m_callee);
 
   auto closure = std::get<Closure>(callee_value);
 
@@ -146,11 +133,17 @@ Value ExpressionEvaluator::operator()(
 
   for (const auto &[parameter, argument] :
        std::views::zip(closure.m_parameters, call_expression->m_arguments)) {
-    new_closure_env->define(parameter, (*this)(argument));
+    new_closure_env->define(parameter, evaluate(argument));
   }
 
-  return ExpressionEvaluator{.m_ctx = {.m_env = Environment(new_closure_env)}}
-      .evaluate_function_body(*closure.m_expression);
+  auto new_environment = Environment(new_closure_env);
+  auto new_context = Context{.m_env = new_environment,
+                             .m_type_registry = m_ctx.m_type_registry};
+
+  auto final_value =
+      ExpressionEvaluator{.m_ctx = new_context}.evaluate_function_body(
+          *closure.m_expression);
+  return final_value;
 }
 
 // The requires here is ensuring that we the expression within is well formed
@@ -194,8 +187,8 @@ Value different_return_type_op(const Value &lhs, const Value &rhs) {
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
-  auto lhs = (*this)(binary_expression->m_lhs);
-  auto rhs = (*this)(binary_expression->m_rhs);
+  auto lhs = evaluate(binary_expression->m_lhs);
+  auto rhs = evaluate(binary_expression->m_rhs);
 
   switch (binary_expression->m_operator) {
   case BinaryOperator::LOGICAL_AND:
@@ -229,21 +222,37 @@ Value ExpressionEvaluator::operator()(
   std::unreachable();
 }
 
+template <template <typename> typename Function>
+Value apply_unary_op(const Value &value) {
+  return std::visit(
+      [](const auto &val) -> Value {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (requires {
+                        T{Function<decltype(val.m_value)>{}(val.m_value)};
+                      }) {
+          return T{Function<decltype(val.m_value)>{}(val.m_value)};
+        } else {
+          std::unreachable();
+        }
+      },
+      value);
+}
+
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
-  auto value = (*this)(unary_expression->m_expression);
+  auto value = evaluate(unary_expression->m_expression);
   switch (unary_expression->m_operator) {
-  case bust::UnaryOperator::MINUS:
-    return I64{-std::get<I64>(value).m_value};
-  case bust::UnaryOperator::NOT:
-    return Bool{!std::get<Bool>(value).m_value};
+  case UnaryOperator::MINUS:
+    return apply_unary_op<std::negate>(value);
+  case UnaryOperator::NOT:
+    return apply_unary_op<std::logical_not>(value);
   }
   std::unreachable();
 }
 
 [[noreturn]] Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expression) {
-  throw ReturnException{(*this)(return_expression->m_expression)};
+  throw ReturnException{evaluate(return_expression->m_expression)};
 }
 
 // The requires here is ensuring that we the expression within is well formed
@@ -253,17 +262,17 @@ Value cast_op(const Value &from, PrimitiveType to) {
       [&](const auto &value) -> Value {
         if constexpr (requires { value.m_value; }) {
           switch (to) {
-          case bust::PrimitiveType::CHAR:
+          case PrimitiveType::CHAR:
             return Char{static_cast<char>(value.m_value)};
-          case bust::PrimitiveType::I8:
+          case PrimitiveType::I8:
             return I8{static_cast<int8_t>(value.m_value)};
-          case bust::PrimitiveType::I32:
+          case PrimitiveType::I32:
             return I32{static_cast<int32_t>(value.m_value)};
-          case bust::PrimitiveType::I64:
+          case PrimitiveType::I64:
             return I64{static_cast<int64_t>(value.m_value)};
-          case bust::PrimitiveType::BOOL:
+          case PrimitiveType::BOOL:
             return Bool{static_cast<bool>(value.m_value)};
-          case bust::PrimitiveType::UNIT:
+          case PrimitiveType::UNIT:
             std::unreachable();
           }
         } else {
@@ -275,12 +284,13 @@ Value cast_op(const Value &from, PrimitiveType to) {
 
 Value ExpressionEvaluator::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expression) {
-  auto value = (*this)(cast_expression->m_expression);
+  auto value = evaluate(cast_expression->m_expression);
   // Do cast, we already type checked
 
-  return cast_op(
-      value,
-      std::get<hir::PrimitiveTypeValue>(cast_expression->m_new_type).m_type);
+  return cast_op(value,
+                 std::get<hir::PrimitiveTypeValue>(
+                     m_ctx.m_type_registry.get(cast_expression->m_new_type))
+                     .m_type);
 }
 
 Value ExpressionEvaluator::operator()(

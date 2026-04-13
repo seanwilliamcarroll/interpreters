@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : bust::Parser
 //*
 //*
@@ -11,8 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include "source_location.hpp"
 #include <memory>
+#include <source_location.hpp>
 #include <sstream>
 
 #include <ast/nodes.hpp>
@@ -23,60 +20,57 @@
 //****************************************************************************
 namespace bust {
 //****************************************************************************
-using namespace ast;
 
 class Parser {
 public:
   explicit Parser(std::unique_ptr<LexerInterface> lexer)
       : m_lexer(std::move(lexer)), m_current_token() {}
 
-  virtual ~Parser() = default;
-
   void reset() { m_current_token = nullptr; }
 
-  Program parse();
+  ast::Program parse();
 
 private:
-  Program parse_program();
-  TopItem parse_top_item();
-  FunctionDef parse_func_def();
-  LetBinding parse_let_binding();
-  std::vector<Identifier> parse_param_list();
-  std::vector<Identifier> parse_lambda_param_list();
+  ast::Program parse_program();
+  ast::TopItem parse_top_item();
+  ast::FunctionDef parse_func_def();
+  ast::LetBinding parse_let_binding();
+  std::vector<ast::Identifier> parse_param_list();
+  std::vector<ast::Identifier> parse_lambda_param_list();
   std::pair<core::SourceLocation, std::string>
   parse_location_name_from_identifier(const char *error_message);
 
-  TypeIdentifier parse_type_identifier();
-  TypeIdentifier parse_function_return_type();
-  TypeIdentifier parse_type_annotation();
-  std::unique_ptr<FunctionTypeIdentifier> parse_function_type_identifier();
+  ast::TypeIdentifier parse_type_identifier();
+  ast::TypeIdentifier parse_function_return_type();
+  ast::TypeIdentifier parse_type_annotation();
+  std::unique_ptr<ast::FunctionTypeIdentifier> parse_function_type_identifier();
 
-  Identifier parse_non_annotated_identifier();
-  Identifier parse_possibly_annotated_identifier();
-  Identifier parse_annotated_identifier();
+  ast::Identifier parse_non_annotated_identifier();
+  ast::Identifier parse_possibly_annotated_identifier();
+  ast::Identifier parse_annotated_identifier();
 
-  Block parse_block();
+  ast::Block parse_block();
 
-  Expression parse_binary_expression(
+  ast::Expression parse_binary_expression(
       const std::unordered_map<TokenType, BinaryOperator> &possible_mappings,
       auto next_clause_to_parse);
 
-  Expression parse_expression();
-  Expression parse_logic_or();
-  Expression parse_logic_and();
-  Expression parse_equality();
-  Expression parse_comparison();
-  Expression parse_add_sub();
-  Expression parse_mult_div_mod();
-  Expression parse_unary_pre();
-  Expression parse_cast_expr();
-  Expression parse_postfix();
-  Expression parse_primary();
+  ast::Expression parse_expression();
+  ast::Expression parse_logic_or();
+  ast::Expression parse_logic_and();
+  ast::Expression parse_equality();
+  ast::Expression parse_comparison();
+  ast::Expression parse_add_sub();
+  ast::Expression parse_mult_div_mod();
+  ast::Expression parse_unary_pre();
+  ast::Expression parse_cast_expr();
+  ast::Expression parse_postfix();
+  ast::Expression parse_primary();
 
-  Expression parse_if_expr();
-  Expression parse_return_expr();
-  Expression parse_lambda_expr();
-  Expression parse_literal();
+  ast::Expression parse_if_expr();
+  ast::Expression parse_return_expr();
+  ast::Expression parse_lambda_expr();
+  ast::Expression parse_literal();
 
   const Token &peek();
 

@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : LLVM type and operator enums for the codegen pass.
 //*
 //*
@@ -11,10 +8,10 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/types.hpp"
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <hir/types.hpp>
 #include <ostream>
 #include <utility>
 #include <variant>
@@ -51,7 +48,7 @@ inline size_t width_bits(LLVMType type) {
   }
 }
 
-inline LLVMType to_llvm_type(const hir::Type &type) {
+inline LLVMType to_llvm_type(const hir::TypeKind &type) {
   const auto *prim = std::get_if<hir::PrimitiveTypeValue>(&type);
   assert(prim && "codegen only handles primitive types for now");
   switch (prim->m_type) {

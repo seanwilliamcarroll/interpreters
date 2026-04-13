@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Basic block representation for the codegen pass.
 //*
 //*
@@ -11,8 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/instructions.hpp"
 #include <cassert>
+#include <codegen/instructions.hpp>
 #include <optional>
 #include <string>
 #include <utility>

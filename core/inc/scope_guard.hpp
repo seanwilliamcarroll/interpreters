@@ -1,30 +1,37 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Statement and block checker — scope management, block checking,
-//*            let bindings.
+//*  Purpose : RAII guard for scoped environments.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <ast/nodes.hpp>
-#include <hir/context.hpp>
-#include <hir/nodes.hpp>
+#include <concepts>
 
 //****************************************************************************
-namespace bust::hir {
+namespace core {
 //****************************************************************************
 
-struct StatementChecker {
-  Statement operator()(const ast::LetBinding &);
+template <typename T>
+concept Scoped = requires(T t) {
+  t.push_scope();
+  t.pop_scope();
+};
 
-  Statement operator()(const ast::Expression &);
+template <Scoped T> struct ScopeGuard {
+  explicit ScopeGuard(T &scoped) : m_scoped(scoped) { m_scoped.push_scope(); }
+  ~ScopeGuard() { m_scoped.pop_scope(); }
 
-  Context &m_ctx;
+  ScopeGuard(const ScopeGuard &) = delete;
+  ScopeGuard &operator=(const ScopeGuard &) = delete;
+  ScopeGuard(ScopeGuard &&) = delete;
+  ScopeGuard &operator=(ScopeGuard &&) = delete;
+
+  T &m_scoped;
 };
 
 //****************************************************************************
-} // namespace bust::hir
+} // namespace core
 //****************************************************************************

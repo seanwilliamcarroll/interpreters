@@ -1,40 +1,44 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Implementation of expression generator.
 //*
 //*
 //****************************************************************************
 
-#include "codegen/expression_generator.hpp"
-
 #include <algorithm>
+#include <codegen/basic_block.hpp>
+#include <codegen/context.hpp>
+#include <codegen/expression_generator.hpp>
+#include <codegen/function.hpp>
+#include <codegen/instructions.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/statement_generator.hpp>
+#include <codegen/symbol_table.hpp>
+#include <exceptions.hpp>
+#include <hir/nodes.hpp>
+#include <hir/types.hpp>
 #include <iterator>
+#include <operators.hpp>
 #include <optional>
 #include <stdexcept>
+#include <stdint.h>
 #include <string>
+#include <types.hpp>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include "codegen/basic_block.hpp"
-#include "codegen/context.hpp"
-#include "codegen/function.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/statement_generator.hpp"
-#include "codegen/symbol_table.hpp"
-#include "hir/nodes.hpp"
-#include "hir/types.hpp"
-#include "operators.hpp"
-#include "types.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/types.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
+
+Handle ExpressionGenerator::generate(const auto &to_generate) {
+  return (*this)(to_generate);
+}
 
 Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   auto identifier_handle = m_ctx.symbols().lookup(identifier.m_name);
@@ -45,12 +49,12 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
     return identifier_handle;
   }
 
-  auto ssa_temp = SymbolTable::next_ssa_temporary();
+  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
 
-  m_ctx.block().add_instruction(
-      LoadInstruction{.m_destination = ssa_temp,
-                      .m_source = identifier_handle,
-                      .m_type = to_llvm_type(identifier.m_type)});
+  m_ctx.block().add_instruction(LoadInstruction{
+      .m_destination = ssa_temp,
+      .m_source = identifier_handle,
+      .m_type = to_llvm_type(m_ctx.type_registry().get(identifier.m_type))});
 
   return ssa_temp;
 }
@@ -79,7 +83,7 @@ Handle ExpressionGenerator::operator()(const hir::LiteralChar &literal) {
 
 Handle
 ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &block) {
-  return (*this)(*block);
+  return generate(*block);
 }
 
 Handle ExpressionGenerator::operator()(const hir::Block &block) {
@@ -89,7 +93,7 @@ Handle ExpressionGenerator::operator()(const hir::Block &block) {
   }
 
   if (block.m_final_expression.has_value()) {
-    return (*this)(block.m_final_expression.value());
+    return generate(block.m_final_expression.value());
   }
 
   // Need to return a value here potentially
@@ -100,11 +104,11 @@ Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::IfExpr> &if_expression) {
   auto &function = m_ctx.function();
 
-  const auto &if_return_type = if_expression->m_then_branch.m_type;
+  const auto &if_return_type_id = if_expression->m_then_block.m_type;
 
   // Get handle to current after condition target generated, so even with nested
   // blocks, we're still starting right after the condition
-  auto condition_target = (*this)(if_expression->m_condition);
+  auto condition_target = generate(if_expression->m_condition);
   auto &final_condition_block = function.current_basic_block();
 
   // Create starting blocks that will always exist, then and merge
@@ -113,12 +117,12 @@ Handle ExpressionGenerator::operator()(
 
   // Do then branch, capture the final block for later if needed
   function.set_insertion_point(starting_then_block);
-  auto then_target = (*this)(if_expression->m_then_branch);
+  auto then_target = generate(if_expression->m_then_block);
   auto &final_then_block = function.current_basic_block();
   final_then_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
 
-  if (!if_expression->m_else_branch.has_value()) {
+  if (!if_expression->m_else_block.has_value()) {
     // Just bare if, else is merge
     final_condition_block.add_terminal(
         BranchInstruction{.m_condition = condition_target,
@@ -134,7 +138,7 @@ Handle ExpressionGenerator::operator()(
   // this branch
   auto &starting_else_block = function.new_basic_block("else");
   function.set_insertion_point(starting_else_block);
-  auto else_target = (*this)(if_expression->m_else_branch.value());
+  auto else_target = generate(if_expression->m_else_block.value());
   auto &final_else_block = function.current_basic_block();
   final_else_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
@@ -150,9 +154,10 @@ Handle ExpressionGenerator::operator()(
 
   // We only return a value when there is an else block
   // AND the types of the then and else expressions are NOT Unit
-  const auto if_type_is_unit = hir::is_unit_type(if_return_type);
+  const auto if_type_is_unit =
+      if_return_type_id == m_ctx.type_registry().m_unit;
   auto if_statement_returns_value =
-      if_expression->m_else_branch.has_value() && !if_type_is_unit;
+      if_expression->m_else_block.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
     // Void, no handle to return
     return {};
@@ -161,114 +166,131 @@ Handle ExpressionGenerator::operator()(
   auto result_handle = m_ctx.symbols().define_local("if_result");
 
   function.add_alloca_instruction(AllocaInstruction{
-      .m_handle = result_handle, .m_type = to_llvm_type(if_return_type)});
+      .m_handle = result_handle,
+      .m_type = to_llvm_type(m_ctx.type_registry().get(if_return_type_id))});
 
   // Need to store the value generated by each branch for use in the merge block
-  final_then_block.add_instruction(
-      StoreInstruction{.m_destination = result_handle,
-                       .m_source = then_target,
-                       .m_type = to_llvm_type(if_return_type)});
+  final_then_block.add_instruction(StoreInstruction{
+      .m_destination = result_handle,
+      .m_source = then_target,
+      .m_type = to_llvm_type(m_ctx.type_registry().get(if_return_type_id))});
 
-  final_else_block.add_instruction(
-      StoreInstruction{.m_destination = result_handle,
-                       .m_source = else_target,
-                       .m_type = to_llvm_type(if_return_type)});
+  final_else_block.add_instruction(StoreInstruction{
+      .m_destination = result_handle,
+      .m_source = else_target,
+      .m_type = to_llvm_type(m_ctx.type_registry().get(if_return_type_id))});
 
-  auto ssa_temp = SymbolTable::next_ssa_temporary();
-  starting_merge_block.add_instruction(
-      LoadInstruction{.m_destination = ssa_temp,
-                      .m_source = {result_handle},
-                      .m_type = to_llvm_type(if_return_type)});
+  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
+  starting_merge_block.add_instruction(LoadInstruction{
+      .m_destination = ssa_temp,
+      .m_source = {result_handle},
+      .m_type = to_llvm_type(m_ctx.type_registry().get(if_return_type_id))});
   return ssa_temp;
 }
 
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::CallExpr> &call_expression) {
 
-  auto callee_handle = (*this)(call_expression->m_callee);
+  auto callee_handle = generate(call_expression->m_callee);
 
   std::vector<Argument> arguments;
   std::transform(call_expression->m_arguments.begin(),
                  call_expression->m_arguments.end(),
                  std::back_inserter(arguments),
                  [this](const auto &argument_expression) -> Argument {
-                   auto handle = (*this)(argument_expression);
+                   auto handle = generate(argument_expression);
                    return {.m_name = handle,
-                           .m_type = to_llvm_type(argument_expression.m_type)};
+                           .m_type = to_llvm_type(m_ctx.type_registry().get(
+                               argument_expression.m_type))};
                  });
 
-  auto function_return_type =
-      hir::get_return_type(call_expression->m_callee.m_type);
+  auto function_return_type_id =
+      std::get<hir::FunctionType>(
+          m_ctx.type_registry().get(call_expression->m_callee.m_type))
+          .m_return_type;
 
-  if (hir::is_unit_type(function_return_type)) {
+  if (function_return_type_id == m_ctx.type_registry().m_unit) {
     m_ctx.block().add_instruction(
         CallVoidInstruction{.m_callee = std::move(callee_handle),
                             .m_arguments = std::move(arguments)});
     return {};
   }
 
-  auto ssa_temp = SymbolTable::next_ssa_temporary();
-  m_ctx.block().add_instruction(
-      CallInstruction{.m_target = ssa_temp,
-                      .m_callee = std::move(callee_handle),
-                      .m_arguments = std::move(arguments),
-                      .m_return_type = to_llvm_type(function_return_type)});
+  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
+  m_ctx.block().add_instruction(CallInstruction{
+      .m_target = ssa_temp,
+      .m_callee = std::move(callee_handle),
+      .m_arguments = std::move(arguments),
+      .m_return_type =
+          to_llvm_type(m_ctx.type_registry().get(function_return_type_id))});
 
   return ssa_temp;
 }
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
   switch (op) {
-  case bust::BinaryOperator::PLUS:
+  case BinaryOperator::PLUS:
     return LLVMBinaryOperator::ADD;
-  case bust::BinaryOperator::MINUS:
+  case BinaryOperator::MINUS:
     return LLVMBinaryOperator::SUB;
-  case bust::BinaryOperator::MULTIPLIES:
+  case BinaryOperator::MULTIPLIES:
     return LLVMBinaryOperator::MUL;
-  case bust::BinaryOperator::DIVIDES:
+  case BinaryOperator::DIVIDES:
     return LLVMBinaryOperator::SDIV;
-  case bust::BinaryOperator::MODULUS:
+  case BinaryOperator::MODULUS:
     return LLVMBinaryOperator::SREM;
 
   default:
-    throw std::runtime_error("UNIMPLEMENTED");
+    throw core::InternalCompilerError(
+        "unsupported binary operator in LLVM lowering");
   }
 }
 
-bool is_signed_type(const hir::Type &type) {
+bool is_signed_type(const hir::TypeKind &type) {
   if (!std::holds_alternative<hir::PrimitiveTypeValue>(type)) {
-    throw std::runtime_error("UNIMPLEMENTED");
+    throw core::InternalCompilerError("signedness check on non-primitive type");
   }
-  return true;
+  auto primitive_type = std::get<hir::PrimitiveTypeValue>(type).m_type;
+  switch (primitive_type) {
+  case PrimitiveType::I8:
+  case PrimitiveType::I32:
+  case PrimitiveType::I64:
+    return true;
+  case PrimitiveType::BOOL:
+  case PrimitiveType::CHAR:
+  case PrimitiveType::UNIT:
+    throw core::InternalCompilerError(
+        "Should never had checked signedness on non numeric type");
+  }
 }
 
-LLVMIntegerCompareCondition to_llvm_compare_condition(BinaryOperator op,
-                                                      const hir::Type &type) {
+LLVMIntegerCompareCondition
+to_llvm_compare_condition(BinaryOperator op, const hir::TypeKind &type) {
   switch (op) {
-  case bust::BinaryOperator::EQ:
+  case BinaryOperator::EQ:
     return LLVMIntegerCompareCondition::EQ;
-  case bust::BinaryOperator::NOT_EQ:
+  case BinaryOperator::NOT_EQ:
     return LLVMIntegerCompareCondition::NE;
 
-  case bust::BinaryOperator::LT:
+  case BinaryOperator::LT:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SLT;
     } else {
       return LLVMIntegerCompareCondition::ULT;
     }
-  case bust::BinaryOperator::LT_EQ:
+  case BinaryOperator::LT_EQ:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SLE;
     } else {
       return LLVMIntegerCompareCondition::ULE;
     }
-  case bust::BinaryOperator::GT:
+  case BinaryOperator::GT:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SGT;
     } else {
       return LLVMIntegerCompareCondition::UGT;
     }
-  case bust::BinaryOperator::GT_EQ:
+  case BinaryOperator::GT_EQ:
     if (is_signed_type(type)) {
       return LLVMIntegerCompareCondition::SGE;
     } else {
@@ -276,18 +298,19 @@ LLVMIntegerCompareCondition to_llvm_compare_condition(BinaryOperator op,
     }
 
   default:
-    throw std::runtime_error("UNIMPLEMENTED");
+    throw core::InternalCompilerError(
+        "unsupported compare operator in LLVM lowering");
   }
 }
 
 bool is_binary_compare(BinaryOperator op) {
   switch (op) {
-  case bust::BinaryOperator::EQ:
-  case bust::BinaryOperator::LT:
-  case bust::BinaryOperator::LT_EQ:
-  case bust::BinaryOperator::GT:
-  case bust::BinaryOperator::GT_EQ:
-  case bust::BinaryOperator::NOT_EQ:
+  case BinaryOperator::EQ:
+  case BinaryOperator::LT:
+  case BinaryOperator::LT_EQ:
+  case BinaryOperator::GT:
+  case BinaryOperator::GT_EQ:
+  case BinaryOperator::NOT_EQ:
     return true;
   default:
     return false;
@@ -296,8 +319,8 @@ bool is_binary_compare(BinaryOperator op) {
 
 bool is_logical_op(BinaryOperator op) {
   switch (op) {
-  case bust::BinaryOperator::LOGICAL_AND:
-  case bust::BinaryOperator::LOGICAL_OR:
+  case BinaryOperator::LOGICAL_AND:
+  case BinaryOperator::LOGICAL_OR:
     return true;
   default:
     return false;
@@ -308,20 +331,22 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
   auto compare_condition = to_llvm_compare_condition(
-      binary_expression->m_operator, binary_expression->m_lhs.m_type);
+      binary_expression->m_operator,
+      m_ctx.type_registry().get(binary_expression->m_lhs.m_type));
 
-  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression->m_lhs);
 
-  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression->m_rhs);
 
-  auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(IntegerCompareInstruction{
       .m_result = result_handle,
       .m_lhs = lhs_handle,
       .m_rhs = rhs_handle,
       .m_condition = compare_condition,
-      .m_type = to_llvm_type(binary_expression->m_lhs.m_type)});
+      .m_type = to_llvm_type(
+          m_ctx.type_registry().get(binary_expression->m_lhs.m_type))});
 
   return result_handle;
 }
@@ -329,18 +354,19 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
 Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
     const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
 
-  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression->m_lhs);
 
-  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression->m_rhs);
 
-  auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
-  m_ctx.block().add_instruction(BinaryInstruction{
-      .m_result = result_handle,
-      .m_lhs = lhs_handle,
-      .m_rhs = rhs_handle,
-      .m_operator = to_llvm_op(binary_expression->m_operator),
-      .m_type = to_llvm_type(binary_expression->m_lhs.m_type)});
+  m_ctx.block().add_instruction(
+      BinaryInstruction{.m_result = result_handle,
+                        .m_lhs = lhs_handle,
+                        .m_rhs = rhs_handle,
+                        .m_operator = to_llvm_op(binary_expression->m_operator),
+                        .m_type = to_llvm_type(m_ctx.type_registry().get(
+                            binary_expression->m_lhs.m_type))});
 
   return result_handle;
 }
@@ -360,7 +386,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = result_handle, .m_type = LLVMType::I1});
 
-  auto lhs_handle = (*this)(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression->m_lhs);
   auto &final_lhs_block = m_ctx.block();
   // Store lhs in result handle
   final_lhs_block.add_instruction(StoreInstruction{
@@ -371,7 +397,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
 
   auto &starting_rhs_block = m_ctx.function().new_basic_block("rhs");
   m_ctx.function().set_insertion_point(starting_rhs_block);
-  auto rhs_handle = (*this)(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression->m_rhs);
   auto &final_rhs_block = m_ctx.block();
 
   final_rhs_block.add_instruction(StoreInstruction{
@@ -387,7 +413,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
 
   // LHS always branches
   const auto is_and_op =
-      binary_expression->m_operator == bust::BinaryOperator::LOGICAL_AND;
+      binary_expression->m_operator == BinaryOperator::LOGICAL_AND;
   final_lhs_block.add_terminal(BranchInstruction{
       .m_condition = lhs_handle,
       .m_iftrue =
@@ -400,7 +426,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_target = starting_merge_block.label(),
   });
 
-  auto final_result = SymbolTable::next_ssa_temporary();
+  auto final_result = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(LoadInstruction{
       .m_destination = final_result,
@@ -427,15 +453,16 @@ Handle ExpressionGenerator::operator()(
 Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
 
-  auto input_handle = (*this)(unary_expression->m_expression);
+  auto input_handle = generate(unary_expression->m_expression);
 
-  auto result_handle = SymbolTable::next_ssa_temporary();
+  auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(UnaryInstruction{
       .m_result = result_handle,
       .m_input = input_handle,
       .m_operator = unary_expression->m_operator,
-      .m_type = to_llvm_type(unary_expression->m_expression.m_type),
+      .m_type = to_llvm_type(
+          m_ctx.type_registry().get(unary_expression->m_expression.m_type)),
   });
 
   return result_handle;
@@ -450,10 +477,12 @@ Handle ExpressionGenerator::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expression) {
 
   // We've type checked, so we know it's a valid cast
-  auto input_handle = (*this)(cast_expression->m_expression);
+  auto input_handle = generate(cast_expression->m_expression);
 
-  const auto &from = to_llvm_type(cast_expression->m_expression.m_type);
-  const auto &to = to_llvm_type(cast_expression->m_new_type);
+  const auto &from = to_llvm_type(
+      m_ctx.type_registry().get(cast_expression->m_expression.m_type));
+  const auto &to =
+      to_llvm_type(m_ctx.type_registry().get(cast_expression->m_new_type));
 
   if (from == to) {
     // Nothing casted, noop
@@ -473,7 +502,7 @@ Handle ExpressionGenerator::operator()(
     cast_op = LLVMCastOperator::SEXT;
   }
 
-  auto ssa_temporary = SymbolTable::next_ssa_temporary();
+  auto ssa_temporary = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(CastInstruction{
       .m_destination = ssa_temporary,

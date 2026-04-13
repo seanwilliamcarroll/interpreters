@@ -1,28 +1,25 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Lexer implementation for bust.
 //*
 //*
 //****************************************************************************
 
+#include <array>
 #include <cctype>
+#include <exceptions.hpp>
 #include <functional>
-#include <iostream>
 #include <lexer.hpp>
 #include <memory>
 #include <source_location.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <token.hpp>
+#include <tokens.hpp>
 #include <unordered_map>
-
-#include "exceptions.hpp"
-#include "token.hpp"
-#include "tokens.hpp"
+#include <utility>
 
 //****************************************************************************
 namespace bust {
@@ -73,8 +70,6 @@ bool is_hex_character(char character) {
          (character >= 'A' && character <= 'F');
 }
 
-using core::SourceLocation;
-
 struct Lexer : LexerInterface {
 
   Lexer(std::istream &in_stream, const char *hint)
@@ -85,12 +80,13 @@ struct Lexer : LexerInterface {
     return std::make_unique<Token>(get_current_loc(), t);
   }
 
-  auto make_token(const SourceLocation &l, TokenType t) const {
+  auto make_token(const core::SourceLocation &l, TokenType t) const {
     return std::make_unique<Token>(l, t);
   }
 
   template <class V>
-  auto make_token(const SourceLocation &l, TokenType t, const V &v) const {
+  auto make_token(const core::SourceLocation &l, TokenType t,
+                  const V &v) const {
     return std::make_unique<core::TokenOf<TokenType, V>>(l, t, v);
   }
 
@@ -219,13 +215,9 @@ struct Lexer : LexerInterface {
 
       return identifier();
     }
-    if (m_in_stream.eof()) {
-      auto current_loc = get_current_loc();
-      reset_eof();
-      return make_token(current_loc, TokenType::EOF_TOKEN);
-    }
-    std::cerr << "Unexpected error!\n";
-    return {};
+    auto current_loc = get_current_loc();
+    reset_eof();
+    return make_token(current_loc, TokenType::EOF_TOKEN);
   }
 
   std::unique_ptr<Token> slash_or_comment() {
@@ -304,7 +296,7 @@ struct Lexer : LexerInterface {
   }
 
   std::unique_ptr<Token> char_literal() {
-    const SourceLocation loc = get_current_loc();
+    const core::SourceLocation loc = get_current_loc();
     std::string lexeme;
 
     char character;
@@ -347,7 +339,7 @@ struct Lexer : LexerInterface {
   }
 
   std::unique_ptr<Token> int_literal() {
-    const SourceLocation loc = get_current_loc();
+    const core::SourceLocation loc = get_current_loc();
     std::string lexeme;
 
     char character;
@@ -378,8 +370,9 @@ struct Lexer : LexerInterface {
     return output;
   }
 
-  std::unique_ptr<Token> create_identifier(const SourceLocation &starting_loc,
-                                           const std::string &lexeme) {
+  std::unique_ptr<Token>
+  create_identifier(const core::SourceLocation &starting_loc,
+                    const std::string &lexeme) {
     if (lexeme.empty()) {
       on_error("Invalid usage of Lexer::create_identifier, did not find any "
                "characters to form the lexeme");
@@ -394,7 +387,7 @@ struct Lexer : LexerInterface {
   std::unique_ptr<Token> identifier() {
     std::string lexeme;
     char character;
-    SourceLocation starting_loc = get_current_loc();
+    core::SourceLocation starting_loc = get_current_loc();
     expect_peek(character, __FUNCTION__);
 
     if (!is_lower(character) && !is_upper(character) && character != '_') {
@@ -433,11 +426,10 @@ struct Lexer : LexerInterface {
     }
   }
 
-  bool peek(char &character) {
+  bool peek(char &character) const {
     auto result = m_in_stream.peek();
 
     if (result == std::char_traits<char>::eof()) {
-      m_in_stream.get(character);
       return false;
     }
     character = static_cast<char>(result);
@@ -486,7 +478,7 @@ struct Lexer : LexerInterface {
              " (value: ", static_cast<int>(character), ")");
   }
 
-  SourceLocation get_current_loc() const {
+  core::SourceLocation get_current_loc() const {
     return {.file_name = m_hint, .line = m_line, .column = m_column};
   }
 

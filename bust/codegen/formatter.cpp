@@ -1,29 +1,27 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Formatter implementation.
 //*
 //*
 //****************************************************************************
 
-#include "codegen/formatter.hpp"
-
+#include <codegen/basic_block.hpp>
+#include <codegen/formatter.hpp>
+#include <codegen/function.hpp>
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 #include <memory>
+#include <operators.hpp>
 #include <optional>
 #include <stdexcept>
 #include <variant>
 #include <vector>
 
-#include "codegen/basic_block.hpp"
-#include "codegen/function.hpp"
-#include "codegen/handle.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
-#include "operators.hpp"
+#include <codegen/function_declaration.hpp>
+#include <codegen/module.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -58,11 +56,13 @@ std::string HandleToString::operator()(const GlobalHandle &handle) {
   return "@" + handle.m_handle;
 }
 
+void Formatter::format(const auto &to_format) { (*this)(to_format); }
+
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
 
   for (const auto &function : mod.functions()) {
-    (*this)(*function);
+    format(*function);
   }
 }
 
@@ -76,10 +76,10 @@ void Formatter::function_parameters(const FunctionDeclaration &signature) {
   }
   for (size_t index = 0; index < signature.m_parameters.size() - 1; ++index) {
     const auto &parameter = signature.m_parameters[index];
-    (*this)(parameter);
+    format(parameter);
     m_out << ", ";
   }
-  (*this)(signature.m_parameters.back());
+  format(signature.m_parameters.back());
 }
 
 void Formatter::declare(const FunctionDeclaration &signature) {
@@ -116,7 +116,7 @@ void Formatter::operator()(const Function &function) {
   newline();
 
   for (const auto &basic_block : function.basic_blocks()) {
-    (*this)(*basic_block);
+    format(*basic_block);
   }
 
   m_out << "}";
@@ -156,12 +156,12 @@ void Formatter::operator()(const UnaryInstruction &instruction) {
   indent();
 
   switch (instruction.m_operator) {
-  case bust::UnaryOperator::MINUS:
+  case UnaryOperator::MINUS:
     m_out << std::visit(m_handle_converter, instruction.m_result) << " = sub "
           << " " << instruction.m_type << " 0, "
           << std::visit(m_handle_converter, instruction.m_input);
     break;
-  case bust::UnaryOperator::NOT:
+  case UnaryOperator::NOT:
     const char *true_equivalent =
         (instruction.m_type == LLVMType::I1) ? "true" : "-1";
     m_out << std::visit(m_handle_converter, instruction.m_result) << " = xor "
@@ -226,10 +226,10 @@ void Formatter::function_arguments(const std::vector<Argument> &arguments) {
   }
   for (size_t index = 0; index < arguments.size() - 1; ++index) {
     const auto &argument = arguments[index];
-    (*this)(argument);
+    format(argument);
     m_out << ", ";
   }
-  (*this)(arguments.back());
+  format(arguments.back());
 }
 
 void Formatter::operator()(const CallVoidInstruction &instruction) {

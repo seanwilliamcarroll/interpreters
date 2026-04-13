@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Type checking pass for bust programs.
 //*
 //*
@@ -11,8 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/environment.hpp"
 #include <ast/nodes.hpp>
+#include <hir/environment.hpp>
 #include <hir/nodes.hpp>
 
 //****************************************************************************

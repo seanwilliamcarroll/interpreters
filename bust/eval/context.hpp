@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Shared context for the evaluator pass.
 //*
 //*
@@ -11,7 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include "eval/environment.hpp"
+#include "hir/type_registry.hpp"
+#include <eval/environment.hpp>
 
 //****************************************************************************
 namespace bust::eval {
@@ -19,6 +17,7 @@ namespace bust::eval {
 
 struct Context {
   Environment m_env{};
+  const hir::TypeRegistry &m_type_registry;
 };
 
 //****************************************************************************

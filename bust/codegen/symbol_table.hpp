@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Symbol table for the codegen pass.
 //*
 //*
@@ -11,15 +8,15 @@
 #pragma once
 //****************************************************************************
 
-#include <cassert>
-#include <iostream>
+#include <exceptions.hpp>
 #include <ranges>
+#include <scope_guard.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "codegen/handle.hpp"
-#include "codegen/instructions.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -58,7 +55,7 @@ struct SymbolTable {
 
   void push_scope() { m_scopes.emplace_back(); }
 
-  void pop_scope() {
+  void pop_scope() noexcept {
     assert((m_scopes.size() > 1) &&
            "Cannot pop scope, already at global scope!");
     m_scopes.pop_back();
@@ -89,26 +86,19 @@ struct SymbolTable {
         return maybe_handle.value();
       }
     }
-    assert(false && "Shouldn't happen");
-    return {};
+    throw core::InternalCompilerError("symbol lookup failed for '" + name +
+                                      "'");
   }
 
-  static Handle next_ssa_temporary() {
-    static size_t count = 1;
-    return TemporaryHandle{count++};
-  }
+  Handle next_ssa_temporary() { return TemporaryHandle{m_ssa_count++}; }
 
 private:
   std::vector<Scope> m_scopes;
   UniqueNameTracker m_name_tracker{};
+  size_t m_ssa_count = 1;
 };
 
-struct ScopeGuard {
-  ScopeGuard(SymbolTable &table) : m_table(table) { m_table.push_scope(); }
-  ~ScopeGuard() { m_table.pop_scope(); }
-
-  SymbolTable &m_table;
-};
+using ScopeGuard = core::ScopeGuard<SymbolTable>;
 
 //****************************************************************************
 } // namespace bust::codegen

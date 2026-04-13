@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Expression evaluator for bust tree-walking evaluator.
 //*
 //*
@@ -18,16 +15,19 @@
 #include <utility>
 #include <vector>
 
-#include "eval/context.hpp"
-#include "eval/environment.hpp"
-#include "eval/values.hpp"
-#include "hir/nodes.hpp"
+#include <eval/context.hpp>
+#include <eval/environment.hpp>
+#include <eval/values.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::eval {
 //****************************************************************************
 
 struct ExpressionEvaluator {
+
+  Value evaluate(const auto &);
+
   Value operator()(const hir::Identifier &);
   Value operator()(const hir::LiteralUnit &);
   Value operator()(const hir::LiteralI8 &);
@@ -66,7 +66,7 @@ struct ExpressionEvaluator {
                    std::move(current_scope)};
   }
 
-  Context m_ctx;
+  Context &m_ctx;
 };
 
 //****************************************************************************

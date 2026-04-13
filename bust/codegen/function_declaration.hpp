@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Function declaration for the codegen pass.
 //*
 //*
@@ -11,9 +8,9 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/handle.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
+#include <codegen/handle.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 #include <vector>
 
 //****************************************************************************

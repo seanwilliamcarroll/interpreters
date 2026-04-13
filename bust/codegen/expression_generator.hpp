@@ -1,9 +1,6 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Expression generator for bust LLVM IR codegen.
 //*
 //*
@@ -13,15 +10,17 @@
 
 #include <memory>
 
-#include "codegen/context.hpp"
-#include "codegen/handle.hpp"
-#include "hir/nodes.hpp"
+#include <codegen/context.hpp>
+#include <codegen/handle.hpp>
+#include <hir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct ExpressionGenerator {
+  Handle generate(const auto &);
+
   Handle operator()(const hir::Identifier &);
   Handle operator()(const hir::LiteralUnit &);
   Handle operator()(const hir::LiteralI8 &);

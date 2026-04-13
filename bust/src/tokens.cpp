@@ -1,15 +1,13 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Version : $Header:$
-//*
-//*
 //*  Purpose : Implementation of token_type_to_string for bust tokens.
 //*
 //*
 //****************************************************************************
 
 #include <ostream>
+#include <string>
 #include <tokens.hpp>
 
 //****************************************************************************
