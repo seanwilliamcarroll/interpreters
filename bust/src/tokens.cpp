@@ -82,6 +82,8 @@ std::string token_type_to_string(TokenType type) {
   // Keywords
   case TokenType::FN:
     return "FN \"fn\"";
+  case TokenType::EXTERN:
+    return "extern \"extern\"";
   case TokenType::LET:
     return "LET \"let\"";
   case TokenType::RETURN:
