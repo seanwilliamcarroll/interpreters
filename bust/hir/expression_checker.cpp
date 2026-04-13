@@ -428,38 +428,13 @@ Expression ExpressionChecker::operator()(
         location);
   }
 
-  // Do we need to rediscover the return type and body types?
-
-  // Expect body to have a unified type?
-  std::vector<Identifier> unified_parameters;
-  unified_parameters.reserve(parameters.size());
-  std::vector<TypeId> unified_parameter_types;
-  unified_parameter_types.reserve(parameter_types.size());
-  for (const auto &[parameter, parameter_type_id] :
-       std::views::zip(parameters, parameter_types)) {
-    const auto &parameter_type = m_ctx.m_type_registry.get(parameter_type_id);
-    if (!std::holds_alternative<TypeVariable>(parameter_type)) {
-      // TODO Could be more efficient than reconstructing
-      unified_parameters.emplace_back(Identifier{
-          {parameter.m_location}, parameter.m_name, parameter.m_type});
-      unified_parameter_types.push_back(parameter_type_id);
-      continue;
-    }
-    // See if we can resolve them
-    auto unified_type =
-        m_ctx.m_type_unifier.find(std::get<TypeVariable>(parameter_type));
-    unified_parameters.emplace_back(
-        Identifier{{parameter.m_location}, parameter.m_name, unified_type});
-    unified_parameter_types.push_back(unified_type);
-  }
-
   auto function_type_id = m_ctx.m_type_registry.intern(
-      FunctionType{std::move(unified_parameter_types), return_type_id});
+      FunctionType{std::move(parameter_types), return_type_id});
 
   return {{location},
           function_type_id,
           std::make_unique<LambdaExpr>(LambdaExpr{
-              std::move(unified_parameters), std::move(body), return_type_id})};
+              std::move(parameters), std::move(body), return_type_id})};
 }
 
 Expression

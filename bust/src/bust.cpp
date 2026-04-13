@@ -44,15 +44,16 @@ void Bust::run() {
     std::cout << "=== AST ===\n" << ast::Dumper::dump(program) << "\n";
   }
 
-  auto typed =
-      run_pipeline(std::move(program), ValidateMain{}, TypeChecker{}, Zonker{});
+  auto typed = run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
 
   if (m_options.dump_hir) {
     std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
   }
 
+  auto zonked = run_pipeline(std::move(typed), Zonker{});
+
   if (m_options.llvm_ir) {
-    auto ir = CodeGen{}(typed);
+    auto ir = CodeGen{}(zonked);
     std::cout << "=== LLVM IR ===\n" << ir << "\n";
 
     // Write IR to a temp file and run via lli, then surface its exit code
@@ -79,7 +80,7 @@ void Bust::run() {
     return;
   }
 
-  auto result = Evaluator{}(typed);
+  auto result = Evaluator{}(zonked);
   std::cout << "Program returned: " << result << "\n";
 }
 

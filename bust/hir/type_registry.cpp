@@ -15,8 +15,9 @@
 namespace bust::hir {
 //****************************************************************************
 
-std::string TypeRegistry::to_string(const TypeKind &type_kind) {
-  return std::visit(
+std::string TypeRegistry::to_string(const TypeKind &type_kind) const {
+  return "(" +
+         std::visit(
              [&](const auto &tk) -> std::string {
                using T = std::decay_t<decltype(tk)>;
                if constexpr (std::is_same_v<T, PrimitiveTypeValue>) {
@@ -25,16 +26,18 @@ std::string TypeRegistry::to_string(const TypeKind &type_kind) {
                } else if constexpr (std::is_same_v<T, TypeVariable>) {
                  return "?T<" + std::to_string(tk.m_id) + ">";
                } else if constexpr (std::is_same_v<T, FunctionType>) {
-                 std::string out = "(";
+                 std::string out{};
                  if (!tk.m_parameters.empty()) {
+                   out += "(";
                    for (size_t index = 0; index < tk.m_parameters.size() - 1;
                         ++index) {
                      out += to_string(get(tk.m_parameters[index]));
                      out += ", ";
                    }
                    out += to_string(get(tk.m_parameters.back()));
+                   out += ")";
                  }
-                 out += ") -> ";
+                 out += " -> ";
                  out += to_string(get(tk.m_return_type));
                  return out;
                } else if constexpr (std::is_same_v<T, NeverType>) {
@@ -42,10 +45,10 @@ std::string TypeRegistry::to_string(const TypeKind &type_kind) {
                }
              },
              type_kind) +
-         " : ID: " + std::to_string(m_mapping.at(type_kind).m_id);
+         " : ID: " + std::to_string(m_mapping.at(type_kind).m_id) + ")";
 }
 
-std::string TypeRegistry::to_string(TypeId type_id) {
+std::string TypeRegistry::to_string(TypeId type_id) const {
   return to_string(m_types.at(type_id.m_id));
 }
 

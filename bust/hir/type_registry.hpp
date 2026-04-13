@@ -48,8 +48,8 @@ struct TypeRegistry {
     return m_types[id.m_id];
   }
 
-  std::string to_string(const TypeKind &);
-  std::string to_string(TypeId);
+  std::string to_string(const TypeKind &) const;
+  std::string to_string(TypeId) const;
 
 private:
   std::vector<TypeKind> m_types{};
