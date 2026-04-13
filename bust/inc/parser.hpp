@@ -33,7 +33,9 @@ public:
 private:
   ast::Program parse_program();
   ast::TopItem parse_top_item();
+  ast::FunctionDeclaration parse_function_declaration();
   ast::FunctionDef parse_func_def();
+  ast::ExternFunctionDeclaration parse_extern_func_declaration();
   ast::LetBinding parse_let_binding();
   std::vector<ast::Identifier> parse_param_list();
   std::vector<ast::Identifier> parse_lambda_param_list();

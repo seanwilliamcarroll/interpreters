@@ -23,6 +23,7 @@ namespace bust::ast {
 
 struct Expression;
 struct FunctionDef;
+struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Identifier;
 struct Block;
@@ -65,7 +66,8 @@ using ExprKind =
 
 using Statement = std::variant<LetBinding, Expression>;
 
-using TopItem = std::variant<FunctionDef, LetBinding>;
+using TopItem =
+    std::variant<FunctionDef, ExternFunctionDeclaration, LetBinding>;
 
 // --- Leaf nodes ------------------------------------------------------------
 
@@ -98,11 +100,19 @@ struct LetBinding : public core::HasLocation {
   Expression m_expression;
 };
 
-struct FunctionDef : public core::HasLocation {
+struct FunctionDeclaration {
   Identifier m_id;
   std::vector<Identifier> m_parameters;
   TypeIdentifier m_return_type;
+};
+
+struct FunctionDef : public core::HasLocation {
+  FunctionDeclaration m_signature;
   Block m_body;
+};
+
+struct ExternFunctionDeclaration : public core::HasLocation {
+  FunctionDeclaration m_signature;
 };
 
 // --- Program ---------------------------------------------------------------
