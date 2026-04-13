@@ -1,0 +1,7 @@
+fn main() -> i64 {
+   let my_i8 : i64 = 4;
+   let my_i64: i64 = 8;
+   let g = |h| { h };
+   let f = |x, y| {x + y};
+   g(f)(my_i8, my_i64)
+}
