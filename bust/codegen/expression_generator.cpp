@@ -6,6 +6,7 @@
 //*
 //****************************************************************************
 
+#include "codegen/function_declaration.hpp"
 #include <algorithm>
 #include <codegen/basic_block.hpp>
 #include <codegen/context.hpp>
@@ -21,7 +22,6 @@
 #include <iterator>
 #include <operators.hpp>
 #include <optional>
-#include <stdexcept>
 #include <stdint.h>
 #include <string>
 #include <types.hpp>
@@ -515,9 +515,69 @@ Handle ExpressionGenerator::operator()(
   return ssa_temporary;
 }
 
-Handle
-ExpressionGenerator::operator()(const std::unique_ptr<hir::LambdaExpr> &) {
-  return {};
+FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
+    const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
+  std::vector<Parameter> parameters;
+  std::transform(
+      lambda_expr->m_parameters.begin(), lambda_expr->m_parameters.end(),
+      std::back_inserter(parameters),
+      [this](const hir::Identifier &parameter) -> Parameter {
+        auto handle = m_ctx.symbols().define_parameter(parameter.m_name);
+        return Parameter{.m_name = std::move(handle),
+                         .m_type = to_llvm_type(
+                             m_ctx.type_registry().get(parameter.m_type))};
+      });
+
+  auto lambda_handle = m_ctx.symbols().define_uniqued_global("lambda");
+
+  return FunctionDeclaration{
+      .m_function_id = lambda_handle,
+      .m_return_type =
+          to_llvm_type(m_ctx.type_registry().get(lambda_expr->m_return_type)),
+      .m_parameters = std::move(parameters)};
+}
+
+struct FunctionScopeGuard {
+  FunctionScopeGuard(Context &ctx)
+      : m_ctx(ctx), m_original_function(ctx.module().current_function()) {}
+  ~FunctionScopeGuard() {
+    m_ctx.module().set_current_function(m_original_function);
+  }
+
+  Context &m_ctx;
+  Function &m_original_function;
+};
+
+Handle ExpressionGenerator::operator()(
+    const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
+  ScopeGuard scope_guard(m_ctx.symbols());
+  FunctionScopeGuard function_guard(m_ctx);
+  // Need to capture any variables into an environment struct for this
+  // particular lambda
+  // Need to generate a top level function, uniquified name
+  // Need to generate a func/env ptr pair to return, returning a handle to them
+
+  // Start with pure lambda, no captures
+
+  auto signature = generate_lambda_signature(lambda_expr);
+
+  auto lambda_handle = signature.m_function_id;
+
+  auto &lambda_function = m_ctx.module().new_function(std::move(signature));
+  m_ctx.module().set_current_function(lambda_function);
+
+  auto return_value = generate(lambda_expr->m_body);
+
+  if (lambda_expr->m_return_type == m_ctx.type_registry().m_unit) {
+    lambda_function.current_basic_block().add_terminal(ReturnVoidInstruction{});
+  } else {
+    lambda_function.current_basic_block().add_terminal(
+        ReturnInstruction{.m_value = return_value,
+                          .m_type = to_llvm_type(m_ctx.type_registry().get(
+                              lambda_expr->m_return_type))});
+  }
+
+  return lambda_handle;
 }
 
 Handle ExpressionGenerator::operator()(const hir::Expression &expression) {

@@ -44,6 +44,8 @@ struct ExpressionGenerator {
   Handle operator()(const std::unique_ptr<hir::UnaryExpr> &);
   Handle operator()(const std::unique_ptr<hir::ReturnExpr> &);
   Handle operator()(const std::unique_ptr<hir::CastExpr> &);
+  FunctionDeclaration
+  generate_lambda_signature(const std::unique_ptr<hir::LambdaExpr> &);
   Handle operator()(const std::unique_ptr<hir::LambdaExpr> &);
 
   Handle operator()(const hir::Expression &);

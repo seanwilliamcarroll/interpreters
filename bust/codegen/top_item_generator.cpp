@@ -24,6 +24,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <codegen/context.hpp>
@@ -75,13 +76,19 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
-  // Wherever we are, we need to add this terminal to the final
-  function.current_basic_block().add_terminal(ReturnInstruction{
-      .m_value = return_value,
-      .m_type = to_llvm_type(m_ctx.type_registry().get(
-          std::get<hir::FunctionType>(
-              m_ctx.type_registry().get(function_def.m_signature.m_type))
-              .m_return_type))});
+  const auto &return_type_id =
+      std::get<hir::FunctionType>(
+          m_ctx.type_registry().get(function_def.m_signature.m_type))
+          .m_return_type;
+
+  if (return_type_id == m_ctx.type_registry().m_unit) {
+    function.current_basic_block().add_terminal(ReturnVoidInstruction{});
+  } else {
+    // Wherever we are, we need to add this terminal to the final
+    function.current_basic_block().add_terminal(ReturnInstruction{
+        .m_value = return_value,
+        .m_type = to_llvm_type(m_ctx.type_registry().get(return_type_id))});
+  }
 }
 
 void TopItemGenerator::operator()(
