@@ -42,7 +42,12 @@ add_library(bust-lib STATIC
   codegen/statement_generator.cpp
   codegen/top_item_generator.cpp
   src/type_checker.cpp
-  src/validate_main.cpp)
+  src/validate_main.cpp
+  src/zonker.cpp
+  zonk/expression_zonker.cpp
+  zonk/let_binding_zonker.cpp
+  zonk/statement_zonker.cpp
+  zonk/top_item_zonker.cpp)
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 
@@ -66,7 +71,8 @@ add_executable(bust-test
   test/src/type_unifier_test.cpp
   test/src/evaluator_test.cpp
   test/src/codegen_test.cpp
-  test/src/validate_main_test.cpp)
+  test/src/validate_main_test.cpp
+  test/src/zonker_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -110,5 +116,6 @@ add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
 add_test(NAME bust.evaluator COMMAND bust-test -ts=bust.evaluator)
 add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
+add_test(NAME bust.zonker COMMAND bust-test -ts=bust.zonker)
 
 #*****************************************************************************

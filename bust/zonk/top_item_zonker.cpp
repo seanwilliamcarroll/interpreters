@@ -1,0 +1,69 @@
+//**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
+//*
+//*
+//*  Purpose : Top-level item zonker implementation.
+//*
+//*
+//****************************************************************************
+
+#include "exceptions.hpp"
+#include "hir/nodes.hpp"
+#include "zonk/expression_zonker.hpp"
+#include "zonk/let_binding_zonker.hpp"
+#include <variant>
+#include <zonk/top_item_zonker.hpp>
+
+//****************************************************************************
+namespace bust::zonk {
+//****************************************************************************
+
+hir::TopItem TopItemZonker::zonk(hir::TopItem top_item) {
+  return std::visit(*this, std::move(top_item));
+}
+
+hir::TopItem TopItemZonker::operator()(hir::FunctionDef function_def) {
+  auto zonker = ExpressionZonker{m_ctx};
+
+  // For now, we expect top level functions to have annotated parameters and
+  // return types
+  std::vector<hir::Identifier> zonked_parameters;
+  zonked_parameters.reserve(function_def.m_parameters.size());
+  std::vector<hir::TypeId> zonked_parameter_ids;
+  zonked_parameter_ids.reserve(function_def.m_parameters.size());
+  for (auto &parameter : function_def.m_parameters) {
+    auto zonked_expression = zonker(std::move(parameter));
+    if (!std::holds_alternative<hir::Identifier>(zonked_expression)) {
+      throw core::InternalCompilerError("Bad expression visitor");
+    }
+    auto &zonked_parameter = std::get<hir::Identifier>(zonked_expression);
+    zonked_parameter_ids.push_back(zonked_parameter.m_type);
+    zonked_parameters.push_back(std::move(zonked_parameter));
+  }
+
+  // Insert the return value into the new type registry
+  auto zonked_return_type_id = m_ctx.find_and_register(function_def.m_type);
+
+  // Reconstruct the zonked function type
+  auto zonked_function_type =
+      hir::FunctionType{.m_parameters = std::move(zonked_parameter_ids),
+                        .m_return_type = zonked_return_type_id};
+  auto zonked_function_type_id =
+      m_ctx.m_new_type_registry.intern(zonked_function_type);
+
+  // Zonk the body
+  auto zonked_body = zonker.zonk_block(std::move(function_def.m_body));
+
+  return hir::FunctionDef{{function_def.m_location},
+                          std::move(function_def.m_function_id),
+                          zonked_function_type_id,
+                          std::move(zonked_parameters),
+                          std::move(zonked_body)};
+}
+
+hir::TopItem TopItemZonker::operator()(hir::LetBinding let_binding) {
+  return LetBindingZonker{m_ctx}.zonk(std::move(let_binding));
+}
+
+//****************************************************************************
+} // namespace bust::zonk
+//****************************************************************************

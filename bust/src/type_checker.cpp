@@ -44,8 +44,10 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
     typed_items.push_back(std::visit(hir::TopItemChecker{context}, top_item));
   }
 
-  return {
-      {program.m_location}, std::move(type_registry), std::move(typed_items)};
+  return {{program.m_location},
+          std::move(type_registry),
+          std::move(typed_items),
+          context.m_type_unifier.extract_state()};
 }
 
 //****************************************************************************

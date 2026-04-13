@@ -10,6 +10,7 @@
 
 #include "hir/type_registry.hpp"
 #include <hir/types.hpp>
+#include <hir/unifier_state.hpp>
 #include <hir/union_find.hpp>
 #include <ranges>
 #include <stdexcept>
@@ -295,6 +296,11 @@ struct TypeUnifier {
 
     // Not a concrete type yet
     return m_type_registry.intern(TypeVariable{root});
+  }
+
+  UnifierState extract_state() {
+    return {std::move(m_union_find), std::move(m_resolved_type_id),
+            std::move(m_resolved_type_class)};
   }
 
   TypeRegistry &m_type_registry;
