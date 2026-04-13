@@ -1,0 +1,19 @@
+extern fn putchar(c: i32) -> i32;
+
+fn main() -> i64 {
+  putchar('H' as i32);
+  putchar('e' as i32);
+  putchar('l' as i32);
+  putchar('l' as i32);
+  putchar('o' as i32);
+  putchar(',' as i32);
+  putchar(' ' as i32);
+  putchar('W' as i32);
+  putchar('o' as i32);
+  putchar('r' as i32);
+  putchar('l' as i32);
+  putchar('d' as i32);
+  putchar('!' as i32);
+  putchar('\n' as i32);
+  0
+}
