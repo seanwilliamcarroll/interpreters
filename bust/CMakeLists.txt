@@ -44,6 +44,9 @@ add_library(bust-lib STATIC
   src/type_checker.cpp
   src/validate_main.cpp
   src/zonker.cpp
+  zonk/expression_zonker.cpp
+  zonk/let_binding_zonker.cpp
+  zonk/statement_zonker.cpp
   zonk/top_item_zonker.cpp)
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
