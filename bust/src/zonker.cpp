@@ -23,14 +23,14 @@ hir::Program Zonker::operator()(hir::Program program) {
         "zonker invoked on program without unifier state");
   }
 
-  auto &unifier_state = program.m_unifier_state.value();
+  auto ctx =
+      zonk::Context{program.m_type_registry, program.m_unifier_state.value()};
 
   std::vector<hir::TopItem> zonked_items;
   zonked_items.reserve(program.m_top_items.size());
   for (auto &top_item : program.m_top_items) {
     zonked_items.push_back(
-        std::visit(zonk::TopItemZonker{program.m_type_registry, unifier_state},
-                   std::move(top_item)));
+        std::visit(zonk::TopItemZonker{ctx}, std::move(top_item)));
   }
 
   return {{program.m_location},
