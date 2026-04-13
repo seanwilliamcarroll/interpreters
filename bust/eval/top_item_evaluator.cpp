@@ -10,6 +10,7 @@
 #include <eval/expression_evaluator.hpp>
 #include <eval/let_binding_evaluator.hpp>
 #include <eval/top_item_evaluator.hpp>
+#include <exceptions.hpp>
 #include <utility>
 
 #include <eval/context.hpp>
@@ -31,8 +32,11 @@ Value TopItemEvaluator::operator()(const hir::FunctionDef &function_def) {
   return Unit{};
 }
 
-Value TopItemEvaluator::operator()(const hir::ExternFunctionDeclaration &) {
-  return Unit{};
+Value TopItemEvaluator::operator()(
+    const hir::ExternFunctionDeclaration &extern_func) {
+  throw core::InternalCompilerError(
+      "evaluator does not support extern functions ('" +
+      extern_func.m_signature.m_function_id + "')");
 }
 
 Value TopItemEvaluator::operator()(const hir::LetBinding &let_binding) {
