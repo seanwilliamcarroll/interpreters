@@ -41,19 +41,11 @@ struct Scope {
   }
 
   void define(const std::string &name, TypeId type_id) {
-    auto iter = m_identifier_to_type.find(name);
-    if (iter != m_identifier_to_type.end()) {
-      m_identifier_to_type.erase(iter);
-    }
-    m_identifier_to_type.emplace(name, TypeScheme{type_id, {}});
+    m_identifier_to_type.insert_or_assign(name, TypeScheme{type_id, {}});
   }
 
   void define(const std::string &name, TypeScheme type_scheme) {
-    auto iter = m_identifier_to_type.find(name);
-    if (iter != m_identifier_to_type.end()) {
-      m_identifier_to_type.erase(iter);
-    }
-    m_identifier_to_type.emplace(name, std::move(type_scheme));
+    m_identifier_to_type.insert_or_assign(name, std::move(type_scheme));
   }
 
 private:
