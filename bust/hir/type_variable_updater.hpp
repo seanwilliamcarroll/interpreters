@@ -1,14 +1,14 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Type visitors for bust HIR types (substitution, collection).
+//*  Purpose : Type variable substitution visitor for bust HIR types.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "hir/type_registry.hpp"
+#include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <unordered_map>
 #include <variant>
@@ -56,31 +56,6 @@ struct TypeVariableUpdater {
 
   TypeRegistry &m_type_registry;
   const std::unordered_map<TypeVariable, TypeVariable> &m_new_mapping;
-};
-
-struct FreeTypeVariableCollector {
-
-  void collect(const TypeKind &type) { std::visit(*this, type); }
-  void collect(const TypeId &type) { collect(m_type_registry.get(type)); }
-
-  void operator()(const PrimitiveTypeValue &) {}
-
-  void operator()(const TypeVariable &type) {
-    m_free_type_variables.emplace_back(type);
-  }
-
-  void operator()(const FunctionType &type) {
-    for (const auto &parameter : type.m_parameters) {
-      collect(m_type_registry.get(parameter));
-    }
-
-    collect(m_type_registry.get(type.m_return_type));
-  }
-
-  void operator()(const NeverType &) {}
-
-  TypeRegistry &m_type_registry;
-  std::vector<TypeVariable> m_free_type_variables{};
 };
 
 //****************************************************************************

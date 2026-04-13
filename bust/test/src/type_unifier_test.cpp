@@ -10,8 +10,10 @@
 //*
 //****************************************************************************
 
+#include "hir/environment.hpp"
+#include <hir/free_type_variable_collector.hpp>
 #include <hir/type_unifier.hpp>
-#include <hir/type_visitors.hpp>
+#include <hir/type_variable_updater.hpp>
 #include <hir/types.hpp>
 
 #include <doctest/doctest.h>
@@ -249,7 +251,12 @@ TEST_SUITE("bust.free_type_variable_collector") {
     auto tv = unifier.new_type_var();
     hir::TypeKind type = tv;
 
-    hir::FreeTypeVariableCollector collector{type_registry};
+    auto env = hir::Environment{};
+    auto context = hir::Context{.m_env = env,
+                                .m_type_registry = type_registry,
+                                .m_return_type_stack{},
+                                .m_type_unifier{type_registry}};
+    hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
     CHECK(collector.m_free_type_variables.size() == 1);
@@ -260,7 +267,12 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::TypeKind type = hir::PrimitiveTypeValue{PrimitiveType::I64};
 
     hir::TypeRegistry type_registry{};
-    hir::FreeTypeVariableCollector collector{type_registry};
+    auto env = hir::Environment{};
+    auto context = hir::Context{.m_env = env,
+                                .m_type_registry = type_registry,
+                                .m_return_type_stack{},
+                                .m_type_unifier{type_registry}};
+    hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
     CHECK(collector.m_free_type_variables.empty());
@@ -270,7 +282,12 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::TypeKind type = hir::NeverType{};
 
     hir::TypeRegistry type_registry{};
-    hir::FreeTypeVariableCollector collector{type_registry};
+    auto env = hir::Environment{};
+    auto context = hir::Context{.m_env = env,
+                                .m_type_registry = type_registry,
+                                .m_return_type_stack{},
+                                .m_type_unifier{type_registry}};
+    hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
     CHECK(collector.m_free_type_variables.empty());
@@ -288,7 +305,12 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::TypeKind fn_type =
         hir::FunctionType{std::move(params), type_registry.intern(t1)};
 
-    hir::FreeTypeVariableCollector collector{type_registry};
+    auto env = hir::Environment{};
+    auto context = hir::Context{.m_env = env,
+                                .m_type_registry = type_registry,
+                                .m_return_type_stack{},
+                                .m_type_unifier{type_registry}};
+    hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, fn_type);
 
     CHECK(collector.m_free_type_variables.size() == 2);
@@ -305,7 +327,12 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::TypeKind fn_type =
         hir::FunctionType{std::move(params), type_registry.intern(t1)};
 
-    hir::FreeTypeVariableCollector collector{type_registry};
+    auto env = hir::Environment{};
+    auto context = hir::Context{.m_env = env,
+                                .m_type_registry = type_registry,
+                                .m_return_type_stack{},
+                                .m_type_unifier{type_registry}};
+    hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, fn_type);
 
     CHECK(collector.m_free_type_variables.size() == 1);

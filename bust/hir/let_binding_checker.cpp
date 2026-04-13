@@ -10,11 +10,11 @@
 #include <exceptions.hpp>
 #include <hir/environment.hpp>
 #include <hir/expression_checker.hpp>
+#include <hir/free_type_variable_collector.hpp>
 #include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/type_converter.hpp>
 #include <hir/type_unifier.hpp>
-#include <hir/type_visitors.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
 #include <stdexcept>
@@ -55,7 +55,7 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
                                    let_binding.m_variable.m_name,
                                    unified_type};
 
-  FreeTypeVariableCollector collector{m_ctx.m_type_registry};
+  FreeTypeVariableCollector collector{m_ctx};
   collector.collect(new_identifier.m_type);
 
   // Store the new let binding

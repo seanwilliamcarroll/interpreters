@@ -11,7 +11,7 @@
 #include "hir/type_registry.hpp"
 #include <hir/environment.hpp>
 #include <hir/type_unifier.hpp>
-#include <hir/type_visitors.hpp>
+#include <hir/type_variable_updater.hpp>
 #include <vector>
 
 //****************************************************************************
