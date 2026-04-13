@@ -1291,6 +1291,62 @@ TEST_SUITE("bust.parser") {
     check_primitive_type(cast.m_new_type, PrimitiveType::I8);
   }
 
+  // === Extern function declarations =========================================
+
+  static const ExternFunctionDeclaration &get_single_extern(
+      const Program &program) {
+    REQUIRE(program.m_items.size() == 1);
+    REQUIRE(
+        std::holds_alternative<ExternFunctionDeclaration>(program.m_items[0]));
+    return std::get<ExternFunctionDeclaration>(program.m_items[0]);
+  }
+
+  TEST_CASE("bust::parse_extern_function_no_params") {
+    auto program = parse_string("extern fn abort() -> i64;");
+    DUMP_AST(program);
+    const auto &ext = get_single_extern(program);
+    CHECK(ext.m_signature.m_id.m_name == "abort");
+    CHECK(ext.m_signature.m_parameters.empty());
+    check_primitive_type(ext.m_signature.m_return_type, PrimitiveType::I64);
+  }
+
+  TEST_CASE("bust::parse_extern_function_with_param") {
+    auto program = parse_string("extern fn putchar(c: i32) -> i32;");
+    DUMP_AST(program);
+    const auto &ext = get_single_extern(program);
+    CHECK(ext.m_signature.m_id.m_name == "putchar");
+    REQUIRE(ext.m_signature.m_parameters.size() == 1);
+    CHECK(ext.m_signature.m_parameters[0].m_name == "c");
+    REQUIRE(ext.m_signature.m_parameters[0].m_type.has_value());
+    check_primitive_type(*ext.m_signature.m_parameters[0].m_type,
+                         PrimitiveType::I32);
+    check_primitive_type(ext.m_signature.m_return_type, PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_extern_function_no_return_type") {
+    auto program = parse_string("extern fn log_message(msg: i64);");
+    DUMP_AST(program);
+    const auto &ext = get_single_extern(program);
+    CHECK(ext.m_signature.m_id.m_name == "log_message");
+    check_primitive_type(ext.m_signature.m_return_type, PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("bust::parse_extern_alongside_func_def") {
+    auto program = parse_string("extern fn putchar(c: i32) -> i32;\n"
+                                "fn main() -> i64 { 0 }");
+    DUMP_AST(program);
+    REQUIRE(program.m_items.size() == 2);
+    REQUIRE(
+        std::holds_alternative<ExternFunctionDeclaration>(program.m_items[0]));
+    REQUIRE(std::holds_alternative<FunctionDef>(program.m_items[1]));
+    const auto &ext = std::get<ExternFunctionDeclaration>(program.m_items[0]);
+    CHECK(ext.m_signature.m_id.m_name == "putchar");
+    const auto &func = std::get<FunctionDef>(program.m_items[1]);
+    CHECK(func.m_signature.m_id.m_name == "main");
+  }
+
+  // === Cast expressions ======================================================
+
   TEST_CASE("bust::parse_cast_in_let_binding") {
     auto program = parse_string("fn main() -> i64 {\n"
                                 "  let x: i8 = 42 as i8;\n"
