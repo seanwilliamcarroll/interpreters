@@ -42,7 +42,9 @@ add_library(bust-lib STATIC
   codegen/statement_generator.cpp
   codegen/top_item_generator.cpp
   src/type_checker.cpp
-  src/validate_main.cpp)
+  src/validate_main.cpp
+  src/zonker.cpp
+  zonk/top_item_zonker.cpp)
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 

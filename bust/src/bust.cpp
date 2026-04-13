@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <utility>
 #include <validate_main.hpp>
+#include <zonker.hpp>
 
 #include <lexer.hpp>
 
@@ -43,7 +44,8 @@ void Bust::run() {
     std::cout << "=== AST ===\n" << ast::Dumper::dump(program) << "\n";
   }
 
-  auto typed = run_pipeline(std::move(program), ValidateMain{}, TypeChecker{});
+  auto typed =
+      run_pipeline(std::move(program), ValidateMain{}, TypeChecker{}, Zonker{});
 
   if (m_options.dump_hir) {
     std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";

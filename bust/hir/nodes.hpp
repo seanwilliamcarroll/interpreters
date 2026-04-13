@@ -11,6 +11,7 @@
 #include "ast/nodes.hpp"
 #include "hir/type_registry.hpp"
 #include <hir/types.hpp>
+#include <hir/unifier_state.hpp>
 #include <nodes.hpp>
 #include <operators.hpp>
 #include <optional>
@@ -130,6 +131,7 @@ struct FunctionDef : public core::HasLocation {
 struct Program : public core::HasLocation {
   TypeRegistry m_type_registry{};
   std::vector<TopItem> m_top_items{};
+  std::optional<UnifierState> m_unifier_state{};
 };
 
 //****************************************************************************
