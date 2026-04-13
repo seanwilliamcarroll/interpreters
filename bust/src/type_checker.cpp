@@ -30,11 +30,19 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
 
   // First pass to collect function signatures
   for (const auto &top_item : program.m_items) {
-    if (!std::holds_alternative<ast::FunctionDef>(top_item)) {
-      continue;
-    }
-    const auto &function_def = std::get<ast::FunctionDef>(top_item);
-    hir::TopItemChecker{context}.collect_function_signature(function_def);
+    std::visit(
+        [&](const auto &ti) {
+          using T = std::decay_t<decltype(ti)>;
+          if constexpr (std::is_same_v<T, ast::FunctionDef> ||
+                        std::is_same_v<T, ast::ExternFunctionDeclaration>) {
+            hir::TopItemChecker{context}.collect_function_signature(
+                ti.m_signature);
+          } else if constexpr (std::is_same_v<T, ast::LetBinding>) {
+            // pass, leave as branch rather than else in case we add more top
+            // items
+          }
+        },
+        top_item);
   }
 
   // Second pass to actually type check everything

@@ -32,32 +32,31 @@ namespace bust::hir {
 //****************************************************************************
 
 void TopItemChecker::collect_function_signature(
-    const ast::FunctionDef &function_def) {
-  if (auto other_id =
-          m_ctx.m_env.lookup(function_def.m_signature.m_id.m_name)) {
+    const ast::FunctionDeclaration &declaration) {
+  if (auto other_id = m_ctx.m_env.lookup(declaration.m_id.m_name)) {
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            function_def.m_signature.m_id.m_name + " with type: " +
+            declaration.m_id.m_name + " with type: " +
             m_ctx.m_type_registry.to_string(other_id.value().m_type),
-        function_def.m_signature.m_id.m_location);
+        declaration.m_id.m_location);
   }
 
   auto return_type_id =
-      TypeConverter{m_ctx}.get_type(function_def.m_signature.m_return_type);
+      TypeConverter{m_ctx}.get_type(declaration.m_return_type);
   const auto &return_type = m_ctx.m_type_registry.get(return_type_id);
   if (std::holds_alternative<TypeVariable>(return_type)) {
     throw core::InternalCompilerError(
         "return type inference for top-level functions not yet implemented");
   }
 
-  auto [_, parameter_types] = TypeConverter{m_ctx}.convert_parameters(
-      function_def.m_signature.m_parameters);
+  auto [_, parameter_types] =
+      TypeConverter{m_ctx}.convert_parameters(declaration.m_parameters);
 
   auto function_type_id = m_ctx.m_type_registry.intern(
       FunctionType{std::move(parameter_types), return_type_id});
 
-  m_ctx.m_env.define(function_def.m_signature.m_id.m_name, function_type_id);
+  m_ctx.m_env.define(declaration.m_id.m_name, function_type_id);
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {

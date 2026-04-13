@@ -18,7 +18,7 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TopItemChecker {
-  void collect_function_signature(const ast::FunctionDef &);
+  void collect_function_signature(const ast::FunctionDeclaration &);
   TopItem operator()(const ast::FunctionDef &);
   TopItem operator()(const ast::ExternFunctionDeclaration &);
   TopItem operator()(const ast::LetBinding &);
