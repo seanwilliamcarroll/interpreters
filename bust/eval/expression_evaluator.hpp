@@ -49,8 +49,24 @@ struct ExpressionEvaluator {
 
   Value evaluate_function_body(const hir::Block &);
 
-  Closure create_closure(const auto &function_object) {
+  Closure create_closure(const hir::FunctionDef &function_object) {
+    auto current_scope = m_ctx.m_env.get_current_scope();
 
+    std::vector<std::string> parameters;
+    parameters.reserve(function_object.m_signature.m_parameters.size());
+    std::transform(
+        function_object.m_signature.m_parameters.begin(),
+        function_object.m_signature.m_parameters.end(),
+        std::back_inserter(parameters),
+        [](const hir::Identifier &identifier) { return identifier.m_name; });
+
+    const auto *function_body = &function_object.m_body;
+
+    return Closure{std::move(parameters), function_body,
+                   std::move(current_scope)};
+  }
+
+  Closure create_closure(const hir::LambdaExpr &function_object) {
     auto current_scope = m_ctx.m_env.get_current_scope();
 
     std::vector<std::string> parameters;

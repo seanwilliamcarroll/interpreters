@@ -18,6 +18,7 @@ namespace bust::eval {
 
 struct TopItemEvaluator {
   Value operator()(const hir::FunctionDef &);
+  Value operator()(const hir::ExternFunctionDeclaration &);
   Value operator()(const hir::LetBinding &);
 
   Context &m_ctx;

@@ -54,7 +54,7 @@ TEST_SUITE("bust.zonker") {
     auto program = zonk_string("fn main() -> i64 { 42 }");
     REQUIRE(program.m_top_items.size() == 1);
     auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
-    CHECK(is_concrete(program.m_type_registry, func.m_type));
+    CHECK(is_concrete(program.m_type_registry, func.m_signature.m_type));
     CHECK(is_concrete(program.m_type_registry, func.m_body.m_type));
   }
 

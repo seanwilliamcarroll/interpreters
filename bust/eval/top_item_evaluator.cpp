@@ -25,8 +25,13 @@ Value TopItemEvaluator::operator()(const hir::FunctionDef &function_def) {
 
   auto closure = ExpressionEvaluator{m_ctx}.create_closure(function_def);
 
-  m_ctx.m_env.define(function_def.m_function_id, std::move(closure));
+  m_ctx.m_env.define(function_def.m_signature.m_function_id,
+                     std::move(closure));
 
+  return Unit{};
+}
+
+Value TopItemEvaluator::operator()(const hir::ExternFunctionDeclaration &) {
   return Unit{};
 }
 

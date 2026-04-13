@@ -17,6 +17,7 @@ namespace bust::codegen {
 
 struct TopItemDeclarationCollector {
   void operator()(const hir::FunctionDef &);
+  void operator()(const hir::ExternFunctionDeclaration &);
   void operator()(const hir::LetBinding &);
 
   Context &m_ctx;
@@ -24,6 +25,7 @@ struct TopItemDeclarationCollector {
 
 struct TopItemGenerator {
   void operator()(const hir::FunctionDef &);
+  void operator()(const hir::ExternFunctionDeclaration &);
   void operator()(const hir::LetBinding &);
 
   Context &m_ctx;
