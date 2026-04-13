@@ -25,6 +25,7 @@ namespace bust::hir {
 
 struct Expression;
 struct FunctionDef;
+struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Block;
 // TODO
@@ -102,7 +103,8 @@ struct Expression : public core::HasLocation {
 
 using Statement = std::variant<Expression, LetBinding>;
 
-using TopItem = std::variant<FunctionDef, LetBinding>;
+using TopItem =
+    std::variant<FunctionDef, ExternFunctionDeclaration, LetBinding>;
 
 // --- Control flow ----------------------------------------------------------
 
@@ -119,10 +121,18 @@ struct LetBinding : public core::HasLocation {
   Expression m_expression;
 };
 
-struct FunctionDef : public core::HasLocation {
+struct FunctionDeclaration {
   std::string m_function_id;
   TypeId m_type;
   std::vector<Identifier> m_parameters;
+};
+
+struct ExternFunctionDeclaration : public core::HasLocation {
+  FunctionDeclaration m_signature;
+};
+
+struct FunctionDef : public core::HasLocation {
+  FunctionDeclaration m_signature;
   Block m_body;
 };
 

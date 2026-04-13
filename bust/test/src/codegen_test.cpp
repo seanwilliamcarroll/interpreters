@@ -10,6 +10,7 @@
 //*
 //****************************************************************************
 
+#include "zonker.hpp"
 #include <codegen.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
@@ -36,7 +37,8 @@ TEST_SUITE("bust.codegen") {
     Parser parser(std::move(lexer));
     auto program = parser.parse();
     TypeChecker checker;
-    return checker(program);
+    Zonker zonker;
+    return zonker(checker(program));
   }
 
   static std::string codegen(const std::string &source) {
@@ -799,6 +801,73 @@ TEST_SUITE("bust.codegen") {
               "fn main() -> i64 { use_i8(10 as i8) as i64 }",
               10);
   }
+
+  // --- Extern function declarations -----------------------------------------
+
+  TEST_CASE("extern function emits declare, not define") {
+    auto ir = codegen("extern fn putchar(c: i32) -> i32;\n"
+                      "fn main() -> i64 { 0 }");
+    CHECK(ir.find("declare i32 @putchar(i32") != std::string::npos);
+    CHECK(ir.find("define i32 @putchar") == std::string::npos);
+  }
+
+  TEST_CASE("extern function with no return type emits declare void") {
+    auto ir = codegen("extern fn log_it(x: i64);\n"
+                      "fn main() -> i64 { 0 }");
+    CHECK(ir.find("declare void @log_it(i64") != std::string::npos);
+  }
+
+  TEST_CASE("extern and regular functions coexist in IR") {
+    auto ir = codegen("extern fn putchar(c: i32) -> i32;\n"
+                      "fn main() -> i64 { 0 }");
+    CHECK(ir.find("declare i32 @putchar") != std::string::npos);
+    CHECK(ir.find("define i64 @main") != std::string::npos);
+  }
+
+  TEST_CASE("multiple extern declarations all emit declare") {
+    auto ir = codegen("extern fn putchar(c: i32) -> i32;\n"
+                      "extern fn getchar() -> i32;\n"
+                      "fn main() -> i64 { 0 }");
+    CHECK(ir.find("declare i32 @putchar") != std::string::npos);
+    CHECK(ir.find("declare i32 @getchar") != std::string::npos);
+  }
+
+#ifdef BUST_LLI_PATH
+  TEST_CASE("call extern putchar via lli") {
+    // putchar returns the character written (as i32), cast to i64 for main
+    CHECK_RUN("extern fn putchar(c: i32) -> i32;\n"
+              "fn main() -> i64 { putchar('H' as i32) as i64 }",
+              72); // 'H' == 72
+  }
+
+  TEST_CASE("call extern putchar multiple times") {
+    // Print "Hi" and return 0
+    CHECK_RUN("extern fn putchar(c: i32) -> i32;\n"
+              "fn main() -> i64 {\n"
+              "  putchar('H' as i32);\n"
+              "  putchar('i' as i32);\n"
+              "  putchar('\\n' as i32);\n"
+              "  0\n"
+              "}",
+              0);
+  }
+
+  TEST_CASE("extern function call result in arithmetic") {
+    // putchar('*') returns 42, cast to i64
+    CHECK_RUN("extern fn putchar(c: i32) -> i32;\n"
+              "fn main() -> i64 { putchar(42 as i32) as i64 }",
+              42); // '*' == 42
+  }
+
+  TEST_CASE("extern function call in let binding") {
+    CHECK_RUN("extern fn putchar(c: i32) -> i32;\n"
+              "fn main() -> i64 {\n"
+              "  let result = putchar('!' as i32);\n"
+              "  result as i64\n"
+              "}",
+              33); // '!' == 33
+  }
+#endif
 
   TEST_CASE("mixed type arithmetic via cast") {
     CHECK_RUN("fn add_mixed(a: i8, b: i64) -> i64 { a as i64 + b }\n"

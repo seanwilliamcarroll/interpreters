@@ -60,6 +60,8 @@ private:
           using T = std::decay_t<decltype(v)>;
           if constexpr (std::is_same_v<T, FunctionDef>) {
             dump_func_def(v);
+          } else if constexpr (std::is_same_v<T, ExternFunctionDeclaration>) {
+            dump_extern_func_declaration(v);
           } else if constexpr (std::is_same_v<T, LetBinding>) {
             dump_let_binding(v);
           }
@@ -99,20 +101,32 @@ private:
     }
   }
 
-  void dump_func_def(const FunctionDef &f) {
-    indent();
-    m_out << "FunctionDef " << f.m_id.m_name << "(";
-    for (size_t i = 0; i < f.m_parameters.size(); ++i) {
+  void dump_func_declaration(const FunctionDeclaration &function_declaration) {
+    m_out << function_declaration.m_id.m_name << "(";
+    for (size_t i = 0; i < function_declaration.m_parameters.size(); ++i) {
       if (i > 0) {
         m_out << ", ";
       }
-      dump_identifier(f.m_parameters[i]);
+      dump_identifier(function_declaration.m_parameters[i]);
     }
     m_out << ") -> ";
-    dump_type_id(f.m_return_type);
+    dump_type_id(function_declaration.m_return_type);
+  }
+
+  void dump_func_def(const FunctionDef &f) {
+    indent();
+    m_out << "FunctionDef ";
+    dump_func_declaration(f.m_signature);
     m_out << "\n";
     IndentGuard g(*this);
     dump_block(f.m_body);
+  }
+
+  void dump_extern_func_declaration(const ExternFunctionDeclaration &f) {
+    indent();
+    m_out << "ExternFunctionDeclaration ";
+    dump_func_declaration(f.m_signature);
+    m_out << "\n";
   }
 
   void dump_let_binding(const LetBinding &lb) {

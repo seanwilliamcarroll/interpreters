@@ -19,8 +19,10 @@ namespace bust::zonk {
 struct TopItemZonker {
 
   hir::TopItem zonk(hir::TopItem);
+  hir::FunctionDeclaration zonk(hir::FunctionDeclaration);
 
   hir::TopItem operator()(hir::FunctionDef);
+  hir::TopItem operator()(hir::ExternFunctionDeclaration);
   hir::TopItem operator()(hir::LetBinding);
 
   Context &m_ctx;

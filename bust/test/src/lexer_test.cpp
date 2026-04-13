@@ -315,6 +315,15 @@ TEST_SUITE("bust.lexer") {
                        TokenType::EOF_TOKEN});
   }
 
+  TEST_CASE("bust::lexer_extern_function_declaration") {
+    check_token_types("extern fn putchar(c: i32) -> i32;",
+                      {TokenType::EXTERN, TokenType::FN, TokenType::IDENTIFIER,
+                       TokenType::LPAREN, TokenType::IDENTIFIER,
+                       TokenType::COLON, TokenType::I32, TokenType::RPAREN,
+                       TokenType::ARROW, TokenType::I32, TokenType::SEMICOLON,
+                       TokenType::EOF_TOKEN});
+  }
+
   TEST_CASE("bust::lexer_if_expression") {
     check_token_types(
         "if x == 0 { 1 } else { 2 }",

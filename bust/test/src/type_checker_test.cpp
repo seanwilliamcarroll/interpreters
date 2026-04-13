@@ -166,12 +166,14 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     REQUIRE(hir.m_top_items.size() == 1);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    CHECK(func.m_function_id == "main");
-    CHECK(std::get<hir::FunctionType>(hir.m_type_registry.get(func.m_type))
+    CHECK(func.m_signature.m_function_id == "main");
+    CHECK(std::get<hir::FunctionType>(
+              hir.m_type_registry.get(func.m_signature.m_type))
               .m_parameters.empty());
 
     auto &ret = std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(
-        std::get<hir::FunctionType>(hir.m_type_registry.get(func.m_type))
+        std::get<hir::FunctionType>(
+            hir.m_type_registry.get(func.m_signature.m_type))
             .m_return_type));
     CHECK(ret.m_type == PrimitiveType::I64);
   }
@@ -182,14 +184,15 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     REQUIRE(hir.m_top_items.size() == 2);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    CHECK(func.m_function_id == "add");
-    REQUIRE(func.m_parameters.size() == 2);
-    CHECK(func.m_parameters[0].m_name == "a");
+    CHECK(func.m_signature.m_function_id == "add");
+    REQUIRE(func.m_signature.m_parameters.size() == 2);
+    CHECK(func.m_signature.m_parameters[0].m_name == "a");
     auto &a_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_parameters[0].m_type));
+        hir.m_type_registry.get(func.m_signature.m_parameters[0].m_type));
     CHECK(a_type.m_type == PrimitiveType::I64);
-    CHECK(func.m_parameters[1].m_name == "b");
-    REQUIRE(std::get<hir::FunctionType>(hir.m_type_registry.get(func.m_type))
+    CHECK(func.m_signature.m_parameters[1].m_name == "b");
+    REQUIRE(std::get<hir::FunctionType>(
+                hir.m_type_registry.get(func.m_signature.m_type))
                 .m_parameters.size() == 2);
   }
 
@@ -524,7 +527,7 @@ TEST_SUITE("bust.type_checker") {
                           "fn main() -> i64 { 0 }");
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    CHECK(func.m_function_id == "countdown");
+    CHECK(func.m_signature.m_function_id == "countdown");
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
         hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
@@ -738,7 +741,7 @@ TEST_SUITE("bust.type_checker") {
                           "}");
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    CHECK(func.m_function_id == "add");
+    CHECK(func.m_signature.m_function_id == "add");
   }
 
   TEST_CASE("return type mismatch with function signature throws") {
@@ -807,9 +810,9 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     REQUIRE(hir.m_top_items.size() == 2);
     auto &helper = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    CHECK(helper.m_function_id == "helper");
+    CHECK(helper.m_signature.m_function_id == "helper");
     auto &main_fn = std::get<hir::FunctionDef>(hir.m_top_items[1]);
-    CHECK(main_fn.m_function_id == "main");
+    CHECK(main_fn.m_signature.m_function_id == "main");
   }
 
   // --- Nested expressions --------------------------------------------------
@@ -860,9 +863,9 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     REQUIRE(hir.m_top_items.size() == 3);
     auto &is_even = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    CHECK(is_even.m_function_id == "is_even");
+    CHECK(is_even.m_signature.m_function_id == "is_even");
     auto &is_odd = std::get<hir::FunctionDef>(hir.m_top_items[1]);
-    CHECK(is_odd.m_function_id == "is_odd");
+    CHECK(is_odd.m_signature.m_function_id == "is_odd");
   }
 
   TEST_CASE("forward reference: wrong argument type still caught") {
@@ -1432,7 +1435,8 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &ret = std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(
-        std::get<hir::FunctionType>(hir.m_type_registry.get(func.m_type))
+        std::get<hir::FunctionType>(
+            hir.m_type_registry.get(func.m_signature.m_type))
             .m_return_type));
     CHECK(ret.m_type == PrimitiveType::I8);
   }
@@ -1443,7 +1447,8 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &ret = std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(
-        std::get<hir::FunctionType>(hir.m_type_registry.get(func.m_type))
+        std::get<hir::FunctionType>(
+            hir.m_type_registry.get(func.m_signature.m_type))
             .m_return_type));
     CHECK(ret.m_type == PrimitiveType::I32);
   }
@@ -1453,9 +1458,9 @@ TEST_SUITE("bust.type_checker") {
                           "fn main() -> i64 { 0 }");
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    REQUIRE(func.m_parameters.size() == 1);
+    REQUIRE(func.m_signature.m_parameters.size() == 1);
     auto &p_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_parameters[0].m_type));
+        hir.m_type_registry.get(func.m_signature.m_parameters[0].m_type));
     CHECK(p_type.m_type == PrimitiveType::I8);
   }
 
@@ -1808,6 +1813,64 @@ TEST_SUITE("bust.type_checker") {
   TEST_CASE("unary minus on char throws") {
     CHECK_THROWS_AS(type_check("fn f(a: char) -> char { -a }\n"
                                "fn main() -> i64 { 0 }"),
+                    core::CompilerException);
+  }
+
+  // --- Extern function declarations -----------------------------------------
+
+  TEST_CASE("extern function declaration produces correct function type") {
+    auto hir = type_check("extern fn putchar(c: i32) -> i32;\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+    auto &ext = std::get<hir::ExternFunctionDeclaration>(hir.m_top_items[0]);
+    CHECK(ext.m_signature.m_function_id == "putchar");
+
+    auto &fn_type = std::get<hir::FunctionType>(
+        hir.m_type_registry.get(ext.m_signature.m_type));
+    REQUIRE(fn_type.m_parameters.size() == 1);
+
+    auto &param_type = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_registry.get(fn_type.m_parameters[0]));
+    CHECK(param_type.m_type == PrimitiveType::I32);
+
+    auto &ret_type = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_registry.get(fn_type.m_return_type));
+    CHECK(ret_type.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE(
+      "extern function declaration with no return type defaults to unit") {
+    auto hir = type_check("extern fn log(x: i64);\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &ext = std::get<hir::ExternFunctionDeclaration>(hir.m_top_items[0]);
+
+    auto &fn_type = std::get<hir::FunctionType>(
+        hir.m_type_registry.get(ext.m_signature.m_type));
+    auto &ret_type = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_registry.get(fn_type.m_return_type));
+    CHECK(ret_type.m_type == PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("calling extern function type checks arguments") {
+    auto hir = type_check("extern fn putchar(c: i32) -> i32;\n"
+                          "fn main() -> i64 {\n"
+                          "  putchar(72 as i32);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
+    CHECK(func.m_signature.m_function_id == "main");
+  }
+
+  TEST_CASE("calling extern function with wrong argument type throws") {
+    CHECK_THROWS_AS(type_check("extern fn putchar(c: i32) -> i32;\n"
+                               "fn main() -> i64 {\n"
+                               "  putchar(true);\n"
+                               "  0\n"
+                               "}"),
                     core::CompilerException);
   }
 

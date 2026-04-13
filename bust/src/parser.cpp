@@ -52,6 +52,9 @@ ast::TopItem Parser::parse_top_item() {
   if (peek().get_token_type() == TokenType::FN) {
     return parse_func_def();
   }
+  if (peek().get_token_type() == TokenType::EXTERN) {
+    return parse_extern_func_declaration();
+  }
   if (peek().get_token_type() == TokenType::LET) {
     return parse_let_binding();
   }
@@ -187,8 +190,7 @@ ast::Identifier Parser::parse_annotated_identifier() {
   return {{location}, identifier_name, std::move(type)};
 }
 
-ast::FunctionDef Parser::parse_func_def() {
-  auto original_location = peek().get_location();
+ast::FunctionDeclaration Parser::parse_function_declaration() {
   expect(TokenType::FN, __FUNCTION__);
 
   auto function_id = parse_non_annotated_identifier();
@@ -211,13 +213,26 @@ ast::FunctionDef Parser::parse_func_def() {
                                PrimitiveType::UNIT,
                            };
 
+  return {std::move(function_id), std::move(parameters),
+          std::move(return_type)};
+}
+
+ast::FunctionDef Parser::parse_func_def() {
+  auto original_location = peek().get_location();
+  auto signature = parse_function_declaration();
+
   auto body = parse_block();
 
-  return {{original_location},
-          std::move(function_id),
-          std::move(parameters),
-          std::move(return_type),
-          std::move(body)};
+  return {{original_location}, std::move(signature), std::move(body)};
+}
+
+ast::ExternFunctionDeclaration Parser::parse_extern_func_declaration() {
+  auto original_location = peek().get_location();
+  expect(TokenType::EXTERN, __FUNCTION__);
+  auto signature = parse_function_declaration();
+  expect(TokenType::SEMICOLON, __FUNCTION__);
+
+  return {{original_location}, std::move(signature)};
 }
 
 ast::LetBinding Parser::parse_let_binding() {

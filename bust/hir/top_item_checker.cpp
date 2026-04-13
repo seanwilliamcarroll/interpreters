@@ -32,18 +32,18 @@ namespace bust::hir {
 //****************************************************************************
 
 void TopItemChecker::collect_function_signature(
-    const ast::FunctionDef &function_def) {
-  if (auto other_id = m_ctx.m_env.lookup(function_def.m_id.m_name)) {
+    const ast::FunctionDeclaration &declaration) {
+  if (auto other_id = m_ctx.m_env.lookup(declaration.m_id.m_name)) {
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            function_def.m_id.m_name + " with type: " +
+            declaration.m_id.m_name + " with type: " +
             m_ctx.m_type_registry.to_string(other_id.value().m_type),
-        function_def.m_id.m_location);
+        declaration.m_id.m_location);
   }
 
   auto return_type_id =
-      TypeConverter{m_ctx}.get_type(function_def.m_return_type);
+      TypeConverter{m_ctx}.get_type(declaration.m_return_type);
   const auto &return_type = m_ctx.m_type_registry.get(return_type_id);
   if (std::holds_alternative<TypeVariable>(return_type)) {
     throw core::InternalCompilerError(
@@ -51,35 +51,44 @@ void TopItemChecker::collect_function_signature(
   }
 
   auto [_, parameter_types] =
-      TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
+      TypeConverter{m_ctx}.convert_parameters(declaration.m_parameters);
 
   auto function_type_id = m_ctx.m_type_registry.intern(
       FunctionType{std::move(parameter_types), return_type_id});
 
-  m_ctx.m_env.define(function_def.m_id.m_name, function_type_id);
+  m_ctx.m_env.define(declaration.m_id.m_name, function_type_id);
 }
 
-TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
+hir::FunctionDeclaration TopItemChecker::check_declaration(
+    const ast::FunctionDeclaration &function_declaration) {
   // Should throw, this would be an error of the type checker itself
-  auto maybe_function_type = m_ctx.m_env.lookup(function_def.m_id.m_name);
+  auto maybe_function_type =
+      m_ctx.m_env.lookup(function_declaration.m_id.m_name);
   if (!maybe_function_type.has_value()) {
     throw core::InternalCompilerError(
-        "function '" + function_def.m_id.m_name +
+        "function '" + function_declaration.m_id.m_name +
         "' not found after first pass signature collection");
   }
   auto function_type_id = maybe_function_type.value().m_type;
 
-  auto [parameters, _] =
-      TypeConverter{m_ctx}.convert_parameters(function_def.m_parameters);
+  auto [parameters, _] = TypeConverter{m_ctx}.convert_parameters(
+      function_declaration.m_parameters);
+
+  return FunctionDeclaration{function_declaration.m_id.m_name, function_type_id,
+                             std::move(parameters)};
+}
+
+TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
+  auto signature = check_declaration(function_def.m_signature);
 
   // Define the function in the environment before checking its body
   // (allows recursion)
   auto expected_return_type =
-      std::get<FunctionType>(m_ctx.m_type_registry.get(function_type_id))
+      std::get<FunctionType>(m_ctx.m_type_registry.get(signature.m_type))
           .m_return_type;
 
   auto body = BlockChecker{m_ctx}.check_callable_body(
-      parameters, expected_return_type, function_def.m_body);
+      signature.m_parameters, expected_return_type, function_def.m_body);
 
   try {
     m_ctx.m_type_unifier.unify(body.m_type, expected_return_type);
@@ -89,11 +98,16 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
         function_def.m_location);
   }
 
-  return FunctionDef{{function_def.m_location},
-                     function_def.m_id.m_name,
-                     function_type_id,
-                     std::move(parameters),
-                     std::move(body)};
+  return FunctionDef{
+      {function_def.m_location}, std::move(signature), std::move(body)};
+}
+
+TopItem
+TopItemChecker::operator()(const ast::ExternFunctionDeclaration &extern_func) {
+  auto signature = check_declaration(extern_func.m_signature);
+
+  return ExternFunctionDeclaration{{extern_func.m_location},
+                                   std::move(signature)};
 }
 
 TopItem TopItemChecker::operator()(const ast::LetBinding &let_binding) {

@@ -4,6 +4,7 @@
 
 ```
 // Keywords
+EXTERN      = `extern`
 FN          = `fn`
 LET         = `let`
 RETURN      = `return`
@@ -81,9 +82,12 @@ IDENTIFIER      = [_a-z][_a-zA-Z0-9]*   // checked against keyword table
 program             = top_item+
 
 top_item            = func_def
+                    | extern_func_declaration
                     | let_binding
 
 func_def            = FN IDENTIFIER parameter_list (ARROW type)? block
+
+extern_func_declaration = EXTERN FN IDENTIFIER parameter_list (ARROW type)? SEMICOLON
 
 parameter_list      = LPAREN (argument_annotated (COMMA argument_annotated)*)? RPAREN
 

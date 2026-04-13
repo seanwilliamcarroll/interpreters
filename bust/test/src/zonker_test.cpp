@@ -54,7 +54,7 @@ TEST_SUITE("bust.zonker") {
     auto program = zonk_string("fn main() -> i64 { 42 }");
     REQUIRE(program.m_top_items.size() == 1);
     auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
-    CHECK(is_concrete(program.m_type_registry, func.m_type));
+    CHECK(is_concrete(program.m_type_registry, func.m_signature.m_type));
     CHECK(is_concrete(program.m_type_registry, func.m_body.m_type));
   }
 
@@ -115,6 +115,32 @@ TEST_SUITE("bust.zonker") {
     REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(param_type));
     CHECK(std::get<hir::PrimitiveTypeValue>(param_type).m_type ==
           PrimitiveType::I64);
+  }
+
+  // --- Extern function declarations -----------------------------------------
+
+  TEST_CASE("extern function declaration types are concrete after zonking") {
+    auto program = zonk_string("extern fn putchar(c: i32) -> i32;\n"
+                               "fn main() -> i64 { 0 }");
+    REQUIRE(program.m_top_items.size() == 2);
+    auto &ext =
+        std::get<hir::ExternFunctionDeclaration>(program.m_top_items[0]);
+    CHECK(is_concrete(program.m_type_registry, ext.m_signature.m_type));
+  }
+
+  TEST_CASE("extern function survives full pipeline with call site") {
+    auto program = zonk_string("extern fn putchar(c: i32) -> i32;\n"
+                               "fn main() -> i64 {\n"
+                               "  putchar(72 as i32);\n"
+                               "  0\n"
+                               "}");
+    REQUIRE(program.m_top_items.size() == 2);
+    auto &ext =
+        std::get<hir::ExternFunctionDeclaration>(program.m_top_items[0]);
+    CHECK(ext.m_signature.m_function_id == "putchar");
+
+    auto &func = std::get<hir::FunctionDef>(program.m_top_items[1]);
+    CHECK(is_concrete(program.m_type_registry, func.m_body.m_type));
   }
 
 } // TEST_SUITE

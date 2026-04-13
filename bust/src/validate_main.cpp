@@ -21,26 +21,26 @@ namespace bust {
 //****************************************************************************
 
 bool try_validate_main(const ast::FunctionDef &function_def) {
-  if (function_def.m_id.m_name != "main") {
+  if (function_def.m_signature.m_id.m_name != "main") {
     return false;
   }
 
   if (!std::holds_alternative<ast::PrimitiveTypeIdentifier>(
-          function_def.m_return_type)) {
+          function_def.m_signature.m_return_type)) {
     throw core::CompilerException(
         "ValidateMain",
         "main function can only return i64 type, not" +
-            type_identifier_to_string(function_def.m_return_type),
+            type_identifier_to_string(function_def.m_signature.m_return_type),
         function_def.m_location);
   }
 
-  auto primitive_type =
-      std::get<ast::PrimitiveTypeIdentifier>(function_def.m_return_type);
+  auto primitive_type = std::get<ast::PrimitiveTypeIdentifier>(
+      function_def.m_signature.m_return_type);
   if (primitive_type.m_type != PrimitiveType::I64) {
     throw core::CompilerException(
         "ValidateMain",
         "main function can only return i64 type, not" +
-            type_identifier_to_string(function_def.m_return_type),
+            type_identifier_to_string(function_def.m_signature.m_return_type),
         function_def.m_location);
   }
 
