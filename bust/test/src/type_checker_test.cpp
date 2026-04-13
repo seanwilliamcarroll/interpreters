@@ -1816,6 +1816,64 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Extern function declarations -----------------------------------------
+
+  TEST_CASE("extern function declaration produces correct function type") {
+    auto hir = type_check("extern fn putchar(c: i32) -> i32;\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+    auto &ext = std::get<hir::ExternFunctionDeclaration>(hir.m_top_items[0]);
+    CHECK(ext.m_signature.m_function_id == "putchar");
+
+    auto &fn_type = std::get<hir::FunctionType>(
+        hir.m_type_registry.get(ext.m_signature.m_type));
+    REQUIRE(fn_type.m_parameters.size() == 1);
+
+    auto &param_type = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_registry.get(fn_type.m_parameters[0]));
+    CHECK(param_type.m_type == PrimitiveType::I32);
+
+    auto &ret_type = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_registry.get(fn_type.m_return_type));
+    CHECK(ret_type.m_type == PrimitiveType::I32);
+  }
+
+  TEST_CASE(
+      "extern function declaration with no return type defaults to unit") {
+    auto hir = type_check("extern fn log(x: i64);\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &ext = std::get<hir::ExternFunctionDeclaration>(hir.m_top_items[0]);
+
+    auto &fn_type = std::get<hir::FunctionType>(
+        hir.m_type_registry.get(ext.m_signature.m_type));
+    auto &ret_type = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_registry.get(fn_type.m_return_type));
+    CHECK(ret_type.m_type == PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("calling extern function type checks arguments") {
+    auto hir = type_check("extern fn putchar(c: i32) -> i32;\n"
+                          "fn main() -> i64 {\n"
+                          "  putchar(72 as i32);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
+    CHECK(func.m_signature.m_function_id == "main");
+  }
+
+  TEST_CASE("calling extern function with wrong argument type throws") {
+    CHECK_THROWS_AS(type_check("extern fn putchar(c: i32) -> i32;\n"
+                               "fn main() -> i64 {\n"
+                               "  putchar(true);\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust
