@@ -38,9 +38,20 @@ struct Module {
     m_current_function = &function;
   }
 
+  void add_extern_function_declaration(
+      std::unique_ptr<FunctionDeclaration> func_declaration) {
+    m_extern_functions.emplace_back(std::move(func_declaration));
+  }
+
+  const std::vector<std::unique_ptr<FunctionDeclaration>> &
+  extern_functions() const {
+    return m_extern_functions;
+  }
+
 private:
   std::vector<Global> m_globals;
   std::vector<std::unique_ptr<Function>> m_functions;
+  std::vector<std::unique_ptr<FunctionDeclaration>> m_extern_functions;
   Function *m_current_function = nullptr;
 };
 

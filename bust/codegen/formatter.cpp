@@ -61,6 +61,10 @@ void Formatter::format(const auto &to_format) { (*this)(to_format); }
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
 
+  for (const auto &function : mod.extern_functions()) {
+    declare(*function);
+  }
+
   for (const auto &function : mod.functions()) {
     format(*function);
   }

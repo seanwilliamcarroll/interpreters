@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "codegen/function_declaration.hpp"
 #include <codegen/context.hpp>
 #include <hir/nodes.hpp>
 
@@ -24,6 +25,8 @@ struct TopItemDeclarationCollector {
 };
 
 struct TopItemGenerator {
+  FunctionDeclaration generate(const hir::FunctionDeclaration &);
+
   void operator()(const hir::FunctionDef &);
   void operator()(const hir::ExternFunctionDeclaration &);
   void operator()(const hir::LetBinding &);
