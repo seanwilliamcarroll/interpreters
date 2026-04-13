@@ -8,11 +8,11 @@
 #pragma once
 //****************************************************************************
 
+#include <cassert>
 #include <hir/types.hpp>
 #include <optional>
 #include <ranges>
 #include <scope_guard.hpp>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -63,10 +63,8 @@ struct Environment {
   Environment() { m_scopes.emplace_back(); }
 
   void push_scope() { m_scopes.emplace_back(); }
-  void pop_scope() {
-    if (m_scopes.size() == 1) {
-      throw std::runtime_error("Cannot pop scope, already at global scope!");
-    }
+  void pop_scope() noexcept {
+    assert(m_scopes.size() > 1 && "Cannot pop scope, already at global scope!");
     m_scopes.pop_back();
   }
 

@@ -55,7 +55,7 @@ struct SymbolTable {
 
   void push_scope() { m_scopes.emplace_back(); }
 
-  void pop_scope() {
+  void pop_scope() noexcept {
     assert((m_scopes.size() > 1) &&
            "Cannot pop scope, already at global scope!");
     m_scopes.pop_back();
