@@ -36,7 +36,7 @@ hir::Program Zonker::operator()(hir::Program program) {
   }
 
   return {{program.m_location},
-          std::move(program.m_type_registry),
+          std::move(ctx.m_new_type_registry),
           std::move(zonked_items),
           {}};
 }

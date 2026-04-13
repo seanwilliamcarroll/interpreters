@@ -71,7 +71,8 @@ add_executable(bust-test
   test/src/type_unifier_test.cpp
   test/src/evaluator_test.cpp
   test/src/codegen_test.cpp
-  test/src/validate_main_test.cpp)
+  test/src/validate_main_test.cpp
+  test/src/zonker_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -115,5 +116,6 @@ add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
 add_test(NAME bust.evaluator COMMAND bust-test -ts=bust.evaluator)
 add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
+add_test(NAME bust.zonker COMMAND bust-test -ts=bust.zonker)
 
 #*****************************************************************************
