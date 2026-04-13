@@ -39,7 +39,14 @@ struct TypeRegistry {
     return next_type_id;
   }
 
-  const TypeKind &get(TypeId id) const { return m_types[id.m_id]; }
+  const TypeKind &get(TypeId id) const {
+    if (id.m_id >= m_types.size()) {
+      throw core::InternalCompilerError(
+          "TypeRegistry::get() out of bounds: id " + std::to_string(id.m_id) +
+          ", size " + std::to_string(m_types.size()));
+    }
+    return m_types[id.m_id];
+  }
 
   std::string to_string(const TypeKind &);
   std::string to_string(TypeId);
