@@ -9,6 +9,7 @@
 #pragma once
 //****************************************************************************
 
+#include "exceptions.hpp"
 #include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
@@ -34,7 +35,10 @@ struct TypeResolver {
     }
 
     // Type variable was not resolved to a concrete type
-    return type_id;
+    throw core::InternalCompilerError(
+        "We assume all type variables should "
+        "have been resolved before zonking!\nCould not resolve: " +
+        m_type_registry.to_string(type_id));
   }
 
   hir::TypeRegistry &m_type_registry;

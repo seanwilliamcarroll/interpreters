@@ -20,6 +20,9 @@ namespace bust::zonk {
 struct ExpressionZonker {
   hir::Expression zonk(hir::Expression);
 
+  hir::ExprKind zonk(hir::Block);
+
+  hir::Identifier zonk(hir::Identifier);
   hir::ExprKind operator()(hir::Identifier);
   hir::ExprKind operator()(hir::LiteralUnit);
   hir::ExprKind operator()(hir::LiteralI8);
@@ -28,6 +31,7 @@ struct ExpressionZonker {
   hir::ExprKind operator()(hir::LiteralBool);
   hir::ExprKind operator()(hir::LiteralChar);
   hir::ExprKind operator()(std::unique_ptr<hir::Block>);
+  hir::Block zonk_block(hir::Block);
   hir::ExprKind operator()(std::unique_ptr<hir::IfExpr>);
   hir::ExprKind operator()(std::unique_ptr<hir::CallExpr>);
   hir::ExprKind operator()(std::unique_ptr<hir::BinaryExpr>);

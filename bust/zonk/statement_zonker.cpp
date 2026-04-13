@@ -6,6 +6,8 @@
 //*
 //****************************************************************************
 
+#include "zonk/expression_zonker.hpp"
+#include "zonk/let_binding_zonker.hpp"
 #include <variant>
 #include <zonk/statement_zonker.hpp>
 
@@ -18,11 +20,11 @@ hir::Statement StatementZonker::zonk(hir::Statement statement) {
 }
 
 hir::Statement StatementZonker::operator()(hir::Expression expression) {
-  return expression;
+  return ExpressionZonker{m_ctx}.zonk(std::move(expression));
 }
 
 hir::Statement StatementZonker::operator()(hir::LetBinding let_binding) {
-  return let_binding;
+  return LetBindingZonker{m_ctx}.zonk(std::move(let_binding));
 }
 
 //****************************************************************************
