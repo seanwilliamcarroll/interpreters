@@ -25,10 +25,11 @@ struct FreeTypeVariableCollector {
   void operator()(const TypeVariable &type) {
     // Let's try to resolve the types first
     auto resolved_type_id = m_ctx.m_type_unifier.find(type);
-    if (std::holds_alternative<TypeVariable>(
+    if (!std::holds_alternative<TypeVariable>(
             m_ctx.m_type_registry.get(resolved_type_id))) {
-      m_free_type_variables.emplace_back(type);
+      return;
     }
+    m_free_type_variables.emplace_back(type);
   }
 
   void operator()(const FunctionType &type) {

@@ -8,10 +8,12 @@
 #pragma once
 //****************************************************************************
 
+#include "exceptions.hpp"
 #include "hir/type_registry.hpp"
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
 #include <hir/union_find.hpp>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <types.hpp>
@@ -23,10 +25,18 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeUnifier {
-  TypeVariable new_type_var() {
+  TypeVariable
+  new_type_var(std::optional<PrimitiveTypeClass> possible_constraint = {}) {
     auto new_id = m_union_find.add_node();
     auto new_type_var = TypeVariable{.m_id = new_id};
     m_type_registry.intern(new_type_var);
+
+    if (!possible_constraint.has_value()) {
+      return new_type_var;
+    }
+    // Check if the constraint conflicts, it shouldn't, but not bad to check
+    const auto &constraint = possible_constraint.value();
+    constrain(new_type_var, constraint);
     return new_type_var;
   }
 
@@ -296,6 +306,27 @@ struct TypeUnifier {
 
     // Not a concrete type yet
     return m_type_registry.intern(TypeVariable{root});
+  }
+
+  std::optional<PrimitiveTypeClass> find_type_class(const TypeVariable &type) {
+    auto root_id = find(type);
+
+    const auto &root = m_type_registry.get(root_id);
+
+    if (!std::holds_alternative<TypeVariable>(root)) {
+      throw core::InternalCompilerError(
+          "Should not call this method on a resolved type variable");
+    }
+
+    const auto &root_type_var = std::get<TypeVariable>(root);
+
+    auto iter = m_resolved_type_class.find(root_type_var.m_id);
+    if (iter == m_resolved_type_class.end()) {
+      return {};
+    }
+    // A constraint exists
+    auto constraint = iter->second;
+    return {constraint};
   }
 
   UnifierState extract_state() {

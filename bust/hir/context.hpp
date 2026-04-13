@@ -23,7 +23,10 @@ struct Context {
   TypeId create_fresh_type_vars(const TypeScheme &type_scheme) {
     std::unordered_map<TypeVariable, TypeVariable> new_mapping;
     for (const auto &old_type_variable : type_scheme.m_free_type_variables) {
-      new_mapping.emplace(old_type_variable, m_type_unifier.new_type_var());
+      auto possible_type_class =
+          m_type_unifier.find_type_class(old_type_variable);
+      new_mapping.emplace(old_type_variable,
+                          m_type_unifier.new_type_var(possible_type_class));
     }
 
     return TypeVariableUpdater{m_type_registry, new_mapping}.update(
