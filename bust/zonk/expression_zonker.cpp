@@ -32,7 +32,10 @@ hir::ExprKind ExpressionZonker::zonk(hir::Block block) {
 
 hir::Identifier ExpressionZonker::zonk(hir::Identifier identifier) {
   auto new_type_id = m_ctx.find_and_register(identifier.m_type);
-  return {{identifier.m_location}, std::move(identifier.m_name), new_type_id};
+  return {{identifier.m_location},
+          std::move(identifier.m_name),
+          identifier.m_id,
+          new_type_id};
 }
 
 hir::ExprKind ExpressionZonker::operator()(hir::Identifier identifier) {

@@ -32,8 +32,7 @@ struct PostTypeCheckedData {
 
 struct Context {
 
-  TypeId create_fresh_type_vars(const std::string &bound_name,
-                                const TypeScheme &type_scheme) {
+  TypeId create_fresh_type_vars(BindingId id, const TypeScheme &type_scheme) {
     TypeSubstitution new_mapping;
     for (const auto &old_type_id : type_scheme.m_free_type_variables) {
       auto possible_type_class = m_type_unifier.find_type_class(old_type_id);
@@ -43,8 +42,7 @@ struct Context {
 
     if (!new_mapping.empty()) {
       // We're instantiating a polymorphic lambda (?)
-      m_instantiation_records.push_back(
-          InstantiationRecord{bound_name, new_mapping});
+      m_instantiation_records.push_back(InstantiationRecord{id, new_mapping});
     }
 
     return TypeVariableSubstituter{m_type_registry, new_mapping}.substitute(
@@ -80,7 +78,7 @@ struct Context {
   }
 
   std::vector<InstantiationRecord> resolve_instantiation_records() {
-    std::unordered_map<std::string,
+    std::unordered_map<BindingId,
                        std::set<std::vector<std::pair<TypeId, TypeId>>>>
         seen;
     std::vector<InstantiationRecord> output;
@@ -89,7 +87,7 @@ struct Context {
     m_instantiation_records.clear();
 
     for (const auto &record : original_records) {
-      const auto &name = record.m_let_binding;
+      const auto &id = record.m_id;
       const auto &mapping = record.m_substitution;
 
       std::vector<std::pair<TypeId, TypeId>> canonical_mapping;
@@ -103,9 +101,9 @@ struct Context {
       // Should sort a vector of tuples by first element
       std::ranges::sort(canonical_mapping);
 
-      if (seen[name].insert(canonical_mapping).second) {
+      if (seen[id].insert(canonical_mapping).second) {
         output.emplace_back(InstantiationRecord{
-            .m_let_binding = name,
+            .m_id = id,
             .m_substitution = TypeSubstitution(canonical_mapping.begin(),
                                                canonical_mapping.end()),
         });
@@ -125,11 +123,16 @@ struct Context {
     };
   }
 
+  BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
+
   Environment m_env{};
   TypeRegistry m_type_registry{};
   std::vector<TypeId> m_return_type_stack{};
   TypeUnifier m_type_unifier{m_type_registry};
   std::vector<InstantiationRecord> m_instantiation_records{};
+
+private:
+  InnerTypeBindingId m_next_let_binding_id = 0;
 };
 
 //****************************************************************************

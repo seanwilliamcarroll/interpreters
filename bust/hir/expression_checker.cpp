@@ -98,14 +98,13 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
         location);
   }
 
-  const auto &type_scheme = maybe_type.value();
+  const auto &[binding_id, type_scheme] = maybe_type.value();
 
-  auto final_type =
-      m_ctx.create_fresh_type_vars(identifier.m_name, type_scheme);
+  auto final_type = m_ctx.create_fresh_type_vars(binding_id, type_scheme);
 
   return {{location},
           final_type,
-          Identifier{{location}, identifier.m_name, final_type}};
+          Identifier{{location}, identifier.m_name, binding_id, final_type}};
 }
 
 Expression ExpressionChecker::operator()(
@@ -436,13 +435,11 @@ Expression ExpressionChecker::operator()(
 Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &,
                               const core::SourceLocation &) {
-  // TODO
-  return {};
+  throw core::InternalCompilerError("Not yet implemented");
 }
 Expression ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &,
                                          const core::SourceLocation &) {
-  // TODO
-  return {};
+  throw core::InternalCompilerError("Not yet implemented");
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal,

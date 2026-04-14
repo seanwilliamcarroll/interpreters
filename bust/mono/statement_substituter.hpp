@@ -9,9 +9,30 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/nodes.hpp"
+#include "mono/context.hpp"
+#include "mono/expression_substituter.hpp"
+#include "mono/let_binding_substituter.hpp"
+
 //****************************************************************************
 namespace bust::mono {
 //****************************************************************************
+
+struct StatementSubstituter {
+  hir::Statement substitute(const hir::Statement &statement) {
+    return std::visit(*this, statement);
+  }
+
+  hir::Statement operator()(const hir::Expression &expression) {
+    return ExpressionSubsituter{m_ctx}.substitute(expression);
+  }
+
+  hir::Statement operator()(const hir::LetBinding &let_binding) {
+    return LetBindingSubstituter{m_ctx}.substitute(let_binding);
+  }
+
+  Context &m_ctx;
+};
 
 //****************************************************************************
 } // namespace bust::mono

@@ -9,7 +9,6 @@
 //****************************************************************************
 
 #include "ast/nodes.hpp"
-#include "hir/context.hpp"
 #include "hir/instantiation_record.hpp"
 #include "hir/type_registry.hpp"
 #include <hir/types.hpp>
@@ -38,6 +37,7 @@ struct ForExpr {};
 
 struct Identifier : public core::HasLocation {
   std::string m_name;
+  BindingId m_id;
   TypeId m_type;
 };
 
@@ -125,6 +125,7 @@ struct LetBinding : public core::HasLocation {
 
 struct FunctionDeclaration {
   std::string m_function_id;
+  BindingId m_id;
   TypeId m_type;
   std::vector<Identifier> m_parameters;
 };

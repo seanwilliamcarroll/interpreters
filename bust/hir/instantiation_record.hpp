@@ -12,19 +12,27 @@
 //****************************************************************************
 
 #include <hir/types.hpp>
-#include <string>
 #include <unordered_map>
 
 //****************************************************************************
 namespace bust::hir {
 //****************************************************************************
 
+using InnerTypeBindingId = size_t;
+
+struct BindingId {
+  BindingId(InnerTypeBindingId id) : m_id(id) {}
+
+  InnerTypeBindingId m_id;
+  auto operator<=>(const BindingId &) const = default;
+};
+
 using TypeSubstitution = std::unordered_map<TypeId, TypeId>;
 
 struct InstantiationRecord {
   // Helper to keep track of each time a polymorphic lambda is instantiated for
   // monomorphization later
-  std::string m_let_binding;
+  BindingId m_id;
   // Need to map the original free type variables to the new ones created for
   // this instantiation
   TypeSubstitution m_substitution;
@@ -32,4 +40,18 @@ struct InstantiationRecord {
 
 //****************************************************************************
 } // namespace bust::hir
+//****************************************************************************
+
+//****************************************************************************
+namespace std {
+//****************************************************************************
+
+template <> struct hash<bust::hir::BindingId> {
+  size_t operator()(const bust::hir::BindingId &id) const {
+    return std::hash<bust::hir::InnerTypeBindingId>{}(id.m_id);
+  }
+};
+
+//****************************************************************************
+} // namespace std
 //****************************************************************************

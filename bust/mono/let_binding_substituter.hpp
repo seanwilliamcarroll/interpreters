@@ -9,9 +9,24 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/nodes.hpp"
+#include "mono/context.hpp"
+
 //****************************************************************************
 namespace bust::mono {
 //****************************************************************************
+
+struct LetBindingSubstituter {
+
+  hir::LetBinding substitute(const hir::LetBinding & // let_binding
+  ) {
+    // Need to check if this is a callable
+
+    return {};
+  }
+
+  Context &m_ctx;
+};
 
 //****************************************************************************
 } // namespace bust::mono

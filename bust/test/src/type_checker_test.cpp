@@ -19,7 +19,9 @@
 #include <parser.hpp>
 #include <type_checker.hpp>
 
+#include <algorithm>
 #include <doctest/doctest.h>
+#include <ranges>
 #include <sstream>
 
 //****************************************************************************
@@ -1885,6 +1887,29 @@ TEST_SUITE("bust.type_checker") {
     return std::get<hir::PrimitiveTypeValue>(kind).m_type;
   }
 
+  // Helper: finds the BindingId of a top-level let inside the main function
+  // by name. Fails the test if no such binding exists.
+  static hir::BindingId binding_id_of(const hir::Program &hir,
+                                      const std::string &name) {
+    for (const auto &top : hir.m_top_items) {
+      const auto *fn = std::get_if<hir::FunctionDef>(&top);
+      if (fn == nullptr) {
+        continue;
+      }
+      for (const auto &stmt : fn->m_body.m_statements) {
+        const auto *lb = std::get_if<hir::LetBinding>(&stmt);
+        if (lb == nullptr) {
+          continue;
+        }
+        if (lb->m_variable.m_name == name) {
+          return lb->m_variable.m_id;
+        }
+      }
+    }
+    FAIL("no let binding named " << name);
+    return hir::BindingId{0};
+  }
+
   TEST_CASE("instantiation records: single polymorphic use yields one record") {
     auto hir = type_check("fn main() -> i64 {\n"
                           "  let id = |x| { x };\n"
@@ -1893,7 +1918,7 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     REQUIRE(hir.m_instantiation_records.size() == 1);
     const auto &record = hir.m_instantiation_records[0];
-    CHECK(record.m_let_binding == "id");
+    CHECK(record.m_id == binding_id_of(hir, "id"));
     REQUIRE(record.m_substitution.size() == 1);
     const auto &[_, resolved] = *record.m_substitution.begin();
     CHECK(resolved_primitive(hir, resolved) == PrimitiveType::I64);
@@ -1908,9 +1933,10 @@ TEST_SUITE("bust.type_checker") {
                           "}");
     DUMP_HIR(hir);
     REQUIRE(hir.m_instantiation_records.size() == 2);
+    const auto id_binding = binding_id_of(hir, "id");
     std::vector<PrimitiveType> resolved_types;
     for (const auto &record : hir.m_instantiation_records) {
-      CHECK(record.m_let_binding == "id");
+      CHECK(record.m_id == id_binding);
       REQUIRE(record.m_substitution.size() == 1);
       const auto &[_, resolved] = *record.m_substitution.begin();
       resolved_types.push_back(resolved_primitive(hir, resolved));
@@ -1930,7 +1956,7 @@ TEST_SUITE("bust.type_checker") {
     DUMP_HIR(hir);
     REQUIRE(hir.m_instantiation_records.size() == 1);
     const auto &record = hir.m_instantiation_records[0];
-    CHECK(record.m_let_binding == "id");
+    CHECK(record.m_id == binding_id_of(hir, "id"));
     REQUIRE(record.m_substitution.size() == 1);
     const auto &[_, resolved] = *record.m_substitution.begin();
     CHECK(resolved_primitive(hir, resolved) == PrimitiveType::I64);
@@ -1953,12 +1979,12 @@ TEST_SUITE("bust.type_checker") {
                           "  apply_id(42)\n"
                           "}");
     DUMP_HIR(hir);
-    std::vector<std::string> names;
+    std::vector<hir::BindingId> ids;
     for (const auto &record : hir.m_instantiation_records) {
-      names.push_back(record.m_let_binding);
+      ids.push_back(record.m_id);
     }
-    CHECK(std::ranges::find(names, "id") != names.end());
-    CHECK(std::ranges::find(names, "apply_id") != names.end());
+    CHECK(std::ranges::find(ids, binding_id_of(hir, "id")) != ids.end());
+    CHECK(std::ranges::find(ids, binding_id_of(hir, "apply_id")) != ids.end());
   }
 
 } // TEST_SUITE

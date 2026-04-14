@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/nodes.hpp"
 #include <cassert>
 #include <hir/types.hpp>
 #include <optional>
@@ -26,13 +27,18 @@ struct TypeScheme {
   std::vector<TypeId> m_free_type_variables;
 };
 
+struct BoundTypeScheme {
+  BindingId m_id;
+  TypeScheme m_type_scheme;
+};
+
 struct Scope {
   // Should be a mapping of identifiers to types
   // Shadowing means we can reuse an identifier with a different type if
   // desired, meaning this is not an error. We're not reassigning, we're
   // shadowing an immutable identifier
 
-  std::optional<TypeScheme> lookup(const std::string &name) {
+  std::optional<BoundTypeScheme> lookup(const std::string &name) {
     auto iter = m_identifier_to_type.find(name);
     if (iter == m_identifier_to_type.end()) {
       return {};
@@ -40,16 +46,18 @@ struct Scope {
     return {iter->second};
   }
 
-  void define(const std::string &name, TypeId type_id) {
-    m_identifier_to_type.insert_or_assign(name, TypeScheme{type_id, {}});
+  void define(const std::string &name, BindingId id, TypeId type_id) {
+    m_identifier_to_type.insert_or_assign(name,
+                                          BoundTypeScheme{id, {type_id, {}}});
   }
 
-  void define(const std::string &name, TypeScheme type_scheme) {
-    m_identifier_to_type.insert_or_assign(name, std::move(type_scheme));
+  void define(const std::string &name, BindingId id, TypeScheme type_scheme) {
+    m_identifier_to_type.insert_or_assign(
+        name, BoundTypeScheme{id, std::move(type_scheme)});
   }
 
 private:
-  std::unordered_map<std::string, TypeScheme> m_identifier_to_type;
+  std::unordered_map<std::string, BoundTypeScheme> m_identifier_to_type;
 };
 
 struct Environment {
@@ -68,7 +76,7 @@ struct Environment {
     m_scopes.pop_back();
   }
 
-  std::optional<TypeScheme> lookup(const std::string &name) {
+  std::optional<BoundTypeScheme> lookup(const std::string &name) {
     for (auto &scope : m_scopes | std::views::reverse) {
       auto maybe_type = scope.lookup(name);
       if (maybe_type.has_value()) {
@@ -78,12 +86,12 @@ struct Environment {
     return {};
   }
 
-  void define(const std::string &name, TypeId type_id) {
-    m_scopes.back().define(name, type_id);
+  void define(const std::string &name, BindingId id, TypeId type_id) {
+    m_scopes.back().define(name, id, type_id);
   }
 
-  void define(const std::string &name, TypeScheme type_scheme) {
-    m_scopes.back().define(name, std::move(type_scheme));
+  void define(const std::string &name, BindingId id, TypeScheme type_scheme) {
+    m_scopes.back().define(name, id, std::move(type_scheme));
   }
 
 private:

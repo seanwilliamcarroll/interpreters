@@ -37,8 +37,8 @@ void TopItemChecker::collect_function_signature(
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            declaration.m_id.m_name +
-            " with type: " + m_ctx.to_string(other_id.value().m_type),
+            declaration.m_id.m_name + " with type: " +
+            m_ctx.to_string(other_id.value().m_type_scheme.m_type),
         declaration.m_id.m_location);
   }
 
@@ -56,7 +56,8 @@ void TopItemChecker::collect_function_signature(
   auto function_type_id = m_ctx.m_type_registry.intern(
       FunctionType{std::move(parameter_types), return_type_id});
 
-  m_ctx.m_env.define(declaration.m_id.m_name, function_type_id);
+  m_ctx.m_env.define(declaration.m_id.m_name, m_ctx.next_let_binding_id(),
+                     function_type_id);
 }
 
 hir::FunctionDeclaration TopItemChecker::check_declaration(
@@ -69,13 +70,14 @@ hir::FunctionDeclaration TopItemChecker::check_declaration(
         "function '" + function_declaration.m_id.m_name +
         "' not found after first pass signature collection");
   }
-  auto function_type_id = maybe_function_type.value().m_type;
+  const auto &[function_id, function_type_scheme] = maybe_function_type.value();
+  auto function_type_id = function_type_scheme.m_type;
 
   auto [parameters, _] = TypeConverter{m_ctx}.convert_parameters(
       function_declaration.m_parameters);
 
-  return FunctionDeclaration{function_declaration.m_id.m_name, function_type_id,
-                             std::move(parameters)};
+  return FunctionDeclaration{function_declaration.m_id.m_name, function_id,
+                             function_type_id, std::move(parameters)};
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {

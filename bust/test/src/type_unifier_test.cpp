@@ -246,16 +246,10 @@ TEST_SUITE("bust.type_unifier") {
 TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects type variable from bare TV") {
-    hir::TypeRegistry type_registry{};
-    hir::TypeUnifier unifier{type_registry};
-    auto tv = unifier.new_type_var();
-    hir::TypeKind type = type_registry.as_type_variable(tv);
+    auto context = hir::Context{};
+    auto tv = context.m_type_unifier.new_type_var();
+    hir::TypeKind type = context.m_type_registry.as_type_variable(tv);
 
-    auto env = hir::Environment{};
-    auto context = hir::Context{.m_env = env,
-                                .m_type_registry = type_registry,
-                                .m_return_type_stack{},
-                                .m_type_unifier{type_registry}};
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
@@ -266,12 +260,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
   TEST_CASE("collects nothing from concrete primitive") {
     hir::TypeKind type = hir::PrimitiveTypeValue{PrimitiveType::I64};
 
-    hir::TypeRegistry type_registry{};
-    auto env = hir::Environment{};
-    auto context = hir::Context{.m_env = env,
-                                .m_type_registry = type_registry,
-                                .m_return_type_stack{},
-                                .m_type_unifier{type_registry}};
+    auto context = hir::Context{};
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
@@ -280,13 +269,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects nothing from NeverType") {
     hir::TypeKind type = hir::NeverType{};
-
-    hir::TypeRegistry type_registry{};
-    auto env = hir::Environment{};
-    auto context = hir::Context{.m_env = env,
-                                .m_type_registry = type_registry,
-                                .m_return_type_stack{},
-                                .m_type_unifier{type_registry}};
+    auto context = hir::Context{};
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
@@ -294,21 +277,15 @@ TEST_SUITE("bust.free_type_variable_collector") {
   }
 
   TEST_CASE("collects TVs from inside FunctionType") {
-    hir::TypeRegistry type_registry{};
-    hir::TypeUnifier unifier{type_registry};
-    auto t0 = unifier.new_type_var();
-    auto t1 = unifier.new_type_var();
+    auto context = hir::Context{};
+    auto t0 = context.m_type_unifier.new_type_var();
+    auto t1 = context.m_type_unifier.new_type_var();
 
     // fn(?T0) -> ?T1
     std::vector<hir::TypeId> params;
     params.emplace_back(t0);
     hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
-    auto env = hir::Environment{};
-    auto context = hir::Context{.m_env = env,
-                                .m_type_registry = type_registry,
-                                .m_return_type_stack{},
-                                .m_type_unifier{type_registry}};
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, fn_type);
 
@@ -317,19 +294,13 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects only TVs not concrete parts of fn type") {
     // fn(i64) -> ?T1 — only ?T1 is a TV
-    hir::TypeRegistry type_registry{};
-    hir::TypeUnifier unifier{type_registry};
-    auto t1 = unifier.new_type_var();
+    auto context = hir::Context{};
+    auto t1 = context.m_type_unifier.new_type_var();
 
     std::vector<hir::TypeId> params;
-    params.emplace_back(type_registry.m_i64);
+    params.emplace_back(context.m_type_registry.m_i64);
     hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
-    auto env = hir::Environment{};
-    auto context = hir::Context{.m_env = env,
-                                .m_type_registry = type_registry,
-                                .m_return_type_stack{},
-                                .m_type_unifier{type_registry}};
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, fn_type);
 

@@ -59,7 +59,10 @@ struct TypeConverter {
   }
 
   Identifier convert_parameter(const ast::Identifier &identifier) {
-    return {{identifier.m_location}, identifier.m_name, get_type(identifier)};
+    return {{identifier.m_location},
+            identifier.m_name,
+            m_ctx.next_let_binding_id(),
+            get_type(identifier)};
   }
 
   std::pair<std::vector<Identifier>, std::vector<TypeId>>
