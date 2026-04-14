@@ -74,9 +74,7 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
   const auto &return_type_id =
-      std::get<hir::FunctionType>(
-          m_ctx.type_registry().get(function_def.m_signature.m_type))
-          .m_return_type;
+      m_ctx.as_function(function_def.m_signature.m_type).m_return_type;
 
   if (return_type_id == m_ctx.type_registry().m_unit) {
     function.current_basic_block().add_terminal(ReturnVoidInstruction{});

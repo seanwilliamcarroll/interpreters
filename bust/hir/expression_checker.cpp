@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <ast/types.hpp>
+#include <atomic>
 #include <exceptions.hpp>
 #include <hir/block_checker.hpp>
 #include <hir/context.hpp>
@@ -112,8 +113,7 @@ Expression ExpressionChecker::operator()(
   auto callee = check_expression(call_expression->m_callee);
 
   auto callee_type_id = callee.m_type;
-  if (!std::holds_alternative<FunctionType>(
-          m_ctx.m_type_registry.get(callee_type_id))) {
+  if (!m_ctx.is_function(callee_type_id)) {
     throw core::CompilerException(
         "TypeChecker",
         "Expression of type: " + m_ctx.to_string(callee_type_id) +
@@ -180,17 +180,17 @@ Expression ExpressionChecker::operator()(
   }
 
   auto type_id = m_ctx.m_type_unifier.find(lhs.m_type);
-  const auto &type = m_ctx.m_type_registry.get(type_id);
 
   // Apply operator constraint
   auto required =
       required_type_class_for_binary_op(binary_expression->m_operator);
   try {
-    if (std::holds_alternative<TypeVariable>(type)) {
-      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(type), required);
-    } else if (!is_type_in_type_class(required, type)) {
+    if (m_ctx.is_type_variable(type_id)) {
+      m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(type_id), required);
+    } else if (!is_type_in_type_class(required,
+                                      m_ctx.as_type_variable(type_id))) {
       throw core::CompilerException("TypeChecker",
-                                    "Type " + m_ctx.to_string(type) +
+                                    "Type " + m_ctx.to_string(type_id) +
                                         " is disallowed by binary operator: " +
                                         binary_expression->m_operator,
                                     location);
@@ -215,15 +215,16 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::UnaryExpr> &unary_expression,
     const core::SourceLocation &location) {
   auto expression = check_expression(unary_expression->m_expression);
-  const auto &expression_type = m_ctx.m_type_registry.get(expression.m_type);
 
   auto required_type_class =
       required_type_class_for_unary_op(unary_expression->m_operator);
   try {
-    if (std::holds_alternative<TypeVariable>(expression_type)) {
-      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(expression_type),
+    if (m_ctx.is_type_variable(expression.m_type)) {
+      m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(expression.m_type),
                                      required_type_class);
-    } else if (!is_type_in_type_class(required_type_class, expression_type)) {
+    } else if (!is_type_in_type_class(
+                   required_type_class,
+                   m_ctx.as_type_variable(expression.m_type))) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
@@ -326,23 +327,22 @@ Expression ExpressionChecker::operator()(
   auto hir_expression = check_expression(cast_expression->m_expression);
 
   auto original_type_id = m_ctx.m_type_unifier.find(hir_expression.m_type);
-  const auto &original_type = m_ctx.m_type_registry.get(original_type_id);
 
   auto new_type_id =
       std::visit(TypeConverter{m_ctx}, cast_expression->m_new_type);
-  const auto &new_type = m_ctx.m_type_registry.get(new_type_id);
 
-  if (!std::holds_alternative<PrimitiveTypeValue>(original_type) ||
-      !std::holds_alternative<PrimitiveTypeValue>(new_type)) {
-    throw core::CompilerException("TypeChecker",
-                                  "Cannot cast an expression with type: " +
-                                      m_ctx.to_string(original_type) +
-                                      " to type: " + m_ctx.to_string(new_type),
-                                  location);
+  if (!m_ctx.is_primitive(original_type_id) ||
+      !m_ctx.is_primitive(new_type_id)) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Cannot cast an expression with type: " +
+            m_ctx.to_string(original_type_id) +
+            " to type: " + m_ctx.to_string(new_type_id),
+        location);
   }
 
-  auto original_primitive = std::get<PrimitiveTypeValue>(original_type).m_type;
-  auto new_primitive = std::get<PrimitiveTypeValue>(new_type).m_type;
+  auto original_primitive = m_ctx.as_primitive(original_type_id).m_type;
+  auto new_primitive = m_ctx.as_primitive(new_type_id).m_type;
 
   if (!can_cast(original_primitive, new_primitive)) {
     throw core::CompilerException("TypeChecker",

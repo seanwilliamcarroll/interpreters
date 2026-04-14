@@ -203,9 +203,7 @@ Handle ExpressionGenerator::operator()(
                  });
 
   auto function_return_type_id =
-      std::get<hir::FunctionType>(
-          m_ctx.type_registry().get(call_expression->m_callee.m_type))
-          .m_return_type;
+      m_ctx.as_function(call_expression->m_callee.m_type).m_return_type;
 
   if (function_return_type_id == m_ctx.type_registry().m_unit) {
     m_ctx.block().add_instruction(
