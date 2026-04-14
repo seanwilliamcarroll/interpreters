@@ -123,6 +123,15 @@ inline std::string to_string(const PrimitiveType &type) {
   }
 }
 
+inline std::string to_sanitized_string(const PrimitiveType &type) {
+  switch (type) {
+  case PrimitiveType::UNIT:
+    return "unit";
+  default:
+    return to_string(type);
+  }
+}
+
 inline bool can_cast(PrimitiveType from, PrimitiveType to) {
   switch (from) {
   case PrimitiveType::UNIT: {
