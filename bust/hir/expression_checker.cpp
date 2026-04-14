@@ -116,8 +116,7 @@ Expression ExpressionChecker::operator()(
           m_ctx.m_type_registry.get(callee_type_id))) {
     throw core::CompilerException(
         "TypeChecker",
-        "Expression of type: " +
-            m_ctx.m_type_registry.to_string(callee_type_id) +
+        "Expression of type: " + m_ctx.to_string(callee_type_id) +
             " is not callable!",
         callee.m_location);
   }
@@ -149,8 +148,8 @@ Expression ExpressionChecker::operator()(
       throw core::CompilerException(
           "TypeChecker",
           "Type unification error!\n Parameter at index: " +
-              std::to_string(index) + " expects type: " +
-              m_ctx.m_type_registry.to_string(parameter_type) +
+              std::to_string(index) +
+              " expects type: " + m_ctx.to_string(parameter_type) +
               " Unification error: " + error.what(),
           argument.m_location);
     }
@@ -191,8 +190,7 @@ Expression ExpressionChecker::operator()(
       m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(type), required);
     } else if (!is_type_in_type_class(required, type)) {
       throw core::CompilerException("TypeChecker",
-                                    "Type " +
-                                        m_ctx.m_type_registry.to_string(type) +
+                                    "Type " + m_ctx.to_string(type) +
                                         " is disallowed by binary operator: " +
                                         binary_expression->m_operator,
                                     location);
@@ -229,8 +227,7 @@ Expression ExpressionChecker::operator()(
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
-              " does not accept type: " +
-              m_ctx.m_type_registry.to_string(expression.m_type),
+              " does not accept type: " + m_ctx.to_string(expression.m_type),
           location);
     }
   } catch (std::runtime_error &error) {
@@ -337,12 +334,11 @@ Expression ExpressionChecker::operator()(
 
   if (!std::holds_alternative<PrimitiveTypeValue>(original_type) ||
       !std::holds_alternative<PrimitiveTypeValue>(new_type)) {
-    throw core::CompilerException(
-        "TypeChecker",
-        "Cannot cast an expression with type: " +
-            m_ctx.m_type_registry.to_string(original_type) +
-            " to type: " + m_ctx.m_type_registry.to_string(new_type),
-        location);
+    throw core::CompilerException("TypeChecker",
+                                  "Cannot cast an expression with type: " +
+                                      m_ctx.to_string(original_type) +
+                                      " to type: " + m_ctx.to_string(new_type),
+                                  location);
   }
 
   auto original_primitive = std::get<PrimitiveTypeValue>(original_type).m_type;

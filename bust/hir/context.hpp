@@ -45,6 +45,10 @@ struct Context {
     return m_type_registry.as_type_variable(type_id);
   }
 
+  std::string to_string(const auto &type) const {
+    return m_type_registry.to_string(type);
+  }
+
   Environment &m_env;
   TypeRegistry &m_type_registry;
   std::vector<TypeId> m_return_type_stack{};

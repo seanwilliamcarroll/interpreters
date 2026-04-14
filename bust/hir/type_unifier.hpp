@@ -25,6 +25,11 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeUnifier {
+
+  std::string to_string(const auto &type) const {
+    return m_type_registry.to_string(type);
+  }
+
   TypeVariable
   new_type_var(std::optional<PrimitiveTypeClass> possible_constraint = {}) {
     auto new_id = m_union_find.add_node();
@@ -71,16 +76,14 @@ struct TypeUnifier {
       return;
     }
 
-    throw std::runtime_error(
-        "Tried to unify concrete types: " + m_type_registry.to_string(type_a) +
-        " and " + m_type_registry.to_string(type_b));
+    throw std::runtime_error("Tried to unify concrete types: " +
+                             to_string(type_a) + " and " + to_string(type_b));
   }
 
   void unify(const FunctionType &type_a, const FunctionType &type_b) {
     if (type_a.m_parameters.size() != type_b.m_parameters.size()) {
       throw std::runtime_error(std::string("Tried to unify concrete types: ") +
-                               m_type_registry.to_string(type_a) + " and " +
-                               m_type_registry.to_string(type_b));
+                               to_string(type_a) + " and " + to_string(type_b));
     }
 
     for (const auto &[parameter_type_a, parameter_type_b] :
@@ -115,10 +118,9 @@ struct TypeUnifier {
     if (iter_a != m_resolved_type_id.end()) {
       const auto &concrete_a = iter_a->second;
       if (concrete_a != type_id_b) {
-        throw std::runtime_error("Could not resolve type variable " +
-                                 m_type_registry.to_string(type_a) + " (" +
-                                 m_type_registry.to_string(concrete_a) +
-                                 ") and " + m_type_registry.to_string(type_b));
+        throw std::runtime_error(
+            "Could not resolve type variable " + to_string(type_a) + " (" +
+            to_string(concrete_a) + ") and " + to_string(type_b));
       }
       // This root has already been unified, satisfying all constraints
       return;
@@ -132,8 +134,8 @@ struct TypeUnifier {
       if (!is_type_in_type_class(resolved_type_class, type_b)) {
         throw std::runtime_error("Could not resolve type class constraints "
                                  "from resolved type_class: " +
-                                 resolved_type_class + " and concrete type: " +
-                                 m_type_registry.to_string(type_b));
+                                 resolved_type_class +
+                                 " and concrete type: " + to_string(type_b));
       }
       // We satisfied the constraint, move to add new concrete type
     }
@@ -152,9 +154,9 @@ struct TypeUnifier {
       const auto &resolved_type_id = iter->second;
       const auto &resolved_type = m_type_registry.get(resolved_type_id);
       if (!is_type_in_type_class(type_class, resolved_type)) {
-        throw std::runtime_error("Could not resolve concrete type: " +
-                                 m_type_registry.to_string(resolved_type) +
-                                 " and type_class: " + type_class);
+        throw std::runtime_error(
+            "Could not resolve concrete type: " + to_string(resolved_type) +
+            " and type_class: " + type_class);
       }
       // All good, constraint satisfied
       return;
@@ -205,12 +207,10 @@ struct TypeUnifier {
       const auto &concrete_a = iter_a->second;
       const auto &concrete_b = iter_b->second;
       if (concrete_a != concrete_b) {
-        throw std::runtime_error("Could not resolve type variables " +
-                                 m_type_registry.to_string(type_a) + " (" +
-                                 m_type_registry.to_string(concrete_a) +
-                                 ") and " + m_type_registry.to_string(type_b) +
-                                 "(" + m_type_registry.to_string(concrete_b) +
-                                 ")");
+        throw std::runtime_error(
+            "Could not resolve type variables " + to_string(type_a) + " (" +
+            to_string(concrete_a) + ") and " + to_string(type_b) + "(" +
+            to_string(concrete_b) + ")");
       }
       // Their concrete types must match, not sure if a bug or not
       return;
@@ -267,7 +267,7 @@ struct TypeUnifier {
           throw std::runtime_error("Could not resolve type class constraints "
                                    "from merged type_class: " +
                                    merged_type_class + " and concrete type: " +
-                                   m_type_registry.to_string(concrete_type));
+                                   to_string(concrete_type));
         }
       }
     }

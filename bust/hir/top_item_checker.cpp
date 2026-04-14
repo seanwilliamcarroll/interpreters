@@ -37,8 +37,8 @@ void TopItemChecker::collect_function_signature(
     throw core::CompilerException(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
-            declaration.m_id.m_name + " with type: " +
-            m_ctx.m_type_registry.to_string(other_id.value().m_type),
+            declaration.m_id.m_name +
+            " with type: " + m_ctx.to_string(other_id.value().m_type),
         declaration.m_id.m_location);
   }
 
