@@ -15,7 +15,7 @@
 namespace bust {
 //****************************************************************************
 
-struct Evaluator {
+struct [[deprecated("Use codegen")]] Evaluator {
   int64_t operator()(const hir::Program &program);
 };
 

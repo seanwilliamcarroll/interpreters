@@ -18,8 +18,6 @@
 int main(int argc, const char *argv[]) {
   bust::Options options;
   const char *filename = nullptr;
-  bool has_llvm_ir = false;
-
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--dump-ast") == 0) {
       options.dump_ast = true;
@@ -27,8 +25,8 @@ int main(int argc, const char *argv[]) {
       options.dump_hir = true;
     } else if (std::strcmp(argv[i], "--dump-zonked") == 0) {
       options.dump_zonked = true;
-    } else if (std::strcmp(argv[i], "--llvm-ir") == 0) {
-      has_llvm_ir = true;
+    } else if (std::strcmp(argv[i], "--dump-llvm-ir") == 0) {
+      options.dump_llvm_ir = true;
     } else if (argv[i][0] == '-') {
       std::cerr << "Unknown option: " << argv[i] << "\n";
       return 1;
@@ -36,18 +34,16 @@ int main(int argc, const char *argv[]) {
       filename = argv[i];
     } else {
       std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-zonked] "
-                   "[--llvm-ir] <script.bu>\n";
+                   "[--dump-llvm-ir] <script.bu>\n";
       return 1;
     }
   }
 
   if (filename == nullptr) {
-    std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--llvm-ir] "
-                 "<script.bu>\n";
+    std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-zonked] "
+                 "[--dump-llvm-ir] <script.bu>\n";
     return 1;
   }
-
-  options.llvm_ir = has_llvm_ir;
 
   try {
     std::ifstream input_file(filename);

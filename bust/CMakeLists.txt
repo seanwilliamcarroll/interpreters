@@ -30,11 +30,6 @@ add_library(bust-lib STATIC
   hir/statement_checker.cpp
   hir/top_item_checker.cpp
   hir/type_registry.cpp
-  eval/expression_evaluator.cpp
-  eval/let_binding_evaluator.cpp
-  eval/statement_evaluator.cpp
-  eval/top_item_evaluator.cpp
-  src/evaluator.cpp
   src/codegen.cpp
   codegen/expression_generator.cpp
   codegen/formatter.cpp
@@ -69,7 +64,6 @@ add_executable(bust-test
   test/src/parser_test.cpp
   test/src/type_checker_test.cpp
   test/src/type_unifier_test.cpp
-  test/src/evaluator_test.cpp
   test/src/codegen_test.cpp
   test/src/validate_main_test.cpp
   test/src/zonker_test.cpp)
@@ -114,7 +108,6 @@ add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysis)
 add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
-add_test(NAME bust.evaluator COMMAND bust-test -ts=bust.evaluator)
 add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
 add_test(NAME bust.zonker COMMAND bust-test -ts=bust.zonker)
 
