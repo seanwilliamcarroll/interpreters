@@ -57,7 +57,7 @@ struct TypeRegistry {
     const auto &type_kind = get(type_id);
     if (!std::holds_alternative<VariantType>(type_kind)) {
       throw core::InternalCompilerError(std::string(function) +
-                                        "Bad access to registry with " +
+                                        " Bad access to registry with " +
                                         to_string(type_id));
     }
     return std::get<VariantType>(type_kind);

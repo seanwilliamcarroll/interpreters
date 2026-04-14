@@ -188,7 +188,7 @@ Expression ExpressionChecker::operator()(
     if (m_ctx.is_type_variable(type_id)) {
       m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(type_id), required);
     } else if (!is_type_in_type_class(required,
-                                      m_ctx.as_type_variable(type_id))) {
+                                      m_ctx.m_type_registry.get(type_id))) {
       throw core::CompilerException("TypeChecker",
                                     "Type " + m_ctx.to_string(type_id) +
                                         " is disallowed by binary operator: " +
@@ -224,7 +224,7 @@ Expression ExpressionChecker::operator()(
                                      required_type_class);
     } else if (!is_type_in_type_class(
                    required_type_class,
-                   m_ctx.as_type_variable(expression.m_type))) {
+                   m_ctx.m_type_registry.get(expression.m_type))) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
