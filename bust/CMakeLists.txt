@@ -38,6 +38,7 @@ add_library(bust-lib STATIC
   codegen/top_item_generator.cpp
   src/type_checker.cpp
   src/validate_main.cpp
+  src/monomorpher.cpp
   src/zonker.cpp
   zonk/expression_zonker.cpp
   zonk/let_binding_zonker.cpp
