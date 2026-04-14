@@ -28,9 +28,10 @@ type it is instantiated at. After monomorphization, no type variables remain.
 
 ## Prerequisites
 
-- Canonicalize unified type variables before generalization (zonk at the
-  generalization point in the let binding checker). Without this, unified
-  variables like `?0` and `?1` from `x + y` are generalized independently.
+- Collapse unified type variables to their root before generalization.
+  When `x + y` unifies `?0` and `?1`, substitute both with their shared
+  root so generalization sees one polymorphic variable, not two aliases
+  that it would try to substitute independently during monomorphization.
 - Propagate type class constraints through `create_fresh_type_vars` (done).
 - Filter resolved type variables from generalization (done).
 
