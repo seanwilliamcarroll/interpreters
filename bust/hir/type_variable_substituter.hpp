@@ -18,12 +18,12 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct TypeVariableUpdater {
+struct TypeVariableSubstituter {
 
-  TypeId update(const TypeKind &type) { return std::visit(*this, type); }
+  TypeId substitute(const TypeKind &type) { return std::visit(*this, type); }
 
-  TypeId update(const TypeId &type) {
-    return update(m_type_registry.get(type));
+  TypeId substitute(const TypeId &type) {
+    return substitute(m_type_registry.get(type));
   }
 
   TypeId operator()(const PrimitiveTypeValue &type) {
@@ -45,12 +45,12 @@ struct TypeVariableUpdater {
     std::vector<TypeId> parameters;
     parameters.reserve(type.m_parameters.size());
     for (const auto &parameter : type.m_parameters) {
-      parameters.emplace_back(update(m_type_registry.get(parameter)));
+      parameters.emplace_back(substitute(m_type_registry.get(parameter)));
     }
 
     return m_type_registry.intern(
         FunctionType{std::move(parameters),
-                     update(m_type_registry.get(type.m_return_type))});
+                     substitute(m_type_registry.get(type.m_return_type))});
   }
 
   TypeId operator()(const NeverType &) { return m_type_registry.m_never; }

@@ -8,34 +8,21 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/instantiation_record.hpp"
 #include "hir/type_registry.hpp"
 #include "hir/types.hpp"
 #include "hir/unifier_state.hpp"
 #include <algorithm>
 #include <hir/environment.hpp>
 #include <hir/type_unifier.hpp>
-#include <hir/type_variable_updater.hpp>
-#include <map>
+#include <hir/type_variable_substituter.hpp>
 #include <set>
-#include <system_error>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 //****************************************************************************
 namespace bust::hir {
 //****************************************************************************
-
-using TypeSubstitution = std::unordered_map<TypeId, TypeId>;
-
-struct InstantiationRecord {
-  // Helper to keep track of each time a polymorphic lambda is instantiated for
-  // monomorphization later
-  std::string m_let_binding;
-  // Need to map the original free type variables to the new ones created for
-  // this instantiation
-  TypeSubstitution m_substitution;
-};
 
 struct PostTypeCheckedData {
   TypeRegistry m_type_registry;
@@ -60,7 +47,7 @@ struct Context {
           InstantiationRecord{bound_name, new_mapping});
     }
 
-    return TypeVariableUpdater{m_type_registry, new_mapping}.update(
+    return TypeVariableSubstituter{m_type_registry, new_mapping}.substitute(
         type_scheme.m_type);
   }
 

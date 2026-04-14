@@ -10,6 +10,7 @@
 
 #include "ast/nodes.hpp"
 #include "hir/context.hpp"
+#include "hir/instantiation_record.hpp"
 #include "hir/type_registry.hpp"
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
