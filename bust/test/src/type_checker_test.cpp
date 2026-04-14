@@ -1917,10 +1917,10 @@ TEST_SUITE("bust.type_checker") {
                           "}");
     DUMP_HIR(hir);
     REQUIRE(hir.m_instantiation_records.size() == 1);
-    const auto &record = hir.m_instantiation_records[0];
-    CHECK(record.m_id == binding_id_of(hir, "id"));
-    REQUIRE(record.m_substitution.size() == 1);
-    const auto &[_, resolved] = *record.m_substitution.begin();
+    const auto &[id, records] = *hir.m_instantiation_records.begin();
+    CHECK(id == binding_id_of(hir, "id"));
+    REQUIRE(records[0].m_substitution.size() == 1);
+    const auto &[_, resolved] = *records[0].m_substitution.begin();
     CHECK(resolved_primitive(hir, resolved) == PrimitiveType::I64);
   }
 
@@ -1932,14 +1932,17 @@ TEST_SUITE("bust.type_checker") {
                           "  a\n"
                           "}");
     DUMP_HIR(hir);
-    REQUIRE(hir.m_instantiation_records.size() == 2);
+    REQUIRE(hir.m_instantiation_records.size() == 1);
     const auto id_binding = binding_id_of(hir, "id");
     std::vector<PrimitiveType> resolved_types;
-    for (const auto &record : hir.m_instantiation_records) {
-      CHECK(record.m_id == id_binding);
-      REQUIRE(record.m_substitution.size() == 1);
-      const auto &[_, resolved] = *record.m_substitution.begin();
-      resolved_types.push_back(resolved_primitive(hir, resolved));
+    for (const auto &[id, records] : hir.m_instantiation_records) {
+      REQUIRE(records.size() == 2);
+      for (const auto &record : records) {
+        CHECK(id == id_binding);
+        REQUIRE(record.m_substitution.size() == 1);
+        const auto &[_, resolved] = *record.m_substitution.begin();
+        resolved_types.push_back(resolved_primitive(hir, resolved));
+      }
     }
     std::ranges::sort(resolved_types);
     REQUIRE(resolved_types.size() == 2);
@@ -1955,10 +1958,10 @@ TEST_SUITE("bust.type_checker") {
                           "}");
     DUMP_HIR(hir);
     REQUIRE(hir.m_instantiation_records.size() == 1);
-    const auto &record = hir.m_instantiation_records[0];
-    CHECK(record.m_id == binding_id_of(hir, "id"));
-    REQUIRE(record.m_substitution.size() == 1);
-    const auto &[_, resolved] = *record.m_substitution.begin();
+    const auto &[id, records] = *hir.m_instantiation_records.begin();
+    CHECK(id == binding_id_of(hir, "id"));
+    REQUIRE(records[0].m_substitution.size() == 1);
+    const auto &[_, resolved] = *records[0].m_substitution.begin();
     CHECK(resolved_primitive(hir, resolved) == PrimitiveType::I64);
   }
 
@@ -1980,8 +1983,8 @@ TEST_SUITE("bust.type_checker") {
                           "}");
     DUMP_HIR(hir);
     std::vector<hir::BindingId> ids;
-    for (const auto &record : hir.m_instantiation_records) {
-      ids.push_back(record.m_id);
+    for (const auto &[id, records] : hir.m_instantiation_records) {
+      ids.push_back(id);
     }
     CHECK(std::ranges::find(ids, binding_id_of(hir, "id")) != ids.end());
     CHECK(std::ranges::find(ids, binding_id_of(hir, "apply_id")) != ids.end());

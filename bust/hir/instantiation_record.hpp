@@ -13,6 +13,7 @@
 
 #include <hir/types.hpp>
 #include <unordered_map>
+#include <vector>
 
 //****************************************************************************
 namespace bust::hir {
@@ -30,13 +31,15 @@ struct BindingId {
 using TypeSubstitution = std::unordered_map<TypeId, TypeId>;
 
 struct InstantiationRecord {
-  // Helper to keep track of each time a polymorphic lambda is instantiated for
-  // monomorphization later
-  BindingId m_id;
   // Need to map the original free type variables to the new ones created for
   // this instantiation
   TypeSubstitution m_substitution;
 };
+
+using InstantiationRecords = std::vector<InstantiationRecord>;
+
+using BindingIdInstantiations =
+    std::unordered_map<BindingId, InstantiationRecords>;
 
 //****************************************************************************
 } // namespace bust::hir

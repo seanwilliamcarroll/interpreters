@@ -27,7 +27,7 @@ namespace bust::hir {
 struct PostTypeCheckedData {
   TypeRegistry m_type_registry;
   UnifierState m_unifier_state;
-  std::vector<InstantiationRecord> m_instantiation_records;
+  BindingIdInstantiations m_instantiation_records;
 };
 
 struct Context {
@@ -42,7 +42,7 @@ struct Context {
 
     if (!new_mapping.empty()) {
       // We're instantiating a polymorphic lambda (?)
-      m_instantiation_records.push_back(InstantiationRecord{id, new_mapping});
+      m_instantiation_records[id].push_back(InstantiationRecord{new_mapping});
     }
 
     return TypeVariableSubstituter{m_type_registry, new_mapping}.substitute(
@@ -77,36 +77,36 @@ struct Context {
     return m_type_registry.to_string(type);
   }
 
-  std::vector<InstantiationRecord> resolve_instantiation_records() {
+  BindingIdInstantiations resolve_instantiation_records() {
     std::unordered_map<BindingId,
                        std::set<std::vector<std::pair<TypeId, TypeId>>>>
         seen;
-    std::vector<InstantiationRecord> output;
+    BindingIdInstantiations output;
 
     const auto original_records = std::move(m_instantiation_records);
     m_instantiation_records.clear();
 
-    for (const auto &record : original_records) {
-      const auto &id = record.m_id;
-      const auto &mapping = record.m_substitution;
+    for (const auto &[id, records] : original_records) {
+      for (const auto &instantiation : records) {
+        std::vector<std::pair<TypeId, TypeId>> canonical_mapping;
+        const auto &mapping = instantiation.m_substitution;
+        for (const auto &[original_free_type_var, instantiated_type_var] :
+             mapping) {
+          auto resolved_type_var_id =
+              m_type_unifier.find(instantiated_type_var);
+          canonical_mapping.emplace_back(original_free_type_var,
+                                         resolved_type_var_id);
+        }
 
-      std::vector<std::pair<TypeId, TypeId>> canonical_mapping;
-      for (const auto &[original_free_type_var, instantiated_type_var] :
-           mapping) {
-        auto resolved_type_var_id = m_type_unifier.find(instantiated_type_var);
-        canonical_mapping.emplace_back(original_free_type_var,
-                                       resolved_type_var_id);
-      }
+        // Should sort a vector of tuples by first element
+        std::ranges::sort(canonical_mapping);
 
-      // Should sort a vector of tuples by first element
-      std::ranges::sort(canonical_mapping);
-
-      if (seen[id].insert(canonical_mapping).second) {
-        output.emplace_back(InstantiationRecord{
-            .m_id = id,
-            .m_substitution = TypeSubstitution(canonical_mapping.begin(),
-                                               canonical_mapping.end()),
-        });
+        if (seen[id].insert(canonical_mapping).second) {
+          output[id].emplace_back(InstantiationRecord{
+              .m_substitution = TypeSubstitution(canonical_mapping.begin(),
+                                                 canonical_mapping.end()),
+          });
+        }
       }
     }
 
@@ -129,7 +129,7 @@ struct Context {
   TypeRegistry m_type_registry{};
   std::vector<TypeId> m_return_type_stack{};
   TypeUnifier m_type_unifier{m_type_registry};
-  std::vector<InstantiationRecord> m_instantiation_records{};
+  BindingIdInstantiations m_instantiation_records{};
 
 private:
   InnerTypeBindingId m_next_let_binding_id = 0;
