@@ -65,6 +65,7 @@ add_executable(bust-test
   test/src/type_checker_test.cpp
   test/src/type_unifier_test.cpp
   test/src/codegen_test.cpp
+  test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/zonker_test.cpp)
 
@@ -110,5 +111,6 @@ add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
 add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
 add_test(NAME bust.zonker COMMAND bust-test -ts=bust.zonker)
+add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
 
 #*****************************************************************************
