@@ -52,10 +52,14 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
     typed_items.push_back(std::visit(hir::TopItemChecker{context}, top_item));
   }
 
+  auto instantiation_records = context.resolve_instantiation_records();
+  auto unifier_state = context.m_type_unifier.extract_state();
+
   return {{program.m_location},
           std::move(type_registry),
           std::move(typed_items),
-          context.m_type_unifier.extract_state()};
+          std::move(unifier_state),
+          std::move(instantiation_records)};
 }
 
 //****************************************************************************

@@ -31,13 +31,14 @@ struct TypeVariableUpdater {
   }
 
   TypeId operator()(const TypeVariable &type) {
-    auto iter = m_new_mapping.find(type);
+    auto type_id = m_type_registry.intern(type);
+    auto iter = m_new_mapping.find(type_id);
 
     if (iter == m_new_mapping.end()) {
       return m_type_registry.intern(type);
     }
 
-    return m_type_registry.intern(iter->second);
+    return iter->second;
   }
 
   TypeId operator()(const FunctionType &type) {
@@ -55,7 +56,7 @@ struct TypeVariableUpdater {
   TypeId operator()(const NeverType &) { return m_type_registry.m_never; }
 
   TypeRegistry &m_type_registry;
-  const std::unordered_map<TypeVariable, TypeVariable> &m_new_mapping;
+  const std::unordered_map<TypeId, TypeId> &m_new_mapping;
 };
 
 //****************************************************************************

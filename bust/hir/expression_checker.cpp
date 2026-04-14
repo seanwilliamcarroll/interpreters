@@ -100,7 +100,8 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
 
   const auto &type_scheme = maybe_type.value();
 
-  auto final_type = m_ctx.create_fresh_type_vars(type_scheme);
+  auto final_type =
+      m_ctx.create_fresh_type_vars(identifier.m_name, type_scheme);
 
   return {{location},
           final_type,
@@ -402,7 +403,7 @@ Expression ExpressionChecker::operator()(
       lambda_expression->m_return_type.has_value()
           ? TypeConverter{m_ctx}.get_type(
                 lambda_expression->m_return_type.value())
-          : m_ctx.m_type_registry.intern(m_ctx.m_type_unifier.new_type_var());
+          : m_ctx.m_type_unifier.new_type_var();
 
   auto body =
       lambda_expression->m_return_type.has_value()

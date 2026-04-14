@@ -55,7 +55,7 @@ struct TypeConverter {
     if (identifier.m_type.has_value()) {
       return std::visit((*this), identifier.m_type.value());
     }
-    return m_ctx.m_type_registry.intern(m_ctx.m_type_unifier.new_type_var());
+    return m_ctx.m_type_unifier.new_type_var();
   }
 
   Identifier convert_parameter(const ast::Identifier &identifier) {

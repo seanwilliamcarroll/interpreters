@@ -28,8 +28,7 @@ struct FreeTypeVariableCollector {
     if (!m_ctx.is_type_variable(resolved_type_id)) {
       return;
     }
-    m_free_type_variables.emplace_back(
-        m_ctx.as_type_variable(resolved_type_id));
+    m_free_type_variables.emplace_back(resolved_type_id);
   }
 
   void operator()(const FunctionType &type) {
@@ -43,7 +42,7 @@ struct FreeTypeVariableCollector {
   void operator()(const NeverType &) {}
 
   hir::Context &m_ctx;
-  std::vector<TypeVariable> m_free_type_variables{};
+  std::vector<TypeId> m_free_type_variables{};
 };
 
 //****************************************************************************

@@ -30,19 +30,19 @@ struct TypeUnifier {
     return m_type_registry.to_string(type);
   }
 
-  TypeVariable
+  TypeId
   new_type_var(std::optional<PrimitiveTypeClass> possible_constraint = {}) {
     auto new_id = m_union_find.add_node();
     auto new_type_var = TypeVariable{.m_id = new_id};
-    m_type_registry.intern(new_type_var);
+    auto new_type_id = m_type_registry.intern(new_type_var);
 
     if (!possible_constraint.has_value()) {
-      return new_type_var;
+      return new_type_id;
     }
     // Check if the constraint conflicts, it shouldn't, but not bad to check
     const auto &constraint = possible_constraint.value();
     constrain(new_type_var, constraint);
-    return new_type_var;
+    return new_type_id;
   }
 
   void unify(const TypeId &type_id_a, const TypeId &type_id_b) {
@@ -142,6 +142,10 @@ struct TypeUnifier {
 
     // No entry
     m_resolved_type_id.emplace(root_a, type_id_b);
+  }
+
+  void constrain(const TypeId &type_id, const PrimitiveTypeClass &type_class) {
+    constrain(m_type_registry.as_type_variable(type_id), type_class);
   }
 
   void constrain(const TypeVariable &type,
@@ -306,6 +310,10 @@ struct TypeUnifier {
 
     // Not a concrete type yet
     return m_type_registry.intern(TypeVariable{root});
+  }
+
+  std::optional<PrimitiveTypeClass> find_type_class(const TypeId &type_id) {
+    return find_type_class(m_type_registry.as_type_variable(type_id));
   }
 
   std::optional<PrimitiveTypeClass> find_type_class(const TypeVariable &type) {

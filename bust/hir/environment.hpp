@@ -23,7 +23,7 @@ namespace bust::hir {
 
 struct TypeScheme {
   TypeId m_type;
-  std::vector<TypeVariable> m_free_type_variables;
+  std::vector<TypeId> m_free_type_variables;
 };
 
 struct Scope {
