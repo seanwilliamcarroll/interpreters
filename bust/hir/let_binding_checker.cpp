@@ -15,6 +15,7 @@
 #include <hir/nodes.hpp>
 #include <hir/type_converter.hpp>
 #include <hir/type_unifier.hpp>
+#include <hir/type_variable_collapser.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
 #include <stdexcept>
@@ -51,9 +52,11 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
 
   auto unified_type = m_ctx.m_type_unifier.find(annotated_type);
 
+  auto collapsed_type = TypeVariableCollapser{m_ctx}.collapse(unified_type);
+
   auto new_identifier = Identifier{{let_binding.m_variable.m_location},
                                    let_binding.m_variable.m_name,
-                                   unified_type};
+                                   collapsed_type};
 
   FreeTypeVariableCollector collector{m_ctx};
   collector.collect(new_identifier.m_type);

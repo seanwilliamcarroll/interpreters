@@ -28,7 +28,8 @@ struct FreeTypeVariableCollector {
     if (!m_ctx.is_type_variable(resolved_type_id)) {
       return;
     }
-    m_free_type_variables.emplace_back(type);
+    m_free_type_variables.emplace_back(
+        m_ctx.as_type_variable(resolved_type_id));
   }
 
   void operator()(const FunctionType &type) {
