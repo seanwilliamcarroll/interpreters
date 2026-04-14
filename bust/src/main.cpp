@@ -25,6 +25,8 @@ int main(int argc, const char *argv[]) {
       options.dump_ast = true;
     } else if (std::strcmp(argv[i], "--dump-hir") == 0) {
       options.dump_hir = true;
+    } else if (std::strcmp(argv[i], "--dump-zonked") == 0) {
+      options.dump_zonked = true;
     } else if (std::strcmp(argv[i], "--llvm-ir") == 0) {
       has_llvm_ir = true;
     } else if (argv[i][0] == '-') {
@@ -33,8 +35,8 @@ int main(int argc, const char *argv[]) {
     } else if (filename == nullptr) {
       filename = argv[i];
     } else {
-      std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--llvm-ir] "
-                   "<script.bu>\n";
+      std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-zonked] "
+                   "[--llvm-ir] <script.bu>\n";
       return 1;
     }
   }

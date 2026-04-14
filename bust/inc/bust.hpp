@@ -17,6 +17,7 @@ namespace bust {
 struct Options {
   bool dump_ast = false;
   bool dump_hir = false;
+  bool dump_zonked = false;
   bool llvm_ir = false;
 };
 

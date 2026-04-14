@@ -24,6 +24,22 @@ struct Context {
 
   hir::TypeId find_and_register(hir::TypeId old_type_id) {
     auto resolved_type_id = m_resolver.resolve(old_type_id);
+    const auto &resolved_type = m_type_registry.get(resolved_type_id);
+
+    // FunctionType contains inner TypeIds that may themselves reference
+    // unresolved type variables.  Recursively resolve them before
+    // re-registering so the new registry never contains stale IDs.
+    if (const auto *fn = std::get_if<hir::FunctionType>(&resolved_type)) {
+      std::vector<hir::TypeId> new_params;
+      new_params.reserve(fn->m_parameters.size());
+      for (const auto &param_id : fn->m_parameters) {
+        new_params.push_back(find_and_register(param_id));
+      }
+      auto new_return = find_and_register(fn->m_return_type);
+      return m_new_type_registry.intern(
+          hir::FunctionType{std::move(new_params), new_return});
+    }
+
     return reregister(resolved_type_id);
   }
 

@@ -52,6 +52,10 @@ void Bust::run() {
 
   auto zonked = run_pipeline(std::move(typed), Zonker{});
 
+  if (m_options.dump_zonked) {
+    std::cout << "=== Zonked HIR ===\n" << hir::Dumper::dump(zonked) << "\n";
+  }
+
   if (m_options.llvm_ir) {
     auto ir = CodeGen{}(zonked);
     std::cout << "=== LLVM IR ===\n" << ir << "\n";
