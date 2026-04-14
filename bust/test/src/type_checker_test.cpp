@@ -1874,6 +1874,93 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Instantiation records (for monomorphization) -----------------------
+
+  // Helper: returns the PrimitiveType that a TypeId resolves to.
+  // Fails the test if the TypeId isn't a primitive.
+  static PrimitiveType resolved_primitive(const hir::Program &hir,
+                                          hir::TypeId id) {
+    const auto &kind = hir.m_type_registry.get(id);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    return std::get<hir::PrimitiveTypeValue>(kind).m_type;
+  }
+
+  TEST_CASE("instantiation records: single polymorphic use yields one record") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |x| { x };\n"
+                          "  id(42)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_instantiation_records.size() == 1);
+    const auto &record = hir.m_instantiation_records[0];
+    CHECK(record.m_let_binding == "id");
+    REQUIRE(record.m_substitution.size() == 1);
+    const auto &[_, resolved] = *record.m_substitution.begin();
+    CHECK(resolved_primitive(hir, resolved) == PrimitiveType::I64);
+  }
+
+  TEST_CASE("instantiation records: two distinct uses yield two records") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |x| { x };\n"
+                          "  let a: i64 = id(42);\n"
+                          "  let b: bool = id(true);\n"
+                          "  a\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_instantiation_records.size() == 2);
+    std::vector<PrimitiveType> resolved_types;
+    for (const auto &record : hir.m_instantiation_records) {
+      CHECK(record.m_let_binding == "id");
+      REQUIRE(record.m_substitution.size() == 1);
+      const auto &[_, resolved] = *record.m_substitution.begin();
+      resolved_types.push_back(resolved_primitive(hir, resolved));
+    }
+    std::ranges::sort(resolved_types);
+    REQUIRE(resolved_types.size() == 2);
+    CHECK(resolved_types[0] == PrimitiveType::BOOL);
+    CHECK(resolved_types[1] == PrimitiveType::I64);
+  }
+
+  TEST_CASE("instantiation records: duplicate uses at same type deduped") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |x| { x };\n"
+                          "  id(1);\n"
+                          "  id(2)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_instantiation_records.size() == 1);
+    const auto &record = hir.m_instantiation_records[0];
+    CHECK(record.m_let_binding == "id");
+    REQUIRE(record.m_substitution.size() == 1);
+    const auto &[_, resolved] = *record.m_substitution.begin();
+    CHECK(resolved_primitive(hir, resolved) == PrimitiveType::I64);
+  }
+
+  TEST_CASE("instantiation records: non-polymorphic let yields no records") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let f = |x: i64| { x };\n"
+                          "  f(1)\n"
+                          "}");
+    DUMP_HIR(hir);
+    CHECK(hir.m_instantiation_records.empty());
+  }
+
+  TEST_CASE(
+      "instantiation records: nested polymorphic functions both recorded") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let id = |x| { x };\n"
+                          "  let apply_id = |y| { id(y) };\n"
+                          "  apply_id(42)\n"
+                          "}");
+    DUMP_HIR(hir);
+    std::vector<std::string> names;
+    for (const auto &record : hir.m_instantiation_records) {
+      names.push_back(record.m_let_binding);
+    }
+    CHECK(std::ranges::find(names, "id") != names.end());
+    CHECK(std::ranges::find(names, "apply_id") != names.end());
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

@@ -40,6 +40,16 @@ on each other are marked with arrows (→ means "enables").
 - [x] Cast expressions in codegen
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
 
+## Type Unifier
+
+- [ ] Make `TypeUnifier::find` const via `mutable` on the union-find internals
+  — Path compression mutates the parent pointers during `find`, which is why
+  it currently can't be `const`. This is the textbook use case for `mutable`:
+  the logical result is unchanged, only an internal cache is rewritten.
+  Marking the union-find storage `mutable` lets const callers (e.g. a
+  post-type-check resolution pass) invoke `find` while preserving the
+  path-compression optimization.
+
 ## Pipeline Overhaul
 
 Goal: polymorphic lambdas work end-to-end through codegen.

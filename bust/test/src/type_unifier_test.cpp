@@ -249,7 +249,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::TypeRegistry type_registry{};
     hir::TypeUnifier unifier{type_registry};
     auto tv = unifier.new_type_var();
-    hir::TypeKind type = tv;
+    hir::TypeKind type = type_registry.as_type_variable(tv);
 
     auto env = hir::Environment{};
     auto context = hir::Context{.m_env = env,
@@ -301,9 +301,8 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
     // fn(?T0) -> ?T1
     std::vector<hir::TypeId> params;
-    params.emplace_back(type_registry.intern(t0));
-    hir::TypeKind fn_type =
-        hir::FunctionType{std::move(params), type_registry.intern(t1)};
+    params.emplace_back(t0);
+    hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
     auto env = hir::Environment{};
     auto context = hir::Context{.m_env = env,
@@ -324,8 +323,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
     std::vector<hir::TypeId> params;
     params.emplace_back(type_registry.m_i64);
-    hir::TypeKind fn_type =
-        hir::FunctionType{std::move(params), type_registry.intern(t1)};
+    hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
     auto env = hir::Environment{};
     auto context = hir::Context{.m_env = env,
@@ -411,7 +409,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
     hir::TypeKind fn_type =
         hir::FunctionType{std::move(params), type_registry.m_bool};
 
-    unifier.unify(type_registry.intern(t0), type_registry.intern(fn_type));
+    unifier.unify(t0, type_registry.intern(fn_type));
 
     auto resolved = unifier.find(t0);
     REQUIRE(
@@ -425,7 +423,7 @@ TEST_SUITE("bust.type_unifier.function_types") {
 
     // fn(?T0) -> bool
     std::vector<hir::TypeId> params;
-    params.emplace_back(type_registry.intern(t0));
+    params.emplace_back(t0);
     hir::TypeKind fn_a =
         hir::FunctionType{std::move(params), type_registry.m_bool};
 
@@ -495,7 +493,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i64));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i64));
   }
 
   TEST_CASE("constrain then resolve with i8 succeeds") {
@@ -503,7 +501,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i8));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i8));
   }
 
   TEST_CASE("constrain then resolve with i32 succeeds") {
@@ -511,7 +509,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i32));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i32));
   }
 
   TEST_CASE("constrain NUMERIC then resolve with bool throws") {
@@ -519,7 +517,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_bool));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_bool));
   }
 
   TEST_CASE("constrain NUMERIC then resolve with char throws") {
@@ -527,7 +525,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_char));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_char));
   }
 
   TEST_CASE("constrain NUMERIC then resolve with unit throws") {
@@ -535,7 +533,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_unit));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_unit));
   }
 
   TEST_CASE("constrain BOOL then resolve with bool succeeds") {
@@ -543,8 +541,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::BOOL);
-    CHECK_NOTHROW(
-        unifier.unify(type_registry.intern(t0), type_registry.m_bool));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_bool));
   }
 
   TEST_CASE("constrain BOOL then resolve with i64 throws") {
@@ -552,7 +549,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::BOOL);
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_i64));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_i64));
   }
 
   TEST_CASE("constrain COMPARABLE then resolve with i64 succeeds") {
@@ -560,7 +557,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i64));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i64));
   }
 
   TEST_CASE("constrain COMPARABLE then resolve with bool succeeds") {
@@ -568,8 +565,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
-    CHECK_NOTHROW(
-        unifier.unify(type_registry.intern(t0), type_registry.m_bool));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_bool));
   }
 
   TEST_CASE("constrain COMPARABLE then resolve with char succeeds") {
@@ -577,8 +573,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
-    CHECK_NOTHROW(
-        unifier.unify(type_registry.intern(t0), type_registry.m_char));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_char));
   }
 
   TEST_CASE("constrain COMPARABLE then resolve with unit throws") {
@@ -586,7 +581,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_unit));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_unit));
   }
 
   // --- constrain after resolve (reverse order) ------------------------------
@@ -595,7 +590,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeRegistry type_registry{};
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
-    unifier.unify(type_registry.intern(t0), type_registry.m_i64);
+    unifier.unify(t0, type_registry.m_i64);
     CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
   }
 
@@ -603,7 +598,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeRegistry type_registry{};
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
-    unifier.unify(type_registry.intern(t0), type_registry.m_bool);
+    unifier.unify(t0, type_registry.m_bool);
     CHECK_THROWS(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
   }
 
@@ -611,7 +606,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeRegistry type_registry{};
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
-    unifier.unify(type_registry.intern(t0), type_registry.m_char);
+    unifier.unify(t0, type_registry.m_char);
     CHECK_THROWS(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
   }
 
@@ -619,7 +614,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeRegistry type_registry{};
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
-    unifier.unify(type_registry.intern(t0), type_registry.m_char);
+    unifier.unify(t0, type_registry.m_char);
     CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE));
   }
 
@@ -640,8 +635,8 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
     CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE));
     // NUMERIC is tighter; char should still be rejected
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_char));
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i32));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_char));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i32));
   }
 
   TEST_CASE("COMPARABLE then NUMERIC tightens to NUMERIC") {
@@ -650,8 +645,8 @@ TEST_SUITE("bust.type_unifier.constraints") {
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
     CHECK_NOTHROW(unifier.constrain(t0, PrimitiveTypeClass::NUMERIC));
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_bool));
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i64));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_bool));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i64));
   }
 
   TEST_CASE("NUMERIC then BOOL throws (disjoint)") {
@@ -681,8 +676,8 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
     unifier.unify(t0, t1);
     // t1 should now inherit NUMERIC; resolving to bool should fail
-    CHECK_THROWS(unifier.unify(type_registry.intern(t1), type_registry.m_bool));
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t1), type_registry.m_i64));
+    CHECK_THROWS(unifier.unify(t1, type_registry.m_bool));
+    CHECK_NOTHROW(unifier.unify(t1, type_registry.m_i64));
   }
 
   TEST_CASE("unconstrained unified with constrained inherits constraint") {
@@ -692,9 +687,8 @@ TEST_SUITE("bust.type_unifier.constraints") {
     auto t1 = unifier.new_type_var();
     unifier.constrain(t1, PrimitiveTypeClass::BOOL);
     unifier.unify(t0, t1);
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_i64));
-    CHECK_NOTHROW(
-        unifier.unify(type_registry.intern(t0), type_registry.m_bool));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_i64));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_bool));
   }
 
   TEST_CASE("two NUMERIC vars unified then resolved") {
@@ -705,7 +699,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
     unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
     CHECK_NOTHROW(unifier.unify(t0, t1));
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i8));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i8));
     // Both should resolve
     auto r0 = unifier.find(t0);
     auto r1 = unifier.find(t1);
@@ -726,8 +720,8 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.constrain(t1, PrimitiveTypeClass::COMPARABLE);
     CHECK_NOTHROW(unifier.unify(t0, t1));
     // Merged constraint should be NUMERIC (tighter)
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_char));
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t0), type_registry.m_i32));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_char));
+    CHECK_NOTHROW(unifier.unify(t0, type_registry.m_i32));
   }
 
   TEST_CASE("COMPARABLE and NUMERIC vars unified keeps NUMERIC") {
@@ -739,7 +733,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);
     unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
     CHECK_NOTHROW(unifier.unify(t0, t1));
-    CHECK_THROWS(unifier.unify(type_registry.intern(t1), type_registry.m_bool));
+    CHECK_THROWS(unifier.unify(t1, type_registry.m_bool));
   }
 
   TEST_CASE("NUMERIC and BOOL vars unified throws (disjoint)") {
@@ -760,7 +754,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    unifier.unify(type_registry.intern(t1), type_registry.m_i64);
+    unifier.unify(t1, type_registry.m_i64);
     CHECK_NOTHROW(unifier.unify(t0, t1));
   }
 
@@ -770,7 +764,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::NUMERIC);
-    unifier.unify(type_registry.intern(t1), type_registry.m_bool);
+    unifier.unify(t1, type_registry.m_bool);
     CHECK_THROWS(unifier.unify(t0, t1));
   }
 
@@ -780,7 +774,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
-    unifier.unify(type_registry.intern(t0), type_registry.m_i32);
+    unifier.unify(t0, type_registry.m_i32);
     unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
     CHECK_NOTHROW(unifier.unify(t0, t1));
   }
@@ -790,7 +784,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     hir::TypeUnifier unifier{type_registry};
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
-    unifier.unify(type_registry.intern(t0), type_registry.m_char);
+    unifier.unify(t0, type_registry.m_char);
     unifier.constrain(t1, PrimitiveTypeClass::NUMERIC);
     CHECK_THROWS(unifier.unify(t0, t1));
   }
@@ -807,8 +801,8 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.unify(t0, t1);
     unifier.unify(t1, t2);
     // t2 should have inherited NUMERIC
-    CHECK_THROWS(unifier.unify(type_registry.intern(t2), type_registry.m_bool));
-    CHECK_NOTHROW(unifier.unify(type_registry.intern(t2), type_registry.m_i64));
+    CHECK_THROWS(unifier.unify(t2, type_registry.m_bool));
+    CHECK_NOTHROW(unifier.unify(t2, type_registry.m_i64));
   }
 
   TEST_CASE("constraint applied to end of chain affects whole chain") {
@@ -821,7 +815,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     unifier.unify(t1, t2);
     unifier.constrain(t2, PrimitiveTypeClass::BOOL);
     // Resolving t0 to i64 should fail
-    CHECK_THROWS(unifier.unify(type_registry.intern(t0), type_registry.m_i64));
+    CHECK_THROWS(unifier.unify(t0, type_registry.m_i64));
   }
 
   // --- constrain after unify with concrete ----------------------------------
@@ -832,7 +826,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     unifier.unify(t0, t1);
-    unifier.unify(type_registry.intern(t0), type_registry.m_i64);
+    unifier.unify(t0, type_registry.m_i64);
     // Adding compatible constraint after resolution is fine
     CHECK_NOTHROW(unifier.constrain(t1, PrimitiveTypeClass::NUMERIC));
   }
@@ -843,7 +837,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
     auto t0 = unifier.new_type_var();
     auto t1 = unifier.new_type_var();
     unifier.unify(t0, t1);
-    unifier.unify(type_registry.intern(t0), type_registry.m_i64);
+    unifier.unify(t0, type_registry.m_i64);
     CHECK_THROWS(unifier.constrain(t1, PrimitiveTypeClass::BOOL));
   }
 }
