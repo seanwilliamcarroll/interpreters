@@ -33,6 +33,18 @@ struct Context {
         type_scheme.m_type);
   }
 
+  const FunctionType &as_function(TypeId type_id) const {
+    return m_type_registry.as_function(type_id);
+  }
+
+  const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
+    return m_type_registry.as_primitive(type_id);
+  }
+
+  const TypeVariable &as_type_variable(TypeId type_id) const {
+    return m_type_registry.as_type_variable(type_id);
+  }
+
   Environment &m_env;
   TypeRegistry &m_type_registry;
   std::vector<TypeId> m_return_type_stack{};

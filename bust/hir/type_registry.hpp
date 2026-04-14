@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <hir/types.hpp>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 //****************************************************************************
@@ -50,6 +51,29 @@ struct TypeRegistry {
 
   std::string to_string(const TypeKind &) const;
   std::string to_string(TypeId) const;
+
+  template <typename VariantType>
+  const VariantType &as(TypeId type_id, const char *function) const {
+    const auto &type_kind = get(type_id);
+    if (!std::holds_alternative<VariantType>(type_kind)) {
+      throw core::InternalCompilerError(std::string(function) +
+                                        "Bad access to registry with " +
+                                        to_string(type_id));
+    }
+    return std::get<VariantType>(type_kind);
+  }
+
+  const FunctionType &as_function(TypeId type_id) const {
+    return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
+  }
+
+  const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
+    return as<PrimitiveTypeValue>(type_id, __PRETTY_FUNCTION__);
+  }
+
+  const TypeVariable &as_type_variable(TypeId type_id) const {
+    return as<TypeVariable>(type_id, __PRETTY_FUNCTION__);
+  }
 
 private:
   std::vector<TypeKind> m_types{};

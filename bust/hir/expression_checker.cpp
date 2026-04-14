@@ -131,8 +131,7 @@ Expression ExpressionChecker::operator()(
   // Check types of arguments against their parameters, then bind and type
   // check the body
 
-  auto function_type =
-      std::get<FunctionType>(m_ctx.m_type_registry.get(callee_type_id));
+  const auto &function_type = m_ctx.as_function(callee_type_id);
 
   if (function_type.m_parameters.size() != arguments.size()) {
     throw core::CompilerException(

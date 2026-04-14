@@ -83,9 +83,7 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
 
   // Define the function in the environment before checking its body
   // (allows recursion)
-  auto expected_return_type =
-      std::get<FunctionType>(m_ctx.m_type_registry.get(signature.m_type))
-          .m_return_type;
+  auto expected_return_type = m_ctx.as_function(signature.m_type).m_return_type;
 
   auto body = BlockChecker{m_ctx}.check_callable_body(
       signature.m_parameters, expected_return_type, function_def.m_body);
