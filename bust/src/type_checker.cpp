@@ -6,7 +6,6 @@
 //*
 //****************************************************************************
 
-#include "hir/type_registry.hpp"
 #include <ast/nodes.hpp>
 #include <hir/context.hpp>
 #include <hir/nodes.hpp>
@@ -22,11 +21,7 @@ namespace bust {
 //****************************************************************************
 
 hir::Program TypeChecker::operator()(const ast::Program &program) {
-  auto type_registry = hir::TypeRegistry{};
-  auto context = hir::Context{.m_env = m_env,
-                              .m_type_registry = type_registry,
-                              .m_return_type_stack{},
-                              .m_type_unifier{type_registry}};
+  auto context = hir::Context{};
 
   // First pass to collect function signatures
   for (const auto &top_item : program.m_items) {
@@ -52,14 +47,13 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
     typed_items.push_back(std::visit(hir::TopItemChecker{context}, top_item));
   }
 
-  auto instantiation_records = context.resolve_instantiation_records();
-  auto unifier_state = context.m_type_unifier.extract_state();
+  auto post_check_state = context.get_post_check_data();
 
   return {{program.m_location},
-          std::move(type_registry),
+          std::move(post_check_state.m_type_registry),
           std::move(typed_items),
-          std::move(unifier_state),
-          std::move(instantiation_records)};
+          std::move(post_check_state.m_unifier_state),
+          std::move(post_check_state.m_instantiation_records)};
 }
 
 //****************************************************************************

@@ -10,6 +10,7 @@
 
 #include "hir/type_registry.hpp"
 #include "hir/types.hpp"
+#include "hir/unifier_state.hpp"
 #include <algorithm>
 #include <hir/environment.hpp>
 #include <hir/type_unifier.hpp>
@@ -34,6 +35,12 @@ struct InstantiationRecord {
   // Need to map the original free type variables to the new ones created for
   // this instantiation
   TypeSubstitution m_substitution;
+};
+
+struct PostTypeCheckedData {
+  TypeRegistry m_type_registry;
+  UnifierState m_unifier_state;
+  std::vector<InstantiationRecord> m_instantiation_records;
 };
 
 struct Context {
@@ -121,8 +128,18 @@ struct Context {
     return output;
   }
 
-  Environment &m_env;
-  TypeRegistry &m_type_registry;
+  PostTypeCheckedData get_post_check_data() {
+    auto instantiation_records = resolve_instantiation_records();
+    auto unifier_state = m_type_unifier.extract_state();
+    return {
+        .m_type_registry = std::move(m_type_registry),
+        .m_unifier_state = std::move(unifier_state),
+        .m_instantiation_records = std::move(instantiation_records),
+    };
+  }
+
+  Environment m_env{};
+  TypeRegistry m_type_registry{};
   std::vector<TypeId> m_return_type_stack{};
   TypeUnifier m_type_unifier{m_type_registry};
   std::vector<InstantiationRecord> m_instantiation_records{};
