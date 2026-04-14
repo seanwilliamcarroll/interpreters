@@ -75,6 +75,21 @@ struct TypeRegistry {
     return as<TypeVariable>(type_id, __PRETTY_FUNCTION__);
   }
 
+  template <typename VariantType> bool is(TypeId type_id) const {
+    const auto &type_kind = get(type_id);
+    return std::holds_alternative<VariantType>(type_kind);
+  }
+
+  bool is_function(TypeId type_id) const { return is<FunctionType>(type_id); }
+
+  bool is_primitive(TypeId type_id) const {
+    return is<PrimitiveTypeValue>(type_id);
+  }
+
+  bool is_type_variable(TypeId type_id) const {
+    return is<TypeVariable>(type_id);
+  }
+
 private:
   std::vector<TypeKind> m_types{};
   std::unordered_map<TypeKind, TypeId> m_mapping{};

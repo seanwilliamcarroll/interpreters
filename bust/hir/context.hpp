@@ -45,6 +45,18 @@ struct Context {
     return m_type_registry.as_type_variable(type_id);
   }
 
+  bool is_function(TypeId type_id) const {
+    return m_type_registry.is_function(type_id);
+  }
+
+  bool is_primitive(TypeId type_id) const {
+    return m_type_registry.is_primitive(type_id);
+  }
+
+  bool is_type_variable(TypeId type_id) const {
+    return m_type_registry.is_type_variable(type_id);
+  }
+
   std::string to_string(const auto &type) const {
     return m_type_registry.to_string(type);
   }
