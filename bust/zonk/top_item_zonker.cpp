@@ -56,7 +56,8 @@ TopItemZonker::zonk(hir::FunctionDeclaration function_declaration) {
       m_ctx.m_new_type_registry.intern(zonked_function_type);
 
   return {std::move(function_declaration.m_function_id),
-          zonked_function_type_id, std::move(zonked_parameters)};
+          function_declaration.m_id, zonked_function_type_id,
+          std::move(zonked_parameters)};
 }
 
 hir::TopItem TopItemZonker::operator()(hir::FunctionDef function_def) {

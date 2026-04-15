@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "hash_combine.hpp"
 #include <functional>
 #include <types.hpp>
 #include <variant>
@@ -16,10 +17,6 @@
 //****************************************************************************
 namespace bust::hir {
 //****************************************************************************
-
-template <typename T> inline void hash_combine(std::size_t &seed, const T &v) {
-  seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
 
 using InnerTypeIdType = size_t;
 
@@ -94,9 +91,9 @@ template <> struct hash<bust::hir::FunctionType> {
   size_t operator()(const bust::hir::FunctionType &id) const noexcept {
     size_t seed = 0;
     for (const auto &parameter : id.m_parameters) {
-      bust::hir::hash_combine(seed, parameter);
+      core::hash_combine(seed, parameter);
     }
-    bust::hir::hash_combine(seed, id.m_return_type);
+    core::hash_combine(seed, id.m_return_type);
     return seed;
   }
 };

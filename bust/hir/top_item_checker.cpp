@@ -38,7 +38,7 @@ void TopItemChecker::collect_function_signature(
         "TypeChecker",
         "Cannot redefine identifier!\nAlready defined " +
             declaration.m_id.m_name + " with type: " +
-            m_ctx.m_type_registry.to_string(other_id.value().m_type),
+            m_ctx.to_string(other_id.value().m_type_scheme.m_type),
         declaration.m_id.m_location);
   }
 
@@ -56,7 +56,8 @@ void TopItemChecker::collect_function_signature(
   auto function_type_id = m_ctx.m_type_registry.intern(
       FunctionType{std::move(parameter_types), return_type_id});
 
-  m_ctx.m_env.define(declaration.m_id.m_name, function_type_id);
+  m_ctx.m_env.define(declaration.m_id.m_name, m_ctx.next_let_binding_id(),
+                     function_type_id);
 }
 
 hir::FunctionDeclaration TopItemChecker::check_declaration(
@@ -69,13 +70,14 @@ hir::FunctionDeclaration TopItemChecker::check_declaration(
         "function '" + function_declaration.m_id.m_name +
         "' not found after first pass signature collection");
   }
-  auto function_type_id = maybe_function_type.value().m_type;
+  const auto &[function_id, function_type_scheme] = maybe_function_type.value();
+  auto function_type_id = function_type_scheme.m_type;
 
   auto [parameters, _] = TypeConverter{m_ctx}.convert_parameters(
       function_declaration.m_parameters);
 
-  return FunctionDeclaration{function_declaration.m_id.m_name, function_type_id,
-                             std::move(parameters)};
+  return FunctionDeclaration{function_declaration.m_id.m_name, function_id,
+                             function_type_id, std::move(parameters)};
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
@@ -83,9 +85,7 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
 
   // Define the function in the environment before checking its body
   // (allows recursion)
-  auto expected_return_type =
-      std::get<FunctionType>(m_ctx.m_type_registry.get(signature.m_type))
-          .m_return_type;
+  auto expected_return_type = m_ctx.as_function(signature.m_type).m_return_type;
 
   auto body = BlockChecker{m_ctx}.check_callable_body(
       signature.m_parameters, expected_return_type, function_def.m_body);

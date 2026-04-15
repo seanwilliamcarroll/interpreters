@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include "ast/nodes.hpp"
+#include "hir/instantiation_record.hpp"
 #include "hir/type_registry.hpp"
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
@@ -36,6 +37,7 @@ struct ForExpr {};
 
 struct Identifier : public core::HasLocation {
   std::string m_name;
+  BindingId m_id;
   TypeId m_type;
 };
 
@@ -123,6 +125,7 @@ struct LetBinding : public core::HasLocation {
 
 struct FunctionDeclaration {
   std::string m_function_id;
+  BindingId m_id;
   TypeId m_type;
   std::vector<Identifier> m_parameters;
 };
@@ -142,6 +145,8 @@ struct Program : public core::HasLocation {
   TypeRegistry m_type_registry{};
   std::vector<TopItem> m_top_items{};
   std::optional<UnifierState> m_unifier_state{};
+  BindingIdInstantiations m_instantiation_records{};
+  InnerTypeBindingId m_next_let_binding_id{};
 };
 
 //****************************************************************************

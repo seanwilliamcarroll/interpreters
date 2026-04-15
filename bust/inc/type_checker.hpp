@@ -20,9 +20,6 @@ namespace bust {
 /// Currently a pass-through — will eventually produce a typed AST.
 struct TypeChecker {
   hir::Program operator()(const ast::Program &program);
-
-private:
-  hir::Environment m_env;
 };
 
 //****************************************************************************

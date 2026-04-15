@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "exceptions.hpp"
 #include <array>
 #include <cassert>
 #include <cstdint>
@@ -25,11 +26,13 @@ enum class LLVMType : uint8_t {
   I8,
   I32,
   I64,
+  PTR,
   VOID,
 };
 
 inline std::ostream &operator<<(std::ostream &out, LLVMType type) {
-  constexpr static std::array type_names{"i1", "i8", "i32", "i64", "void"};
+  constexpr static std::array type_names{"i1",  "i8",  "i32",
+                                         "i64", "ptr", "void"};
   return out << type_names[std::to_underlying(type)];
 }
 
@@ -42,6 +45,7 @@ inline size_t width_bits(LLVMType type) {
   case LLVMType::I32:
     return 32;
   case LLVMType::I64:
+  case LLVMType::PTR:
     return 64;
   case LLVMType::VOID:
     std::unreachable();
@@ -49,21 +53,32 @@ inline size_t width_bits(LLVMType type) {
 }
 
 inline LLVMType to_llvm_type(const hir::TypeKind &type) {
-  const auto *prim = std::get_if<hir::PrimitiveTypeValue>(&type);
-  assert(prim && "codegen only handles primitive types for now");
-  switch (prim->m_type) {
-  case PrimitiveType::BOOL:
-    return LLVMType::I1;
-  case PrimitiveType::I8:
-  case PrimitiveType::CHAR:
-    return LLVMType::I8;
-  case PrimitiveType::I32:
-    return LLVMType::I32;
-  case PrimitiveType::I64:
-    return LLVMType::I64;
-  case PrimitiveType::UNIT:
-    return LLVMType::VOID;
-  }
+  return std::visit(
+      [](const auto &t) {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, hir::PrimitiveTypeValue>) {
+          switch (t.m_type) {
+          case PrimitiveType::BOOL:
+            return LLVMType::I1;
+          case PrimitiveType::I8:
+          case PrimitiveType::CHAR:
+            return LLVMType::I8;
+          case PrimitiveType::I32:
+            return LLVMType::I32;
+          case PrimitiveType::I64:
+            return LLVMType::I64;
+          case PrimitiveType::UNIT:
+            return LLVMType::VOID;
+          }
+        } else if constexpr (std::is_same_v<T, hir::FunctionType>) {
+          return LLVMType::PTR;
+        } else {
+          assert(false && "codegen only handles primitive types and function "
+                          "types for now");
+          return LLVMType::VOID;
+        }
+      },
+      type);
 }
 
 enum class LLVMBinaryOperator : uint8_t {

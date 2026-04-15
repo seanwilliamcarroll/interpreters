@@ -10,11 +10,11 @@
 #include <bust.hpp>
 #include <codegen.hpp>
 #include <cstdlib>
-#include <evaluator.hpp>
 #include <fstream>
 #include <hir/dump.hpp>
 #include <iostream>
 #include <memory>
+#include <monomorpher.hpp>
 #include <parser.hpp>
 #include <pipeline.hpp>
 #include <stdexcept>
@@ -50,38 +50,45 @@ void Bust::run() {
     std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
   }
 
-  auto zonked = run_pipeline(std::move(typed), Zonker{});
+  auto monomorphed = run_pipeline(std::move(typed), Monomorpher{});
 
-  if (m_options.llvm_ir) {
-    auto ir = CodeGen{}(zonked);
-    std::cout << "=== LLVM IR ===\n" << ir << "\n";
-
-    // Write IR to a temp file and run via lli, then surface its exit code
-    // as our "Program returned" value (mirrors the Evaluator path).
-    char tmp_path[] = "/tmp/bust-XXXXXX.ll";
-    int fd = mkstemps(tmp_path, 3);
-    if (fd < 0) {
-      throw std::runtime_error("failed to create temp file for lli");
-    }
-    {
-      std::ofstream out(tmp_path);
-      out << ir;
-    }
-    ::close(fd);
-
-    std::string cmd = std::string("lli ") + tmp_path;
-    int raw = std::system(cmd.c_str());
-    ::unlink(tmp_path);
-
-    if (raw < 0 || !WIFEXITED(raw)) {
-      throw std::runtime_error("lli did not exit normally");
-    }
-    std::cout << "Program returned: " << WEXITSTATUS(raw) << "\n";
-    return;
+  if (m_options.dump_mono) {
+    std::cout << "=== Monomorphed HIR ===\n"
+              << hir::Dumper::dump(monomorphed) << "\n";
   }
 
-  auto result = Evaluator{}(zonked);
-  std::cout << "Program returned: " << result << "\n";
+  auto zonked = run_pipeline(std::move(monomorphed), Zonker{});
+
+  if (m_options.dump_zonked) {
+    std::cout << "=== Zonked HIR ===\n" << hir::Dumper::dump(zonked) << "\n";
+  }
+
+  auto ir = CodeGen{}(zonked);
+
+  if (m_options.dump_llvm_ir) {
+    std::cout << "=== LLVM IR ===\n" << ir << "\n";
+  }
+
+  // Write IR to a temp file and run via lli, then surface its exit code.
+  char tmp_path[] = "/tmp/bust-XXXXXX.ll";
+  int fd = mkstemps(tmp_path, 3);
+  if (fd < 0) {
+    throw std::runtime_error("failed to create temp file for lli");
+  }
+  {
+    std::ofstream out(tmp_path);
+    out << ir;
+  }
+  ::close(fd);
+
+  std::string cmd = std::string("lli ") + tmp_path;
+  int raw = std::system(cmd.c_str());
+  ::unlink(tmp_path);
+
+  if (raw < 0 || !WIFEXITED(raw)) {
+    throw std::runtime_error("lli did not exit normally");
+  }
+  std::cout << "Program returned: " << WEXITSTATUS(raw) << "\n";
 }
 
 } // namespace bust

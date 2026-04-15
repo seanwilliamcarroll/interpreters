@@ -1233,6 +1233,83 @@ TEST_SUITE("bust.codegen") {
               1);
   }
 
+  // --- Lambda expressions (non-capturing) ----------------------------------
+
+  TEST_CASE("basic lambda call") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let add = |a: i64, b: i64| -> i64 { a + b };\n"
+              "  add(3, 4)\n"
+              "}",
+              7);
+  }
+
+  TEST_CASE("lambda with explicit parameter type") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let double = |x: i64| -> i64 { x + x };\n"
+              "  double(5)\n"
+              "}",
+              10);
+  }
+
+  TEST_CASE("lambda passed as argument to function") {
+    CHECK_RUN("fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }\n"
+              "fn main() -> i64 {\n"
+              "  let inc = |x: i64| -> i64 { x + 1 };\n"
+              "  apply(inc, 41)\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("lambda with no parameters") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = || -> i64 { 99 };\n"
+              "  f()\n"
+              "}",
+              99);
+  }
+
+  TEST_CASE("lambda calling another function") {
+    CHECK_RUN("fn helper(x: i64) -> i64 { x * 2 }\n"
+              "fn main() -> i64 {\n"
+              "  let f = |x: i64| -> i64 { helper(x) + 1 };\n"
+              "  f(20)\n"
+              "}",
+              41);
+  }
+
+  TEST_CASE("multiple lambdas in same function") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let add = |a: i64, b: i64| -> i64 { a + b };\n"
+              "  let mul = |a: i64, b: i64| -> i64 { a * b };\n"
+              "  add(mul(3, 4), 2)\n"
+              "}",
+              14);
+  }
+
+  TEST_CASE("lambda result used in arithmetic") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = |x: i64| -> i64 { x + 1 };\n"
+              "  f(10) + f(20)\n"
+              "}",
+              32);
+  }
+
+  TEST_CASE("lambda in if condition") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let is_big = |x: i64| -> bool { x > 10 };\n"
+              "  if is_big(20) { 1 } else { 0 }\n"
+              "}",
+              1);
+  }
+
+  TEST_CASE("identity lambda") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let id = |x: i64| -> i64 { x };\n"
+              "  id(42)\n"
+              "}",
+              42);
+  }
+
 #else
   TEST_CASE("codegen execution tests" * doctest::skip()) {
     MESSAGE("lli not found at configure time - execution tests skipped");

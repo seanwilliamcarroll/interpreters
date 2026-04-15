@@ -55,11 +55,14 @@ struct TypeConverter {
     if (identifier.m_type.has_value()) {
       return std::visit((*this), identifier.m_type.value());
     }
-    return m_ctx.m_type_registry.intern(m_ctx.m_type_unifier.new_type_var());
+    return m_ctx.m_type_unifier.new_type_var();
   }
 
   Identifier convert_parameter(const ast::Identifier &identifier) {
-    return {{identifier.m_location}, identifier.m_name, get_type(identifier)};
+    return {{identifier.m_location},
+            identifier.m_name,
+            m_ctx.next_let_binding_id(),
+            get_type(identifier)};
   }
 
   std::pair<std::vector<Identifier>, std::vector<TypeId>>

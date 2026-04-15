@@ -1,7 +1,9 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Tree-walking evaluator for bust HIR.
+//*  Purpose : Monomorphization pass — specializes polymorphic let bindings
+//*            into concrete type-specialized copies based on the
+//*            instantiation records attached to the program.
 //*
 //*
 //****************************************************************************
@@ -9,14 +11,16 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
-#include <stdint.h>
 
 //****************************************************************************
 namespace bust {
 //****************************************************************************
 
-struct [[deprecated("Use codegen")]] Evaluator {
-  int64_t operator()(const hir::Program &program);
+/// Monomorphization pass. Consumes the instantiation records attached to
+/// the program and emits a new program in which every polymorphic let
+/// binding has been replaced by one or more concrete specializations.
+struct Monomorpher {
+  hir::Program operator()(hir::Program program);
 };
 
 //****************************************************************************

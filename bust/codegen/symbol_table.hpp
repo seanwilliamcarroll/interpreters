@@ -79,6 +79,10 @@ struct SymbolTable {
     return new_handle;
   }
 
+  GlobalHandle define_uniqued_global(const std::string &name) {
+    return define_global(m_name_tracker.uniquify(name));
+  }
+
   Handle lookup(const std::string &name) const {
     for (const auto &scope : m_scopes | std::views::reverse) {
       auto maybe_handle = scope.lookup(name);

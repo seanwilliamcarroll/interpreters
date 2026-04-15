@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <ast/types.hpp>
+#include <atomic>
 #include <exceptions.hpp>
 #include <hir/block_checker.hpp>
 #include <hir/context.hpp>
@@ -97,13 +98,13 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
         location);
   }
 
-  const auto &type_scheme = maybe_type.value();
+  const auto &[binding_id, type_scheme] = maybe_type.value();
 
-  auto final_type = m_ctx.create_fresh_type_vars(type_scheme);
+  auto final_type = m_ctx.create_fresh_type_vars(binding_id, type_scheme);
 
   return {{location},
           final_type,
-          Identifier{{location}, identifier.m_name, final_type}};
+          Identifier{{location}, identifier.m_name, binding_id, final_type}};
 }
 
 Expression ExpressionChecker::operator()(
@@ -111,59 +112,89 @@ Expression ExpressionChecker::operator()(
     const core::SourceLocation &location) {
   auto callee = check_expression(call_expression->m_callee);
 
-  auto callee_type_id = callee.m_type;
-  if (!std::holds_alternative<FunctionType>(
-          m_ctx.m_type_registry.get(callee_type_id))) {
-    throw core::CompilerException(
-        "TypeChecker",
-        "Expression of type: " +
-            m_ctx.m_type_registry.to_string(callee_type_id) +
-            " is not callable!",
-        callee.m_location);
-  }
-
   std::vector<Expression> arguments;
   arguments.reserve(call_expression->m_arguments.size());
   for (const auto &argument : call_expression->m_arguments) {
     arguments.emplace_back(check_expression(argument));
   }
 
-  // Check types of arguments against their parameters, then bind and type
-  // check the body
+  // TODO Clean this up
 
-  auto function_type =
-      std::get<FunctionType>(m_ctx.m_type_registry.get(callee_type_id));
+  auto callee_type_id = callee.m_type;
+  if (m_ctx.is_function(callee_type_id)) {
+    // Check types of arguments against their parameters, then bind and type
+    // check the body
 
-  if (function_type.m_parameters.size() != arguments.size()) {
-    throw core::CompilerException(
-        "TypeChecker",
-        "Callee expects " + std::to_string(function_type.m_parameters.size()) +
-            " arguments, " + std::to_string(arguments.size()) + " provided",
-        location);
+    const auto &function_type = m_ctx.as_function(callee_type_id);
+
+    if (function_type.m_parameters.size() != arguments.size()) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Callee expects " +
+              std::to_string(function_type.m_parameters.size()) +
+              " arguments, " + std::to_string(arguments.size()) + " provided",
+          location);
+    }
+
+    for (const auto &[index, parameter_type, argument] : std::views::zip(
+             std::views::iota(0ULL), function_type.m_parameters, arguments)) {
+      try {
+        m_ctx.m_type_unifier.unify(parameter_type, argument.m_type);
+      } catch (std::runtime_error &error) {
+        throw core::CompilerException(
+            "TypeChecker",
+            "Type unification error!\n Parameter at index: " +
+                std::to_string(index) +
+                " expects type: " + m_ctx.to_string(parameter_type) +
+                " Unification error: " + error.what(),
+            argument.m_location);
+      }
+    }
+    // They all match
+
+    auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
+
+    return {{location},
+            return_type,
+            std::make_unique<CallExpr>(
+                CallExpr{std::move(callee), std::move(arguments)})};
   }
+  if (m_ctx.is_type_variable(callee_type_id)) {
+    // Need to make fresh type variables
+    auto function_type = FunctionType{};
+    function_type.m_parameters.reserve(arguments.size());
+    for (const auto &argument : arguments) {
+      function_type.m_parameters.push_back(argument.m_type);
+    }
+    function_type.m_return_type = m_ctx.m_type_unifier.new_type_var();
 
-  for (const auto &[index, parameter_type, argument] : std::views::zip(
-           std::views::iota(0ULL), function_type.m_parameters, arguments)) {
+    auto function_type_id = m_ctx.m_type_registry.intern(function_type);
+
+    // Do single unification
     try {
-      m_ctx.m_type_unifier.unify(parameter_type, argument.m_type);
+      m_ctx.m_type_unifier.unify(function_type_id, callee_type_id);
     } catch (std::runtime_error &error) {
       throw core::CompilerException(
           "TypeChecker",
-          "Type unification error!\n Parameter at index: " +
-              std::to_string(index) + " expects type: " +
-              m_ctx.m_type_registry.to_string(parameter_type) +
+          "Type unification error!\nCallee type: " +
+              m_ctx.to_string(callee_type_id) +
+              " cannot unify with: " + m_ctx.to_string(function_type_id) +
               " Unification error: " + error.what(),
-          argument.m_location);
+          callee.m_location);
     }
+
+    auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
+
+    return {{location},
+            return_type,
+            std::make_unique<CallExpr>(
+                CallExpr{std::move(callee), std::move(arguments)})};
   }
-  // They all match
-
-  auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
-
-  return {{location},
-          return_type,
-          std::make_unique<CallExpr>(
-              CallExpr{std::move(callee), std::move(arguments)})};
+  throw core::CompilerException(
+      "TypeChecker",
+      "Expression of type: " + m_ctx.to_string(callee_type_id) +
+          " is not callable, nor a type variable!",
+      callee.m_location);
 }
 
 Expression ExpressionChecker::operator()(
@@ -182,18 +213,17 @@ Expression ExpressionChecker::operator()(
   }
 
   auto type_id = m_ctx.m_type_unifier.find(lhs.m_type);
-  const auto &type = m_ctx.m_type_registry.get(type_id);
 
   // Apply operator constraint
   auto required =
       required_type_class_for_binary_op(binary_expression->m_operator);
   try {
-    if (std::holds_alternative<TypeVariable>(type)) {
-      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(type), required);
-    } else if (!is_type_in_type_class(required, type)) {
+    if (m_ctx.is_type_variable(type_id)) {
+      m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(type_id), required);
+    } else if (!is_type_in_type_class(required,
+                                      m_ctx.m_type_registry.get(type_id))) {
       throw core::CompilerException("TypeChecker",
-                                    "Type " +
-                                        m_ctx.m_type_registry.to_string(type) +
+                                    "Type " + m_ctx.to_string(type_id) +
                                         " is disallowed by binary operator: " +
                                         binary_expression->m_operator,
                                     location);
@@ -218,20 +248,20 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::UnaryExpr> &unary_expression,
     const core::SourceLocation &location) {
   auto expression = check_expression(unary_expression->m_expression);
-  const auto &expression_type = m_ctx.m_type_registry.get(expression.m_type);
 
   auto required_type_class =
       required_type_class_for_unary_op(unary_expression->m_operator);
   try {
-    if (std::holds_alternative<TypeVariable>(expression_type)) {
-      m_ctx.m_type_unifier.constrain(std::get<TypeVariable>(expression_type),
+    if (m_ctx.is_type_variable(expression.m_type)) {
+      m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(expression.m_type),
                                      required_type_class);
-    } else if (!is_type_in_type_class(required_type_class, expression_type)) {
+    } else if (!is_type_in_type_class(
+                   required_type_class,
+                   m_ctx.m_type_registry.get(expression.m_type))) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
-              " does not accept type: " +
-              m_ctx.m_type_registry.to_string(expression.m_type),
+              " does not accept type: " + m_ctx.to_string(expression.m_type),
           location);
     }
   } catch (std::runtime_error &error) {
@@ -330,24 +360,22 @@ Expression ExpressionChecker::operator()(
   auto hir_expression = check_expression(cast_expression->m_expression);
 
   auto original_type_id = m_ctx.m_type_unifier.find(hir_expression.m_type);
-  const auto &original_type = m_ctx.m_type_registry.get(original_type_id);
 
   auto new_type_id =
       std::visit(TypeConverter{m_ctx}, cast_expression->m_new_type);
-  const auto &new_type = m_ctx.m_type_registry.get(new_type_id);
 
-  if (!std::holds_alternative<PrimitiveTypeValue>(original_type) ||
-      !std::holds_alternative<PrimitiveTypeValue>(new_type)) {
+  if (!m_ctx.is_primitive(original_type_id) ||
+      !m_ctx.is_primitive(new_type_id)) {
     throw core::CompilerException(
         "TypeChecker",
         "Cannot cast an expression with type: " +
-            m_ctx.m_type_registry.to_string(original_type) +
-            " to type: " + m_ctx.m_type_registry.to_string(new_type),
+            m_ctx.to_string(original_type_id) +
+            " to type: " + m_ctx.to_string(new_type_id),
         location);
   }
 
-  auto original_primitive = std::get<PrimitiveTypeValue>(original_type).m_type;
-  auto new_primitive = std::get<PrimitiveTypeValue>(new_type).m_type;
+  auto original_primitive = m_ctx.as_primitive(original_type_id).m_type;
+  auto new_primitive = m_ctx.as_primitive(new_type_id).m_type;
 
   if (!can_cast(original_primitive, new_primitive)) {
     throw core::CompilerException("TypeChecker",
@@ -407,7 +435,7 @@ Expression ExpressionChecker::operator()(
       lambda_expression->m_return_type.has_value()
           ? TypeConverter{m_ctx}.get_type(
                 lambda_expression->m_return_type.value())
-          : m_ctx.m_type_registry.intern(m_ctx.m_type_unifier.new_type_var());
+          : m_ctx.m_type_unifier.new_type_var();
 
   auto body =
       lambda_expression->m_return_type.has_value()
@@ -440,13 +468,11 @@ Expression ExpressionChecker::operator()(
 Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &,
                               const core::SourceLocation &) {
-  // TODO
-  return {};
+  throw core::InternalCompilerError("Not yet implemented");
 }
 Expression ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &,
                                          const core::SourceLocation &) {
-  // TODO
-  return {};
+  throw core::InternalCompilerError("Not yet implemented");
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal,

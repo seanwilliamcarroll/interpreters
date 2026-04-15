@@ -24,6 +24,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <codegen/context.hpp>
@@ -54,15 +55,12 @@ TopItemGenerator::generate(const hir::FunctionDeclaration &func_declaration) {
       [this](const hir::Identifier &parameter) -> Parameter {
         auto handle = m_ctx.symbols().define_parameter(parameter.m_name);
         return Parameter{.m_name = std::move(handle),
-                         .m_type = to_llvm_type(
-                             m_ctx.type_registry().get(parameter.m_type))};
+                         .m_type = m_ctx.to_type(parameter.m_type)};
       });
   return FunctionDeclaration{
       .m_function_id = GlobalHandle{func_declaration.m_function_id},
-      .m_return_type = to_llvm_type(m_ctx.type_registry().get(
-          std::get<hir::FunctionType>(
-              m_ctx.type_registry().get(func_declaration.m_type))
-              .m_return_type)),
+      .m_return_type = m_ctx.to_type(
+          m_ctx.as_function(func_declaration.m_type).m_return_type),
       .m_parameters = std::move(parameters)};
 }
 
@@ -75,13 +73,16 @@ void TopItemGenerator::operator()(const hir::FunctionDef &function_def) {
 
   auto return_value = ExpressionGenerator{m_ctx}(function_def.m_body);
 
-  // Wherever we are, we need to add this terminal to the final
-  function.current_basic_block().add_terminal(ReturnInstruction{
-      .m_value = return_value,
-      .m_type = to_llvm_type(m_ctx.type_registry().get(
-          std::get<hir::FunctionType>(
-              m_ctx.type_registry().get(function_def.m_signature.m_type))
-              .m_return_type))});
+  const auto &return_type_id =
+      m_ctx.as_function(function_def.m_signature.m_type).m_return_type;
+
+  if (return_type_id == m_ctx.type_registry().m_unit) {
+    function.current_basic_block().add_terminal(ReturnVoidInstruction{});
+  } else {
+    // Wherever we are, we need to add this terminal to the final
+    function.current_basic_block().add_terminal(ReturnInstruction{
+        .m_value = return_value, .m_type = m_ctx.to_type(return_type_id)});
+  }
 }
 
 void TopItemGenerator::operator()(

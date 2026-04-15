@@ -287,10 +287,7 @@ Value ExpressionEvaluator::operator()(
   auto value = evaluate(cast_expression->m_expression);
   // Do cast, we already type checked
 
-  return cast_op(value,
-                 std::get<hir::PrimitiveTypeValue>(
-                     m_ctx.m_type_registry.get(cast_expression->m_new_type))
-                     .m_type);
+  return cast_op(value, m_ctx.as_primitive(cast_expression->m_new_type).m_type);
 }
 
 Value ExpressionEvaluator::operator()(

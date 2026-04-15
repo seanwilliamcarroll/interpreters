@@ -25,19 +25,34 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeUnifier {
-  TypeVariable
+
+  // Adopt an existing UnifierState (e.g. carried forward on hir::Program
+  // between passes) by moving its contents into this unifier's own fields.
+  // The source state is left empty. Intended for the "aggregate-init an
+  // empty unifier, then move state in" pattern at pass entry.
+  void adopt_state(UnifierState state) {
+    m_union_find = std::move(state.m_union_find);
+    m_resolved_type_id = std::move(state.m_resolved_type_id);
+    m_resolved_type_class = std::move(state.m_resolved_type_class);
+  }
+
+  std::string to_string(const auto &type) const {
+    return m_type_registry.to_string(type);
+  }
+
+  TypeId
   new_type_var(std::optional<PrimitiveTypeClass> possible_constraint = {}) {
     auto new_id = m_union_find.add_node();
     auto new_type_var = TypeVariable{.m_id = new_id};
-    m_type_registry.intern(new_type_var);
+    auto new_type_id = m_type_registry.intern(new_type_var);
 
     if (!possible_constraint.has_value()) {
-      return new_type_var;
+      return new_type_id;
     }
     // Check if the constraint conflicts, it shouldn't, but not bad to check
     const auto &constraint = possible_constraint.value();
     constrain(new_type_var, constraint);
-    return new_type_var;
+    return new_type_id;
   }
 
   void unify(const TypeId &type_id_a, const TypeId &type_id_b) {
@@ -71,16 +86,14 @@ struct TypeUnifier {
       return;
     }
 
-    throw std::runtime_error(
-        "Tried to unify concrete types: " + m_type_registry.to_string(type_a) +
-        " and " + m_type_registry.to_string(type_b));
+    throw std::runtime_error("Tried to unify concrete types: " +
+                             to_string(type_a) + " and " + to_string(type_b));
   }
 
   void unify(const FunctionType &type_a, const FunctionType &type_b) {
     if (type_a.m_parameters.size() != type_b.m_parameters.size()) {
       throw std::runtime_error(std::string("Tried to unify concrete types: ") +
-                               m_type_registry.to_string(type_a) + " and " +
-                               m_type_registry.to_string(type_b));
+                               to_string(type_a) + " and " + to_string(type_b));
     }
 
     for (const auto &[parameter_type_a, parameter_type_b] :
@@ -115,10 +128,9 @@ struct TypeUnifier {
     if (iter_a != m_resolved_type_id.end()) {
       const auto &concrete_a = iter_a->second;
       if (concrete_a != type_id_b) {
-        throw std::runtime_error("Could not resolve type variable " +
-                                 m_type_registry.to_string(type_a) + " (" +
-                                 m_type_registry.to_string(concrete_a) +
-                                 ") and " + m_type_registry.to_string(type_b));
+        throw std::runtime_error(
+            "Could not resolve type variable " + to_string(type_a) + " (" +
+            to_string(concrete_a) + ") and " + to_string(type_b));
       }
       // This root has already been unified, satisfying all constraints
       return;
@@ -132,14 +144,18 @@ struct TypeUnifier {
       if (!is_type_in_type_class(resolved_type_class, type_b)) {
         throw std::runtime_error("Could not resolve type class constraints "
                                  "from resolved type_class: " +
-                                 resolved_type_class + " and concrete type: " +
-                                 m_type_registry.to_string(type_b));
+                                 resolved_type_class +
+                                 " and concrete type: " + to_string(type_b));
       }
       // We satisfied the constraint, move to add new concrete type
     }
 
     // No entry
     m_resolved_type_id.emplace(root_a, type_id_b);
+  }
+
+  void constrain(const TypeId &type_id, const PrimitiveTypeClass &type_class) {
+    constrain(m_type_registry.as_type_variable(type_id), type_class);
   }
 
   void constrain(const TypeVariable &type,
@@ -152,9 +168,9 @@ struct TypeUnifier {
       const auto &resolved_type_id = iter->second;
       const auto &resolved_type = m_type_registry.get(resolved_type_id);
       if (!is_type_in_type_class(type_class, resolved_type)) {
-        throw std::runtime_error("Could not resolve concrete type: " +
-                                 m_type_registry.to_string(resolved_type) +
-                                 " and type_class: " + type_class);
+        throw std::runtime_error(
+            "Could not resolve concrete type: " + to_string(resolved_type) +
+            " and type_class: " + type_class);
       }
       // All good, constraint satisfied
       return;
@@ -205,12 +221,10 @@ struct TypeUnifier {
       const auto &concrete_a = iter_a->second;
       const auto &concrete_b = iter_b->second;
       if (concrete_a != concrete_b) {
-        throw std::runtime_error("Could not resolve type variables " +
-                                 m_type_registry.to_string(type_a) + " (" +
-                                 m_type_registry.to_string(concrete_a) +
-                                 ") and " + m_type_registry.to_string(type_b) +
-                                 "(" + m_type_registry.to_string(concrete_b) +
-                                 ")");
+        throw std::runtime_error(
+            "Could not resolve type variables " + to_string(type_a) + " (" +
+            to_string(concrete_a) + ") and " + to_string(type_b) + "(" +
+            to_string(concrete_b) + ")");
       }
       // Their concrete types must match, not sure if a bug or not
       return;
@@ -267,7 +281,7 @@ struct TypeUnifier {
           throw std::runtime_error("Could not resolve type class constraints "
                                    "from merged type_class: " +
                                    merged_type_class + " and concrete type: " +
-                                   m_type_registry.to_string(concrete_type));
+                                   to_string(concrete_type));
         }
       }
     }
@@ -306,6 +320,10 @@ struct TypeUnifier {
 
     // Not a concrete type yet
     return m_type_registry.intern(TypeVariable{root});
+  }
+
+  std::optional<PrimitiveTypeClass> find_type_class(const TypeId &type_id) {
+    return find_type_class(m_type_registry.as_type_variable(type_id));
   }
 
   std::optional<PrimitiveTypeClass> find_type_class(const TypeVariable &type) {

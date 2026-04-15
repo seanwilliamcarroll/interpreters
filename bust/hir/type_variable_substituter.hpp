@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/type_unifier.hpp"
 #include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <unordered_map>
@@ -18,12 +19,12 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct TypeVariableUpdater {
+struct TypeVariableSubstituter {
 
-  TypeId update(const TypeKind &type) { return std::visit(*this, type); }
+  TypeId substitute(const TypeKind &type) { return std::visit(*this, type); }
 
-  TypeId update(const TypeId &type) {
-    return update(m_type_registry.get(type));
+  TypeId substitute(const TypeId &type) {
+    return substitute(m_type_registry.get(type));
   }
 
   TypeId operator()(const PrimitiveTypeValue &type) {
@@ -31,31 +32,42 @@ struct TypeVariableUpdater {
   }
 
   TypeId operator()(const TypeVariable &type) {
-    auto iter = m_new_mapping.find(type);
+    auto type_id = m_type_registry.intern(type);
+    auto iter = m_new_mapping.find(type_id);
 
     if (iter == m_new_mapping.end()) {
-      return m_type_registry.intern(type);
+      auto resolved_type_id = m_type_unifier.find(type);
+      auto resolved_iter = m_new_mapping.find(resolved_type_id);
+      if (resolved_iter != m_new_mapping.end()) {
+        return resolved_iter->second;
+      }
+      if (m_type_registry.is_type_variable(resolved_type_id)) {
+        return resolved_type_id;
+      }
+      // Otherwise, recurse on it?
+      return substitute(resolved_type_id);
     }
 
-    return m_type_registry.intern(iter->second);
+    return iter->second;
   }
 
   TypeId operator()(const FunctionType &type) {
     std::vector<TypeId> parameters;
     parameters.reserve(type.m_parameters.size());
     for (const auto &parameter : type.m_parameters) {
-      parameters.emplace_back(update(m_type_registry.get(parameter)));
+      parameters.emplace_back(substitute(m_type_registry.get(parameter)));
     }
 
     return m_type_registry.intern(
         FunctionType{std::move(parameters),
-                     update(m_type_registry.get(type.m_return_type))});
+                     substitute(m_type_registry.get(type.m_return_type))});
   }
 
   TypeId operator()(const NeverType &) { return m_type_registry.m_never; }
 
   TypeRegistry &m_type_registry;
-  const std::unordered_map<TypeVariable, TypeVariable> &m_new_mapping;
+  TypeUnifier &m_type_unifier;
+  const std::unordered_map<TypeId, TypeId> &m_new_mapping;
 };
 
 //****************************************************************************
