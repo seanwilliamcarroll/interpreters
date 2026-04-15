@@ -112,14 +112,10 @@ TEST_SUITE("bust.zonker") {
                                    T, std::unique_ptr<hir::BinaryExpr>>) {
             require_expression_concrete(registry, e->m_lhs);
             require_expression_concrete(registry, e->m_rhs);
-          } else if constexpr (std::is_same_v<
-                                   T, std::unique_ptr<hir::UnaryExpr>>) {
-            require_expression_concrete(registry, e->m_expression);
-          } else if constexpr (std::is_same_v<
-                                   T, std::unique_ptr<hir::ReturnExpr>>) {
-            require_expression_concrete(registry, e->m_expression);
-          } else if constexpr (std::is_same_v<T,
-                                              std::unique_ptr<hir::CastExpr>>) {
+          } else if constexpr (
+              std::is_same_v<T, std::unique_ptr<hir::UnaryExpr>> ||
+              std::is_same_v<T, std::unique_ptr<hir::ReturnExpr>> ||
+              std::is_same_v<T, std::unique_ptr<hir::CastExpr>>) {
             require_expression_concrete(registry, e->m_expression);
           } else {
             // Literals carry their type statically — expr.m_type already

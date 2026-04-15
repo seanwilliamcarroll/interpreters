@@ -47,7 +47,7 @@ TEST_SUITE("bust.monomorpher") {
   // Must be a macro (not a helper) because INFO is scope-bound — it only
   // fires for assertions in the block where it's declared.
 #define MONO_STRING(var, src)                                                  \
-  auto var = mono_string_impl(src);                                            \
+  auto(var) = mono_string_impl(src);                                           \
   INFO("HIR:\n" << hir::Dumper::dump(var))
 
   static bool is_concrete(const hir::TypeRegistry &registry, hir::TypeId id) {
