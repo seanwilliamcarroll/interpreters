@@ -37,6 +37,10 @@ struct TypeVariableSubstituter {
 
     if (iter == m_new_mapping.end()) {
       auto resolved_type_id = m_type_unifier.find(type);
+      auto resolved_iter = m_new_mapping.find(resolved_type_id);
+      if (resolved_iter != m_new_mapping.end()) {
+        return resolved_iter->second;
+      }
       if (m_type_registry.is_type_variable(resolved_type_id)) {
         return resolved_type_id;
       }

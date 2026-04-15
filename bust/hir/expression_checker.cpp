@@ -112,56 +112,89 @@ Expression ExpressionChecker::operator()(
     const core::SourceLocation &location) {
   auto callee = check_expression(call_expression->m_callee);
 
-  auto callee_type_id = callee.m_type;
-  if (!m_ctx.is_function(callee_type_id)) {
-    throw core::CompilerException(
-        "TypeChecker",
-        "Expression of type: " + m_ctx.to_string(callee_type_id) +
-            " is not callable!",
-        callee.m_location);
-  }
-
   std::vector<Expression> arguments;
   arguments.reserve(call_expression->m_arguments.size());
   for (const auto &argument : call_expression->m_arguments) {
     arguments.emplace_back(check_expression(argument));
   }
 
-  // Check types of arguments against their parameters, then bind and type
-  // check the body
+  // TODO Clean this up
 
-  const auto &function_type = m_ctx.as_function(callee_type_id);
+  auto callee_type_id = callee.m_type;
+  if (m_ctx.is_function(callee_type_id)) {
+    // Check types of arguments against their parameters, then bind and type
+    // check the body
 
-  if (function_type.m_parameters.size() != arguments.size()) {
-    throw core::CompilerException(
-        "TypeChecker",
-        "Callee expects " + std::to_string(function_type.m_parameters.size()) +
-            " arguments, " + std::to_string(arguments.size()) + " provided",
-        location);
+    const auto &function_type = m_ctx.as_function(callee_type_id);
+
+    if (function_type.m_parameters.size() != arguments.size()) {
+      throw core::CompilerException(
+          "TypeChecker",
+          "Callee expects " +
+              std::to_string(function_type.m_parameters.size()) +
+              " arguments, " + std::to_string(arguments.size()) + " provided",
+          location);
+    }
+
+    for (const auto &[index, parameter_type, argument] : std::views::zip(
+             std::views::iota(0ULL), function_type.m_parameters, arguments)) {
+      try {
+        m_ctx.m_type_unifier.unify(parameter_type, argument.m_type);
+      } catch (std::runtime_error &error) {
+        throw core::CompilerException(
+            "TypeChecker",
+            "Type unification error!\n Parameter at index: " +
+                std::to_string(index) +
+                " expects type: " + m_ctx.to_string(parameter_type) +
+                " Unification error: " + error.what(),
+            argument.m_location);
+      }
+    }
+    // They all match
+
+    auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
+
+    return {{location},
+            return_type,
+            std::make_unique<CallExpr>(
+                CallExpr{std::move(callee), std::move(arguments)})};
   }
+  if (m_ctx.is_type_variable(callee_type_id)) {
+    // Need to make fresh type variables
+    auto function_type = FunctionType{};
+    function_type.m_parameters.reserve(arguments.size());
+    for (const auto &argument : arguments) {
+      function_type.m_parameters.push_back(argument.m_type);
+    }
+    function_type.m_return_type = m_ctx.m_type_unifier.new_type_var();
 
-  for (const auto &[index, parameter_type, argument] : std::views::zip(
-           std::views::iota(0ULL), function_type.m_parameters, arguments)) {
+    auto function_type_id = m_ctx.m_type_registry.intern(function_type);
+
+    // Do single unification
     try {
-      m_ctx.m_type_unifier.unify(parameter_type, argument.m_type);
+      m_ctx.m_type_unifier.unify(function_type_id, callee_type_id);
     } catch (std::runtime_error &error) {
       throw core::CompilerException(
           "TypeChecker",
-          "Type unification error!\n Parameter at index: " +
-              std::to_string(index) +
-              " expects type: " + m_ctx.to_string(parameter_type) +
+          "Type unification error!\nCallee type: " +
+              m_ctx.to_string(callee_type_id) +
+              " cannot unify with: " + m_ctx.to_string(function_type_id) +
               " Unification error: " + error.what(),
-          argument.m_location);
+          callee.m_location);
     }
+
+    auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
+
+    return {{location},
+            return_type,
+            std::make_unique<CallExpr>(
+                CallExpr{std::move(callee), std::move(arguments)})};
   }
-  // They all match
-
-  auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
-
-  return {{location},
-          return_type,
-          std::make_unique<CallExpr>(
-              CallExpr{std::move(callee), std::move(arguments)})};
+  throw core::CompilerException(
+      "TypeChecker",
+      "Expression of type: " + m_ctx.to_string(callee_type_id) +
+          " is not callable, nor a type variable!",
+      callee.m_location);
 }
 
 Expression ExpressionChecker::operator()(
