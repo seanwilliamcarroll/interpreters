@@ -31,8 +31,8 @@ TEST_SUITE("bust.name_mangler") {
     hir::TypeRegistry registry;
     mono::Mangler mangler_a{registry};
     mono::Mangler mangler_b{registry};
-    CHECK(mangler_a.mangle("id", registry.m_i64) ==
-          mangler_b.mangle("id", registry.m_i64));
+    CHECK(mangler_a.mangle("id", hir::BindingId{0}, registry.m_i64) ==
+          mangler_b.mangle("id", hir::BindingId{0}, registry.m_i64));
   }
 
   TEST_CASE("same Mangler reused across calls does not accumulate") {
@@ -40,8 +40,8 @@ TEST_SUITE("bust.name_mangler") {
     // on the same instance should produce fresh output each time.
     hir::TypeRegistry registry;
     mono::Mangler mangler{registry};
-    auto first = mangler.mangle("id", registry.m_i64);
-    auto second = mangler.mangle("id", registry.m_i64);
+    auto first = mangler.mangle("id", hir::BindingId{0}, registry.m_i64);
+    auto second = mangler.mangle("id", hir::BindingId{0}, registry.m_i64);
     CHECK(first == second);
   }
 
@@ -49,22 +49,32 @@ TEST_SUITE("bust.name_mangler") {
     hir::TypeRegistry registry;
     mono::Mangler mangler_i64{registry};
     mono::Mangler mangler_bool{registry};
-    CHECK(mangler_i64.mangle("id", registry.m_i64) !=
-          mangler_bool.mangle("id", registry.m_bool));
+    CHECK(mangler_i64.mangle("id", hir::BindingId{0}, registry.m_i64) !=
+          mangler_bool.mangle("id", hir::BindingId{0}, registry.m_bool));
   }
 
   TEST_CASE("different names yield different mangled names") {
     hir::TypeRegistry registry;
     mono::Mangler mangler_a{registry};
     mono::Mangler mangler_b{registry};
-    CHECK(mangler_a.mangle("id", registry.m_i64) !=
-          mangler_b.mangle("other", registry.m_i64));
+    CHECK(mangler_a.mangle("id", hir::BindingId{0}, registry.m_i64) !=
+          mangler_b.mangle("other", hir::BindingId{0}, registry.m_i64));
+  }
+
+  TEST_CASE("different binding ids yield different mangled names") {
+    // Same name + same type but different binding sites (e.g. shadowing at
+    // top level) must not collide.
+    hir::TypeRegistry registry;
+    mono::Mangler mangler_a{registry};
+    mono::Mangler mangler_b{registry};
+    CHECK(mangler_a.mangle("id", hir::BindingId{0}, registry.m_i64) !=
+          mangler_b.mangle("id", hir::BindingId{1}, registry.m_i64));
   }
 
   TEST_CASE("mangled primitive type is a valid identifier") {
     hir::TypeRegistry registry;
     mono::Mangler mangler{registry};
-    auto name = mangler.mangle("id", registry.m_i64);
+    auto name = mangler.mangle("id", hir::BindingId{0}, registry.m_i64);
     CHECK(std::regex_match(name, k_identifier_regex));
   }
 
@@ -74,7 +84,7 @@ TEST_SUITE("bust.name_mangler") {
     auto fn_type_id = registry.intern(hir::FunctionType{
         .m_parameters = {registry.m_i64}, .m_return_type = registry.m_i64});
     mono::Mangler mangler{registry};
-    auto name = mangler.mangle("apply", fn_type_id);
+    auto name = mangler.mangle("apply", hir::BindingId{0}, fn_type_id);
     CHECK(std::regex_match(name, k_identifier_regex));
   }
 
@@ -87,8 +97,8 @@ TEST_SUITE("bust.name_mangler") {
         .m_parameters = {registry.m_bool}, .m_return_type = registry.m_i64});
     mono::Mangler mangler_a{registry};
     mono::Mangler mangler_b{registry};
-    CHECK(mangler_a.mangle("apply", fn_i64_to_i64) !=
-          mangler_b.mangle("apply", fn_bool_to_i64));
+    CHECK(mangler_a.mangle("apply", hir::BindingId{0}, fn_i64_to_i64) !=
+          mangler_b.mangle("apply", hir::BindingId{0}, fn_bool_to_i64));
   }
 
   TEST_CASE("parameter order matters") {
@@ -102,8 +112,8 @@ TEST_SUITE("bust.name_mangler") {
                           .m_return_type = registry.m_i64});
     mono::Mangler mangler_a{registry};
     mono::Mangler mangler_b{registry};
-    CHECK(mangler_a.mangle("f", fn_i64_bool) !=
-          mangler_b.mangle("f", fn_bool_i64));
+    CHECK(mangler_a.mangle("f", hir::BindingId{0}, fn_i64_bool) !=
+          mangler_b.mangle("f", hir::BindingId{0}, fn_bool_i64));
   }
 
 } // TEST_SUITE

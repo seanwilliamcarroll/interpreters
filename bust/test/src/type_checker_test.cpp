@@ -14,6 +14,7 @@
 #include <exceptions.hpp>
 #include <hir/dump.hpp>
 #include <hir/nodes.hpp>
+#include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
@@ -1988,6 +1989,196 @@ TEST_SUITE("bust.type_checker") {
     }
     CHECK(std::ranges::find(ids, binding_id_of(hir, "id")) != ids.end());
     CHECK(std::ranges::find(ids, binding_id_of(hir, "apply_id")) != ids.end());
+  }
+
+  // --- Callee-is-a-type-variable at CallExpr ------------------------------
+  //
+  // These cases exercise the checker's ability to call something whose type
+  // hasn't been pinned to a FunctionType yet — typically a lambda parameter
+  // used as a callable inside the body. The checker must manufacture a
+  // function-shaped constraint and unify, rather than demanding the callee
+  // already look like a function.
+
+  TEST_CASE(
+      "higher-order: lambda parameter called with one argument type-checks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let apply = |f, x| { f(x) };\n"
+                          "  let dbl = |y: i64| { y + y };\n"
+                          "  apply(dbl, 21)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(resolved_primitive(hir, func.m_body.m_final_expression->m_type) ==
+          PrimitiveType::I64);
+  }
+
+  TEST_CASE(
+      "higher-order: lambda parameter called with zero arguments type-checks") {
+    // Thunk pattern: f has no args; its return type is what call-site uses.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let run = |f| { f() };\n"
+                          "  let forty_two = || { 42 };\n"
+                          "  run(forty_two)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(resolved_primitive(hir, func.m_body.m_final_expression->m_type) ==
+          PrimitiveType::I64);
+  }
+
+  TEST_CASE("higher-order: lambda parameter called with multiple arguments "
+            "type-checks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let apply2 = |f, x, y| { f(x, y) };\n"
+                          "  let add = |a: i64, b: i64| { a + b };\n"
+                          "  apply2(add, 3, 4)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(resolved_primitive(hir, func.m_body.m_final_expression->m_type) ==
+          PrimitiveType::I64);
+  }
+
+  TEST_CASE(
+      "higher-order: return type of callee-var propagates through arithmetic") {
+    // f(x) + 1 forces the fresh return-type var of f's minted function type
+    // to unify with i64 (via the + operator's NUMERIC constraint).
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let plus_one = |f, x| { f(x) + 1 };\n"
+                          "  let identity = |v: i64| { v };\n"
+                          "  plus_one(identity, 41)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(resolved_primitive(hir, func.m_body.m_final_expression->m_type) ==
+          PrimitiveType::I64);
+  }
+
+  TEST_CASE(
+      "higher-order: nested calls through two variable callees type-check") {
+    // Both f and g are parameters — neither is known to be a function before
+    // the call site. The inner call f(g(x)) exercises two nested "mint a
+    // function type and unify" steps, and couples them: g's return type
+    // must unify with f's parameter type.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let compose_apply = |f, g, x| { f(g(x)) };\n"
+                          "  let inc = |n: i64| { n + 1 };\n"
+                          "  let dbl = |n: i64| { n + n };\n"
+                          "  compose_apply(inc, dbl, 10)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(resolved_primitive(hir, func.m_body.m_final_expression->m_type) ==
+          PrimitiveType::I64);
+  }
+
+  TEST_CASE(
+      "higher-order: apply parameter's resolved type is a function type") {
+    // The `f` parameter of `apply` should, after type checking, be observable
+    // as a FunctionType via the unifier — not just a lingering type variable.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let apply = |f, x| { f(x) };\n"
+                          "  let dbl = |y: i64| { y + y };\n"
+                          "  apply(dbl, 21)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    // Find apply in the block.
+    const hir::LetBinding *apply_let = nullptr;
+    for (const auto &stmt : func.m_body.m_statements) {
+      if (const auto *let = std::get_if<hir::LetBinding>(&stmt)) {
+        if (let->m_variable.m_name == "apply") {
+          apply_let = let;
+        }
+      }
+    }
+    REQUIRE(apply_let != nullptr);
+    const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
+        apply_let->m_expression.m_expression);
+    REQUIRE(lambda->m_parameters.size() == 2);
+    // Parameter types still carry the post-checker (pre-zonk) type ids.
+    // The substituter can resolve these via the unifier; asking the
+    // registry directly gives us the raw node. That should still be a
+    // FunctionType once the checker's work has settled — or, if the AST
+    // retains the original type-var, at least not be outright broken.
+    // We assert that after resolving through the program's unifier state,
+    // the f parameter is either a FunctionType or a type variable whose
+    // union-find root resolves to a FunctionType.
+    hir::TypeUnifier unifier{hir.m_type_registry};
+    REQUIRE(hir.m_unifier_state.has_value());
+    unifier.adopt_state(std::move(hir.m_unifier_state.value()));
+    auto resolved = unifier.find(lambda->m_parameters[0].m_type);
+    const auto &kind = hir.m_type_registry.get(resolved);
+    CHECK(std::holds_alternative<hir::FunctionType>(kind));
+  }
+
+  TEST_CASE("higher-order: argument-type constraint propagates to callee-var") {
+    // Passing an i64 literal as the argument to a callee-var should pin
+    // the minted function type's parameter slot to i64, so that using the
+    // same parameter as an i64 elsewhere in the body type-checks.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let use_twice = |f, x| { f(x) + x };\n"
+                          "  let id = |v: i64| { v };\n"
+                          "  use_twice(id, 7)\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    CHECK(resolved_primitive(hir, func.m_body.m_final_expression->m_type) ==
+          PrimitiveType::I64);
+  }
+
+  // --- Negative cases (preserved behavior) --------------------------------
+
+  TEST_CASE(
+      "calling a literal throws: callee cannot be a non-function concrete") {
+    // Even with the callee-var handling in place, calling a known non-function
+    // concrete (an i64 literal) must still produce a type error.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  (42)(1)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("calling a bool throws: callee cannot be a non-function concrete") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  (true)(1)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("callee-var called at inconsistent arities fails to unify") {
+    // Inside the body, f is first used as a 1-arg function, then as a
+    // 2-arg function — those two constraints should conflict via the
+    // unifier.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let bad = |f, x| { f(x); f(x, x) };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE(
+      "callee-var called with conflicting argument types fails to unify") {
+    // f(x) constrains f's param to x's type; f(true) in the same scope
+    // constrains it to bool. If x is also used numerically later, conflict.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let bad = |f, x| { f(x); f(true); x + 1 };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
   }
 
 } // TEST_SUITE
