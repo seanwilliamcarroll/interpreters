@@ -9,6 +9,7 @@
 //****************************************************************************
 #include "hir/instantiation_record.hpp"
 #include "hir/type_registry.hpp"
+#include "hir/type_unifier.hpp"
 #include "hir/type_variable_substituter.hpp"
 #include "hir/types.hpp"
 #include "hir/unifier_state.hpp"
@@ -24,7 +25,7 @@ struct Context {
   hir::BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
 
   hir::TypeRegistry &m_type_registry;
-  hir::UnifierState &m_unifier_state;
+  hir::TypeUnifier m_type_unifier;
   const hir::BindingIdInstantiations &m_instantiation_records;
   hir::InnerTypeBindingId m_next_let_binding_id;
   Environment m_env{};
@@ -33,6 +34,7 @@ struct Context {
 struct SubstitutionContext {
   hir::TypeId rewrite_type(hir::TypeId type_id) {
     return hir::TypeVariableSubstituter{m_parent.type_registry(),
+                                        m_parent.m_type_unifier,
                                         m_substitution_mapping}
         .substitute(type_id);
   }

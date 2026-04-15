@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/type_unifier.hpp"
 #include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <unordered_map>
@@ -35,7 +36,12 @@ struct TypeVariableSubstituter {
     auto iter = m_new_mapping.find(type_id);
 
     if (iter == m_new_mapping.end()) {
-      return m_type_registry.intern(type);
+      auto resolved_type_id = m_type_unifier.find(type);
+      if (m_type_registry.is_type_variable(resolved_type_id)) {
+        return resolved_type_id;
+      }
+      // Otherwise, recurse on it?
+      return substitute(resolved_type_id);
     }
 
     return iter->second;
@@ -56,6 +62,7 @@ struct TypeVariableSubstituter {
   TypeId operator()(const NeverType &) { return m_type_registry.m_never; }
 
   TypeRegistry &m_type_registry;
+  TypeUnifier &m_type_unifier;
   const std::unordered_map<TypeId, TypeId> &m_new_mapping;
 };
 

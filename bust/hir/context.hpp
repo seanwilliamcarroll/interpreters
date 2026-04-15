@@ -46,8 +46,8 @@ struct Context {
       m_instantiation_records[id].push_back(InstantiationRecord{new_mapping});
     }
 
-    return TypeVariableSubstituter{m_type_registry, new_mapping}.substitute(
-        type_scheme.m_type);
+    return TypeVariableSubstituter{m_type_registry, m_type_unifier, new_mapping}
+        .substitute(type_scheme.m_type);
   }
 
   const FunctionType &as_function(TypeId type_id) const {

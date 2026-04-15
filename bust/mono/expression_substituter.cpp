@@ -91,7 +91,6 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
 
   std::vector<hir::Statement> new_statements;
   for (const auto &statement : block.m_statements) {
-
     std::visit(
         [&](const auto &s) {
           using T = std::decay_t<decltype(s)>;
@@ -191,7 +190,6 @@ hir::ExprKind ExpressionSubstituter::operator()(
 
 hir::ExprKind ExpressionSubstituter::operator()(
     const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
-  ScopeGuard guard{m_ctx.m_parent.m_env};
   // Param BindingIds are preserved as-is across specializations. Each
   // specialization becomes its own emitted function, so the "two sites share
   // an id" concern is inert after this pass — nothing downstream does a

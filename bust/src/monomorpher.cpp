@@ -8,6 +8,7 @@
 
 #include "exceptions.hpp"
 #include "hir/nodes.hpp"
+#include "hir/type_unifier.hpp"
 #include "mono/context.hpp"
 #include "mono/top_item_monomorpher.hpp"
 #include <iterator>
@@ -26,9 +27,14 @@ hir::Program Monomorpher::operator()(hir::Program program) {
         "Cannot monomorphize a program without unification state!");
   }
 
-  auto context = mono::Context{
-      program.m_type_registry, program.m_unifier_state.value(),
-      program.m_instantiation_records, program.m_next_let_binding_id};
+  auto unifier = hir::TypeUnifier{program.m_type_registry};
+  unifier.adopt_state(std::move(program.m_unifier_state.value()));
+
+  auto context =
+      mono::Context{.m_type_registry = program.m_type_registry,
+                    .m_type_unifier = std::move(unifier),
+                    .m_instantiation_records = program.m_instantiation_records,
+                    .m_next_let_binding_id = program.m_next_let_binding_id};
 
   std::vector<hir::TopItem> top_items;
   for (const auto &top_item : program.m_top_items) {

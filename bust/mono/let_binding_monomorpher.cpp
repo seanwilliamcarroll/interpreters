@@ -24,7 +24,6 @@ namespace bust::mono {
 std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
     const hir::LetBinding &let_binding,
     const hir::TypeSubstitution &outer_substitution) {
-  ScopeGuard guard{m_ctx.m_env};
   // We've just been handed a let binding, we need to generate all the possible
   // future let bindings based on the instantiation records
   const auto id = let_binding.m_variable.m_id;
@@ -49,15 +48,16 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
     hir::TypeSubstitution combined = outer_substitution;
     auto substituter =
         hir::TypeVariableSubstituter{.m_type_registry = m_ctx.type_registry(),
+                                     .m_type_unifier = m_ctx.m_type_unifier,
                                      .m_new_mapping = outer_substitution};
     for (auto &[original_type_id, substituted_type_id] :
          record.m_substitution) {
       combined[original_type_id] = substituter.substitute(substituted_type_id);
     }
 
-    auto new_type =
-        hir::TypeVariableSubstituter{m_ctx.type_registry(), combined}
-            .substitute(let_binding.m_expression.m_type);
+    auto new_type = hir::TypeVariableSubstituter{m_ctx.type_registry(),
+                                                 m_ctx.m_type_unifier, combined}
+                        .substitute(let_binding.m_expression.m_type);
 
     auto new_id = m_ctx.next_let_binding_id();
     auto new_name = Mangler{m_ctx.type_registry()}.mangle(

@@ -26,6 +26,16 @@ namespace bust::hir {
 
 struct TypeUnifier {
 
+  // Adopt an existing UnifierState (e.g. carried forward on hir::Program
+  // between passes) by moving its contents into this unifier's own fields.
+  // The source state is left empty. Intended for the "aggregate-init an
+  // empty unifier, then move state in" pattern at pass entry.
+  void adopt_state(UnifierState state) {
+    m_union_find = std::move(state.m_union_find);
+    m_resolved_type_id = std::move(state.m_resolved_type_id);
+    m_resolved_type_class = std::move(state.m_resolved_type_class);
+  }
+
   std::string to_string(const auto &type) const {
     return m_type_registry.to_string(type);
   }
