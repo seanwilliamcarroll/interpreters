@@ -32,7 +32,7 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
   auto iter = m_ctx.m_instantiation_records.find(id);
   if (iter == m_ctx.m_instantiation_records.end()) {
     // Nothing to substitute
-    auto context = SubstitutionContext{m_ctx, {}};
+    auto context = SubstitutionContext{m_ctx, outer_substitution};
     auto output = LetBindingSubstituter{context}.substitute(let_binding);
     std::vector<hir::LetBinding> new_let_bindings;
     new_let_bindings.emplace_back(std::move(output));
@@ -67,8 +67,6 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
                        Specialization{new_name, new_id});
 
     auto context = SubstitutionContext{m_ctx, combined};
-    auto new_expression_body =
-        ExpressionSubstituter{context}.substitute(let_binding.m_expression);
 
     new_let_bindings.push_back(
         LetBindingSubstituter{context}.substitute(let_binding));
