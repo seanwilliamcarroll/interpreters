@@ -5,7 +5,7 @@ on each other are marked with arrows (→ means "enables").
 
 ## Type System
 
-- [ ] Collapse unified type variables to their root before generalization
+- [x] Collapse unified type variables to their root before generalization
   — When `x + y` unifies `?T<0>` and `?T<1>`, the unifier knows they're
   the same type but stores them as two entries pointing to the same root.
   Before generalization decides which variables are polymorphic, substitute
@@ -54,8 +54,8 @@ on each other are marked with arrows (→ means "enables").
 
 Goal: polymorphic lambdas work end-to-end through codegen.
 
-- [ ] Drop evaluator (remove from CMake build, evaluator no longer maintained)
-- [ ] Monomorphization pass — see [monomorphization.md](monomorphization.md)
+- [x] Drop evaluator (remove from CMake build, evaluator no longer maintained)
+- [x] Monomorphization pass
   - Sits between type checking and zonking
   - Canonicalization → monomorphization → polymorphic lambdas resolve cleanly
 - [ ] ZIR: arena-based zonked intermediate representation
