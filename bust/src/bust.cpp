@@ -52,9 +52,10 @@ void Bust::run() {
 
   auto monomorphed = run_pipeline(std::move(typed), Monomorpher{});
 
-  // if (m_options.dump_hir) {
-  //   std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
-  // }
+  if (m_options.dump_mono) {
+    std::cout << "=== Monomorphed HIR ===\n"
+              << hir::Dumper::dump(monomorphed) << "\n";
+  }
 
   auto zonked = run_pipeline(std::move(monomorphed), Zonker{});
 
