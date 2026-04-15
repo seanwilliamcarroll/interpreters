@@ -146,6 +146,7 @@ struct Program : public core::HasLocation {
   std::vector<TopItem> m_top_items{};
   std::optional<UnifierState> m_unifier_state{};
   BindingIdInstantiations m_instantiation_records{};
+  InnerTypeBindingId m_next_let_binding_id{};
 };
 
 //****************************************************************************

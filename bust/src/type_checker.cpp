@@ -53,7 +53,8 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
           std::move(post_check_state.m_type_registry),
           std::move(typed_items),
           std::move(post_check_state.m_unifier_state),
-          std::move(post_check_state.m_instantiation_records)};
+          std::move(post_check_state.m_instantiation_records),
+          post_check_state.m_next_let_binding_id};
 }
 
 //****************************************************************************

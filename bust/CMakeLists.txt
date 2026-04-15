@@ -39,6 +39,7 @@ add_library(bust-lib STATIC
   src/type_checker.cpp
   src/validate_main.cpp
   src/monomorpher.cpp
+  mono/expression_substituter.cpp
   mono/let_binding_monomorpher.cpp
   mono/statement_monomorpher.cpp
   mono/top_item_monomorpher.cpp

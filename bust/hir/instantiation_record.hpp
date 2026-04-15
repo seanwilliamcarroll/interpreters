@@ -22,8 +22,6 @@ namespace bust::hir {
 using InnerTypeBindingId = size_t;
 
 struct BindingId {
-  BindingId(InnerTypeBindingId id) : m_id(id) {}
-
   InnerTypeBindingId m_id;
   auto operator<=>(const BindingId &) const = default;
 };

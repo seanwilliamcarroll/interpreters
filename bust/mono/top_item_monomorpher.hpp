@@ -11,8 +11,21 @@
 //****************************************************************************
 
 //****************************************************************************
+#include "hir/nodes.hpp"
+#include "mono/context.hpp"
 namespace bust::mono {
 //****************************************************************************
+
+struct TopItemMonomorpher {
+
+  std::vector<hir::TopItem> monomorph(const hir::TopItem &);
+
+  std::vector<hir::TopItem> operator()(const hir::LetBinding &);
+  std::vector<hir::TopItem> operator()(const hir::FunctionDef &);
+  std::vector<hir::TopItem> operator()(const hir::ExternFunctionDeclaration &);
+
+  Context &m_ctx;
+};
 
 //****************************************************************************
 } // namespace bust::mono

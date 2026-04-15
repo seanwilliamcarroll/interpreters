@@ -11,9 +11,21 @@
 #pragma once
 //****************************************************************************
 
+#include "hir/instantiation_record.hpp"
+#include "hir/nodes.hpp"
+#include "mono/context.hpp"
+
 //****************************************************************************
 namespace bust::mono {
 //****************************************************************************
+
+struct LetBindingMonomorpher {
+
+  std::vector<hir::LetBinding> monomorph(const hir::LetBinding &,
+                                         const hir::TypeSubstitution &);
+
+  Context &m_ctx;
+};
 
 //****************************************************************************
 } // namespace bust::mono

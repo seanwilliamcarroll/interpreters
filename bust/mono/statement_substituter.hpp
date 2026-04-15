@@ -24,14 +24,14 @@ struct StatementSubstituter {
   }
 
   hir::Statement operator()(const hir::Expression &expression) {
-    return ExpressionSubsituter{m_ctx}.substitute(expression);
+    return ExpressionSubstituter{m_ctx}.substitute(expression);
   }
 
   hir::Statement operator()(const hir::LetBinding &let_binding) {
     return LetBindingSubstituter{m_ctx}.substitute(let_binding);
   }
 
-  Context &m_ctx;
+  SubstitutionContext &m_ctx;
 };
 
 //****************************************************************************

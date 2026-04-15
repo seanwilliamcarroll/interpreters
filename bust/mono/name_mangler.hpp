@@ -11,6 +11,7 @@
 //****************************************************************************
 
 #include "exceptions.hpp"
+#include "hir/instantiation_record.hpp"
 #include "hir/type_registry.hpp"
 #include "hir/types.hpp"
 #include "types.hpp"
@@ -26,9 +27,9 @@ struct Mangler {
 
   // Entry point
   std::string mangle(const std::string &original_identifier,
-                     const hir::TypeId &type_id) {
+                     const hir::BindingId &id, const hir::TypeId &type_id) {
     m_out.str("");
-    m_out << original_identifier << "_";
+    m_out << original_identifier << "__bi" << std::to_string(id.m_id) << "_";
     mangle(type_id);
     return m_out.str();
   }
@@ -51,7 +52,7 @@ struct Mangler {
               mangle(type.m_parameters.back());
             }
 
-            m_out << "_p_ret__";
+            m_out << "_p_ret_";
             mangle(type.m_return_type);
           } else {
             throw core::InternalCompilerError(

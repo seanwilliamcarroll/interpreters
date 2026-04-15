@@ -7,10 +7,75 @@
 //****************************************************************************
 
 #include "mono/let_binding_monomorpher.hpp"
+#include "exceptions.hpp"
+#include "hir/instantiation_record.hpp"
+#include "hir/nodes.hpp"
+#include "hir/type_variable_substituter.hpp"
+#include "mono/context.hpp"
+#include "mono/expression_substituter.hpp"
+#include "mono/let_binding_substituter.hpp"
+#include "mono/name_mangler.hpp"
+#include "mono/specialization.hpp"
 
 //****************************************************************************
 namespace bust::mono {
 //****************************************************************************
+
+std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
+    const hir::LetBinding &let_binding,
+    const hir::TypeSubstitution &outer_substitution) {
+  ScopeGuard guard{m_ctx.m_env};
+  // We've just been handed a let binding, we need to generate all the possible
+  // future let bindings based on the instantiation records
+  const auto id = let_binding.m_variable.m_id;
+
+  auto iter = m_ctx.m_instantiation_records.find(id);
+  if (iter == m_ctx.m_instantiation_records.end()) {
+    // Nothing to substitute
+    auto context = SubstitutionContext{m_ctx, {}};
+    auto output = LetBindingSubstituter{context}.substitute(let_binding);
+    std::vector<hir::LetBinding> new_let_bindings;
+    new_let_bindings.emplace_back(std::move(output));
+    return new_let_bindings;
+  }
+
+  const auto &records = iter->second;
+
+  std::vector<hir::LetBinding> new_let_bindings;
+  new_let_bindings.reserve(records.size());
+  for (const auto &record : records) {
+    // Record the specialization in the table
+
+    hir::TypeSubstitution combined = outer_substitution;
+    auto substituter =
+        hir::TypeVariableSubstituter{.m_type_registry = m_ctx.type_registry(),
+                                     .m_new_mapping = outer_substitution};
+    for (auto &[original_type_id, substituted_type_id] :
+         record.m_substitution) {
+      combined[original_type_id] = substituter.substitute(substituted_type_id);
+    }
+
+    auto new_type =
+        hir::TypeVariableSubstituter{m_ctx.type_registry(), combined}
+            .substitute(let_binding.m_expression.m_type);
+
+    auto new_id = m_ctx.next_let_binding_id();
+    auto new_name = Mangler{m_ctx.type_registry()}.mangle(
+        let_binding.m_variable.m_name, let_binding.m_variable.m_id, new_type);
+
+    m_ctx.m_env.define(let_binding.m_variable.m_id, new_type,
+                       Specialization{new_name, new_id});
+
+    auto context = SubstitutionContext{m_ctx, combined};
+    auto new_expression_body =
+        ExpressionSubstituter{context}.substitute(let_binding.m_expression);
+
+    new_let_bindings.push_back(
+        LetBindingSubstituter{context}.substitute(let_binding));
+  }
+
+  return new_let_bindings;
+}
 
 //****************************************************************************
 } // namespace bust::mono

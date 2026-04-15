@@ -16,10 +16,11 @@
 namespace bust::mono {
 //****************************************************************************
 
-struct ExpressionSubsituter {
+struct ExpressionSubstituter {
 
   hir::Expression substitute(const hir::Expression &);
 
+  hir::Identifier substitute(const hir::Identifier &);
   hir::ExprKind operator()(const hir::Identifier &);
   hir::ExprKind operator()(const hir::LiteralUnit &);
   hir::ExprKind operator()(const hir::LiteralI8 &);
@@ -27,6 +28,7 @@ struct ExpressionSubsituter {
   hir::ExprKind operator()(const hir::LiteralI64 &);
   hir::ExprKind operator()(const hir::LiteralBool &);
   hir::ExprKind operator()(const hir::LiteralChar &);
+  hir::Block substitute(const hir::Block &);
   hir::ExprKind operator()(const std::unique_ptr<hir::Block> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::IfExpr> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::CallExpr> &);
@@ -36,7 +38,7 @@ struct ExpressionSubsituter {
   hir::ExprKind operator()(const std::unique_ptr<hir::CastExpr> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::LambdaExpr> &);
 
-  Context &m_ctx;
+  SubstitutionContext &m_ctx;
 };
 
 //****************************************************************************

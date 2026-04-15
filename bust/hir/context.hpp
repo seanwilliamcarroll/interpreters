@@ -28,6 +28,7 @@ struct PostTypeCheckedData {
   TypeRegistry m_type_registry;
   UnifierState m_unifier_state;
   BindingIdInstantiations m_instantiation_records;
+  InnerTypeBindingId m_next_let_binding_id;
 };
 
 struct Context {
@@ -120,6 +121,7 @@ struct Context {
         .m_type_registry = std::move(m_type_registry),
         .m_unifier_state = std::move(unifier_state),
         .m_instantiation_records = std::move(instantiation_records),
+        .m_next_let_binding_id = m_next_let_binding_id,
     };
   }
 
@@ -130,8 +132,6 @@ struct Context {
   std::vector<TypeId> m_return_type_stack{};
   TypeUnifier m_type_unifier{m_type_registry};
   BindingIdInstantiations m_instantiation_records{};
-
-private:
   InnerTypeBindingId m_next_let_binding_id = 0;
 };
 
