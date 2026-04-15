@@ -48,6 +48,7 @@ add_library(bust-lib STATIC
   zonk/statement_zonker.cpp
   zonk/top_item_zonker.cpp
   src/zir_lowerer.cpp
+  zir/arena.cpp
   zir/expression_lowerer.cpp
   zir/let_binding_lowerer.cpp
   zir/statement_lowerer.cpp
