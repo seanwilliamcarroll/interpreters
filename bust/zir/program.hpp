@@ -1,28 +1,26 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : ZIR lowering pass — converts HIR (with resolved unifier
-//*            state) into the arena-backed ZIR.
+//*  Purpose : ZIR program — top-level container holding the arena and
+//*            the list of top-level items.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <hir/nodes.hpp>
-#include <zir/program.hpp>
+#include <zir/arena.hpp>
+#include <zir/nodes.hpp>
 
 //****************************************************************************
-namespace bust {
+namespace bust::zir {
 //****************************************************************************
 
-/// ZIR lowering pass. Consumes HIR + unifier state and produces a ZIR
-/// program whose types contain no type variables and whose expressions
-/// live in a flat arena.
-struct ZirLowerer {
-  zir::Program operator()(hir::Program program);
+struct Program {
+  Arena m_arena{};
+  std::vector<TopItem> m_top_items;
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::zir
 //****************************************************************************

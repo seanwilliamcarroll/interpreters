@@ -81,6 +81,7 @@ struct Arena {
 private:
   TypeArena m_type_arena{};
   AbstractArena<Expression, ExprId> m_expr_arena{};
+  AbstractArena<Binding, BindingId> m_binding_arena{};
 };
 
 //****************************************************************************
