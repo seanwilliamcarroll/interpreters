@@ -14,6 +14,7 @@
 #include <hir/dump.hpp>
 #include <iostream>
 #include <memory>
+#include <monomorpher.hpp>
 #include <parser.hpp>
 #include <pipeline.hpp>
 #include <stdexcept>
@@ -49,7 +50,13 @@ void Bust::run() {
     std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
   }
 
-  auto zonked = run_pipeline(std::move(typed), Zonker{});
+  auto monomorphed = run_pipeline(std::move(typed), Monomorpher{});
+
+  // if (m_options.dump_hir) {
+  //   std::cout << "=== HIR ===\n" << hir::Dumper::dump(typed) << "\n";
+  // }
+
+  auto zonked = run_pipeline(std::move(monomorphed), Zonker{});
 
   if (m_options.dump_zonked) {
     std::cout << "=== Zonked HIR ===\n" << hir::Dumper::dump(zonked) << "\n";

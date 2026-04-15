@@ -21,21 +21,15 @@ namespace bust::mono {
 
 struct LetBindingSubstituter {
   hir::LetBinding substitute(const hir::LetBinding &let_binding) {
-    // Need to check if this is a callable
+    auto substituter = ExpressionSubstituter{m_ctx};
 
-    auto expression =
-        ExpressionSubstituter{m_ctx}.substitute(let_binding.m_expression);
+    auto new_identifier = substituter.substitute(let_binding.m_variable);
 
-    // // Bound to a function, we need to monomorphize
-    // auto new_name = Mangler{m_ctx.type_registry()}.mangle(
-    //     let_binding.m_variable.m_name, let_binding.m_variable.m_id,
-    //     expression.m_type);
+    auto expression = substituter.substitute(let_binding.m_expression);
 
-    // auto new_identifier = hir::Identifier {
-    //   {let_binding.m_variable.m_location}, std::move(new_name),
-    // };
-
-    return {};
+    return {{let_binding.m_location},
+            std::move(new_identifier),
+            std::move(expression)};
   }
 
   SubstitutionContext &m_ctx;
