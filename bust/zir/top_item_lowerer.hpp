@@ -16,7 +16,12 @@ namespace bust::zir {
 //****************************************************************************
 
 struct TopItemLowerer {
-  // Interface to be designed.
+
+  TopItem lower(const hir::TopItem &);
+
+  TopItem operator()(const hir::FunctionDef &);
+  TopItem operator()(const hir::ExternFunctionDeclaration &);
+  TopItem operator()(const hir::LetBinding &);
 };
 
 //****************************************************************************
