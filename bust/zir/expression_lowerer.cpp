@@ -9,7 +9,10 @@
 #include "hir/nodes.hpp"
 #include "zir/nodes.hpp"
 #include "zir/statement_lowerer.hpp"
+#include <algorithm>
+#include <iterator>
 #include <optional>
+#include <vector>
 #include <zir/expression_lowerer.hpp>
 
 //****************************************************************************
@@ -17,7 +20,6 @@ namespace bust::zir {
 //****************************************************************************
 
 ExprId ExpressionLowerer::lower(const hir::Expression &expression) {
-
   // Resolve the type
   auto new_type = m_ctx.convert(expression.m_type);
 
@@ -76,8 +78,8 @@ Block ExpressionLowerer::lower(const hir::Block &block) {
   }
 
   auto final_expression =
-      block.m_final_expression.and_then([&](const hir::Expression &expression) {
-        return std::optional<ExprId>(lower(expression));
+      block.m_final_expression.and_then([&](const auto &expression) {
+        return std::make_optional(lower(expression));
       });
 
   return {.m_statements = std::move(new_statements),
@@ -89,36 +91,73 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::Block> &block) {
   return lower(*block);
 }
 
-ExprKind ExpressionLowerer::operator()(const std::unique_ptr<hir::IfExpr> &) {
-  return {};
-}
-
-ExprKind ExpressionLowerer::operator()(const std::unique_ptr<hir::CallExpr> &) {
-  return {};
+ExprKind
+ExpressionLowerer::operator()(const std::unique_ptr<hir::IfExpr> &if_expr) {
+  return IfExpr{.m_condition = lower(if_expr->m_condition),
+                .m_then_block = lower(if_expr->m_then_block),
+                .m_else_block =
+                    if_expr->m_else_block.and_then([&](const auto &expression) {
+                      return std::make_optional(lower(expression));
+                    })};
 }
 
 ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::BinaryExpr> &) {
-  return {};
+ExpressionLowerer::operator()(const std::unique_ptr<hir::CallExpr> &call_expr) {
+
+  std::vector<ExprId> arguments;
+  arguments.reserve(call_expr->m_arguments.size());
+  std::transform(call_expr->m_arguments.begin(), call_expr->m_arguments.end(),
+                 std::back_inserter(arguments),
+                 [&](const auto &argument) { return lower(argument); });
+
+  return CallExpr{.m_callee = lower(call_expr->m_callee),
+                  .m_arguments = std::move(arguments)};
+}
+
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::BinaryExpr> &binary_expr) {
+  return BinaryExpr{
+      .m_operator = binary_expr->m_operator,
+      .m_lhs = lower(binary_expr->m_lhs),
+      .m_rhs = lower(binary_expr->m_rhs),
+  };
+}
+
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::UnaryExpr> &unary_expr) {
+  return UnaryExpr{
+      .m_operator = unary_expr->m_operator,
+      .m_expression = lower(unary_expr->m_expression),
+  };
+}
+
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::ReturnExpr> &return_expr) {
+  return ReturnExpr{.m_expression = lower(return_expr->m_expression)};
 }
 
 ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::UnaryExpr> &) {
-  return {};
+ExpressionLowerer::operator()(const std::unique_ptr<hir::CastExpr> &cast_expr) {
+  return CastExpr{
+      .m_expression = lower(cast_expr->m_expression),
+      .m_new_type = m_ctx.convert(cast_expr->m_new_type),
+  };
 }
 
-ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::ReturnExpr> &) {
-  return {};
-}
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
+  std::vector<IdentifierExpr> parameters;
+  parameters.reserve(lambda_expr->m_parameters.size());
+  std::transform(lambda_expr->m_parameters.begin(),
+                 lambda_expr->m_parameters.end(),
+                 std::back_inserter(parameters),
+                 [&](const auto &parameter) { return lower(parameter); });
 
-ExprKind ExpressionLowerer::operator()(const std::unique_ptr<hir::CastExpr> &) {
-  return {};
-}
-
-ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::LambdaExpr> &) {
-  return {};
+  return LambdaExpr{
+      .m_parameters = std::move(parameters),
+      .m_body = lower(lambda_expr->m_body),
+      .m_return_type = m_ctx.convert(lambda_expr->m_return_type),
+  };
 }
 
 //****************************************************************************

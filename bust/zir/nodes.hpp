@@ -66,14 +66,6 @@ struct IdentifierExpr {
   auto operator<=>(const IdentifierExpr &) const = default;
 };
 
-using CallExpr = CallExprBase<ExprId>;
-using BinaryExpr = BinaryExprBase<ExprId>;
-using UnaryExpr = UnaryExprBase<ExprId>;
-using ReturnExpr = ReturnExprBase<ExprId>;
-using CastExpr = CastExprBase<ExprId, TypeId>;
-using IfExpr = IfExprBase<ExprId, ExprId>;
-using LambdaExpr = LambdaExprBase<ExprId, ExprId, TypeId>;
-
 struct ExpressionStatement {
   ExprId m_expression;
   auto operator<=>(const ExpressionStatement &) const = default;
@@ -92,6 +84,14 @@ struct Block {
   std::optional<ExprId> m_final_expression;
   auto operator<=>(const Block &) const = default;
 };
+
+using CallExpr = CallExprBase<ExprId>;
+using BinaryExpr = BinaryExprBase<ExprId>;
+using UnaryExpr = UnaryExprBase<ExprId>;
+using ReturnExpr = ReturnExprBase<ExprId>;
+using CastExpr = CastExprBase<ExprId, TypeId>;
+using IfExpr = IfExprBase<ExprId, Block>;
+using LambdaExpr = LambdaExprBase<IdentifierExpr, Block, TypeId>;
 
 using ExprKind = std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr,
                               CallExpr, BinaryExpr, UnaryExpr, ReturnExpr,
