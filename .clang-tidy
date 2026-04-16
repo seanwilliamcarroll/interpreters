@@ -3,24 +3,12 @@ Checks: >
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   performance-*,
-  modernize-use-override,
-  modernize-use-nullptr,
-  modernize-use-auto,
-  modernize-use-emplace,
-  modernize-loop-convert,
-  modernize-return-braced-init-list,
-  modernize-use-default-member-init,
-  readability-const-return-type,
-  readability-container-size-empty,
-  readability-duplicate-include,
-  readability-else-after-return,
-  readability-implicit-bool-conversion,
-  readability-misleading-indentation,
-  readability-redundant-smartptr-get,
-  readability-braces-around-statements,
-  readability-simplify-boolean-expr,
-  cppcoreguidelines-slicing,
-  cppcoreguidelines-virtual-class-destructor
+  modernize-*,
+  readability-*,
+  cppcoreguidelines-*,
+  clang-analyzer-*,
+  hicpp-*,
+  misc-includes-cleaner
 
 WarningsAsErrors: '*'
 
