@@ -740,7 +740,7 @@ TEST_SUITE("bust.type_checker") {
 
   TEST_CASE("return with inferred type matches function signature") {
     auto hir = type_check("fn add(x: i64, y: i64) -> i64 {\n"
-                          "  return x + y;\n"
+                          "  return x + y\n"
                           "}");
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
