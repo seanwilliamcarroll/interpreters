@@ -11,6 +11,7 @@
 #include <nodes.hpp>
 #include <types.hpp>
 #include <zir/arena.hpp>
+#include <zir/context.hpp>
 #include <zir/expression_lowerer.hpp>
 #include <zir/nodes.hpp>
 #include <zir/statement_lowerer.hpp>

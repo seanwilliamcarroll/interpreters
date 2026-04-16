@@ -7,7 +7,11 @@
 //****************************************************************************
 
 #include <exceptions.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/types.hpp>
+#include <types.hpp>
 #include <zir/arena.hpp>
+#include <zir/types.hpp>
 
 #include <stddef.h>
 

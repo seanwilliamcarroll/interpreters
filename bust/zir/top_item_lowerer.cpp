@@ -9,13 +9,13 @@
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
 #include <zir/arena.hpp>
+#include <zir/context.hpp>
 #include <zir/expression_lowerer.hpp>
 #include <zir/let_binding_lowerer.hpp>
 #include <zir/nodes.hpp>
 #include <zir/top_item_lowerer.hpp>
 #include <zir/types.hpp>
 
-#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
