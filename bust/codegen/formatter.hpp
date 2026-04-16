@@ -8,13 +8,6 @@
 #pragma once
 //****************************************************************************
 
-#include <iosfwd>
-#include <ostream>
-#include <stddef.h>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
@@ -22,6 +15,14 @@
 #include <codegen/instructions.hpp>
 #include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
+
+#include <stddef.h>
+
+#include <iosfwd>
+#include <ostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

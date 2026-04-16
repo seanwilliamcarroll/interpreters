@@ -9,24 +9,27 @@
 #include <ast/dump.hpp>
 #include <bust.hpp>
 #include <codegen.hpp>
-#include <cstdlib>
-#include <fstream>
 #include <hir/dump.hpp>
-#include <iostream>
-#include <memory>
+#include <lexer.hpp>
 #include <monomorpher.hpp>
 #include <parser.hpp>
 #include <pipeline.hpp>
+#include <type_checker.hpp>
+#include <validate_main.hpp>
+#include <zir/dump.hpp>
+#include <zir_lowerer.hpp>
+
+#include <unistd.h>
+
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
-#include <sys/wait.h>
-#include <type_checker.hpp>
-#include <unistd.h>
 #include <utility>
-#include <validate_main.hpp>
-#include <zonker.hpp>
 
-#include <lexer.hpp>
+#include <sys/wait.h>
 
 //****************************************************************************
 
@@ -57,13 +60,13 @@ void Bust::run() {
               << hir::Dumper::dump(monomorphed) << "\n";
   }
 
-  auto zonked = run_pipeline(std::move(monomorphed), Zonker{});
+  auto zir = run_pipeline(std::move(monomorphed), ZirLowerer{});
 
-  if (m_options.dump_zonked) {
-    std::cout << "=== Zonked HIR ===\n" << hir::Dumper::dump(zonked) << "\n";
+  if (m_options.dump_zir) {
+    std::cout << "=== ZIR HIR ===\n" << zir::Dumper::dump(zir) << "\n";
   }
 
-  auto ir = CodeGen{}(zonked);
+  auto ir = CodeGen{}(zir);
 
   if (m_options.dump_llvm_ir) {
     std::cout << "=== LLVM IR ===\n" << ir << "\n";

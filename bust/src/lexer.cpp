@@ -6,18 +6,19 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
+#include <lexer.hpp>
+#include <source_location.hpp>
+#include <token.hpp>
+#include <tokens.hpp>
+
 #include <array>
 #include <cctype>
-#include <exceptions.hpp>
 #include <functional>
-#include <lexer.hpp>
 #include <memory>
-#include <source_location.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <token.hpp>
-#include <tokens.hpp>
 #include <unordered_map>
 #include <utility>
 
@@ -46,7 +47,7 @@ bool is_slash(char character) { return character == '/'; }
 
 bool is_printable_char(char character) {
   // skip single quote and backslash so they are parsed correctly
-  return character >= 32 && character <= 126 && character != '\'' &&
+  return character >= ' ' && character <= '~' && character != '\'' &&
          character != '\\';
 }
 
@@ -76,17 +77,18 @@ struct Lexer : LexerInterface {
       : m_in_stream(in_stream), m_keywords(keywords.begin(), keywords.end()),
         m_hint(hint) {}
 
-  auto make_token(TokenType t) const {
+  [[nodiscard]] auto make_token(TokenType t) const {
     return std::make_unique<Token>(get_current_loc(), t);
   }
 
-  auto make_token(const core::SourceLocation &l, TokenType t) const {
+  [[nodiscard]] static auto make_token(const core::SourceLocation &l,
+                                       TokenType t) {
     return std::make_unique<Token>(l, t);
   }
 
   template <class V>
-  auto make_token(const core::SourceLocation &l, TokenType t,
-                  const V &v) const {
+  [[nodiscard]] auto make_token(const core::SourceLocation &l, TokenType t,
+                                const V &v) const {
     return std::make_unique<core::TokenOf<TokenType, V>>(l, t, v);
   }
 
@@ -370,9 +372,9 @@ struct Lexer : LexerInterface {
     return output;
   }
 
-  std::unique_ptr<Token>
+  [[nodiscard]] std::unique_ptr<Token>
   create_identifier(const core::SourceLocation &starting_loc,
-                    const std::string &lexeme) {
+                    const std::string &lexeme) const {
     if (lexeme.empty()) {
       on_error("Invalid usage of Lexer::create_identifier, did not find any "
                "characters to form the lexeme");
@@ -407,7 +409,7 @@ struct Lexer : LexerInterface {
     return create_identifier(starting_loc, lexeme);
   }
 
-  TokenType lookup_keyword(std::string_view lexeme) const {
+  [[nodiscard]] TokenType lookup_keyword(std::string_view lexeme) const {
     if (m_keywords.count(lexeme) == 1) {
       return m_keywords.at(lexeme);
     }
@@ -436,7 +438,7 @@ struct Lexer : LexerInterface {
     return true;
   }
 
-  void expect_peek(char &character, std::string_view additional_message) {
+  void expect_peek(char &character, std::string_view additional_message) const {
     if (!peek(character)) {
       on_error("Lexer::expect_peek failed: ", additional_message);
     }
@@ -478,7 +480,7 @@ struct Lexer : LexerInterface {
              " (value: ", static_cast<int>(character), ")");
   }
 
-  core::SourceLocation get_current_loc() const {
+  [[nodiscard]] core::SourceLocation get_current_loc() const {
     return {.file_name = m_hint, .line = m_line, .column = m_column};
   }
 

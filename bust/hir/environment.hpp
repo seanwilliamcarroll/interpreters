@@ -8,12 +8,13 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/nodes.hpp"
-#include <cassert>
+#include <hir/nodes.hpp>
 #include <hir/types.hpp>
+#include <scope_guard.hpp>
+
+#include <cassert>
 #include <optional>
 #include <ranges>
-#include <scope_guard.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>

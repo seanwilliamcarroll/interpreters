@@ -8,9 +8,12 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include <cstddef>
+#include <exceptions.hpp>
 #include <hir/types.hpp>
+#include <types.hpp>
+
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <variant>
 #include <vector>

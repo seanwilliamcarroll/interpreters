@@ -18,7 +18,7 @@ struct Options {
   bool dump_ast = false;
   bool dump_hir = false;
   bool dump_mono = false;
-  bool dump_zonked = false;
+  bool dump_zir = false;
   bool dump_llvm_ir = false;
 };
 

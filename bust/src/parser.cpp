@@ -7,9 +7,18 @@
 //****************************************************************************
 
 #include <ast/nodes.hpp>
+#include <ast/types.hpp>
+#include <lexer_interface.hpp>
+#include <operators.hpp>
+#include <parser.hpp>
+#include <source_location.hpp>
+#include <token.hpp>
+#include <tokens.hpp>
+#include <types.hpp>
+
+#include <cstddef>
 #include <memory>
 #include <optional>
-#include <parser.hpp>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -17,17 +26,11 @@
 #include <variant>
 #include <vector>
 
-#include <ast/types.hpp>
-#include <lexer_interface.hpp>
-#include <operators.hpp>
-#include <source_location.hpp>
-#include <token.hpp>
-#include <tokens.hpp>
-#include <types.hpp>
-
 //****************************************************************************
 namespace bust {
 //****************************************************************************
+
+constexpr size_t HEXADECIMAL_BASE_16 = 16ULL;
 
 // --- Public ----------------------------------------------------------------
 
@@ -213,8 +216,9 @@ ast::FunctionDeclaration Parser::parse_function_declaration() {
                                PrimitiveType::UNIT,
                            };
 
-  return {std::move(function_id), std::move(parameters),
-          std::move(return_type)};
+  return {.m_id = std::move(function_id),
+          .m_parameters = std::move(parameters),
+          .m_return_type = std::move(return_type)};
 }
 
 ast::FunctionDef Parser::parse_func_def() {
@@ -624,8 +628,8 @@ ast::Expression Parser::parse_literal() {
       }
       // Must be \x, want indices 3 and 4
       return {{original_location},
-              ast::LiteralChar{static_cast<char>(
-                  std::stoi(lexeme.substr(3, 2), nullptr, 16))}};
+              ast::LiteralChar{static_cast<char>(std::stoi(
+                  lexeme.substr(3, 2), nullptr, HEXADECIMAL_BASE_16))}};
     }
     // Must have been printable
     return {{original_location}, ast::LiteralChar{lexeme[1]}};

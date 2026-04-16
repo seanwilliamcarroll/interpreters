@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <bust.hpp>
+
 #include <cstring>
 #include <exception>
 #include <fstream>
@@ -25,8 +26,8 @@ int main(int argc, const char *argv[]) {
       options.dump_hir = true;
     } else if (std::strcmp(argv[i], "--dump-mono") == 0) {
       options.dump_mono = true;
-    } else if (std::strcmp(argv[i], "--dump-zonked") == 0) {
-      options.dump_zonked = true;
+    } else if (std::strcmp(argv[i], "--dump-zir") == 0) {
+      options.dump_zir = true;
     } else if (std::strcmp(argv[i], "--dump-llvm-ir") == 0) {
       options.dump_llvm_ir = true;
     } else if (argv[i][0] == '-') {
@@ -36,14 +37,14 @@ int main(int argc, const char *argv[]) {
       filename = argv[i];
     } else {
       std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-mono] "
-                   "[--dump-zonked] [--dump-llvm-ir] <script.bu>\n";
+                   "[--dump-zir] [--dump-llvm-ir] <script.bu>\n";
       return 1;
     }
   }
 
   if (filename == nullptr) {
     std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-mono] "
-                 "[--dump-zonked] [--dump-llvm-ir] <script.bu>\n";
+                 "[--dump-zir] [--dump-llvm-ir] <script.bu>\n";
     return 1;
   }
 

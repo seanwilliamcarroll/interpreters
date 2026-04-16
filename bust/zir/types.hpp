@@ -9,7 +9,8 @@
 //****************************************************************************
 #pragma once
 //****************************************************************************
-#include "hash_combine.hpp"
+#include <hash_combine.hpp>
+
 #include <compare>
 #include <cstddef>
 #include <type_traits>

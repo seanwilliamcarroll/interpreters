@@ -6,26 +6,28 @@
 //*
 //****************************************************************************
 
+#include <ast/nodes.hpp>
 #include <exceptions.hpp>
 #include <hir/block_checker.hpp>
 #include <hir/context.hpp>
 #include <hir/environment.hpp>
+#include <hir/instantiation_record.hpp>
 #include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
 #include <hir/type_converter.hpp>
+#include <hir/type_registry.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
-#include <memory>
-#include <optional>
 #include <source_location.hpp>
+
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <ast/nodes.hpp>
 
 //****************************************************************************
 namespace bust::hir {
@@ -54,7 +56,8 @@ void TopItemChecker::collect_function_signature(
       TypeConverter{m_ctx}.convert_parameters(declaration.m_parameters);
 
   auto function_type_id = m_ctx.m_type_registry.intern(
-      FunctionType{std::move(parameter_types), return_type_id});
+      FunctionType{.m_parameters = std::move(parameter_types),
+                   .m_return_type = return_type_id});
 
   m_ctx.m_env.define(declaration.m_id.m_name, m_ctx.next_let_binding_id(),
                      function_type_id);
@@ -76,8 +79,10 @@ hir::FunctionDeclaration TopItemChecker::check_declaration(
   auto [parameters, _] = TypeConverter{m_ctx}.convert_parameters(
       function_declaration.m_parameters);
 
-  return FunctionDeclaration{function_declaration.m_id.m_name, function_id,
-                             function_type_id, std::move(parameters)};
+  return FunctionDeclaration{.m_function_id = function_declaration.m_id.m_name,
+                             .m_id = function_id,
+                             .m_type = function_type_id,
+                             .m_parameters = std::move(parameters)};
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {

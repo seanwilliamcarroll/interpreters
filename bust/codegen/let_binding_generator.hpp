@@ -9,14 +9,14 @@
 //****************************************************************************
 
 #include <codegen/context.hpp>
-#include <hir/nodes.hpp>
+#include <zir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct LetBindingGenerator {
-  void operator()(const hir::LetBinding &);
+  void generate(const zir::LetBinding &);
 
   Context &m_ctx;
 };

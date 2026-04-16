@@ -8,14 +8,15 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/instantiation_record.hpp"
-#include "hir/type_registry.hpp"
-#include "hir/types.hpp"
-#include "hir/unifier_state.hpp"
-#include <algorithm>
 #include <hir/environment.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/type_registry.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/type_variable_substituter.hpp>
+#include <hir/types.hpp>
+#include <hir/unifier_state.hpp>
+
+#include <algorithm>
 #include <set>
 #include <unordered_map>
 #include <vector>

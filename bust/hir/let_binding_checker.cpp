@@ -8,9 +8,11 @@
 
 #include <ast/nodes.hpp>
 #include <exceptions.hpp>
+#include <hir/context.hpp>
 #include <hir/environment.hpp>
 #include <hir/expression_checker.hpp>
 #include <hir/free_type_variable_collector.hpp>
+#include <hir/instantiation_record.hpp>
 #include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/type_converter.hpp>
@@ -18,11 +20,11 @@
 #include <hir/type_variable_collapser.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
+
 #include <stdexcept>
 #include <string>
 #include <utility>
-
-#include <hir/context.hpp>
+#include <vector>
 
 //****************************************************************************
 namespace bust::hir {
@@ -59,13 +61,14 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
                                    binding_id,
                                    collapsed_type};
 
-  FreeTypeVariableCollector collector{m_ctx};
+  FreeTypeVariableCollector collector{.m_ctx = m_ctx};
   collector.collect(new_identifier.m_type);
 
   // Store the new let binding
   m_ctx.m_env.define(new_identifier.m_name, binding_id,
-                     TypeScheme{new_identifier.m_type,
-                                std::move(collector.m_free_type_variables)});
+                     TypeScheme{.m_type = new_identifier.m_type,
+                                .m_free_type_variables = std::move(
+                                    collector.m_free_type_variables)});
 
   return {{let_binding.m_location}, std::move(new_identifier), std::move(body)};
 }

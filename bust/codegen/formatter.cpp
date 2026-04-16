@@ -9,19 +9,19 @@
 #include <codegen/basic_block.hpp>
 #include <codegen/formatter.hpp>
 #include <codegen/function.hpp>
+#include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
+#include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
-#include <memory>
 #include <operators.hpp>
+
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <variant>
 #include <vector>
-
-#include <codegen/function_declaration.hpp>
-#include <codegen/module.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -289,7 +289,7 @@ void Formatter::operator()(const JumpInstruction &instruction) {
   newline();
 }
 
-void Formatter::operator()(const ReturnVoidInstruction &) {
+void Formatter::operator()(const ReturnVoidInstruction & /*unused*/) {
   indent();
   m_out << "ret void";
   newline();

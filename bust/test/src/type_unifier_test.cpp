@@ -10,7 +10,7 @@
 //*
 //****************************************************************************
 
-#include "hir/environment.hpp"
+#include <hir/environment.hpp>
 #include <hir/free_type_variable_collector.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/type_variable_substituter.hpp>

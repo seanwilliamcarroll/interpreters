@@ -10,21 +10,23 @@
 //*
 //****************************************************************************
 
-#include "zonker.hpp"
 #include <codegen.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
 #include <type_checker.hpp>
+#include <zir_lowerer.hpp>
+
+#include <unistd.h>
 
 #include <array>
 #include <cstdio>
 #include <cstdlib>
-#include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+#include <doctest/doctest.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 //****************************************************************************
 namespace bust {
@@ -33,14 +35,14 @@ TEST_SUITE("bust.codegen") {
 
   // --- Helpers -------------------------------------------------------------
 
-  static hir::Program type_check(const std::string &source) {
+  static zir::Program type_check(const std::string &source) {
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
     Parser parser(std::move(lexer));
     auto program = parser.parse();
     TypeChecker checker;
-    Zonker zonker;
-    return zonker(checker(program));
+    ZirLowerer zir_lowerer;
+    return zir_lowerer(checker(program));
   }
 
   static std::string codegen(const std::string &source) {

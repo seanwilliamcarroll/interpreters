@@ -9,11 +9,11 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include "hir/nodes.hpp"
-#include "mono/context.hpp"
-#include "mono/expression_substituter.hpp"
-#include "mono/name_mangler.hpp"
+#include <exceptions.hpp>
+#include <hir/nodes.hpp>
+#include <mono/context.hpp>
+#include <mono/expression_substituter.hpp>
+#include <mono/name_mangler.hpp>
 
 //****************************************************************************
 namespace bust::mono {

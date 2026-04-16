@@ -1,24 +1,25 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : LLVM IR code generation pass for bust HIR.
+//*  Purpose : LLVM IR code generation pass for bust ZIR.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <hir/nodes.hpp>
+#include <zir/program.hpp>
+
 #include <string>
 
 //****************************************************************************
 namespace bust {
 //****************************************************************************
 
-/// Lowers a typed bust program (HIR) to textual LLVM IR.
+/// Lowers a typed, monomorphed bust program (ZIR) to textual LLVM IR.
 /// Follows the pass-functor convention so it slots into run_pipeline.
 struct CodeGen {
-  std::string operator()(const hir::Program &program);
+  std::string operator()(const zir::Program &program);
 };
 
 //****************************************************************************

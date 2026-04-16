@@ -8,10 +8,11 @@
 #pragma once
 //****************************************************************************
 
-#include <memory>
 #include <source_location.hpp>
-#include <string>
 #include <types.hpp>
+
+#include <memory>
+#include <string>
 #include <variant>
 #include <vector>
 

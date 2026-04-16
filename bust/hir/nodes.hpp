@@ -8,13 +8,14 @@
 #pragma once
 //****************************************************************************
 
-#include "ast/nodes.hpp"
-#include "hir/instantiation_record.hpp"
-#include "hir/type_registry.hpp"
+#include <ast/nodes.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
 #include <nodes.hpp>
 #include <operators.hpp>
+
 #include <optional>
 #include <vector>
 

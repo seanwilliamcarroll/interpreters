@@ -6,14 +6,24 @@
 //*
 //****************************************************************************
 
-#include "hir/nodes.hpp"
-#include "zir/nodes.hpp"
-#include "zir/statement_lowerer.hpp"
+#include <hir/nodes.hpp>
+#include <hir/types.hpp>
+#include <nodes.hpp>
+#include <types.hpp>
+#include <zir/arena.hpp>
+#include <zir/context.hpp>
+#include <zir/expression_lowerer.hpp>
+#include <zir/nodes.hpp>
+#include <zir/statement_lowerer.hpp>
+#include <zir/types.hpp>
+
 #include <algorithm>
 #include <iterator>
 #include <optional>
+#include <string>
+#include <utility>
+#include <variant>
 #include <vector>
-#include <zir/expression_lowerer.hpp>
 
 //****************************************************************************
 namespace bust::zir {
@@ -46,7 +56,7 @@ ExprKind ExpressionLowerer::operator()(const hir::Identifier &identifier) {
   return lower(identifier);
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralUnit &) {
+ExprKind ExpressionLowerer::operator()(const hir::LiteralUnit & /*unused*/) {
   return Unit{};
 }
 

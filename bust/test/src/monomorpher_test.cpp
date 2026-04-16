@@ -16,14 +16,16 @@
 #include <lexer.hpp>
 #include <monomorpher.hpp>
 #include <parser.hpp>
+#include <pipeline.hpp>
 #include <type_checker.hpp>
-#include <zonker.hpp>
+#include <validate_main.hpp>
 
-#include <doctest/doctest.h>
 #include <set>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {
@@ -36,9 +38,8 @@ TEST_SUITE("bust.monomorpher") {
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
     Parser parser(std::move(lexer));
-    auto program = parser.parse();
-    auto typed = TypeChecker{}(program);
-    return Monomorpher{}(std::move(typed));
+    return run_pipeline(parser.parse(), ValidateMain{}, TypeChecker{},
+                        Monomorpher{});
   }
 
   // Convenience macro: declares `var` as the mono'd program for `src`,
@@ -403,7 +404,7 @@ TEST_SUITE("bust.monomorpher") {
   }
 
   TEST_CASE("unifier state is still present after monomorphization") {
-    // Unifier state is consumed by the zonker, not by mono.
+    // Unifier state is consumed by the ZIR Lowerer, not by mono.
     MONO_STRING(program, "fn main() -> i64 { 42 }");
     CHECK(program.m_unifier_state.has_value());
   }
@@ -411,40 +412,6 @@ TEST_SUITE("bust.monomorpher") {
   TEST_CASE("monomorpher throws without unifier state") {
     hir::Program program;
     CHECK_THROWS(Monomorpher{}(std::move(program)));
-  }
-
-  // --- Pipeline integration ------------------------------------------------
-
-  TEST_CASE("mono output can be zonked without error") {
-    // Feed a polymorphic program through mono + zonk; zonker should succeed
-    // and leave no type variables behind.
-    std::istringstream input("fn main() -> i64 {\n"
-                             "  let id = |x| { x };\n"
-                             "  id(42)\n"
-                             "}");
-    auto lexer = make_lexer(input, "test");
-    Parser parser(std::move(lexer));
-    auto program = parser.parse();
-    auto typed = TypeChecker{}(program);
-    auto monoed = Monomorpher{}(std::move(typed));
-    auto zonked = Zonker{}(std::move(monoed));
-
-    REQUIRE(zonked.m_top_items.size() == 1);
-    auto &func = std::get<hir::FunctionDef>(zonked.m_top_items[0]);
-    CHECK(is_concrete(zonked.m_type_registry, func.m_body.m_type));
-  }
-
-  TEST_CASE("mono output for non-polymorphic program zonks to the same shape") {
-    std::istringstream input("fn main() -> i64 { 42 }");
-    auto lexer = make_lexer(input, "test");
-    Parser parser(std::move(lexer));
-    auto program = parser.parse();
-    auto typed = TypeChecker{}(program);
-    auto monoed = Monomorpher{}(std::move(typed));
-    REQUIRE(monoed.m_top_items.size() == 1);
-    auto zonked = Zonker{}(std::move(monoed));
-    REQUIRE(zonked.m_top_items.size() == 1);
-    CHECK(std::holds_alternative<hir::FunctionDef>(zonked.m_top_items[0]));
   }
 
 } // TEST_SUITE

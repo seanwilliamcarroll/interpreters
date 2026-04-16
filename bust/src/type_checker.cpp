@@ -8,10 +8,16 @@
 
 #include <ast/nodes.hpp>
 #include <hir/context.hpp>
+#include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/unifier_state.hpp>
 #include <source_location.hpp>
 #include <type_checker.hpp>
+
+#include <optional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>

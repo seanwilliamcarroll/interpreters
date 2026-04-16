@@ -10,15 +10,17 @@
 
 #include <codegen/context.hpp>
 #include <codegen/handle.hpp>
-#include <hir/nodes.hpp>
+#include <zir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct StatementGenerator {
-  Handle operator()(const hir::Expression &);
-  Handle operator()(const hir::LetBinding &);
+  Handle generate(const zir::Statement &);
+
+  Handle operator()(const zir::ExpressionStatement &);
+  Handle operator()(const zir::LetBinding &);
 
   Context &m_ctx;
 };

@@ -2,7 +2,7 @@
 //*
 //*
 //*  Purpose : Moveable state extracted from TypeUnifier, stored in
-//*            hir::Program so downstream passes (zonking) can resolve
+//*            hir::Program so downstream passes (ZIR lowering) can resolve
 //*            type variables without needing the full unifier.
 //*
 //*
@@ -13,6 +13,7 @@
 #include <hir/types.hpp>
 #include <hir/union_find.hpp>
 #include <types.hpp>
+
 #include <unordered_map>
 
 //****************************************************************************

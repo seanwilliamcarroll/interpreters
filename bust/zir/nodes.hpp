@@ -9,13 +9,14 @@
 #pragma once
 //****************************************************************************
 
-#include <cstddef>
 #include <hash_combine.hpp>
 #include <nodes.hpp>
+#include <zir/types.hpp>
+
+#include <cstddef>
 #include <optional>
 #include <variant>
 #include <vector>
-#include <zir/types.hpp>
 
 //****************************************************************************
 namespace bust::zir {

@@ -8,12 +8,12 @@
 #pragma once
 //****************************************************************************
 
-#include <vector>
-
 #include <ast/nodes.hpp>
 #include <hir/context.hpp>
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
+
+#include <vector>
 
 //****************************************************************************
 namespace bust::hir {

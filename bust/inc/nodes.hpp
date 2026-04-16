@@ -8,8 +8,9 @@
 #pragma once
 //****************************************************************************
 
-#include "hash_combine.hpp"
+#include <hash_combine.hpp>
 #include <operators.hpp>
+
 #include <optional>
 #include <type_traits>
 #include <vector>

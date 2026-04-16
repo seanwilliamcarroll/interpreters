@@ -7,11 +7,12 @@
 //****************************************************************************
 #pragma once
 //****************************************************************************
-#include "hir/instantiation_record.hpp"
-#include "hir/types.hpp"
-#include "scope_guard.hpp"
-#include <cassert>
 #include <hash_combine.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/types.hpp>
+#include <scope_guard.hpp>
+
+#include <cassert>
 #include <memory>
 #include <string>
 #include <unordered_map>

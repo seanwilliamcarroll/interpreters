@@ -7,11 +7,17 @@
 //*
 //****************************************************************************
 
-#include "mono/top_item_monomorpher.hpp"
-#include "hir/nodes.hpp"
-#include "mono/expression_substituter.hpp"
-#include "mono/let_binding_monomorpher.hpp"
+#include <hir/nodes.hpp>
+#include <hir/types.hpp>
+#include <mono/context.hpp>
+#include <mono/expression_substituter.hpp>
+#include <mono/let_binding_monomorpher.hpp>
+#include <mono/top_item_monomorpher.hpp>
+#include <source_location.hpp>
+
 #include <iterator>
+#include <utility>
+#include <variant>
 
 //****************************************************************************
 namespace bust::mono {
@@ -40,7 +46,8 @@ TopItemMonomorpher::operator()(const hir::FunctionDef &function_def) {
   // At this time, all top level functions require annotation, so no
   // polymorphism to handle here, just recurse on down
 
-  auto sub_context = SubstitutionContext{m_ctx, {}};
+  auto sub_context =
+      SubstitutionContext{.m_parent = m_ctx, .m_substitution_mapping = {}};
   auto new_body =
       ExpressionSubstituter{sub_context}.substitute(function_def.m_body);
 

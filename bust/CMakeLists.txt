@@ -42,11 +42,6 @@ add_library(bust-lib STATIC
   mono/expression_substituter.cpp
   mono/let_binding_monomorpher.cpp
   mono/top_item_monomorpher.cpp
-  src/zonker.cpp
-  zonk/expression_zonker.cpp
-  zonk/let_binding_zonker.cpp
-  zonk/statement_zonker.cpp
-  zonk/top_item_zonker.cpp
   src/zir_lowerer.cpp
   zir/arena.cpp
   zir/expression_lowerer.cpp
@@ -77,7 +72,6 @@ add_executable(bust-test
   test/src/codegen_test.cpp
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
-  test/src/zonker_test.cpp
   test/src/monomorpher_test.cpp
   test/src/zir_lowerer_test.cpp)
 
@@ -119,12 +113,11 @@ endif()
 add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
 add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
 add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysis)
-add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
-add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
-add_test(NAME bust.zonker COMMAND bust-test -ts=bust.zonker)
-add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
+add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
+add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
 add_test(NAME bust.zir_lowerer COMMAND bust-test -ts=bust.zir_lowerer)
+add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
 
 #*****************************************************************************

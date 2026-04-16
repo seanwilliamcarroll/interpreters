@@ -8,15 +8,16 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include "hir/type_registry.hpp"
+#include <exceptions.hpp>
+#include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
 #include <hir/union_find.hpp>
+#include <types.hpp>
+
 #include <optional>
 #include <ranges>
 #include <stdexcept>
-#include <types.hpp>
 #include <unordered_map>
 #include <variant>
 

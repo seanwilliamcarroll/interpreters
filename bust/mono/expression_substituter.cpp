@@ -6,15 +6,25 @@
 //*
 //****************************************************************************
 
-#include "mono/expression_substituter.hpp"
-#include "hir/nodes.hpp"
-#include "hir/type_variable_substituter.hpp"
-#include "mono/let_binding_monomorpher.hpp"
-#include "mono/specialization.hpp"
+#include <hir/instantiation_record.hpp>
+#include <hir/nodes.hpp>
+#include <hir/types.hpp>
+#include <mono/context.hpp>
+#include <mono/expression_substituter.hpp>
+#include <mono/let_binding_monomorpher.hpp>
+#include <mono/specialization.hpp>
+#include <nodes.hpp>
+#include <source_location.hpp>
+#include <types.hpp>
+
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::mono {
@@ -110,10 +120,10 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
         statement);
   }
 
-  auto final_expression = block.m_final_expression.has_value()
-                              ? std::optional<hir::Expression>(substitute(
-                                    block.m_final_expression.value()))
-                              : std::nullopt;
+  auto final_expression =
+      block.m_final_expression.and_then([&](const auto &final_expression) {
+        return std::make_optional(substitute(final_expression));
+      });
 
   return {{block.m_location},
           new_type,
@@ -131,10 +141,9 @@ ExpressionSubstituter::operator()(const std::unique_ptr<hir::IfExpr> &if_expr) {
 
   auto condition = substitute(if_expr->m_condition);
   auto then_block = substitute(if_expr->m_then_block);
-  auto else_block =
-      if_expr->m_else_block.has_value()
-          ? std::optional<hir::Block>(substitute(if_expr->m_else_block.value()))
-          : std::nullopt;
+  auto else_block = if_expr->m_else_block.and_then([&](const auto &else_block) {
+    return std::make_optional(substitute(else_block));
+  });
 
   return std::make_unique<hir::IfExpr>(hir::IfExpr{
       std::move(condition), std::move(then_block), std::move(else_block)});

@@ -6,29 +6,33 @@
 //*
 //****************************************************************************
 
-#include <ast/types.hpp>
-#include <atomic>
+#include <ast/nodes.hpp>
 #include <exceptions.hpp>
 #include <hir/block_checker.hpp>
 #include <hir/context.hpp>
 #include <hir/environment.hpp>
 #include <hir/expression_checker.hpp>
+#include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
 #include <hir/type_converter.hpp>
+#include <hir/type_registry.hpp>
 #include <hir/type_unifier.hpp>
-#include <memory>
+#include <hir/types.hpp>
+#include <nodes.hpp>
 #include <operators.hpp>
-#include <optional>
 #include <source_location.hpp>
+#include <types.hpp>
+
+#include <memory>
+#include <optional>
+#include <ranges>
 #include <stdexcept>
 #include <string>
-#include <types.hpp>
+#include <string_view>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <ast/nodes.hpp>
-#include <hir/types.hpp>
 
 //****************************************************************************
 namespace bust::hir {
@@ -457,7 +461,8 @@ Expression ExpressionChecker::operator()(
   }
 
   auto function_type_id = m_ctx.m_type_registry.intern(
-      FunctionType{std::move(parameter_types), return_type_id});
+      FunctionType{.m_parameters = std::move(parameter_types),
+                   .m_return_type = return_type_id});
 
   return {{location},
           function_type_id,
@@ -465,13 +470,14 @@ Expression ExpressionChecker::operator()(
               std::move(parameters), std::move(body), return_type_id})};
 }
 
-Expression
-ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &,
-                              const core::SourceLocation &) {
+Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::WhileExpr> & /*unused*/,
+    const core::SourceLocation & /*unused*/) {
   throw core::InternalCompilerError("Not yet implemented");
 }
-Expression ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> &,
-                                         const core::SourceLocation &) {
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
+                              const core::SourceLocation & /*unused*/) {
   throw core::InternalCompilerError("Not yet implemented");
 }
 
@@ -510,7 +516,7 @@ Expression ExpressionChecker::operator()(const ast::LiteralChar &literal,
           LiteralChar{{location}, literal.m_value}};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralUnit &,
+Expression ExpressionChecker::operator()(const ast::LiteralUnit & /*unused*/,
                                          const core::SourceLocation &location) {
   return {{location}, m_ctx.m_type_registry.m_unit, LiteralUnit{{location}}};
 }

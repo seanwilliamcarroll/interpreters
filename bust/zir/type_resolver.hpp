@@ -2,17 +2,18 @@
 //*
 //*
 //*  Purpose : Post-inference type resolver — wraps unifier state to
-//*            provide find-only access for the zonk pass.
+//*            provide find-only access for the ZIR lowering pass.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
+#include <exceptions.hpp>
 #include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
+
 #include <variant>
 
 //****************************************************************************
@@ -37,7 +38,7 @@ struct TypeResolver {
     // Type variable was not resolved to a concrete type
     throw core::InternalCompilerError(
         "We assume all type variables should "
-        "have been resolved before zonking!\nCould not resolve: " +
+        "have been resolved before ZIR lowering!\nCould not resolve: " +
         m_type_registry.to_string(type_id));
   }
 

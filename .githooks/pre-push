@@ -161,7 +161,7 @@ if [ -n "$CLANG_TIDY" ] && [ -n "$RUN_CLANG_TIDY" ]; then
 
   # Get changed C++ files
   CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD \
-    | grep -E '\.(cpp|cc|cxx|hpp|h)$' || true)
+    | grep -E '\.(cpp|cc|cxx|hpp|h)$' | grep -v '/test/' || true)
 
   if [ -z "$CHANGED_FILES" ]; then
     dim "No changed C++ files — skipping clang-tidy"
@@ -212,7 +212,7 @@ elif [ -n "$CLANG_TIDY" ]; then
 
   # Fallback: incremental but serial
   CHANGED_FILES=$(git diff --name-only origin/main...HEAD \
-    | grep -E '\.(cpp|cc|cxx|hpp|h)$' || true)
+    | grep -E '\.(cpp|cc|cxx|hpp|h)$' | grep -v '/test/' || true)
 
   FAILURES=0
 

@@ -6,12 +6,22 @@
 //*
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include "zir/context.hpp"
-#include "zir/nodes.hpp"
-#include "zir/top_item_lowerer.hpp"
-#include "zir/type_resolver.hpp"
+#include <exceptions.hpp>
+#include <hir/nodes.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/unifier_state.hpp>
+#include <zir/arena.hpp>
+#include <zir/context.hpp>
+#include <zir/nodes.hpp>
+#include <zir/program.hpp>
+#include <zir/top_item_lowerer.hpp>
+#include <zir/type_resolver.hpp>
 #include <zir_lowerer.hpp>
+
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 //****************************************************************************
 namespace bust {
@@ -26,9 +36,12 @@ zir::Program ZirLowerer::operator()(hir::Program program) {
 
   auto unifier_state = std::move(program.m_unifier_state.value());
 
-  auto resolver = zir::TypeResolver{type_registry, std::move(unifier_state)};
+  auto resolver =
+      zir::TypeResolver{.m_type_registry = type_registry,
+                        .m_unifier_state = std::move(unifier_state)};
 
-  auto context = zir::Context{type_registry, std::move(resolver)};
+  auto context = zir::Context{.m_type_registry = type_registry,
+                              .m_resolver = std::move(resolver)};
 
   std::vector<zir::TopItem> new_top_items;
   new_top_items.reserve(program.m_top_items.size());

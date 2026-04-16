@@ -7,32 +7,31 @@
 //****************************************************************************
 
 #include <codegen.hpp>
-#include <sstream>
-#include <string>
-#include <variant>
-#include <vector>
-
 #include <codegen/context.hpp>
 #include <codegen/formatter.hpp>
 #include <codegen/top_item_generator.hpp>
-#include <hir/nodes.hpp>
+#include <zir/program.hpp>
+
+#include <sstream>
+#include <string>
+#include <vector>
 
 //****************************************************************************
 namespace bust {
 //****************************************************************************
 
-std::string CodeGen::operator()(const hir::Program &program) {
-  auto context = codegen::Context(program.m_type_registry);
+std::string CodeGen::operator()(const zir::Program &program) {
+  auto context = codegen::Context(program.m_arena);
 
   auto collector = codegen::TopItemDeclarationCollector{context};
   auto generator = codegen::TopItemGenerator{context};
 
   for (const auto &top_item : program.m_top_items) {
-    std::visit(collector, (top_item));
+    collector.collect(top_item);
   }
 
   for (const auto &top_item : program.m_top_items) {
-    std::visit(generator, (top_item));
+    generator.generate(top_item);
   }
 
   // How to do top level let bindings?

@@ -8,11 +8,11 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
+#include <zir/types.hpp>
+
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <hir/types.hpp>
 #include <ostream>
 #include <utility>
 #include <variant>
@@ -52,25 +52,22 @@ inline size_t width_bits(LLVMType type) {
   }
 }
 
-inline LLVMType to_llvm_type(const hir::TypeKind &type) {
+inline LLVMType to_llvm_type(const zir::Type &type) {
   return std::visit(
       [](const auto &t) {
         using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, hir::PrimitiveTypeValue>) {
-          switch (t.m_type) {
-          case PrimitiveType::BOOL:
-            return LLVMType::I1;
-          case PrimitiveType::I8:
-          case PrimitiveType::CHAR:
-            return LLVMType::I8;
-          case PrimitiveType::I32:
-            return LLVMType::I32;
-          case PrimitiveType::I64:
-            return LLVMType::I64;
-          case PrimitiveType::UNIT:
-            return LLVMType::VOID;
-          }
-        } else if constexpr (std::is_same_v<T, hir::FunctionType>) {
+        if constexpr (std::is_same_v<T, zir::UnitType>) {
+          return LLVMType::VOID;
+        } else if constexpr (std::is_same_v<T, zir::BoolType>) {
+          return LLVMType::I1;
+        } else if constexpr (std::is_same_v<T, zir::I8Type> ||
+                             std::is_same_v<T, zir::CharType>) {
+          return LLVMType::I8;
+        } else if constexpr (std::is_same_v<T, zir::I32Type>) {
+          return LLVMType::I32;
+        } else if constexpr (std::is_same_v<T, zir::I64Type>) {
+          return LLVMType::I64;
+        } else if constexpr (std::is_same_v<T, zir::FunctionType>) {
           return LLVMType::PTR;
         } else {
           assert(false && "codegen only handles primitive types and function "

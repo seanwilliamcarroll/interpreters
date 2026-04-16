@@ -6,20 +6,21 @@
 //*
 //****************************************************************************
 
+#include <ast/nodes.hpp>
 #include <hir/block_checker.hpp>
+#include <hir/context.hpp>
 #include <hir/environment.hpp>
 #include <hir/expression_checker.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/nodes.hpp>
 #include <hir/statement_checker.hpp>
-#include <optional>
+#include <hir/type_registry.hpp>
+#include <hir/types.hpp>
 #include <source_location.hpp>
-#include <types.hpp>
+
+#include <optional>
 #include <utility>
 #include <variant>
-
-#include <ast/nodes.hpp>
-#include <hir/context.hpp>
-#include <hir/nodes.hpp>
-#include <hir/types.hpp>
 
 //****************************************************************************
 namespace bust::hir {
@@ -42,10 +43,10 @@ Block BlockChecker::check_block(const ast::Block &block) {
   }
 
   auto final_expression =
-      block.m_final_expression.has_value()
-          ? std::optional<Expression>(ExpressionChecker{m_ctx}.check_expression(
-                block.m_final_expression.value()))
-          : std::nullopt;
+      block.m_final_expression.and_then([&](const auto &expression) {
+        return std::make_optional(
+            ExpressionChecker{m_ctx}.check_expression(expression));
+      });
 
   auto type = final_expression.has_value() ? final_expression.value().m_type
                                            : m_ctx.m_type_registry.m_unit;

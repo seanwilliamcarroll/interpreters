@@ -7,34 +7,35 @@
 //****************************************************************************
 
 #include <codegen/basic_block.hpp>
+#include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/let_binding_generator.hpp>
 #include <codegen/symbol_table.hpp>
-#include <codegen/types.hpp>
-
-#include <codegen/context.hpp>
-#include <hir/nodes.hpp>
+#include <zir/arena.hpp>
+#include <zir/nodes.hpp>
+#include <zir/types.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-void LetBindingGenerator::operator()(const hir::LetBinding &let_binding) {
-  auto value_handle = ExpressionGenerator{m_ctx}(let_binding.m_expression);
+void LetBindingGenerator::generate(const zir::LetBinding &let_binding) {
+  auto value_handle =
+      ExpressionGenerator{m_ctx}.generate(let_binding.m_expression);
 
-  auto identifier_handle =
-      m_ctx.symbols().define_local(let_binding.m_variable.m_name);
+  auto binding = m_ctx.arena().get(let_binding.m_identifier);
+
+  auto identifier_handle = m_ctx.symbols().define_local(binding.m_name);
 
   m_ctx.function().add_alloca_instruction(AllocaInstruction{
-      .m_handle = identifier_handle,
-      .m_type = m_ctx.to_type(let_binding.m_expression.m_type)});
+      .m_handle = identifier_handle, .m_type = m_ctx.to_type(binding.m_type)});
 
   m_ctx.block().add_instruction(StoreInstruction{
       .m_destination = identifier_handle,
       .m_source = value_handle,
-      .m_type = m_ctx.to_type(let_binding.m_expression.m_type),
+      .m_type = m_ctx.to_type(binding.m_type),
   });
 }
 

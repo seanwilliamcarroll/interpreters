@@ -14,9 +14,10 @@
 #include <hir/types.hpp>
 #include <mono/name_mangler.hpp>
 
-#include <doctest/doctest.h>
 #include <regex>
 #include <string>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {
