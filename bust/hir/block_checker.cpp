@@ -48,8 +48,7 @@ Block BlockChecker::check_block(const ast::Block &block) {
           : std::nullopt;
 
   auto type = final_expression.has_value() ? final_expression.value().m_type
-              : !statements.empty() ? get_statement_type(statements.back())
-                                    : m_ctx.m_type_registry.m_unit;
+                                           : m_ctx.m_type_registry.m_unit;
 
   return {{block.m_location},
           type,
