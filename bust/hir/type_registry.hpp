@@ -29,6 +29,14 @@ struct TypeRegistry {
         m_bool(intern(PrimitiveTypeValue{PrimitiveType::BOOL})),
         m_never(intern(NeverType{})) {}
 
+  TypeId intern(const TypeKind &kind) const {
+    if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {
+      return iter->second;
+    }
+    throw core::InternalCompilerError(
+        "With a const TypeRegistry, expect to be able to find TypeKind!");
+  }
+
   TypeId intern(const TypeKind &kind) {
     if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {
       return iter->second;

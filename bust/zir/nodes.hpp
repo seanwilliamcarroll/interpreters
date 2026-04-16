@@ -99,15 +99,13 @@ using ExprKind = std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr,
 
 struct Expression {
   TypeId m_type_id;
-  ExprId m_expr_id;
+  ExprKind m_expr_kind;
   auto operator<=>(const Expression &) const = default;
 };
 
 struct FunctionDef {
   BindingId m_id;
   std::vector<BindingId> m_parameters;
-  // Block somehow? Controlled through convention? How to control with type?
-  // Or do we need full expression? BlockExpr directly?
   Block m_body;
 };
 
@@ -200,7 +198,7 @@ template <> struct hash<bust::zir::Expression> {
   size_t operator()(const bust::zir::Expression &expr) const noexcept {
     size_t seed = 0;
     core::hash_combine(seed, expr.m_type_id);
-    core::hash_combine(seed, expr.m_expr_id);
+    core::hash_combine(seed, expr.m_expr_kind);
     return seed;
   }
 };

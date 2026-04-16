@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "zir/context.hpp"
 #include <hir/nodes.hpp>
 #include <zir/nodes.hpp>
 
@@ -22,6 +23,8 @@ struct TopItemLowerer {
   TopItem operator()(const hir::FunctionDef &);
   TopItem operator()(const hir::ExternFunctionDeclaration &);
   TopItem operator()(const hir::LetBinding &);
+
+  Context &m_ctx;
 };
 
 //****************************************************************************

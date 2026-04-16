@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include "zir/context.hpp"
 #include <hir/nodes.hpp>
 #include <zir/nodes.hpp>
 
@@ -16,7 +17,10 @@ namespace bust::zir {
 //****************************************************************************
 
 struct LetBindingLowerer {
-  // Interface to be designed.
+
+  LetBinding lower(const hir::LetBinding &);
+
+  Context &m_ctx;
 };
 
 //****************************************************************************

@@ -17,7 +17,7 @@ namespace bust::zir {
 //****************************************************************************
 
 struct Program {
-  Arena m_arena{};
+  Arena m_arena;
   std::vector<TopItem> m_top_items;
 };
 
