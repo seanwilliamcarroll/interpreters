@@ -25,8 +25,8 @@ int main(int argc, const char *argv[]) {
       options.dump_hir = true;
     } else if (std::strcmp(argv[i], "--dump-mono") == 0) {
       options.dump_mono = true;
-    } else if (std::strcmp(argv[i], "--dump-zonked") == 0) {
-      options.dump_zonked = true;
+    } else if (std::strcmp(argv[i], "--dump-zir") == 0) {
+      options.dump_zir = true;
     } else if (std::strcmp(argv[i], "--dump-llvm-ir") == 0) {
       options.dump_llvm_ir = true;
     } else if (argv[i][0] == '-') {

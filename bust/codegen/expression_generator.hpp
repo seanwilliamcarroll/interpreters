@@ -12,43 +12,40 @@
 
 #include <codegen/context.hpp>
 #include <codegen/handle.hpp>
-#include <hir/nodes.hpp>
+#include <zir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct ExpressionGenerator {
-  Handle generate(const auto &);
+  Handle generate(const zir::ExprId &);
+  Handle generate(const zir::ExprKind &);
+  Handle generate(const zir::Expression &);
 
-  Handle operator()(const hir::Identifier &);
-  Handle operator()(const hir::LiteralUnit &);
-  Handle operator()(const hir::LiteralI8 &);
-  Handle operator()(const hir::LiteralI32 &);
-  Handle operator()(const hir::LiteralI64 &);
-  Handle operator()(const hir::LiteralBool &);
-  Handle operator()(const hir::LiteralChar &);
-  Handle operator()(const std::unique_ptr<hir::Block> &);
-  Handle operator()(const hir::Block &);
-  Handle operator()(const std::unique_ptr<hir::IfExpr> &);
-  Handle operator()(const std::unique_ptr<hir::CallExpr> &);
+  Handle operator()(const zir::IdentifierExpr &);
+  Handle operator()(const zir::Unit &);
+  Handle operator()(const zir::I8 &);
+  Handle operator()(const zir::I32 &);
+  Handle operator()(const zir::I64 &);
+  Handle operator()(const zir::Bool &);
+  Handle operator()(const zir::Char &);
 
-  Handle generate_integer_compare_instruction(
-      const std::unique_ptr<hir::BinaryExpr> &);
-  Handle generate_arithmetic_binary_instruction(
-      const std::unique_ptr<hir::BinaryExpr> &);
-  Handle
-  generate_logical_binary_instruction(const std::unique_ptr<hir::BinaryExpr> &);
-  Handle operator()(const std::unique_ptr<hir::BinaryExpr> &);
+  zir::TypeId get_block_type(const zir::Block &);
+  Handle operator()(const zir::Block &);
+  Handle operator()(const zir::IfExpr &);
+  Handle operator()(const zir::CallExpr &);
 
-  Handle operator()(const std::unique_ptr<hir::UnaryExpr> &);
-  Handle operator()(const std::unique_ptr<hir::ReturnExpr> &);
-  Handle operator()(const std::unique_ptr<hir::CastExpr> &);
-  FunctionDeclaration
-  generate_lambda_signature(const std::unique_ptr<hir::LambdaExpr> &);
-  Handle operator()(const std::unique_ptr<hir::LambdaExpr> &);
+  Handle generate_integer_compare_instruction(const zir::BinaryExpr &);
+  Handle generate_arithmetic_binary_instruction(const zir::BinaryExpr &);
+  Handle generate_logical_binary_instruction(const zir::BinaryExpr &);
+  Handle operator()(const zir::BinaryExpr &);
 
-  Handle operator()(const hir::Expression &);
+  Handle operator()(const zir::UnaryExpr &);
+  Handle operator()(const zir::ReturnExpr &);
+  Handle operator()(const zir::CastExpr &);
+  FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
+  Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;
 };

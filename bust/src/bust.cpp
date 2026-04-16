@@ -6,6 +6,7 @@
 //*
 //****************************************************************************
 
+#include "zir_lowerer.hpp"
 #include <ast/dump.hpp>
 #include <bust.hpp>
 #include <codegen.hpp>
@@ -24,7 +25,6 @@
 #include <unistd.h>
 #include <utility>
 #include <validate_main.hpp>
-#include <zonker.hpp>
 
 #include <lexer.hpp>
 
@@ -57,13 +57,13 @@ void Bust::run() {
               << hir::Dumper::dump(monomorphed) << "\n";
   }
 
-  auto zonked = run_pipeline(std::move(monomorphed), Zonker{});
+  auto zir = run_pipeline(std::move(monomorphed), ZirLowerer{});
 
-  if (m_options.dump_zonked) {
-    std::cout << "=== Zonked HIR ===\n" << hir::Dumper::dump(zonked) << "\n";
+  if (m_options.dump_zir) {
+    // std::cout << "=== ZIR HIR ===\n" << zir::Dumper::dump(zir) << "\n";
   }
 
-  auto ir = CodeGen{}(zonked);
+  auto ir = CodeGen{}(zir);
 
   if (m_options.dump_llvm_ir) {
     std::cout << "=== LLVM IR ===\n" << ir << "\n";

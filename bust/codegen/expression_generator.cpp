@@ -17,8 +17,6 @@
 #include <codegen/statement_generator.hpp>
 #include <codegen/symbol_table.hpp>
 #include <exceptions.hpp>
-#include <hir/nodes.hpp>
-#include <hir/types.hpp>
 #include <iterator>
 #include <operators.hpp>
 #include <optional>
@@ -28,6 +26,8 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <zir/nodes.hpp>
+#include <zir/types.hpp>
 
 #include <codegen/handle.hpp>
 #include <codegen/types.hpp>
@@ -36,12 +36,21 @@
 namespace bust::codegen {
 //****************************************************************************
 
-Handle ExpressionGenerator::generate(const auto &to_generate) {
-  return (*this)(to_generate);
+Handle ExpressionGenerator::generate(const zir::ExprId &expr_id) {
+  return generate(m_ctx.arena().get(expr_id));
 }
 
-Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
-  auto identifier_handle = m_ctx.symbols().lookup(identifier.m_name);
+Handle ExpressionGenerator::generate(const zir::ExprKind &expr_kind) {
+  return std::visit(*this, expr_kind);
+}
+
+Handle ExpressionGenerator::generate(const zir::Expression &expression) {
+  return generate(expression.m_expr_kind);
+}
+
+Handle ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
+  auto binding = m_ctx.arena().get(identifier.m_id);
+  auto identifier_handle = m_ctx.symbols().lookup(binding.m_name);
 
   // GlobalHandle (functions) and ParameterHandle (SSA args) are used directly.
   // Only LocalHandle (alloca slots) need a load.
@@ -54,61 +63,61 @@ Handle ExpressionGenerator::operator()(const hir::Identifier &identifier) {
   m_ctx.block().add_instruction(
       LoadInstruction{.m_destination = ssa_temp,
                       .m_source = identifier_handle,
-                      .m_type = m_ctx.to_type(identifier.m_type)});
+                      .m_type = m_ctx.to_type(binding.m_type)});
 
   return ssa_temp;
 }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralUnit &) { return {}; }
+Handle ExpressionGenerator::operator()(const zir::Unit &) { return {}; }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralI8 &literal) {
+Handle ExpressionGenerator::operator()(const zir::I8 &literal) {
   return LiteralHandle{std::to_string(literal.m_value)};
 }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralI32 &literal) {
+Handle ExpressionGenerator::operator()(const zir::I32 &literal) {
   return LiteralHandle{std::to_string(literal.m_value)};
 }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralI64 &literal) {
+Handle ExpressionGenerator::operator()(const zir::I64 &literal) {
   return LiteralHandle{std::to_string(literal.m_value)};
 }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralBool &literal) {
+Handle ExpressionGenerator::operator()(const zir::Bool &literal) {
   return LiteralHandle{literal.m_value ? "true" : "false"};
 }
 
-Handle ExpressionGenerator::operator()(const hir::LiteralChar &literal) {
+Handle ExpressionGenerator::operator()(const zir::Char &literal) {
   return LiteralHandle{std::to_string(static_cast<int8_t>(literal.m_value))};
 }
 
-Handle
-ExpressionGenerator::operator()(const std::unique_ptr<hir::Block> &block) {
-  return generate(*block);
-}
-
-Handle ExpressionGenerator::operator()(const hir::Block &block) {
-  Handle last_value{};
+Handle ExpressionGenerator::operator()(const zir::Block &block) {
+  // TODO: Changed this, not sure, but should be correct
   for (const auto &statement : block.m_statements) {
-    last_value = std::visit(StatementGenerator{m_ctx}, statement);
+    StatementGenerator{m_ctx}.generate(statement);
   }
 
   if (block.m_final_expression.has_value()) {
     return generate(block.m_final_expression.value());
   }
 
-  // Need to return a value here potentially
-  return last_value;
+  return {};
 }
 
-Handle ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::IfExpr> &if_expression) {
-  auto &function = m_ctx.function();
+zir::TypeId ExpressionGenerator::get_block_type(const zir::Block &block) {
+  if (block.m_final_expression.has_value()) {
+    const auto &expression =
+        m_ctx.arena().get(block.m_final_expression.value());
+    return expression.m_type_id;
+  }
+  return m_ctx.arena().type().m_unit;
+}
 
-  const auto &if_return_type_id = if_expression->m_then_block.m_type;
+Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
+  auto &function = m_ctx.function();
 
   // Get handle to current after condition target generated, so even with nested
   // blocks, we're still starting right after the condition
-  auto condition_target = generate(if_expression->m_condition);
+  auto condition_target = generate(if_expression.m_condition);
   auto &final_condition_block = function.current_basic_block();
 
   // Create starting blocks that will always exist, then and merge
@@ -117,12 +126,12 @@ Handle ExpressionGenerator::operator()(
 
   // Do then branch, capture the final block for later if needed
   function.set_insertion_point(starting_then_block);
-  auto then_target = generate(if_expression->m_then_block);
+  auto then_target = generate(if_expression.m_then_block);
   auto &final_then_block = function.current_basic_block();
   final_then_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
 
-  if (!if_expression->m_else_block.has_value()) {
+  if (!if_expression.m_else_block.has_value()) {
     // Just bare if, else is merge
     final_condition_block.add_terminal(
         BranchInstruction{.m_condition = condition_target,
@@ -138,7 +147,7 @@ Handle ExpressionGenerator::operator()(
   // this branch
   auto &starting_else_block = function.new_basic_block("else");
   function.set_insertion_point(starting_else_block);
-  auto else_target = generate(if_expression->m_else_block.value());
+  auto else_target = generate(if_expression.m_else_block.value());
   auto &final_else_block = function.current_basic_block();
   final_else_block.add_terminal(
       JumpInstruction{.m_target = starting_merge_block.label()});
@@ -154,10 +163,11 @@ Handle ExpressionGenerator::operator()(
 
   // We only return a value when there is an else block
   // AND the types of the then and else expressions are NOT Unit
-  const auto if_type_is_unit =
-      if_return_type_id == m_ctx.type_registry().m_unit;
+  const auto &if_return_type_id = get_block_type(if_expression.m_then_block);
+
+  const auto if_type_is_unit = if_return_type_id == m_ctx.arena().type().m_unit;
   auto if_statement_returns_value =
-      if_expression->m_else_block.has_value() && !if_type_is_unit;
+      if_expression.m_else_block.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
     // Void, no handle to return
     return {};
@@ -187,25 +197,27 @@ Handle ExpressionGenerator::operator()(
   return ssa_temp;
 }
 
-Handle ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::CallExpr> &call_expression) {
+Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
 
-  auto callee_handle = generate(call_expression->m_callee);
+  auto callee_handle = generate(call_expression.m_callee);
 
   std::vector<Argument> arguments;
-  std::transform(call_expression->m_arguments.begin(),
-                 call_expression->m_arguments.end(),
+  std::transform(call_expression.m_arguments.begin(),
+                 call_expression.m_arguments.end(),
                  std::back_inserter(arguments),
-                 [this](const auto &argument_expression) -> Argument {
-                   auto handle = generate(argument_expression);
+                 [this](const auto &argument_expr_id) -> Argument {
+                   auto expression = m_ctx.arena().get(argument_expr_id);
+                   auto handle = generate(expression);
                    return {.m_name = handle,
-                           .m_type = m_ctx.to_type(argument_expression.m_type)};
+                           .m_type = m_ctx.to_type(expression.m_type_id)};
                  });
 
-  auto function_return_type_id =
-      m_ctx.as_function(call_expression->m_callee.m_type).m_return_type;
+  auto callee_expr = m_ctx.arena().get(call_expression.m_callee);
 
-  if (function_return_type_id == m_ctx.type_registry().m_unit) {
+  auto function_return_type_id =
+      m_ctx.arena().as_function(callee_expr.m_type_id).m_return_type;
+
+  if (function_return_type_id == m_ctx.arena().type().m_unit) {
     m_ctx.block().add_instruction(
         CallVoidInstruction{.m_callee = std::move(callee_handle),
                             .m_arguments = std::move(arguments)});
@@ -241,26 +253,28 @@ LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
   }
 }
 
-bool is_signed_type(const hir::TypeKind &type) {
-  if (!std::holds_alternative<hir::PrimitiveTypeValue>(type)) {
-    throw core::InternalCompilerError("signedness check on non-primitive type");
-  }
-  auto primitive_type = std::get<hir::PrimitiveTypeValue>(type).m_type;
-  switch (primitive_type) {
-  case PrimitiveType::I8:
-  case PrimitiveType::I32:
-  case PrimitiveType::I64:
-    return true;
-  case PrimitiveType::BOOL:
-  case PrimitiveType::CHAR:
-  case PrimitiveType::UNIT:
-    throw core::InternalCompilerError(
-        "Should never had checked signedness on non numeric type");
-  }
+bool is_signed_type(const zir::Type &type) {
+  return std::visit(
+      [](const auto &t) -> bool {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, zir::I8Type> ||
+                      std::is_same_v<T, zir::I32Type> ||
+                      std::is_same_v<T, zir::I64Type>) {
+          return true;
+        } else if constexpr (std::is_same_v<T, zir::UnitType> ||
+                             std::is_same_v<T, zir::BoolType> ||
+                             std::is_same_v<T, zir::CharType> ||
+                             std::is_same_v<T, zir::NeverType> ||
+                             std::is_same_v<T, zir::FunctionType>) {
+          throw core::InternalCompilerError(
+              "Should never had checked signedness on non numeric type");
+        }
+      },
+      type);
 }
 
-LLVMIntegerCompareCondition
-to_llvm_compare_condition(BinaryOperator op, const hir::TypeKind &type) {
+LLVMIntegerCompareCondition to_llvm_compare_condition(BinaryOperator op,
+                                                      const zir::Type &type) {
   switch (op) {
   case BinaryOperator::EQ:
     return LLVMIntegerCompareCondition::EQ;
@@ -323,49 +337,52 @@ bool is_logical_op(BinaryOperator op) {
 }
 
 Handle ExpressionGenerator::generate_integer_compare_instruction(
-    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+    const zir::BinaryExpr &binary_expression) {
+
+  auto lhs = m_ctx.arena().get(binary_expression.m_lhs);
 
   auto compare_condition = to_llvm_compare_condition(
-      binary_expression->m_operator,
-      m_ctx.type_registry().get(binary_expression->m_lhs.m_type));
+      binary_expression.m_operator, m_ctx.arena().get(lhs.m_type_id));
 
-  auto lhs_handle = generate(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression.m_lhs);
 
-  auto rhs_handle = generate(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression.m_rhs);
 
   auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
-  m_ctx.block().add_instruction(IntegerCompareInstruction{
-      .m_result = result_handle,
-      .m_lhs = lhs_handle,
-      .m_rhs = rhs_handle,
-      .m_condition = compare_condition,
-      .m_type = m_ctx.to_type(binary_expression->m_lhs.m_type)});
+  m_ctx.block().add_instruction(
+      IntegerCompareInstruction{.m_result = result_handle,
+                                .m_lhs = lhs_handle,
+                                .m_rhs = rhs_handle,
+                                .m_condition = compare_condition,
+                                .m_type = m_ctx.to_type(lhs.m_type_id)});
 
   return result_handle;
 }
 
 Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
-    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+    const zir::BinaryExpr &binary_expression) {
 
-  auto lhs_handle = generate(binary_expression->m_lhs);
+  auto lhs = m_ctx.arena().get(binary_expression.m_lhs);
 
-  auto rhs_handle = generate(binary_expression->m_rhs);
+  auto lhs_handle = generate(binary_expression.m_lhs);
+
+  auto rhs_handle = generate(binary_expression.m_rhs);
 
   auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
-  m_ctx.block().add_instruction(BinaryInstruction{
-      .m_result = result_handle,
-      .m_lhs = lhs_handle,
-      .m_rhs = rhs_handle,
-      .m_operator = to_llvm_op(binary_expression->m_operator),
-      .m_type = m_ctx.to_type(binary_expression->m_lhs.m_type)});
+  m_ctx.block().add_instruction(
+      BinaryInstruction{.m_result = result_handle,
+                        .m_lhs = lhs_handle,
+                        .m_rhs = rhs_handle,
+                        .m_operator = to_llvm_op(binary_expression.m_operator),
+                        .m_type = m_ctx.to_type(lhs.m_type_id)});
 
   return result_handle;
 }
 
 Handle ExpressionGenerator::generate_logical_binary_instruction(
-    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
+    const zir::BinaryExpr &binary_expression) {
   // Supporting short circuiting is similar to if expressions
   // lhs executes no matter what
   // For AND, branch to merge on negative, else to rhs
@@ -379,7 +396,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = result_handle, .m_type = LLVMType::I1});
 
-  auto lhs_handle = generate(binary_expression->m_lhs);
+  auto lhs_handle = generate(binary_expression.m_lhs);
   auto &final_lhs_block = m_ctx.block();
   // Store lhs in result handle
   final_lhs_block.add_instruction(StoreInstruction{
@@ -390,7 +407,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
 
   auto &starting_rhs_block = m_ctx.function().new_basic_block("rhs");
   m_ctx.function().set_insertion_point(starting_rhs_block);
-  auto rhs_handle = generate(binary_expression->m_rhs);
+  auto rhs_handle = generate(binary_expression.m_rhs);
   auto &final_rhs_block = m_ctx.block();
 
   final_rhs_block.add_instruction(StoreInstruction{
@@ -406,7 +423,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
 
   // LHS always branches
   const auto is_and_op =
-      binary_expression->m_operator == BinaryOperator::LOGICAL_AND;
+      binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
   final_lhs_block.add_terminal(BranchInstruction{
       .m_condition = lhs_handle,
       .m_iftrue =
@@ -430,49 +447,48 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   return final_result;
 }
 
-Handle ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::BinaryExpr> &binary_expression) {
-  if (is_binary_compare(binary_expression->m_operator)) {
+Handle
+ExpressionGenerator::operator()(const zir::BinaryExpr &binary_expression) {
+  if (is_binary_compare(binary_expression.m_operator)) {
     return generate_integer_compare_instruction(binary_expression);
   }
 
-  if (is_logical_op(binary_expression->m_operator)) {
+  if (is_logical_op(binary_expression.m_operator)) {
     return generate_logical_binary_instruction(binary_expression);
   }
 
   return generate_arithmetic_binary_instruction(binary_expression);
 }
 
-Handle ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::UnaryExpr> &unary_expression) {
+Handle ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
 
-  auto input_handle = generate(unary_expression->m_expression);
+  auto expression = m_ctx.arena().get(unary_expression.m_expression);
+
+  auto input_handle = generate(unary_expression.m_expression);
 
   auto result_handle = m_ctx.symbols().next_ssa_temporary();
 
   m_ctx.block().add_instruction(UnaryInstruction{
       .m_result = result_handle,
       .m_input = input_handle,
-      .m_operator = unary_expression->m_operator,
-      .m_type = m_ctx.to_type(unary_expression->m_expression.m_type),
+      .m_operator = unary_expression.m_operator,
+      .m_type = m_ctx.to_type(expression.m_type_id),
   });
 
   return result_handle;
 }
 
-Handle
-ExpressionGenerator::operator()(const std::unique_ptr<hir::ReturnExpr> &) {
-  return {};
-}
+Handle ExpressionGenerator::operator()(const zir::ReturnExpr &) { return {}; }
 
-Handle ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::CastExpr> &cast_expression) {
+Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
+
+  auto expression = m_ctx.arena().get(cast_expression.m_expression);
 
   // We've type checked, so we know it's a valid cast
-  auto input_handle = generate(cast_expression->m_expression);
+  auto input_handle = generate(cast_expression.m_expression);
 
-  const auto &from = m_ctx.to_type(cast_expression->m_expression.m_type);
-  const auto &to = m_ctx.to_type(cast_expression->m_new_type);
+  const auto &from = m_ctx.to_type(expression.m_type_id);
+  const auto &to = m_ctx.to_type(cast_expression.m_new_type);
 
   if (from == to) {
     // Nothing casted, noop
@@ -506,22 +522,24 @@ Handle ExpressionGenerator::operator()(
 }
 
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
-    const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
+    const zir::LambdaExpr &lambda_expr) {
   std::vector<Parameter> parameters;
-  std::transform(
-      lambda_expr->m_parameters.begin(), lambda_expr->m_parameters.end(),
-      std::back_inserter(parameters),
-      [this](const hir::Identifier &parameter) -> Parameter {
-        auto handle = m_ctx.symbols().define_parameter(parameter.m_name);
-        return Parameter{.m_name = std::move(handle),
-                         .m_type = m_ctx.to_type(parameter.m_type)};
-      });
+  std::transform(lambda_expr.m_parameters.begin(),
+                 lambda_expr.m_parameters.end(), std::back_inserter(parameters),
+                 [this](const zir::IdentifierExpr &parameter) -> Parameter {
+                   auto binding = m_ctx.arena().get(parameter.m_id);
+
+                   auto handle =
+                       m_ctx.symbols().define_parameter(binding.m_name);
+                   return Parameter{.m_name = std::move(handle),
+                                    .m_type = m_ctx.to_type(binding.m_type)};
+                 });
 
   auto lambda_handle = m_ctx.symbols().define_uniqued_global("lambda");
 
   return FunctionDeclaration{.m_function_id = lambda_handle,
                              .m_return_type =
-                                 m_ctx.to_type(lambda_expr->m_return_type),
+                                 m_ctx.to_type(lambda_expr.m_return_type),
                              .m_parameters = std::move(parameters)};
 }
 
@@ -536,8 +554,7 @@ struct FunctionScopeGuard {
   Function &m_original_function;
 };
 
-Handle ExpressionGenerator::operator()(
-    const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
+Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   ScopeGuard scope_guard(m_ctx.symbols());
   FunctionScopeGuard function_guard(m_ctx);
   // Need to capture any variables into an environment struct for this
@@ -554,21 +571,17 @@ Handle ExpressionGenerator::operator()(
   auto &lambda_function = m_ctx.module().new_function(std::move(signature));
   m_ctx.module().set_current_function(lambda_function);
 
-  auto return_value = generate(lambda_expr->m_body);
+  auto return_value = generate(lambda_expr.m_body);
 
-  if (lambda_expr->m_return_type == m_ctx.type_registry().m_unit) {
+  if (lambda_expr.m_return_type == m_ctx.arena().type().m_unit) {
     lambda_function.current_basic_block().add_terminal(ReturnVoidInstruction{});
   } else {
     lambda_function.current_basic_block().add_terminal(
         ReturnInstruction{.m_value = return_value,
-                          .m_type = m_ctx.to_type(lambda_expr->m_return_type)});
+                          .m_type = m_ctx.to_type(lambda_expr.m_return_type)});
   }
 
   return lambda_handle;
-}
-
-Handle ExpressionGenerator::operator()(const hir::Expression &expression) {
-  return std::visit(*this, expression.m_expression);
 }
 
 //****************************************************************************

@@ -13,6 +13,7 @@
 #include "types.hpp"
 #include "zir/nodes.hpp"
 #include "zir/types.hpp"
+#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -27,69 +28,39 @@ struct TypeArena {
         m_i32(intern(I32Type{})), m_i64(intern(I64Type{})),
         m_never(intern(NeverType{})) {}
 
-  TypeId intern(const Type &type) {
-    auto iter = m_type_to_type_id.find(type);
-    if (iter == m_type_to_type_id.end()) {
-      auto new_id = m_type_id_to_type.size();
-      m_type_to_type_id.emplace(type, new_id);
-      m_type_id_to_type.emplace_back(type);
-      return {new_id};
+  TypeId intern(const Type &);
+  TypeId intern(const Type &) const;
+
+  const Type &get(TypeId) const;
+
+  TypeId convert(hir::TypeId, const hir::TypeRegistry &);
+
+  TypeId convert(const hir::TypeKind &, const hir::TypeRegistry &);
+
+  template <typename VariantType>
+  const VariantType &as(TypeId type_id, const char *function) const {
+    const auto &type_kind = get(type_id);
+    if (!std::holds_alternative<VariantType>(type_kind)) {
+      throw core::InternalCompilerError(std::string(function) +
+                                        " Bad access to registry with " +
+                                        to_string(type_id));
     }
-    return iter->second;
+    return std::get<VariantType>(type_kind);
   }
 
-  const Type &get(TypeId type_id) const {
-    if (type_id.m_id >= m_type_id_to_type.size()) {
-      throw core::InternalCompilerError("Failed to call get on type_id: " +
-                                        std::to_string(type_id.m_id));
-    }
-    return m_type_id_to_type[type_id.m_id];
+  const FunctionType &as_function(TypeId type_id) const {
+    return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
   }
 
-  TypeId convert(hir::TypeId type_id, const hir::TypeRegistry &reg) {
-    return convert(reg.get(type_id), reg);
+  template <typename VariantType> bool is(TypeId type_id) const {
+    const auto &type_kind = get(type_id);
+    return std::holds_alternative<VariantType>(type_kind);
   }
 
-  TypeId convert(const hir::TypeKind &type_kind, const hir::TypeRegistry &reg) {
-    // Translate concrete hir TypeKind into zir Type and intern
-    auto new_type = std::visit(
-        [&](const auto &tk) -> Type {
-          using T = std::decay_t<decltype(tk)>;
-          if constexpr (std::is_same_v<T, hir::PrimitiveTypeValue>) {
-            switch (tk.m_type) {
-            case PrimitiveType::UNIT:
-              return UnitType{};
-            case PrimitiveType::BOOL:
-              return BoolType{};
-            case PrimitiveType::CHAR:
-              return CharType{};
-            case PrimitiveType::I8:
-              return I8Type{};
-            case PrimitiveType::I32:
-              return I32Type{};
-            case PrimitiveType::I64:
-              return I64Type{};
-            }
-          } else if constexpr (std::is_same_v<T, hir::FunctionType>) {
-            std::vector<TypeId> parameters;
-            parameters.reserve(tk.m_parameters.size());
-            for (const auto &parameter : tk.m_parameters) {
-              parameters.emplace_back(convert(parameter, reg));
-            }
-            auto return_type = convert(tk.m_return_type, reg);
-            return FunctionType{.m_parameters = std::move(parameters),
-                                .m_return_type = return_type};
-          } else if constexpr (std::is_same_v<T, hir::NeverType>) {
-            return NeverType{};
-          } else {
-            // TypeVariable shouldn't be passed here?
-            std::unreachable();
-          }
-        },
-        type_kind);
+  bool is_function(TypeId type_id) const { return is<FunctionType>(type_id); }
 
-    return intern(new_type);
-  }
+  std::string to_string(TypeId) const;
+  std::string to_string(const Type &) const;
 
 private:
   std::unordered_map<Type, TypeId> m_type_to_type_id{};
@@ -152,6 +123,18 @@ struct Arena {
   }
   TypeId convert(hir::TypeId type_id, const hir::TypeRegistry &reg) {
     return type().convert(type_id, reg);
+  }
+
+  const FunctionType &as_function(TypeId type_id) const {
+    return type().as_function(type_id);
+  }
+
+  std::string to_string(const Type &type) const {
+    return m_type_arena.to_string(type);
+  }
+
+  std::string to_string(TypeId type_id) const {
+    return m_type_arena.to_string(type_id);
   }
 
 private:

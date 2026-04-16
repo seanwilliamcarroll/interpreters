@@ -10,26 +10,32 @@
 
 #include "codegen/function_declaration.hpp"
 #include <codegen/context.hpp>
-#include <hir/nodes.hpp>
+#include <zir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct TopItemDeclarationCollector {
-  void operator()(const hir::FunctionDef &);
-  void operator()(const hir::ExternFunctionDeclaration &);
-  void operator()(const hir::LetBinding &);
+  void collect(const zir::TopItem &);
+
+  void operator()(const zir::FunctionDef &);
+  void operator()(const zir::ExternFunctionDeclaration &);
+  void operator()(const zir::LetBinding &);
 
   Context &m_ctx;
 };
 
 struct TopItemGenerator {
-  FunctionDeclaration generate(const hir::FunctionDeclaration &);
+  void generate(const zir::TopItem &);
 
-  void operator()(const hir::FunctionDef &);
-  void operator()(const hir::ExternFunctionDeclaration &);
-  void operator()(const hir::LetBinding &);
+  FunctionDeclaration generate_signature(const zir::FunctionDef &);
+  FunctionDeclaration
+  generate_signature(const zir::ExternFunctionDeclaration &);
+
+  void operator()(const zir::FunctionDef &);
+  void operator()(const zir::ExternFunctionDeclaration &);
+  void operator()(const zir::LetBinding &);
 
   Context &m_ctx;
 };
