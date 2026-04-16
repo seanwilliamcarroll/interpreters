@@ -61,13 +61,14 @@ LetBinding LetBindingChecker::operator()(const ast::LetBinding &let_binding) {
                                    binding_id,
                                    collapsed_type};
 
-  FreeTypeVariableCollector collector{m_ctx};
+  FreeTypeVariableCollector collector{.m_ctx = m_ctx};
   collector.collect(new_identifier.m_type);
 
   // Store the new let binding
   m_ctx.m_env.define(new_identifier.m_name, binding_id,
-                     TypeScheme{new_identifier.m_type,
-                                std::move(collector.m_free_type_variables)});
+                     TypeScheme{.m_type = new_identifier.m_type,
+                                .m_free_type_variables = std::move(
+                                    collector.m_free_type_variables)});
 
   return {{let_binding.m_location}, std::move(new_identifier), std::move(body)};
 }

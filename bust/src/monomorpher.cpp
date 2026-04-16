@@ -36,7 +36,7 @@ hir::Program Monomorpher::operator()(hir::Program program) {
         "Cannot monomorphize a program without unification state!");
   }
 
-  auto unifier = hir::TypeUnifier{program.m_type_registry};
+  auto unifier = hir::TypeUnifier{.m_type_registry = program.m_type_registry};
   unifier.adopt_state(std::move(program.m_unifier_state.value()));
 
   auto context =

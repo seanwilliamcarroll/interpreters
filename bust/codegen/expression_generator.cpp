@@ -24,9 +24,8 @@
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
-#include <stdint.h>
-
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -72,7 +71,9 @@ Handle ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
   return ssa_temp;
 }
 
-Handle ExpressionGenerator::operator()(const zir::Unit &) { return {}; }
+Handle ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
+  return {};
+}
 
 Handle ExpressionGenerator::operator()(const zir::I8 &literal) {
   return LiteralHandle{std::to_string(literal.m_value)};
@@ -106,7 +107,7 @@ Handle ExpressionGenerator::operator()(const zir::Block &block) {
   return {};
 }
 
-zir::TypeId ExpressionGenerator::get_block_type(const zir::Block &block) {
+zir::TypeId ExpressionGenerator::get_block_type(const zir::Block &block) const {
   if (block.m_final_expression.has_value()) {
     const auto &expression =
         m_ctx.arena().get(block.m_final_expression.value());
@@ -205,15 +206,16 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
   auto callee_handle = generate(call_expression.m_callee);
 
   std::vector<Argument> arguments;
-  std::transform(call_expression.m_arguments.begin(),
-                 call_expression.m_arguments.end(),
-                 std::back_inserter(arguments),
-                 [this](const auto &argument_expr_id) -> Argument {
-                   auto expression = m_ctx.arena().get(argument_expr_id);
-                   auto handle = generate(expression);
-                   return {.m_name = handle,
-                           .m_type = m_ctx.to_type(expression.m_type_id)};
-                 });
+  std::ranges::transform(
+      call_expression.m_arguments,
+
+      std::back_inserter(arguments),
+      [this](const auto &argument_expr_id) -> Argument {
+        auto expression = m_ctx.arena().get(argument_expr_id);
+        auto handle = generate(expression);
+        return {.m_name = handle,
+                .m_type = m_ctx.to_type(expression.m_type_id)};
+      });
 
   auto callee_expr = m_ctx.arena().get(call_expression.m_callee);
 
@@ -481,7 +483,9 @@ Handle ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
   return result_handle;
 }
 
-Handle ExpressionGenerator::operator()(const zir::ReturnExpr &) { return {}; }
+Handle ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
+  return {};
+}
 
 Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
 
@@ -527,16 +531,15 @@ Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
     const zir::LambdaExpr &lambda_expr) {
   std::vector<Parameter> parameters;
-  std::transform(lambda_expr.m_parameters.begin(),
-                 lambda_expr.m_parameters.end(), std::back_inserter(parameters),
-                 [this](const zir::IdentifierExpr &parameter) -> Parameter {
-                   auto binding = m_ctx.arena().get(parameter.m_id);
+  std::ranges::transform(
+      lambda_expr.m_parameters, std::back_inserter(parameters),
+      [this](const zir::IdentifierExpr &parameter) -> Parameter {
+        auto binding = m_ctx.arena().get(parameter.m_id);
 
-                   auto handle =
-                       m_ctx.symbols().define_parameter(binding.m_name);
-                   return Parameter{.m_name = std::move(handle),
-                                    .m_type = m_ctx.to_type(binding.m_type)};
-                 });
+        auto handle = m_ctx.symbols().define_parameter(binding.m_name);
+        return Parameter{.m_name = std::move(handle),
+                         .m_type = m_ctx.to_type(binding.m_type)};
+      });
 
   auto lambda_handle = m_ctx.symbols().define_uniqued_global("lambda");
 

@@ -4,14 +4,14 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   performance-*,
   modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
   readability-*,
-  cppcoreguidelines-*,
+  -readability-identifier-length,
   clang-analyzer-*,
-  hicpp-*,
   misc-includes-cleaner
 
-WarningsAsErrors: '*'
-
-HeaderFilterRegex: '.*'
-
+HeaderFilterRegex: ''
+ExcludeHeaderFilterRegex: 'doctest|rapidcheck'
 FormatStyle: file
+SystemHeaders:   false

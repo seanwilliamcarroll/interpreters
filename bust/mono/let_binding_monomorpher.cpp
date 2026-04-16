@@ -34,7 +34,8 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
   auto iter = m_ctx.m_instantiation_records.find(id);
   if (iter == m_ctx.m_instantiation_records.end()) {
     // Nothing to substitute
-    auto context = SubstitutionContext{m_ctx, outer_substitution};
+    auto context = SubstitutionContext{
+        .m_parent = m_ctx, .m_substitution_mapping = outer_substitution};
     auto output = LetBindingSubstituter{context}.substitute(let_binding);
     std::vector<hir::LetBinding> new_let_bindings;
     new_let_bindings.emplace_back(std::move(output));
@@ -53,23 +54,27 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
         hir::TypeVariableSubstituter{.m_type_registry = m_ctx.type_registry(),
                                      .m_type_unifier = m_ctx.m_type_unifier,
                                      .m_new_mapping = outer_substitution};
-    for (auto &[original_type_id, substituted_type_id] :
+    for (const auto &[original_type_id, substituted_type_id] :
          record.m_substitution) {
       combined[original_type_id] = substituter.substitute(substituted_type_id);
     }
 
-    auto new_type = hir::TypeVariableSubstituter{m_ctx.type_registry(),
-                                                 m_ctx.m_type_unifier, combined}
-                        .substitute(let_binding.m_expression.m_type);
+    auto new_type =
+        hir::TypeVariableSubstituter{.m_type_registry = m_ctx.type_registry(),
+                                     .m_type_unifier = m_ctx.m_type_unifier,
+                                     .m_new_mapping = combined}
+            .substitute(let_binding.m_expression.m_type);
 
     auto new_id = m_ctx.next_let_binding_id();
-    auto new_name = Mangler{m_ctx.type_registry()}.mangle(
+    auto new_name = Mangler{.m_type_registry = m_ctx.type_registry()}.mangle(
         let_binding.m_variable.m_name, let_binding.m_variable.m_id, new_type);
 
-    m_ctx.m_env.define(let_binding.m_variable.m_id, new_type,
-                       Specialization{new_name, new_id});
+    m_ctx.m_env.define(
+        let_binding.m_variable.m_id, new_type,
+        Specialization{.m_mangled_name = new_name, .m_new_id = new_id});
 
-    auto context = SubstitutionContext{m_ctx, combined};
+    auto context = SubstitutionContext{.m_parent = m_ctx,
+                                       .m_substitution_mapping = combined};
 
     new_let_bindings.push_back(
         LetBindingSubstituter{context}.substitute(let_binding));

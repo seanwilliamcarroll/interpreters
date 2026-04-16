@@ -56,7 +56,7 @@ ExprKind ExpressionLowerer::operator()(const hir::Identifier &identifier) {
   return lower(identifier);
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralUnit &) {
+ExprKind ExpressionLowerer::operator()(const hir::LiteralUnit & /*unused*/) {
   return Unit{};
 }
 

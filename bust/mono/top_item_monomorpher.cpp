@@ -46,7 +46,8 @@ TopItemMonomorpher::operator()(const hir::FunctionDef &function_def) {
   // At this time, all top level functions require annotation, so no
   // polymorphism to handle here, just recurse on down
 
-  auto sub_context = SubstitutionContext{m_ctx, {}};
+  auto sub_context =
+      SubstitutionContext{.m_parent = m_ctx, .m_substitution_mapping = {}};
   auto new_body =
       ExpressionSubstituter{sub_context}.substitute(function_def.m_body);
 

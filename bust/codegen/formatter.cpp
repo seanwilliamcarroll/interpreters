@@ -289,7 +289,7 @@ void Formatter::operator()(const JumpInstruction &instruction) {
   newline();
 }
 
-void Formatter::operator()(const ReturnVoidInstruction &) {
+void Formatter::operator()(const ReturnVoidInstruction & /*unused*/) {
   indent();
   m_out << "ret void";
   newline();

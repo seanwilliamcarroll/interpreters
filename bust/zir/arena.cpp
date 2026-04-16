@@ -13,8 +13,7 @@
 #include <zir/arena.hpp>
 #include <zir/types.hpp>
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <string_view>
 #include <type_traits>
 

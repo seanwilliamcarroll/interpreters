@@ -51,7 +51,8 @@ void TopItemDeclarationCollector::operator()(
   m_ctx.symbols().define_global(binding.m_name);
 }
 
-void TopItemDeclarationCollector::operator()(const zir::LetBinding &) {}
+void TopItemDeclarationCollector::operator()(
+    const zir::LetBinding & /*unused*/) {}
 
 void TopItemGenerator::generate(const zir::TopItem &top_item) {
   std::visit(*this, top_item);
@@ -63,9 +64,9 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
   std::vector<Parameter> parameters;
-  std::transform(
-      function_def.m_parameters.begin(), function_def.m_parameters.end(),
-      std::back_inserter(parameters), [&](const auto &id) -> Parameter {
+  std::ranges::transform(
+      function_def.m_parameters, std::back_inserter(parameters),
+      [&](const auto &id) -> Parameter {
         const auto &parameter_binding = m_ctx.arena().get(id);
         auto handle =
             m_ctx.symbols().define_parameter(parameter_binding.m_name);

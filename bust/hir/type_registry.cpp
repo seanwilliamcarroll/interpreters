@@ -10,8 +10,7 @@
 #include <hir/types.hpp>
 #include <types.hpp>
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <string>
 #include <type_traits>
 
