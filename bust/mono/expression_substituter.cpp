@@ -110,10 +110,10 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
         statement);
   }
 
-  auto final_expression = block.m_final_expression.has_value()
-                              ? std::optional<hir::Expression>(substitute(
-                                    block.m_final_expression.value()))
-                              : std::nullopt;
+  auto final_expression =
+      block.m_final_expression.and_then([&](const auto &final_expression) {
+        return std::make_optional(substitute(final_expression));
+      });
 
   return {{block.m_location},
           new_type,
@@ -131,10 +131,9 @@ ExpressionSubstituter::operator()(const std::unique_ptr<hir::IfExpr> &if_expr) {
 
   auto condition = substitute(if_expr->m_condition);
   auto then_block = substitute(if_expr->m_then_block);
-  auto else_block =
-      if_expr->m_else_block.has_value()
-          ? std::optional<hir::Block>(substitute(if_expr->m_else_block.value()))
-          : std::nullopt;
+  auto else_block = if_expr->m_else_block.and_then([&](const auto &else_block) {
+    return std::make_optional(substitute(else_block));
+  });
 
   return std::make_unique<hir::IfExpr>(hir::IfExpr{
       std::move(condition), std::move(then_block), std::move(else_block)});

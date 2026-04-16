@@ -11,7 +11,6 @@
 #include <cassert>
 #include <codegen/instructions.hpp>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 

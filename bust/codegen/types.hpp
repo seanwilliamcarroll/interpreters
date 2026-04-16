@@ -8,7 +8,6 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
 #include <array>
 #include <cassert>
 #include <cstdint>
