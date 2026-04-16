@@ -31,7 +31,7 @@ struct ExpressionGenerator {
   Handle operator()(const zir::Bool &);
   Handle operator()(const zir::Char &);
 
-  zir::TypeId get_block_type(const zir::Block &) const;
+  [[nodiscard]] zir::TypeId get_block_type(const zir::Block &) const;
   Handle operator()(const zir::Block &);
   Handle operator()(const zir::IfExpr &);
   Handle operator()(const zir::CallExpr &);

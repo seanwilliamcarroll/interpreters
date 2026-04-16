@@ -25,6 +25,8 @@
 #include <variant>
 #include <vector>
 
+#include "zir/free_variable_collector.hpp"
+
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
@@ -163,10 +165,19 @@ ExprKind ExpressionLowerer::operator()(
                  std::back_inserter(parameters),
                  [&](const auto &parameter) { return lower(parameter); });
 
+  auto body = lower(lambda_expr->m_body);
+
+  auto capture_set = FreeVariableCollector(m_ctx, parameters).collect(body);
+  auto captures =
+      std::vector<IdentifierExpr>(std::make_move_iterator(capture_set.begin()),
+                                  std::make_move_iterator(capture_set.end()));
+  capture_set.clear();
+
   return LambdaExpr{
       .m_parameters = std::move(parameters),
-      .m_body = lower(lambda_expr->m_body),
+      .m_body = body,
       .m_return_type = m_ctx.convert(lambda_expr->m_return_type),
+      .m_captures = captures,
   };
 }
 

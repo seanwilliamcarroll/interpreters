@@ -92,7 +92,14 @@ using UnaryExpr = UnaryExprBase<ExprId>;
 using ReturnExpr = ReturnExprBase<ExprId>;
 using CastExpr = CastExprBase<ExprId, TypeId>;
 using IfExpr = IfExprBase<ExprId, Block>;
-using LambdaExpr = LambdaExprBase<IdentifierExpr, Block, TypeId>;
+
+struct LambdaExpr {
+  std::vector<IdentifierExpr> m_parameters;
+  Block m_body;
+  TypeId m_return_type;
+  std::vector<IdentifierExpr> m_captures;
+  auto operator<=>(const LambdaExpr &) const = default;
+};
 
 using ExprKind = std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr,
                               CallExpr, BinaryExpr, UnaryExpr, ReturnExpr,
@@ -221,6 +228,23 @@ template <> struct hash<bust::zir::Block> {
     }
     if (block.m_final_expression.has_value()) {
       core::hash_combine(seed, block.m_final_expression.value());
+    }
+    return seed;
+  }
+};
+
+template <> struct hash<bust::zir::LambdaExpr> {
+  size_t operator()(const bust::zir::LambdaExpr &expr) const noexcept {
+    size_t seed = 0;
+    for (const auto &parameter : expr.m_parameters) {
+      core::hash_combine(seed,
+                         std::hash<bust::zir::IdentifierExpr>{}(parameter));
+    }
+    core::hash_combine(seed, std::hash<bust::zir::Block>{}(expr.m_body));
+    core::hash_combine(seed,
+                       std::hash<bust::zir::TypeId>{}(expr.m_return_type));
+    for (const auto &capture : expr.m_captures) {
+      core::hash_combine(seed, std::hash<bust::zir::IdentifierExpr>{}(capture));
     }
     return seed;
   }

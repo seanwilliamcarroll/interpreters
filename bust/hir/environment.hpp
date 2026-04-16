@@ -96,7 +96,7 @@ struct Environment {
   }
 
 private:
-  std::vector<Scope> m_scopes{};
+  std::vector<Scope> m_scopes;
 };
 
 using ScopeGuard = core::ScopeGuard<Environment>;
