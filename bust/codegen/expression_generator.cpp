@@ -6,12 +6,12 @@
 //*
 //****************************************************************************
 
-#include "codegen/function_declaration.hpp"
 #include <algorithm>
 #include <codegen/basic_block.hpp>
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
+#include <codegen/function_declaration.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/statement_generator.hpp>
@@ -91,7 +91,6 @@ Handle ExpressionGenerator::operator()(const zir::Char &literal) {
 }
 
 Handle ExpressionGenerator::operator()(const zir::Block &block) {
-  // TODO: Changed this, not sure, but should be correct
   for (const auto &statement : block.m_statements) {
     StatementGenerator{m_ctx}.generate(statement);
   }

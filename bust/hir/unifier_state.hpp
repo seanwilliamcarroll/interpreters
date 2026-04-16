@@ -2,7 +2,7 @@
 //*
 //*
 //*  Purpose : Moveable state extracted from TypeUnifier, stored in
-//*            hir::Program so downstream passes (zonking) can resolve
+//*            hir::Program so downstream passes (ZIR lowering) can resolve
 //*            type variables without needing the full unifier.
 //*
 //*

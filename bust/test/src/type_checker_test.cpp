@@ -2107,7 +2107,7 @@ TEST_SUITE("bust.type_checker") {
     const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
         apply_let->m_expression.m_expression);
     REQUIRE(lambda->m_parameters.size() == 2);
-    // Parameter types still carry the post-checker (pre-zonk) type ids.
+    // Parameter types still carry the post-checker (pre-zir lowering) type ids.
     // The substituter can resolve these via the unifier; asking the
     // registry directly gives us the raw node. That should still be a
     // FunctionType once the checker's work has settled — or, if the AST

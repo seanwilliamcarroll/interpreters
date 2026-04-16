@@ -36,14 +36,14 @@ int main(int argc, const char *argv[]) {
       filename = argv[i];
     } else {
       std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-mono] "
-                   "[--dump-zonked] [--dump-llvm-ir] <script.bu>\n";
+                   "[--dump-zir] [--dump-llvm-ir] <script.bu>\n";
       return 1;
     }
   }
 
   if (filename == nullptr) {
     std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-mono] "
-                 "[--dump-zonked] [--dump-llvm-ir] <script.bu>\n";
+                 "[--dump-zir] [--dump-llvm-ir] <script.bu>\n";
     return 1;
   }
 

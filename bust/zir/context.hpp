@@ -1,7 +1,7 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Shared context for the zonk pass.
+//*  Purpose : Shared context for the ZIR lowering pass.
 //*
 //*
 //****************************************************************************

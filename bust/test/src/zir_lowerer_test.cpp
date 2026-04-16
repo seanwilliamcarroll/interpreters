@@ -542,7 +542,7 @@ TEST_SUITE("bust.zir_lowerer") {
     }
   }
 
-  // --- Polymorphic programs (mono -> zonk -> zir) ----------------------------
+  // --- Polymorphic programs (mono -> zir) ----------------------------
 
   TEST_CASE("polymorphic identity used at one type") {
     auto zir = lower_string("fn main() -> i64 {\n"
