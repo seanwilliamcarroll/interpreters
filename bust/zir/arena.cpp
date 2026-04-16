@@ -87,9 +87,43 @@ TypeId TypeArena::convert(const hir::TypeKind &type_kind,
   return intern(new_type);
 }
 
-std::string TypeArena::to_string(TypeId) const { return {}; }
+std::string TypeArena::to_string(TypeId type_id) const {
+  return to_string(get(type_id));
+}
 
-std::string TypeArena::to_string(const Type &) const { return {}; }
+std::string TypeArena::to_string(const Type &type) const {
+  return std::visit(
+      [this](const auto &t) -> std::string {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, UnitType>) {
+          return "()";
+        } else if constexpr (std::is_same_v<T, BoolType>) {
+          return "bool";
+        } else if constexpr (std::is_same_v<T, CharType>) {
+          return "char";
+        } else if constexpr (std::is_same_v<T, I8Type>) {
+          return "i8";
+        } else if constexpr (std::is_same_v<T, I32Type>) {
+          return "i32";
+        } else if constexpr (std::is_same_v<T, I64Type>) {
+          return "i64";
+        } else if constexpr (std::is_same_v<T, NeverType>) {
+          return "!";
+        } else if constexpr (std::is_same_v<T, FunctionType>) {
+          std::string result = "fn(";
+          for (size_t i = 0; i < t.m_parameters.size(); ++i) {
+            if (i > 0) {
+              result += ", ";
+            }
+            result += to_string(t.m_parameters[i]);
+          }
+          result += ") -> ";
+          result += to_string(t.m_return_type);
+          return result;
+        }
+      },
+      type);
+}
 
 //****************************************************************************
 } // namespace bust::zir

@@ -6,7 +6,6 @@
 //*
 //****************************************************************************
 
-#include "zir_lowerer.hpp"
 #include <ast/dump.hpp>
 #include <bust.hpp>
 #include <codegen.hpp>
@@ -25,6 +24,8 @@
 #include <unistd.h>
 #include <utility>
 #include <validate_main.hpp>
+#include <zir/dump.hpp>
+#include <zir_lowerer.hpp>
 
 #include <lexer.hpp>
 
@@ -60,7 +61,7 @@ void Bust::run() {
   auto zir = run_pipeline(std::move(monomorphed), ZirLowerer{});
 
   if (m_options.dump_zir) {
-    // std::cout << "=== ZIR HIR ===\n" << zir::Dumper::dump(zir) << "\n";
+    std::cout << "=== ZIR HIR ===\n" << zir::Dumper::dump(zir) << "\n";
   }
 
   auto ir = CodeGen{}(zir);
