@@ -7,15 +7,19 @@
 //****************************************************************************
 #pragma once
 //****************************************************************************
-#include "exceptions.hpp"
-#include "hir/type_registry.hpp"
-#include "hir/types.hpp"
-#include "types.hpp"
-#include "zir/nodes.hpp"
-#include "zir/types.hpp"
+
+#include <exceptions.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/types.hpp>
+#include <types.hpp>
+#include <zir/nodes.hpp>
+#include <zir/types.hpp>
+
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::zir {

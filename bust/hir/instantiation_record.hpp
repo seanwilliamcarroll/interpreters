@@ -12,6 +12,7 @@
 //****************************************************************************
 
 #include <hir/types.hpp>
+
 #include <unordered_map>
 #include <vector>
 

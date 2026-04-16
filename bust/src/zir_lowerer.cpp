@@ -6,12 +6,22 @@
 //*
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include "zir/context.hpp"
-#include "zir/nodes.hpp"
-#include "zir/top_item_lowerer.hpp"
-#include "zir/type_resolver.hpp"
+#include <exceptions.hpp>
+#include <hir/nodes.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/unifier_state.hpp>
+#include <zir/arena.hpp>
+#include <zir/context.hpp>
+#include <zir/nodes.hpp>
+#include <zir/program.hpp>
+#include <zir/top_item_lowerer.hpp>
+#include <zir/type_resolver.hpp>
 #include <zir_lowerer.hpp>
+
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 //****************************************************************************
 namespace bust {

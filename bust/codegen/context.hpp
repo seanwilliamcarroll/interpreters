@@ -8,7 +8,6 @@
 #pragma once
 //****************************************************************************
 
-#include <cassert>
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
 #include <codegen/module.hpp>
@@ -16,6 +15,8 @@
 #include <codegen/types.hpp>
 #include <zir/arena.hpp>
 #include <zir/types.hpp>
+
+#include <cassert>
 
 //****************************************************************************
 namespace bust::codegen {

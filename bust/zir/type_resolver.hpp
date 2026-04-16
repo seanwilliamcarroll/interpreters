@@ -9,10 +9,11 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
+#include <exceptions.hpp>
 #include <hir/type_registry.hpp>
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
+
 #include <variant>
 
 //****************************************************************************

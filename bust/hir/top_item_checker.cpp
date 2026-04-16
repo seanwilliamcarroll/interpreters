@@ -6,26 +6,28 @@
 //*
 //****************************************************************************
 
+#include <ast/nodes.hpp>
 #include <exceptions.hpp>
 #include <hir/block_checker.hpp>
 #include <hir/context.hpp>
 #include <hir/environment.hpp>
+#include <hir/instantiation_record.hpp>
 #include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
 #include <hir/type_converter.hpp>
+#include <hir/type_registry.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
-#include <memory>
-#include <optional>
 #include <source_location.hpp>
+
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <ast/nodes.hpp>
 
 //****************************************************************************
 namespace bust::hir {

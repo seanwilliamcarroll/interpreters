@@ -6,31 +6,35 @@
 //*
 //****************************************************************************
 
-#include <algorithm>
 #include <codegen/basic_block.hpp>
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
+#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
+#include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/statement_generator.hpp>
 #include <codegen/symbol_table.hpp>
+#include <codegen/types.hpp>
 #include <exceptions.hpp>
-#include <iterator>
 #include <operators.hpp>
-#include <optional>
-#include <stdint.h>
-#include <string>
-#include <types.hpp>
-#include <utility>
-#include <variant>
-#include <vector>
+#include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
-#include <codegen/handle.hpp>
-#include <codegen/types.hpp>
+#include <stdint.h>
+
+#include <algorithm>
+#include <iterator>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

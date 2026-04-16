@@ -16,10 +16,12 @@
 #include <lexer.hpp>
 #include <tokens.hpp>
 
-#include <doctest/doctest.h>
 #include <rapidcheck.h>
+
 #include <sstream>
 #include <vector>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {

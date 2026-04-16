@@ -16,8 +16,9 @@
 #include <parser.hpp>
 #include <tokens.hpp>
 
-#include <doctest/doctest.h>
 #include <sstream>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {

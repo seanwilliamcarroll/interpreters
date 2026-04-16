@@ -7,11 +7,16 @@
 //*
 //****************************************************************************
 
-#include "mono/top_item_monomorpher.hpp"
-#include "hir/nodes.hpp"
-#include "mono/expression_substituter.hpp"
-#include "mono/let_binding_monomorpher.hpp"
+#include <hir/nodes.hpp>
+#include <hir/types.hpp>
+#include <mono/expression_substituter.hpp>
+#include <mono/let_binding_monomorpher.hpp>
+#include <mono/top_item_monomorpher.hpp>
+#include <source_location.hpp>
+
 #include <iterator>
+#include <utility>
+#include <variant>
 
 //****************************************************************************
 namespace bust::mono {

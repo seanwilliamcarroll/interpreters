@@ -147,20 +147,20 @@ ForEachMacros:
   - BOOST_FOREACH
 IfMacros:
   - KJ_IF_MAYBE
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 IncludeCategories:
-  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
-    Priority:        2
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
-    Priority:        3
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '.*'
-    Priority:        1
-    SortPriority:    0
-    CaseSensitive:   false
+  # 1. Your project headers (ending in .hpp)
+  - Regex: '^<.*\.hpp>'
+    Priority: 1
+  # 2. C System headers (ending in .h)
+  - Regex: '^<[^/]*\.h>'
+    Priority: 2
+  # 3. C++ Standard Library (no extension, e.g., <vector>)
+  - Regex: '^<[^.]*>'
+    Priority: 3
+  # 4. Catch-all for anything else
+  - Regex: '^<.*'
+    Priority: 4
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
 IndentAccessModifiers: false

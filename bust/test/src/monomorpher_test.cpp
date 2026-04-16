@@ -10,21 +10,22 @@
 //*
 //****************************************************************************
 
-#include "pipeline.hpp"
-#include "validate_main.hpp"
 #include <hir/dump.hpp>
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
 #include <lexer.hpp>
 #include <monomorpher.hpp>
 #include <parser.hpp>
+#include <pipeline.hpp>
 #include <type_checker.hpp>
+#include <validate_main.hpp>
 
-#include <doctest/doctest.h>
 #include <set>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {

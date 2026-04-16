@@ -21,9 +21,10 @@
 #include <type_checker.hpp>
 
 #include <algorithm>
-#include <doctest/doctest.h>
 #include <ranges>
 #include <sstream>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {

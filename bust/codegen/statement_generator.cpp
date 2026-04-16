@@ -7,12 +7,12 @@
 //****************************************************************************
 
 #include <codegen/expression_generator.hpp>
+#include <codegen/handle.hpp>
 #include <codegen/let_binding_generator.hpp>
 #include <codegen/statement_generator.hpp>
-
-#include <codegen/handle.hpp>
-#include <variant>
 #include <zir/nodes.hpp>
+
+#include <variant>
 
 //****************************************************************************
 namespace bust::codegen {

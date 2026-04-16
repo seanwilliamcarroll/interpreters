@@ -8,9 +8,11 @@
 
 #include <ast/nodes.hpp>
 #include <exceptions.hpp>
+#include <hir/context.hpp>
 #include <hir/environment.hpp>
 #include <hir/expression_checker.hpp>
 #include <hir/free_type_variable_collector.hpp>
+#include <hir/instantiation_record.hpp>
 #include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/type_converter.hpp>
@@ -18,11 +20,11 @@
 #include <hir/type_variable_collapser.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
+
 #include <stdexcept>
 #include <string>
 #include <utility>
-
-#include <hir/context.hpp>
+#include <vector>
 
 //****************************************************************************
 namespace bust::hir {

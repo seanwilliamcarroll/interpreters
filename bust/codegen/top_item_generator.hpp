@@ -8,8 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include "codegen/function_declaration.hpp"
 #include <codegen/context.hpp>
+#include <codegen/function_declaration.hpp>
 #include <zir/nodes.hpp>
 
 //****************************************************************************

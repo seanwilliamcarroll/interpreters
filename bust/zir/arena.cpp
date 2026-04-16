@@ -6,8 +6,13 @@
 //*
 //****************************************************************************
 
-#include "exceptions.hpp"
+#include <exceptions.hpp>
 #include <zir/arena.hpp>
+
+#include <stddef.h>
+
+#include <string_view>
+#include <type_traits>
 
 //****************************************************************************
 namespace bust::zir {

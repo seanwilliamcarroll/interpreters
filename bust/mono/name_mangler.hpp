@@ -10,11 +10,12 @@
 #pragma once
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include "hir/instantiation_record.hpp"
-#include "hir/type_registry.hpp"
-#include "hir/types.hpp"
-#include "types.hpp"
+#include <exceptions.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/types.hpp>
+#include <types.hpp>
+
 #include <sstream>
 #include <string>
 #include <variant>

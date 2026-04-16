@@ -9,10 +9,11 @@
 #include <ast/nodes.hpp>
 #include <ast/types.hpp>
 #include <exceptions.hpp>
-#include <string>
-#include <string_view>
 #include <types.hpp>
 #include <validate_main.hpp>
+
+#include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 

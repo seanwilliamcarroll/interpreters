@@ -7,15 +7,14 @@
 //****************************************************************************
 
 #include <codegen.hpp>
-#include <sstream>
-#include <string>
-#include <variant>
-#include <vector>
-
 #include <codegen/context.hpp>
 #include <codegen/formatter.hpp>
 #include <codegen/top_item_generator.hpp>
-#include <zir/nodes.hpp>
+#include <zir/program.hpp>
+
+#include <sstream>
+#include <string>
+#include <vector>
 
 //****************************************************************************
 namespace bust {

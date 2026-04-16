@@ -18,15 +18,16 @@
 #include <pipeline.hpp>
 #include <type_checker.hpp>
 #include <validate_main.hpp>
-#include <variant>
 #include <zir/nodes.hpp>
 #include <zir/program.hpp>
 #include <zir/types.hpp>
 #include <zir_lowerer.hpp>
 
-#include <doctest/doctest.h>
 #include <sstream>
 #include <string>
+#include <variant>
+
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {

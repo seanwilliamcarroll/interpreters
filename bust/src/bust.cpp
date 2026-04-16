@@ -9,25 +9,27 @@
 #include <ast/dump.hpp>
 #include <bust.hpp>
 #include <codegen.hpp>
-#include <cstdlib>
-#include <fstream>
 #include <hir/dump.hpp>
-#include <iostream>
-#include <memory>
+#include <lexer.hpp>
 #include <monomorpher.hpp>
 #include <parser.hpp>
 #include <pipeline.hpp>
-#include <stdexcept>
-#include <string>
-#include <sys/wait.h>
 #include <type_checker.hpp>
-#include <unistd.h>
-#include <utility>
 #include <validate_main.hpp>
 #include <zir/dump.hpp>
 #include <zir_lowerer.hpp>
 
-#include <lexer.hpp>
+#include <unistd.h>
+
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <sys/wait.h>
 
 //****************************************************************************
 

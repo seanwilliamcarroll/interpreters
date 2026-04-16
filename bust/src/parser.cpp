@@ -7,23 +7,23 @@
 //****************************************************************************
 
 #include <ast/nodes.hpp>
+#include <ast/types.hpp>
+#include <lexer_interface.hpp>
+#include <operators.hpp>
+#include <parser.hpp>
+#include <source_location.hpp>
+#include <token.hpp>
+#include <tokens.hpp>
+#include <types.hpp>
+
 #include <memory>
 #include <optional>
-#include <parser.hpp>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <ast/types.hpp>
-#include <lexer_interface.hpp>
-#include <operators.hpp>
-#include <source_location.hpp>
-#include <token.hpp>
-#include <tokens.hpp>
-#include <types.hpp>
 
 //****************************************************************************
 namespace bust {

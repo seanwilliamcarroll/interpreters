@@ -6,18 +6,19 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
+#include <lexer.hpp>
+#include <source_location.hpp>
+#include <token.hpp>
+#include <tokens.hpp>
+
 #include <array>
 #include <cctype>
-#include <exceptions.hpp>
 #include <functional>
-#include <lexer.hpp>
 #include <memory>
-#include <source_location.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <token.hpp>
-#include <tokens.hpp>
 #include <unordered_map>
 #include <utility>
 

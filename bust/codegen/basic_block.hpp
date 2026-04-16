@@ -8,8 +8,9 @@
 #pragma once
 //****************************************************************************
 
-#include <cassert>
 #include <codegen/instructions.hpp>
+
+#include <cassert>
 #include <optional>
 #include <utility>
 #include <vector>

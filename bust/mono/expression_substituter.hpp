@@ -9,8 +9,10 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/nodes.hpp"
-#include "mono/context.hpp"
+#include <hir/nodes.hpp>
+#include <mono/context.hpp>
+
+#include <memory>
 
 //****************************************************************************
 namespace bust::mono {

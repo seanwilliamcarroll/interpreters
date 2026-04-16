@@ -16,15 +16,17 @@
 #include <type_checker.hpp>
 #include <zir_lowerer.hpp>
 
+#include <unistd.h>
+
 #include <array>
 #include <cstdio>
 #include <cstdlib>
-#include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+#include <doctest/doctest.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 //****************************************************************************
 namespace bust {

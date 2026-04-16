@@ -6,9 +6,10 @@
 //*
 //****************************************************************************
 
-#include "zir/expression_lowerer.hpp"
-#include "zir/nodes.hpp"
+#include <hir/nodes.hpp>
+#include <zir/expression_lowerer.hpp>
 #include <zir/let_binding_lowerer.hpp>
+#include <zir/nodes.hpp>
 
 //****************************************************************************
 namespace bust::zir {

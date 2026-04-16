@@ -8,9 +8,10 @@
 #pragma once
 //****************************************************************************
 
-#include "hash_combine.hpp"
-#include <functional>
+#include <hash_combine.hpp>
 #include <types.hpp>
+
+#include <functional>
 #include <variant>
 #include <vector>
 

@@ -8,15 +8,15 @@
 #pragma once
 //****************************************************************************
 
+#include <lexer_interface.hpp>
+#include <token.hpp>
+
 #include <array>
 #include <cstdint>
 #include <iosfwd>
 #include <string>
 #include <string_view>
 #include <utility>
-
-#include <lexer_interface.hpp>
-#include <token.hpp>
 
 //****************************************************************************
 namespace bust {

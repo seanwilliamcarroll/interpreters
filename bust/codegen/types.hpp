@@ -8,13 +8,14 @@
 #pragma once
 //****************************************************************************
 
+#include <zir/types.hpp>
+
 #include <array>
 #include <cassert>
 #include <cstdint>
 #include <ostream>
 #include <utility>
 #include <variant>
-#include <zir/types.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

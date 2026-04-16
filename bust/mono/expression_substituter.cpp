@@ -6,15 +6,24 @@
 //*
 //****************************************************************************
 
-#include "mono/expression_substituter.hpp"
-#include "hir/nodes.hpp"
-#include "hir/type_variable_substituter.hpp"
-#include "mono/let_binding_monomorpher.hpp"
-#include "mono/specialization.hpp"
+#include <hir/instantiation_record.hpp>
+#include <hir/nodes.hpp>
+#include <hir/types.hpp>
+#include <mono/expression_substituter.hpp>
+#include <mono/let_binding_monomorpher.hpp>
+#include <mono/specialization.hpp>
+#include <nodes.hpp>
+#include <source_location.hpp>
+#include <types.hpp>
+
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::mono {

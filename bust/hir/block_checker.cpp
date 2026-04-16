@@ -6,20 +6,21 @@
 //*
 //****************************************************************************
 
+#include <ast/nodes.hpp>
 #include <hir/block_checker.hpp>
+#include <hir/context.hpp>
 #include <hir/environment.hpp>
 #include <hir/expression_checker.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/nodes.hpp>
 #include <hir/statement_checker.hpp>
-#include <optional>
+#include <hir/type_registry.hpp>
+#include <hir/types.hpp>
 #include <source_location.hpp>
-#include <types.hpp>
+
+#include <optional>
 #include <utility>
 #include <variant>
-
-#include <ast/nodes.hpp>
-#include <hir/context.hpp>
-#include <hir/nodes.hpp>
-#include <hir/types.hpp>
 
 //****************************************************************************
 namespace bust::hir {

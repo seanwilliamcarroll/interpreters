@@ -8,15 +8,15 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
 #include <exceptions.hpp>
-#include <ranges>
 #include <scope_guard.hpp>
+
+#include <ranges>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <codegen/handle.hpp>
-#include <codegen/instructions.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

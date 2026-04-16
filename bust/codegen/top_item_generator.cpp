@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <codegen/basic_block.hpp>
+#include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
@@ -17,15 +18,19 @@
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/top_item_generator.hpp>
-#include <codegen/types.hpp>
+#include <zir/arena.hpp>
+#include <zir/nodes.hpp>
+#include <zir/types.hpp>
+
+#include <algorithm>
+#include <iterator>
 #include <memory>
 #include <ranges>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <variant>
-#include <zir/types.hpp>
-
-#include <codegen/context.hpp>
-#include <zir/nodes.hpp>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

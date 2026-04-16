@@ -9,10 +9,10 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/nodes.hpp"
-#include "mono/context.hpp"
-#include "mono/expression_substituter.hpp"
-#include "mono/let_binding_substituter.hpp"
+#include <hir/nodes.hpp>
+#include <mono/context.hpp>
+#include <mono/expression_substituter.hpp>
+#include <mono/let_binding_substituter.hpp>
 
 //****************************************************************************
 namespace bust::mono {

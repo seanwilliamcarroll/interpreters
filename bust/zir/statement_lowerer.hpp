@@ -8,8 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include "zir/context.hpp"
 #include <hir/nodes.hpp>
+#include <zir/context.hpp>
 #include <zir/nodes.hpp>
 
 //****************************************************************************

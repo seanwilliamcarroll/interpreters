@@ -9,11 +9,12 @@
 //****************************************************************************
 
 #include <operators.hpp>
-#include <sstream>
-#include <string>
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 #include <zir/program.hpp>
+
+#include <sstream>
+#include <string>
 
 //****************************************************************************
 namespace bust::zir {

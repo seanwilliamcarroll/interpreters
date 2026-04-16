@@ -8,9 +8,10 @@
 #pragma once
 //****************************************************************************
 
-#include "hir/type_unifier.hpp"
 #include <hir/type_registry.hpp>
+#include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
+
 #include <unordered_map>
 #include <variant>
 #include <vector>

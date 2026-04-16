@@ -8,11 +8,11 @@
 #pragma once
 //****************************************************************************
 
-#include <memory>
-
 #include <codegen/context.hpp>
+#include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
 #include <zir/nodes.hpp>
+#include <zir/types.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

@@ -6,16 +6,19 @@
 //*
 //****************************************************************************
 
-#include "mono/let_binding_monomorpher.hpp"
-#include "exceptions.hpp"
-#include "hir/instantiation_record.hpp"
-#include "hir/nodes.hpp"
-#include "hir/type_variable_substituter.hpp"
-#include "mono/context.hpp"
-#include "mono/expression_substituter.hpp"
-#include "mono/let_binding_substituter.hpp"
-#include "mono/name_mangler.hpp"
-#include "mono/specialization.hpp"
+#include <hir/instantiation_record.hpp>
+#include <hir/nodes.hpp>
+#include <hir/type_variable_substituter.hpp>
+#include <hir/types.hpp>
+#include <mono/context.hpp>
+#include <mono/let_binding_monomorpher.hpp>
+#include <mono/let_binding_substituter.hpp>
+#include <mono/name_mangler.hpp>
+#include <mono/specialization.hpp>
+
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 //****************************************************************************
 namespace bust::mono {

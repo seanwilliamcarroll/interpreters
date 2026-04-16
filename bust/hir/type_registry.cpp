@@ -6,10 +6,14 @@
 //*
 //****************************************************************************
 
-#include "hir/types.hpp"
 #include <hir/type_registry.hpp>
-#include <string>
+#include <hir/types.hpp>
 #include <types.hpp>
+
+#include <stddef.h>
+
+#include <string>
+#include <type_traits>
 
 //****************************************************************************
 namespace bust::hir {

@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <bust.hpp>
+
 #include <cstring>
 #include <exception>
 #include <fstream>

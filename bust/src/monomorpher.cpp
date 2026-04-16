@@ -6,13 +6,22 @@
 //*
 //****************************************************************************
 
-#include "exceptions.hpp"
-#include "hir/nodes.hpp"
-#include "hir/type_unifier.hpp"
-#include "mono/context.hpp"
-#include "mono/top_item_monomorpher.hpp"
-#include <iterator>
+#include <exceptions.hpp>
+#include <hir/instantiation_record.hpp>
+#include <hir/nodes.hpp>
+#include <hir/type_registry.hpp>
+#include <hir/type_unifier.hpp>
+#include <hir/unifier_state.hpp>
+#include <mono/context.hpp>
+#include <mono/top_item_monomorpher.hpp>
 #include <monomorpher.hpp>
+#include <source_location.hpp>
+
+#include <iterator>
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 //****************************************************************************
 namespace bust {
