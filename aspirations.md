@@ -40,6 +40,18 @@ on each other are marked with arrows (→ means "enables").
 - [x] Cast expressions in codegen
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
 
+## Control Flow / Return Analysis
+
+- [ ] Smarter reasoning about `return` expressions in blocks
+  — Currently, `return expr;` with a trailing semicolon makes it a statement,
+  so the block's final expression is absent and the block type is unit. This
+  means `fn foo() -> i64 { return 42; }` is a type error because the block
+  returns `()`, not `i64`. Rust handles this by special-casing return/diverging
+  statements. We should either: (a) treat `return` as a diverging expression
+  (type `!`) so the block type is still valid, or (b) allow semicolons after
+  the final expression in a block without forcing the block type to unit.
+  Either approach would make `return x + y;` legal in tail position.
+
 ## Type Unifier
 
 - [ ] Make `TypeUnifier::find` const via `mutable` on the union-find internals
