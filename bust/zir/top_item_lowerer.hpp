@@ -55,7 +55,7 @@ struct TopItemLowerer {
   TopItem lower(const hir::TopItem &);
 
   TopItem operator()(const hir::FunctionDef &);
-  TopItem operator()(const hir::ExternFunctionDeclaration &);
+  TopItem operator()(const hir::ExternFunctionDeclaration &) const;
   TopItem operator()(const hir::LetBinding &);
 
   Context &m_ctx;

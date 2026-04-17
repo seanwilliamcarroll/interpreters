@@ -53,7 +53,7 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
 }
 
 TopItem TopItemLowerer::TopItemLowerer::operator()(
-    const hir::ExternFunctionDeclaration &extern_function_declaration) {
+    const hir::ExternFunctionDeclaration &extern_function_declaration) const {
   auto binding_id = m_ctx.get_global_binding(
       extern_function_declaration.m_signature.m_function_id);
 
