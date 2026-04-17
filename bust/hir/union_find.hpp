@@ -66,6 +66,6 @@ private:
         static_cast<const UnionFind *>(this)->get_rank(index));
   }
 
-  std::vector<size_t> parent{};
-  std::vector<size_t> rank{};
+  std::vector<size_t> parent;
+  std::vector<size_t> rank;
 };

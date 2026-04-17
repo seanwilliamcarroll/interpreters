@@ -523,12 +523,12 @@ TEST_SUITE("bust.zir_lowerer") {
     // Final expression is retrievable
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto final_id = func.m_body.m_final_expression.value();
-    CHECK_NOTHROW(zir.m_arena.get(final_id));
+    CHECK_NOTHROW({ auto result = zir.m_arena.get(final_id); });
 
     // Let binding expression is retrievable
     auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
-    CHECK_NOTHROW(zir.m_arena.get(let.m_expression));
-    CHECK_NOTHROW(zir.m_arena.get(let.m_identifier));
+    CHECK_NOTHROW({ auto result = zir.m_arena.get(let.m_expression); });
+    CHECK_NOTHROW({ auto result = zir.m_arena.get(let.m_identifier); });
   }
 
   TEST_CASE("binding IDs are retrievable from arena") {

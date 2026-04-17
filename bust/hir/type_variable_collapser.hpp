@@ -44,7 +44,9 @@ struct TypeVariableCollapser {
     return m_ctx.m_type_registry.intern(function_type);
   }
 
-  TypeId operator()(const NeverType &) { return m_ctx.m_type_registry.m_never; }
+  TypeId operator()(const NeverType & /*unused*/) {
+    return m_ctx.m_type_registry.m_never;
+  }
 
   hir::Context &m_ctx;
 };

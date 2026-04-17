@@ -167,38 +167,44 @@ template <> struct hash<bust::zir::ExpressionStatement> {
 };
 
 template <> struct hash<bust::zir::Unit> {
-  size_t operator()(const bust::zir::Unit &) const noexcept {
-    return hash<size_t>{}(0);
+  static constexpr size_t HASH_VALUE = 0;
+  size_t operator()(const bust::zir::Unit & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::Bool> {
-  size_t operator()(const bust::zir::Bool &) const noexcept {
-    return hash<size_t>{}(1);
+  static constexpr size_t HASH_VALUE = 1;
+  size_t operator()(const bust::zir::Bool & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::Char> {
-  size_t operator()(const bust::zir::Char &) const noexcept {
-    return hash<size_t>{}(2);
+  static constexpr size_t HASH_VALUE = 2;
+  size_t operator()(const bust::zir::Char & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I8> {
-  size_t operator()(const bust::zir::I8 &) const noexcept {
-    return hash<size_t>{}(3);
+  static constexpr size_t HASH_VALUE = 3;
+  size_t operator()(const bust::zir::I8 & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I32> {
-  size_t operator()(const bust::zir::I32 &) const noexcept {
-    return hash<size_t>{}(4);
+  static constexpr size_t HASH_VALUE = 4;
+  size_t operator()(const bust::zir::I32 & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I64> {
-  size_t operator()(const bust::zir::I64 &) const noexcept {
-    return hash<size_t>{}(5);
+  static constexpr size_t HASH_VALUE = 5;
+  size_t operator()(const bust::zir::I64 & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 

@@ -31,9 +31,11 @@ struct Function {
 
   FunctionDeclaration &signature() { return m_signature; }
 
-  const FunctionDeclaration &signature() const { return m_signature; }
+  [[nodiscard]] const FunctionDeclaration &signature() const {
+    return m_signature;
+  }
 
-  const auto &basic_blocks() const { return m_basic_blocks; }
+  [[nodiscard]] const auto &basic_blocks() const { return m_basic_blocks; }
 
   BasicBlock &new_basic_block(const std::string &label) {
     m_basic_blocks.emplace_back(std::make_unique<BasicBlock>(

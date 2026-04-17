@@ -100,7 +100,7 @@ template <> struct hash<bust::hir::FunctionType> {
 };
 
 template <> struct hash<bust::hir::NeverType> {
-  size_t operator()(const bust::hir::NeverType &) const noexcept {
+  size_t operator()(const bust::hir::NeverType & /*unused*/) const noexcept {
     return hash<size_t>{}(0);
   }
 };

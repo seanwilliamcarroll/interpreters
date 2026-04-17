@@ -33,6 +33,7 @@ struct PostTypeCheckedData {
 };
 
 struct Context {
+  explicit Context() : m_type_unifier(m_type_registry) {}
 
   TypeId create_fresh_type_vars(BindingId id, const TypeScheme &type_scheme) {
     TypeSubstitution new_mapping;
@@ -47,31 +48,33 @@ struct Context {
       m_instantiation_records[id].push_back(InstantiationRecord{new_mapping});
     }
 
-    return TypeVariableSubstituter{m_type_registry, m_type_unifier, new_mapping}
+    return TypeVariableSubstituter{.m_type_registry = m_type_registry,
+                                   .m_type_unifier = m_type_unifier,
+                                   .m_new_mapping = new_mapping}
         .substitute(type_scheme.m_type);
   }
 
-  const FunctionType &as_function(TypeId type_id) const {
+  [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return m_type_registry.as_function(type_id);
   }
 
-  const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
+  [[nodiscard]] const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
     return m_type_registry.as_primitive(type_id);
   }
 
-  const TypeVariable &as_type_variable(TypeId type_id) const {
+  [[nodiscard]] const TypeVariable &as_type_variable(TypeId type_id) const {
     return m_type_registry.as_type_variable(type_id);
   }
 
-  bool is_function(TypeId type_id) const {
+  [[nodiscard]] bool is_function(TypeId type_id) const {
     return m_type_registry.is_function(type_id);
   }
 
-  bool is_primitive(TypeId type_id) const {
+  [[nodiscard]] bool is_primitive(TypeId type_id) const {
     return m_type_registry.is_primitive(type_id);
   }
 
-  bool is_type_variable(TypeId type_id) const {
+  [[nodiscard]] bool is_type_variable(TypeId type_id) const {
     return m_type_registry.is_type_variable(type_id);
   }
 
@@ -128,11 +131,11 @@ struct Context {
 
   BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
 
-  Environment m_env{};
-  TypeRegistry m_type_registry{};
-  std::vector<TypeId> m_return_type_stack{};
-  TypeUnifier m_type_unifier{m_type_registry};
-  BindingIdInstantiations m_instantiation_records{};
+  Environment m_env;
+  TypeRegistry m_type_registry;
+  std::vector<TypeId> m_return_type_stack;
+  TypeUnifier m_type_unifier;
+  BindingIdInstantiations m_instantiation_records;
   InnerTypeBindingId m_next_let_binding_id = 0;
 };
 

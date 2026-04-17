@@ -16,8 +16,7 @@
 #include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <iosfwd>
 #include <ostream>
 #include <string>

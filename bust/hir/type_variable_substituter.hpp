@@ -59,12 +59,14 @@ struct TypeVariableSubstituter {
       parameters.emplace_back(substitute(m_type_registry.get(parameter)));
     }
 
-    return m_type_registry.intern(
-        FunctionType{std::move(parameters),
-                     substitute(m_type_registry.get(type.m_return_type))});
+    return m_type_registry.intern(FunctionType{
+        .m_parameters = std::move(parameters),
+        .m_return_type = substitute(m_type_registry.get(type.m_return_type))});
   }
 
-  TypeId operator()(const NeverType &) { return m_type_registry.m_never; }
+  TypeId operator()(const NeverType & /*unused*/) {
+    return m_type_registry.m_never;
+  }
 
   TypeRegistry &m_type_registry;
   TypeUnifier &m_type_unifier;

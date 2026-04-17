@@ -173,7 +173,7 @@ private:
     std::visit([this](const auto &v) { dump_expr_kind(v); }, expr.m_expr_kind);
   }
 
-  void dump_expr_kind(const Unit &) { m_out << "Unit\n"; }
+  void dump_expr_kind(const Unit & /*unused*/) { m_out << "Unit\n"; }
 
   void dump_expr_kind(const Bool &v) {
     m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";

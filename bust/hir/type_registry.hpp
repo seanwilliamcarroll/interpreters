@@ -32,7 +32,7 @@ struct TypeRegistry {
         m_bool(intern(PrimitiveTypeValue{PrimitiveType::BOOL})),
         m_never(intern(NeverType{})) {}
 
-  TypeId intern(const TypeKind &kind) const {
+  [[nodiscard]] TypeId intern(const TypeKind &kind) const {
     if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {
       return iter->second;
     }
@@ -51,7 +51,7 @@ struct TypeRegistry {
     return next_type_id;
   }
 
-  const TypeKind &get(TypeId id) const {
+  [[nodiscard]] const TypeKind &get(TypeId id) const {
     if (id.m_id >= m_types.size()) {
       throw core::InternalCompilerError(
           "TypeRegistry::get() out of bounds: id " + std::to_string(id.m_id) +
@@ -60,8 +60,8 @@ struct TypeRegistry {
     return m_types[id.m_id];
   }
 
-  std::string to_string(const TypeKind &) const;
-  std::string to_string(TypeId) const;
+  [[nodiscard]] std::string to_string(const TypeKind &) const;
+  [[nodiscard]] std::string to_string(TypeId) const;
 
   template <typename VariantType>
   const VariantType &as(TypeId type_id, const char *function) const {
@@ -74,36 +74,40 @@ struct TypeRegistry {
     return std::get<VariantType>(type_kind);
   }
 
-  const FunctionType &as_function(TypeId type_id) const {
+  [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
   }
 
-  const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
+  [[nodiscard]] const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
     return as<PrimitiveTypeValue>(type_id, __PRETTY_FUNCTION__);
   }
 
-  const TypeVariable &as_type_variable(TypeId type_id) const {
+  [[nodiscard]] const TypeVariable &as_type_variable(TypeId type_id) const {
     return as<TypeVariable>(type_id, __PRETTY_FUNCTION__);
   }
 
-  template <typename VariantType> bool is(TypeId type_id) const {
+  template <typename VariantType>
+  [[nodiscard]] [[nodiscard]] [[nodiscard]] [[nodiscard]] bool
+  is(TypeId type_id) const {
     const auto &type_kind = get(type_id);
     return std::holds_alternative<VariantType>(type_kind);
   }
 
-  bool is_function(TypeId type_id) const { return is<FunctionType>(type_id); }
+  [[nodiscard]] bool is_function(TypeId type_id) const {
+    return is<FunctionType>(type_id);
+  }
 
-  bool is_primitive(TypeId type_id) const {
+  [[nodiscard]] bool is_primitive(TypeId type_id) const {
     return is<PrimitiveTypeValue>(type_id);
   }
 
-  bool is_type_variable(TypeId type_id) const {
+  [[nodiscard]] bool is_type_variable(TypeId type_id) const {
     return is<TypeVariable>(type_id);
   }
 
 private:
-  std::vector<TypeKind> m_types{};
-  std::unordered_map<TypeKind, TypeId> m_mapping{};
+  std::vector<TypeKind> m_types;
+  std::unordered_map<TypeKind, TypeId> m_mapping;
 
 public:
   const TypeId m_unit;

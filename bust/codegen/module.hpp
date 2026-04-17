@@ -27,9 +27,10 @@ struct Module {
     return *m_functions.back();
   }
 
-  const std::vector<Global> &globals() const { return m_globals; }
+  [[nodiscard]] const std::vector<Global> &globals() const { return m_globals; }
 
-  const std::vector<std::unique_ptr<Function>> &functions() const {
+  [[nodiscard]] const std::vector<std::unique_ptr<Function>> &
+  functions() const {
     return m_functions;
   }
 
@@ -44,7 +45,7 @@ struct Module {
     m_extern_functions.emplace_back(std::move(func_declaration));
   }
 
-  const std::vector<std::unique_ptr<FunctionDeclaration>> &
+  [[nodiscard]] const std::vector<std::unique_ptr<FunctionDeclaration>> &
   extern_functions() const {
     return m_extern_functions;
   }

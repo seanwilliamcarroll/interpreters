@@ -44,8 +44,8 @@ struct TypeConverter {
       param_types.push_back(convert(param));
     }
     auto return_type = convert(type->m_return_type);
-    return m_ctx.m_type_registry.intern(
-        FunctionType{std::move(param_types), return_type});
+    return m_ctx.m_type_registry.intern(FunctionType{
+        .m_parameters = std::move(param_types), .m_return_type = return_type});
   }
 
   TypeId get_type(const ast::TypeIdentifier &identifier) {

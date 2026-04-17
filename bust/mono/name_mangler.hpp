@@ -26,6 +26,9 @@ namespace bust::mono {
 
 struct Mangler {
 
+  explicit Mangler(hir::TypeRegistry &type_registry)
+      : m_type_registry(type_registry) {}
+
   // Entry point
   std::string mangle(const std::string &original_identifier,
                      const hir::BindingId &id, const hir::TypeId &type_id) {
@@ -64,7 +67,7 @@ struct Mangler {
   }
 
   const hir::TypeRegistry &m_type_registry;
-  std::stringstream m_out{};
+  std::stringstream m_out;
 };
 
 //****************************************************************************

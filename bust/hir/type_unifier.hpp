@@ -27,6 +27,9 @@ namespace bust::hir {
 
 struct TypeUnifier {
 
+  explicit TypeUnifier(TypeRegistry &type_registry)
+      : m_type_registry(type_registry) {}
+
   // Adopt an existing UnifierState (e.g. carried forward on hir::Program
   // between passes) by moving its contents into this unifier's own fields.
   // The source state is left empty. Intended for the "aggregate-init an
@@ -37,7 +40,8 @@ struct TypeUnifier {
     m_resolved_type_class = std::move(state.m_resolved_type_class);
   }
 
-  std::string to_string(const auto &type) const {
+  [[nodiscard]] [[nodiscard]] [[nodiscard]] [[nodiscard]] std::string
+  to_string(const auto &type) const {
     return m_type_registry.to_string(type);
   }
 
@@ -349,14 +353,15 @@ struct TypeUnifier {
   }
 
   UnifierState extract_state() {
-    return {std::move(m_union_find), std::move(m_resolved_type_id),
-            std::move(m_resolved_type_class)};
+    return {.m_union_find = std::move(m_union_find),
+            .m_resolved_type_id = std::move(m_resolved_type_id),
+            .m_resolved_type_class = std::move(m_resolved_type_class)};
   }
 
   TypeRegistry &m_type_registry;
-  UnionFind m_union_find{};
-  std::unordered_map<size_t, TypeId> m_resolved_type_id{};
-  std::unordered_map<size_t, PrimitiveTypeClass> m_resolved_type_class{};
+  UnionFind m_union_find;
+  std::unordered_map<size_t, TypeId> m_resolved_type_id;
+  std::unordered_map<size_t, PrimitiveTypeClass> m_resolved_type_class;
 };
 
 //****************************************************************************

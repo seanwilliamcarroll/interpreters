@@ -30,19 +30,19 @@ struct Context {
   Function &function() { return m_module.current_function(); }
   BasicBlock &block() { return function().current_basic_block(); }
 
-  const zir::Arena &arena() const { return m_arena; }
+  [[nodiscard]] const zir::Arena &arena() const { return m_arena; }
 
   std::string to_string(const auto &type) const {
     return m_arena.to_string(type);
   }
 
-  LLVMType to_type(zir::TypeId type_id) const {
+  [[nodiscard]] LLVMType to_type(zir::TypeId type_id) const {
     return to_llvm_type(arena().get(type_id));
   }
 
 private:
   Module m_module{};
-  SymbolTable m_symbol_table{};
+  SymbolTable m_symbol_table;
   const zir::Arena &m_arena;
 };
 

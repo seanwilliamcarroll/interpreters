@@ -8,10 +8,10 @@
 #pragma once
 //****************************************************************************
 
+#include <source_location.hpp>
+
 #include <ostream>
 #include <string>
-
-#include <source_location.hpp>
 
 //****************************************************************************
 namespace core {
@@ -28,7 +28,7 @@ public:
     return out;
   }
 
-  const SourceLocation &get_location() const { return m_loc; }
+  [[nodiscard]] const SourceLocation &get_location() const { return m_loc; }
 
   TT get_token_type() const { return m_type; }
 

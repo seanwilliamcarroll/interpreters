@@ -21,6 +21,8 @@
 namespace bust::codegen {
 //****************************************************************************
 
+constexpr size_t BITS_PER_BYTE = 8;
+
 enum class LLVMType : uint8_t {
   I1,
   I8,
@@ -41,12 +43,12 @@ inline size_t width_bits(LLVMType type) {
   case LLVMType::I1:
     return 1;
   case LLVMType::I8:
-    return 8;
+    return BITS_PER_BYTE * sizeof(int8_t);
   case LLVMType::I32:
-    return 32;
+    return BITS_PER_BYTE * sizeof(int32_t);
   case LLVMType::I64:
   case LLVMType::PTR:
-    return 64;
+    return BITS_PER_BYTE * sizeof(int64_t);
   case LLVMType::VOID:
     std::unreachable();
   }

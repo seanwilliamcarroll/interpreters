@@ -33,9 +33,9 @@ struct TypeArena {
         m_never(intern(NeverType{})) {}
 
   TypeId intern(const Type &);
-  TypeId intern(const Type &) const;
+  [[nodiscard]] TypeId intern(const Type &) const;
 
-  const Type &get(TypeId) const;
+  [[nodiscard]] const Type &get(TypeId) const;
 
   TypeId convert(hir::TypeId, const hir::TypeRegistry &);
 
@@ -52,23 +52,26 @@ struct TypeArena {
     return std::get<VariantType>(type_kind);
   }
 
-  const FunctionType &as_function(TypeId type_id) const {
+  [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
   }
 
-  template <typename VariantType> bool is(TypeId type_id) const {
+  template <typename VariantType>
+  [[nodiscard]] [[nodiscard]] bool is(TypeId type_id) const {
     const auto &type_kind = get(type_id);
     return std::holds_alternative<VariantType>(type_kind);
   }
 
-  bool is_function(TypeId type_id) const { return is<FunctionType>(type_id); }
+  [[nodiscard]] bool is_function(TypeId type_id) const {
+    return is<FunctionType>(type_id);
+  }
 
-  std::string to_string(TypeId) const;
-  std::string to_string(const Type &) const;
+  [[nodiscard]] std::string to_string(TypeId) const;
+  [[nodiscard]] std::string to_string(const Type &) const;
 
 private:
-  std::unordered_map<Type, TypeId> m_type_to_type_id{};
-  std::vector<Type> m_type_id_to_type{};
+  std::unordered_map<Type, TypeId> m_type_to_type_id;
+  std::vector<Type> m_type_id_to_type;
 
 public:
   TypeId m_unit;
@@ -88,7 +91,7 @@ template <typename ActualType, typename IdType> struct AbstractArena {
     return {new_id};
   }
 
-  const ActualType &get(IdType type_id) const {
+  [[nodiscard]] const ActualType &get(IdType type_id) const {
     if (type_id.m_id >= m_id_to_actual.size()) {
       throw core::InternalCompilerError("Failed to call get on type_id: " +
                                         std::to_string(type_id.m_id));
@@ -105,19 +108,25 @@ struct Arena {
   explicit Arena() = default;
 
   TypeArena &type() { return m_type_arena; }
-  const TypeArena &type() const { return m_type_arena; }
+  [[nodiscard]] const TypeArena &type() const { return m_type_arena; }
 
   AbstractArena<Expression, ExprId> &expr() { return m_expr_arena; }
-  const AbstractArena<Expression, ExprId> &expr() const { return m_expr_arena; }
+  [[nodiscard]] const AbstractArena<Expression, ExprId> &expr() const {
+    return m_expr_arena;
+  }
 
   AbstractArena<Binding, BindingId> &binding() { return m_binding_arena; }
-  const AbstractArena<Binding, BindingId> &binding() const {
+  [[nodiscard]] const AbstractArena<Binding, BindingId> &binding() const {
     return m_binding_arena;
   }
 
-  const Type &get(TypeId id) const { return type().get(id); }
-  const Expression &get(ExprId id) const { return expr().get(id); }
-  const Binding &get(BindingId id) const { return binding().get(id); }
+  [[nodiscard]] const Type &get(TypeId id) const { return type().get(id); }
+  [[nodiscard]] const Expression &get(ExprId id) const {
+    return expr().get(id);
+  }
+  [[nodiscard]] const Binding &get(BindingId id) const {
+    return binding().get(id);
+  }
 
   ExprId push(Expression actual) { return expr().push(std::move(actual)); }
   BindingId push(Binding actual) { return binding().push(std::move(actual)); }
@@ -131,20 +140,20 @@ struct Arena {
     return type().convert(type_id, reg);
   }
 
-  const FunctionType &as_function(TypeId type_id) const {
+  [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return type().as_function(type_id);
   }
 
-  std::string to_string(const Type &type) const {
+  [[nodiscard]] std::string to_string(const Type &type) const {
     return m_type_arena.to_string(type);
   }
 
-  std::string to_string(TypeId type_id) const {
+  [[nodiscard]] std::string to_string(TypeId type_id) const {
     return m_type_arena.to_string(type_id);
   }
 
 private:
-  TypeArena m_type_arena{};
+  TypeArena m_type_arena;
   AbstractArena<Expression, ExprId> m_expr_arena{};
   AbstractArena<Binding, BindingId> m_binding_arena{};
 };

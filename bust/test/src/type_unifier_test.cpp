@@ -253,8 +253,8 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
-    CHECK(collector.m_free_type_variables.size() == 1);
-    CHECK(collector.m_free_type_variables[0].m_id == tv.m_id);
+    CHECK(collector.free_type_variables().size() == 1);
+    CHECK(collector.free_type_variables()[0].m_id == tv.m_id);
   }
 
   TEST_CASE("collects nothing from concrete primitive") {
@@ -264,7 +264,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
-    CHECK(collector.m_free_type_variables.empty());
+    CHECK(collector.free_type_variables().empty());
   }
 
   TEST_CASE("collects nothing from NeverType") {
@@ -273,7 +273,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, type);
 
-    CHECK(collector.m_free_type_variables.empty());
+    CHECK(collector.free_type_variables().empty());
   }
 
   TEST_CASE("collects TVs from inside FunctionType") {
@@ -289,7 +289,7 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, fn_type);
 
-    CHECK(collector.m_free_type_variables.size() == 2);
+    CHECK(collector.free_type_variables().size() == 2);
   }
 
   TEST_CASE("collects only TVs not concrete parts of fn type") {
@@ -304,8 +304,8 @@ TEST_SUITE("bust.free_type_variable_collector") {
     hir::FreeTypeVariableCollector collector{context};
     std::visit(collector, fn_type);
 
-    CHECK(collector.m_free_type_variables.size() == 1);
-    CHECK(collector.m_free_type_variables[0].m_id == t1.m_id);
+    CHECK(collector.free_type_variables().size() == 1);
+    CHECK(collector.free_type_variables()[0].m_id == t1.m_id);
   }
 }
 

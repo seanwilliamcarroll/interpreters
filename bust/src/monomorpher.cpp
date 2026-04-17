@@ -28,7 +28,6 @@ namespace bust {
 //****************************************************************************
 
 hir::Program Monomorpher::operator()(hir::Program program) {
-
   // We have a program and within it are instantiation records
   //
   if (!program.m_unifier_state.has_value()) {
@@ -36,14 +35,9 @@ hir::Program Monomorpher::operator()(hir::Program program) {
         "Cannot monomorphize a program without unification state!");
   }
 
-  auto unifier = hir::TypeUnifier{.m_type_registry = program.m_type_registry};
-  unifier.adopt_state(std::move(program.m_unifier_state.value()));
-
-  auto context =
-      mono::Context{.m_type_registry = program.m_type_registry,
-                    .m_type_unifier = std::move(unifier),
-                    .m_instantiation_records = program.m_instantiation_records,
-                    .m_next_let_binding_id = program.m_next_let_binding_id};
+  auto context = mono::Context(
+      program.m_type_registry, std::move(program.m_unifier_state.value()),
+      program.m_instantiation_records, program.m_next_let_binding_id);
 
   std::vector<hir::TopItem> top_items;
   for (const auto &top_item : program.m_top_items) {

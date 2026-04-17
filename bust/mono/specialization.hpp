@@ -115,7 +115,7 @@ struct Environment {
   }
 
 private:
-  std::vector<std::shared_ptr<Scope>> m_scopes{};
+  std::vector<std::shared_ptr<Scope>> m_scopes;
 };
 
 using ScopeGuard = core::ScopeGuard<Environment>;

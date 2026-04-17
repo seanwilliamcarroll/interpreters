@@ -20,6 +20,17 @@ namespace bust::mono {
 //****************************************************************************
 
 struct Context {
+
+  explicit Context(hir::TypeRegistry &type_registry,
+                   hir::UnifierState unifier_state,
+                   const hir::BindingIdInstantiations &instantiation_records,
+                   hir::InnerTypeBindingId next_let_binding_id)
+      : m_type_registry(type_registry), m_type_unifier(type_registry),
+        m_instantiation_records(instantiation_records),
+        m_next_let_binding_id(next_let_binding_id) {
+    m_type_unifier.adopt_state(std::move(unifier_state));
+  }
+
   hir::TypeRegistry &type_registry() { return m_type_registry; }
 
   hir::BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
@@ -28,14 +39,15 @@ struct Context {
   hir::TypeUnifier m_type_unifier;
   const hir::BindingIdInstantiations &m_instantiation_records;
   hir::InnerTypeBindingId m_next_let_binding_id;
-  Environment m_env{};
+  Environment m_env;
 };
 
 struct SubstitutionContext {
   hir::TypeId rewrite_type(hir::TypeId type_id) {
-    return hir::TypeVariableSubstituter{m_parent.type_registry(),
-                                        m_parent.m_type_unifier,
-                                        m_substitution_mapping}
+    return hir::TypeVariableSubstituter{
+        .m_type_registry = m_parent.type_registry(),
+        .m_type_unifier = m_parent.m_type_unifier,
+        .m_new_mapping = m_substitution_mapping}
         .substitute(type_id);
   }
 

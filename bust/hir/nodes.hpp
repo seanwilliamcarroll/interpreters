@@ -143,10 +143,10 @@ struct FunctionDef : public core::HasLocation {
 // --- Program ---------------------------------------------------------------
 
 struct Program : public core::HasLocation {
-  TypeRegistry m_type_registry{};
-  std::vector<TopItem> m_top_items{};
-  std::optional<UnifierState> m_unifier_state{};
-  BindingIdInstantiations m_instantiation_records{};
+  TypeRegistry m_type_registry;
+  std::vector<TopItem> m_top_items;
+  std::optional<UnifierState> m_unifier_state;
+  BindingIdInstantiations m_instantiation_records;
   InnerTypeBindingId m_next_let_binding_id{};
 };
 
