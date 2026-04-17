@@ -26,9 +26,9 @@ struct TopItemCollector {
                                          hir::TypeId type_id) {
       auto new_type_id = m_ctx.convert(type_id);
       auto binding = Binding{.m_name = name, .m_type = new_type_id};
-      auto binding_id = m_ctx.m_arena.push(std::move(binding));
-      m_ctx.m_global_bindings[name] = binding_id;
-      m_ctx.m_env.define(name, binding_id);
+      auto binding_id = m_ctx.arena().push(std::move(binding));
+      m_ctx.set_global_binding(name, binding_id);
+      m_ctx.env().define(name, binding_id);
     };
 
     std::visit(

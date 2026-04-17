@@ -43,19 +43,18 @@ ExprId ExpressionLowerer::lower(const hir::Expression &expression) {
 
   // TODO: Location
   // One place we actually push expressions
-  return m_ctx.m_arena.push(std::move(new_expression));
+  return m_ctx.arena().push(std::move(new_expression));
 }
 
 IdentifierExpr ExpressionLowerer::lower(const hir::Identifier &identifier) {
-  auto maybe_id = m_ctx.m_env.lookup(identifier.m_name);
+  auto maybe_id = m_ctx.env().lookup(identifier.m_name);
   if (maybe_id.has_value()) {
     return {.m_id = maybe_id.value()};
   }
   throw core::InternalCompilerError(
       "This binding should have been lowered through lower_definition! "
       "Identifier: " +
-      identifier.m_name +
-      " of type: " + m_ctx.m_type_registry.to_string(identifier.m_type));
+      identifier.m_name + " of type: " + m_ctx.to_string(identifier.m_type));
 }
 
 IdentifierExpr
@@ -64,9 +63,9 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
   auto new_type = m_ctx.convert(identifier.m_type);
 
   auto binding = Binding{.m_name = identifier.m_name, .m_type = new_type};
-  auto binding_id = m_ctx.m_arena.push(std::move(binding));
+  auto binding_id = m_ctx.arena().push(std::move(binding));
 
-  m_ctx.m_env.define(identifier.m_name, binding_id);
+  m_ctx.env().define(identifier.m_name, binding_id);
 
   return {.m_id = binding_id};
 }
@@ -100,7 +99,7 @@ ExprKind ExpressionLowerer::operator()(const hir::LiteralChar &literal) {
 }
 
 Block ExpressionLowerer::lower(const hir::Block &block) {
-  ScopeGuard guard{m_ctx.m_env};
+  ScopeGuard guard{m_ctx.env()};
   std::vector<Statement> new_statements;
   new_statements.reserve(block.m_statements.size());
   for (const auto &statement : block.m_statements) {
@@ -177,19 +176,19 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::CastExpr> &cast_expr) {
 
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
-  ScopeGuard guard{m_ctx.m_env};
+  ScopeGuard guard{m_ctx.env()};
 
   std::vector<IdentifierExpr> known_bindings;
   std::vector<IdentifierExpr> parameters;
   parameters.reserve(lambda_expr->m_parameters.size());
   for (const auto &parameter : lambda_expr->m_parameters) {
     auto new_identifier = lower_definition(parameter);
-    m_ctx.m_env.define(parameter.m_name, new_identifier.m_id);
+    m_ctx.env().define(parameter.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier);
     known_bindings.emplace_back(new_identifier);
   }
 
-  for (const auto &[_, global_id] : m_ctx.m_global_bindings) {
+  for (const auto &[_, global_id] : m_ctx.global_bindings()) {
     known_bindings.emplace_back(IdentifierExpr{.m_id = global_id});
   }
 

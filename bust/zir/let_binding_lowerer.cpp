@@ -22,7 +22,7 @@ LetBinding LetBindingLowerer::lower(const hir::LetBinding &let_binding) {
 
   auto binding_id = identifier_expr.m_id;
 
-  m_ctx.m_env.define(let_binding.m_variable.m_name, binding_id);
+  m_ctx.env().define(let_binding.m_variable.m_name, binding_id);
 
   auto expr_id = ExpressionLowerer{m_ctx}.lower(let_binding.m_expression);
 

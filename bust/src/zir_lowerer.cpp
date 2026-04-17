@@ -36,14 +36,7 @@ zir::Program ZirLowerer::operator()(hir::Program program) {
 
   auto unifier_state = std::move(program.m_unifier_state.value());
 
-  auto resolver =
-      zir::TypeResolver{.m_type_registry = type_registry,
-                        .m_unifier_state = std::move(unifier_state)};
-
-  auto context = zir::Context{.m_type_registry = type_registry,
-                              .m_resolver = std::move(resolver),
-                              .m_env{},
-                              .m_global_bindings{}};
+  auto context = zir::Context(type_registry, std::move(unifier_state));
 
   // Collect global bindings into context
   auto collector = zir::TopItemCollector{.m_ctx = context};
@@ -57,7 +50,7 @@ zir::Program ZirLowerer::operator()(hir::Program program) {
     new_top_items.emplace_back(zir::TopItemLowerer{context}.lower(top_item));
   }
 
-  return zir::Program{.m_arena = std::move(context.m_arena),
+  return zir::Program{.m_arena = std::move(context.arena()),
                       .m_top_items = std::move(new_top_items)};
 }
 

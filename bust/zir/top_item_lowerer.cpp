@@ -32,16 +32,16 @@ TopItem TopItemLowerer::lower(const hir::TopItem &top_item) {
 TopItem TopItemLowerer::TopItemLowerer::operator()(
     const hir::FunctionDef &function_def) {
   auto binding_id =
-      m_ctx.m_global_bindings.at(function_def.m_signature.m_function_id);
+      m_ctx.get_global_binding(function_def.m_signature.m_function_id);
 
   // Push scope before we define the parameters
-  ScopeGuard guard{m_ctx.m_env};
+  ScopeGuard guard{m_ctx.env()};
 
   std::vector<BindingId> parameters;
   parameters.reserve(function_def.m_signature.m_parameters.size());
   for (const auto &parameter : function_def.m_signature.m_parameters) {
     auto new_identifier = ExpressionLowerer{m_ctx}.lower_definition(parameter);
-    m_ctx.m_env.define(parameter.m_name, new_identifier.m_id);
+    m_ctx.env().define(parameter.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier.m_id);
   }
 
@@ -54,7 +54,7 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
 
 TopItem TopItemLowerer::TopItemLowerer::operator()(
     const hir::ExternFunctionDeclaration &extern_function_declaration) {
-  auto binding_id = m_ctx.m_global_bindings.at(
+  auto binding_id = m_ctx.get_global_binding(
       extern_function_declaration.m_signature.m_function_id);
 
   // All we need is the binding id, since we don't even need the parameter
@@ -64,7 +64,7 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
 
 TopItem TopItemLowerer::operator()(const hir::LetBinding &let_binding) {
   // Potentially shadowing, so do a definition lowering
-  auto binding_id = m_ctx.m_global_bindings.at(let_binding.m_variable.m_name);
+  auto binding_id = m_ctx.get_global_binding(let_binding.m_variable.m_name);
 
   auto expr_id = ExpressionLowerer{m_ctx}.lower(let_binding.m_expression);
 

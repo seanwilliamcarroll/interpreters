@@ -21,6 +21,11 @@ namespace bust::zir {
 //****************************************************************************
 
 struct TypeResolver {
+  explicit TypeResolver(const hir::TypeRegistry &type_registry,
+                        hir::UnifierState unifier_state)
+      : m_type_registry(type_registry),
+        m_unifier_state(std::move(unifier_state)) {}
+
   hir::TypeId resolve(hir::TypeId type_id) {
     const auto &type = m_type_registry.get(type_id);
     if (!std::holds_alternative<hir::TypeVariable>(type)) {
@@ -42,7 +47,8 @@ struct TypeResolver {
         m_type_registry.to_string(type_id));
   }
 
-  hir::TypeRegistry &m_type_registry;
+private:
+  const hir::TypeRegistry &m_type_registry;
   hir::UnifierState m_unifier_state;
 };
 

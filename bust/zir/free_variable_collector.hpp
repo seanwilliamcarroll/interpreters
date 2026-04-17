@@ -126,7 +126,7 @@ struct FreeVariableCollector {
   }
 
   FreeVariables collect(ExprId expr_id) {
-    return std::visit(*this, m_ctx.m_arena.get(expr_id).m_expr_kind);
+    return std::visit(*this, m_ctx.arena().get(expr_id).m_expr_kind);
   }
 
   FreeVariables operator()(const IdentifierExpr &identifier) {

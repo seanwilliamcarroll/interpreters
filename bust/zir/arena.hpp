@@ -102,6 +102,8 @@ private:
 };
 
 struct Arena {
+  explicit Arena() = default;
+
   TypeArena &type() { return m_type_arena; }
   const TypeArena &type() const { return m_type_arena; }
 
