@@ -10,6 +10,7 @@
 #include <hir/types.hpp>
 #include <zir/arena.hpp>
 #include <zir/context.hpp>
+#include <zir/environment.hpp>
 #include <zir/expression_lowerer.hpp>
 #include <zir/let_binding_lowerer.hpp>
 #include <zir/nodes.hpp>
@@ -19,8 +20,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "zir/environment.hpp"
 
 //****************************************************************************
 namespace bust::zir {

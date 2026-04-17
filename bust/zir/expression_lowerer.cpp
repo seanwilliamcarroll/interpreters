@@ -6,13 +6,16 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
 #include <nodes.hpp>
 #include <types.hpp>
 #include <zir/arena.hpp>
 #include <zir/context.hpp>
+#include <zir/environment.hpp>
 #include <zir/expression_lowerer.hpp>
+#include <zir/free_variable_collector.hpp>
 #include <zir/nodes.hpp>
 #include <zir/statement_lowerer.hpp>
 #include <zir/types.hpp>
@@ -24,10 +27,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "exceptions.hpp"
-#include "zir/environment.hpp"
-#include "zir/free_variable_collector.hpp"
 
 //****************************************************************************
 namespace bust::zir {

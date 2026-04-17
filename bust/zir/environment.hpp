@@ -7,13 +7,13 @@
 //****************************************************************************
 #pragma once
 //****************************************************************************
+#include <scope_guard.hpp>
+#include <zir/nodes.hpp>
+
 #include <cassert>
 #include <optional>
 #include <string>
 #include <unordered_map>
-
-#include "scope_guard.hpp"
-#include "zir/nodes.hpp"
 
 // Same old env structure, scopes with parent pointers, map name to id in
 // closest scope

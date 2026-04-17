@@ -11,11 +11,10 @@
 #include <hir/type_registry.hpp>
 #include <zir/arena.hpp>
 #include <zir/environment.hpp>
+#include <zir/nodes.hpp>
 #include <zir/type_resolver.hpp>
 
 #include <unordered_map>
-
-#include "zir/nodes.hpp"
 
 //****************************************************************************
 namespace bust::zir {
