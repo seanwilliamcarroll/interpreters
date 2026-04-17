@@ -32,6 +32,8 @@
 #include <variant>
 #include <vector>
 
+#include "codegen/types.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -48,7 +50,7 @@ void TopItemDeclarationCollector::operator()(
 void TopItemDeclarationCollector::operator()(
     const zir::ExternFunctionDeclaration &extern_func) {
   const auto &binding = m_ctx.arena().get(extern_func.m_id);
-  m_ctx.symbols().define_global(binding.m_name);
+  m_ctx.symbols().define_thunked(binding.m_name);
 }
 
 void TopItemDeclarationCollector::operator()(
@@ -64,6 +66,10 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
   std::vector<Parameter> parameters;
+  if (binding.m_name != "main") {
+    parameters.emplace_back(
+        Parameter{.m_name = ParameterHandle{"env"}, .m_type = LLVMType::PTR});
+  }
   std::ranges::transform(
       function_def.m_parameters, std::back_inserter(parameters),
       [&](const auto &id) -> Parameter {
@@ -122,10 +128,58 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
 
 void TopItemGenerator::operator()(
     const zir::ExternFunctionDeclaration &extern_func) {
+  {
+    ScopeGuard guard(m_ctx.symbols());
+
+    m_ctx.module().add_extern_function_declaration(
+        std::make_unique<FunctionDeclaration>(generate_signature(extern_func)));
+  }
   ScopeGuard guard(m_ctx.symbols());
 
-  m_ctx.module().add_extern_function_declaration(
-      std::make_unique<FunctionDeclaration>(generate_signature(extern_func)));
+  const auto &binding = m_ctx.arena().get(extern_func.m_id);
+  const auto &type = m_ctx.arena().as_function(binding.m_type);
+
+  std::vector<Parameter> parameters;
+  parameters.emplace_back(Parameter{
+      .m_name = ParameterHandle{.m_handle = "env"}, .m_type = LLVMType::PTR});
+  std::vector<Argument> arguments;
+  for (auto [index, type_id] :
+       std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
+    // Don't actually need names on externs, but doesn't hurt
+    auto handle =
+        m_ctx.symbols().define_parameter("param_" + std::to_string(index));
+    parameters.emplace_back(
+        Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+    arguments.emplace_back(
+        Argument{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+  }
+  auto thunked_signature = FunctionDeclaration{
+      .m_function_id = m_ctx.symbols().lookup(binding.m_name),
+      .m_return_type = m_ctx.to_type(type.m_return_type),
+      .m_parameters = std::move(parameters)};
+
+  auto &function = m_ctx.module().new_function(thunked_signature);
+  m_ctx.module().set_current_function(function);
+
+  const auto &return_type_id =
+      m_ctx.arena().as_function(binding.m_type).m_return_type;
+
+  if (return_type_id == m_ctx.arena().type().m_unit) {
+    function.current_basic_block().add_instruction(
+        CallVoidInstruction{.m_callee = GlobalHandle{binding.m_name},
+                            .m_arguments = std::move(arguments)});
+    function.current_basic_block().add_terminal(ReturnVoidInstruction{});
+  } else {
+    auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
+    m_ctx.block().add_instruction(
+        CallInstruction{.m_target = ssa_temp,
+                        .m_callee = GlobalHandle{.m_handle = binding.m_name},
+                        .m_arguments = std::move(arguments),
+                        .m_return_type = m_ctx.to_type(return_type_id)});
+    // Wherever we are, we need to add this terminal to the final
+    function.current_basic_block().add_terminal(ReturnInstruction{
+        .m_value = ssa_temp, .m_type = m_ctx.to_type(return_type_id)});
+  }
 }
 
 void TopItemGenerator::operator()(const zir::LetBinding &let_binding) {

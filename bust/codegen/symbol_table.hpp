@@ -83,6 +83,12 @@ struct SymbolTable {
     return define_global(m_name_tracker.uniquify(name));
   }
 
+  ThunkWrapperHandle define_thunked(const std::string &name) {
+    ThunkWrapperHandle new_handle{name};
+    m_scopes.front().define(name, new_handle);
+    return new_handle;
+  }
+
   [[nodiscard]] Handle lookup(const std::string &name) const {
     for (const auto &scope : m_scopes | std::views::reverse) {
       auto maybe_handle = scope.lookup(name);

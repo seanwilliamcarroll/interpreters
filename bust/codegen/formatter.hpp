@@ -33,6 +33,7 @@ struct HandleToString {
   std::string operator()(const LocalHandle &);
   std::string operator()(const ParameterHandle &);
   std::string operator()(const GlobalHandle &);
+  std::string operator()(const ThunkWrapperHandle &);
 
   size_t m_temporary_count = 0;
   std::unordered_map<size_t, size_t> m_ssa_mapping;

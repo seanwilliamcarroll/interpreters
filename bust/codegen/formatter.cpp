@@ -56,6 +56,10 @@ std::string HandleToString::operator()(const GlobalHandle &handle) {
   return "@" + handle.m_handle;
 }
 
+std::string HandleToString::operator()(const ThunkWrapperHandle &handle) {
+  return "@" + handle.m_handle + ".thunk";
+}
+
 void Formatter::format(const auto &to_format) { (*this)(to_format); }
 
 void Formatter::operator()(const Module &mod) {

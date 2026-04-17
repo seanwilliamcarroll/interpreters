@@ -206,6 +206,8 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
   auto callee_handle = generate(call_expression.m_callee);
 
   std::vector<Argument> arguments;
+  arguments.emplace_back(
+      Argument{.m_name = LiteralHandle{"null"}, .m_type = LLVMType::PTR});
   std::ranges::transform(
       call_expression.m_arguments,
 
@@ -531,6 +533,8 @@ Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
     const zir::LambdaExpr &lambda_expr) {
   std::vector<Parameter> parameters;
+  parameters.emplace_back(
+      Parameter{.m_name = ParameterHandle{"env"}, .m_type = LLVMType::PTR});
   std::ranges::transform(
       lambda_expr.m_parameters, std::back_inserter(parameters),
       [this](const zir::IdentifierExpr &parameter) -> Parameter {

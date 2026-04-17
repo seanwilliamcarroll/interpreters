@@ -856,7 +856,7 @@ TEST_SUITE("bust.codegen") {
     auto ir = codegen("extern fn putchar(c: i32) -> i32;\n"
                       "fn main() -> i64 { 0 }");
     CHECK(ir.find("declare i32 @putchar(i32") != std::string::npos);
-    CHECK(ir.find("define i32 @putchar") == std::string::npos);
+    CHECK(ir.find("define i32 @putchar(i32") == std::string::npos);
   }
 
   TEST_CASE("extern function with no return type emits declare void") {
