@@ -180,24 +180,23 @@ ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
   ScopeGuard guard{m_ctx.m_env};
 
-  std::vector<IdentifierExpr> initial_bindings;
+  std::vector<IdentifierExpr> known_bindings;
   std::vector<IdentifierExpr> parameters;
   parameters.reserve(lambda_expr->m_parameters.size());
   for (const auto &parameter : lambda_expr->m_parameters) {
     auto new_identifier = lower_definition(parameter);
     m_ctx.m_env.define(parameter.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier);
-    initial_bindings.emplace_back(new_identifier);
+    known_bindings.emplace_back(new_identifier);
   }
 
   for (const auto &[_, global_id] : m_ctx.m_global_bindings) {
-    initial_bindings.emplace_back(IdentifierExpr{.m_id = global_id});
+    known_bindings.emplace_back(IdentifierExpr{.m_id = global_id});
   }
 
   auto body = lower(lambda_expr->m_body);
 
-  auto capture_set =
-      FreeVariableCollector(m_ctx, initial_bindings).collect(body);
+  auto capture_set = FreeVariableCollector(m_ctx, known_bindings).collect(body);
   auto captures =
       std::vector<IdentifierExpr>(std::make_move_iterator(capture_set.begin()),
                                   std::make_move_iterator(capture_set.end()));

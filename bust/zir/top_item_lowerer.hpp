@@ -14,39 +14,35 @@
 
 #include <variant>
 
+#include "hir/types.hpp"
+
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
 
 struct TopItemCollector {
   void collect(const hir::TopItem &top_item) {
+
+    auto create_binding_and_define = [&](const std::string &name,
+                                         hir::TypeId type_id) {
+      auto new_type_id = m_ctx.convert(type_id);
+      auto binding = Binding{.m_name = name, .m_type = new_type_id};
+      auto binding_id = m_ctx.m_arena.push(std::move(binding));
+      m_ctx.m_global_bindings[name] = binding_id;
+      m_ctx.m_env.define(name, binding_id);
+    };
+
     std::visit(
         [&](const auto &item) {
           using T = std::decay_t<decltype(item)>;
           if constexpr (std::is_same_v<T, hir::LetBinding>) {
-            auto new_type_id = m_ctx.convert(item.m_expression.m_type);
-            auto binding = Binding{.m_name = item.m_variable.m_name,
-                                   .m_type = new_type_id};
-            auto binding_id = m_ctx.m_arena.push(std::move(binding));
-            m_ctx.m_global_bindings[item.m_variable.m_name] = binding_id;
-            m_ctx.m_env.define(item.m_variable.m_name, binding_id);
-          } else if constexpr (std::is_same_v<T, hir::FunctionDef>) {
-            auto new_type_id = m_ctx.convert(item.m_signature.m_type);
-            auto binding = Binding{.m_name = item.m_signature.m_function_id,
-                                   .m_type = new_type_id};
-            auto binding_id = m_ctx.m_arena.push(std::move(binding));
-            m_ctx.m_global_bindings[item.m_signature.m_function_id] =
-                binding_id;
-            m_ctx.m_env.define(item.m_signature.m_function_id, binding_id);
-          } else if constexpr (std::is_same_v<T,
+            create_binding_and_define(item.m_variable.m_name,
+                                      item.m_expression.m_type);
+          } else if constexpr (std::is_same_v<T, hir::FunctionDef> ||
+                               std::is_same_v<T,
                                               hir::ExternFunctionDeclaration>) {
-            auto new_type_id = m_ctx.convert(item.m_signature.m_type);
-            auto binding = Binding{.m_name = item.m_signature.m_function_id,
-                                   .m_type = new_type_id};
-            auto binding_id = m_ctx.m_arena.push(std::move(binding));
-            m_ctx.m_global_bindings[item.m_signature.m_function_id] =
-                binding_id;
-            m_ctx.m_env.define(item.m_signature.m_function_id, binding_id);
+            create_binding_and_define(item.m_signature.m_function_id,
+                                      item.m_signature.m_type);
           }
         },
         top_item);
