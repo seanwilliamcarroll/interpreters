@@ -25,6 +25,7 @@
 #include <variant>
 #include <vector>
 
+#include "exceptions.hpp"
 #include "zir/environment.hpp"
 #include "zir/free_variable_collector.hpp"
 
@@ -47,20 +48,15 @@ ExprId ExpressionLowerer::lower(const hir::Expression &expression) {
 }
 
 IdentifierExpr ExpressionLowerer::lower(const hir::Identifier &identifier) {
-  auto new_type = m_ctx.convert(identifier.m_type);
-
   auto maybe_id = m_ctx.m_env.lookup(identifier.m_name);
-
   if (maybe_id.has_value()) {
     return {.m_id = maybe_id.value()};
   }
-  // Not yet seen
-  auto binding = Binding{.m_name = identifier.m_name, .m_type = new_type};
-  auto binding_id = m_ctx.m_arena.push(std::move(binding));
-
-  m_ctx.m_env.define(identifier.m_name, binding_id);
-
-  return {.m_id = binding_id};
+  throw core::InternalCompilerError(
+      "This binding should have been lowered through lower_definition! "
+      "Identifier: " +
+      identifier.m_name +
+      " of type: " + m_ctx.m_type_registry.to_string(identifier.m_type));
 }
 
 IdentifierExpr
@@ -141,8 +137,10 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::CallExpr> &call_expr) {
   std::vector<ExprId> arguments;
   arguments.reserve(call_expr->m_arguments.size());
   std::transform(call_expr->m_arguments.begin(), call_expr->m_arguments.end(),
-                 std::back_inserter(arguments),
-                 [&](const auto &argument) { return lower(argument); });
+                 std::back_inserter(arguments), [&](const auto &argument) {
+                   // Check if we're calling a globally bound function
+                   return lower(argument);
+                 });
 
   return CallExpr{.m_callee = lower(call_expr->m_callee),
                   .m_arguments = std::move(arguments)};

@@ -29,6 +29,7 @@ struct TopItemCollector {
                                    .m_type = new_type_id};
             auto binding_id = m_ctx.m_arena.push(std::move(binding));
             m_ctx.m_global_bindings[item.m_variable.m_name] = binding_id;
+            m_ctx.m_env.define(item.m_variable.m_name, binding_id);
           } else if constexpr (std::is_same_v<T, hir::FunctionDef>) {
             auto new_type_id = m_ctx.convert(item.m_signature.m_type);
             auto binding = Binding{.m_name = item.m_signature.m_function_id,
@@ -36,6 +37,7 @@ struct TopItemCollector {
             auto binding_id = m_ctx.m_arena.push(std::move(binding));
             m_ctx.m_global_bindings[item.m_signature.m_function_id] =
                 binding_id;
+            m_ctx.m_env.define(item.m_signature.m_function_id, binding_id);
           } else if constexpr (std::is_same_v<T,
                                               hir::ExternFunctionDeclaration>) {
             auto new_type_id = m_ctx.convert(item.m_signature.m_type);
@@ -44,6 +46,7 @@ struct TopItemCollector {
             auto binding_id = m_ctx.m_arena.push(std::move(binding));
             m_ctx.m_global_bindings[item.m_signature.m_function_id] =
                 binding_id;
+            m_ctx.m_env.define(item.m_signature.m_function_id, binding_id);
           }
         },
         top_item);

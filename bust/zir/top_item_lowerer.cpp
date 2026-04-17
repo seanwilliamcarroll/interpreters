@@ -35,15 +35,13 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
   auto binding_id =
       m_ctx.m_global_bindings.at(function_def.m_signature.m_function_id);
 
-  m_ctx.m_env.define(function_def.m_signature.m_function_id, binding_id);
-
   // Push scope before we define the parameters
   ScopeGuard guard{m_ctx.m_env};
 
   std::vector<BindingId> parameters;
   parameters.reserve(function_def.m_signature.m_parameters.size());
   for (const auto &parameter : function_def.m_signature.m_parameters) {
-    auto new_identifier = ExpressionLowerer{m_ctx}.lower(parameter);
+    auto new_identifier = ExpressionLowerer{m_ctx}.lower_definition(parameter);
     m_ctx.m_env.define(parameter.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier.m_id);
   }
@@ -60,9 +58,6 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
   auto binding_id = m_ctx.m_global_bindings.at(
       extern_function_declaration.m_signature.m_function_id);
 
-  m_ctx.m_env.define(extern_function_declaration.m_signature.m_function_id,
-                     binding_id);
-
   // All we need is the binding id, since we don't even need the parameter
   // names, just their types for a call site later on
   return ExternFunctionDeclaration{.m_id = binding_id};
@@ -71,8 +66,6 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
 TopItem TopItemLowerer::operator()(const hir::LetBinding &let_binding) {
   // Potentially shadowing, so do a definition lowering
   auto binding_id = m_ctx.m_global_bindings.at(let_binding.m_variable.m_name);
-
-  m_ctx.m_env.define(let_binding.m_variable.m_name, binding_id);
 
   auto expr_id = ExpressionLowerer{m_ctx}.lower(let_binding.m_expression);
 
