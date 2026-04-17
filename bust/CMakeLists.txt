@@ -73,7 +73,8 @@ add_executable(bust-test
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/monomorpher_test.cpp
-  test/src/zir_lowerer_test.cpp)
+  test/src/zir_lowerer_test.cpp
+  test/src/free_variable_collector_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -118,6 +119,7 @@ add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
 add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
 add_test(NAME bust.zir_lowerer COMMAND bust-test -ts=bust.zir_lowerer)
+add_test(NAME bust.free_variable_collector COMMAND bust-test -ts=bust.free_variable_collector)
 add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
 
 #*****************************************************************************
