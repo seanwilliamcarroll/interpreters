@@ -94,13 +94,6 @@ struct FreeVariableCollector {
     BoundVariableScopeGuard guard{m_env};
     FreeVariables free_variables;
     for (const auto &statement : block.m_statements) {
-      // Look for LetBindings, because their binding ids should be added to the
-      // bound list before we look in their bodies
-      // If we find a lambda, we need to add its parameters to the current bound
-      // variables
-      // Need a notion of scope, where original parameters are in the "global"
-      // scope, since they must always be there
-      // Any time we step into a block, we increase our scope
       auto new_free_variables = collect(statement);
       drain(free_variables, new_free_variables);
     }
