@@ -23,29 +23,30 @@
 namespace bust::zir {
 //****************************************************************************
 
-struct Scope {
+struct BoundVariableEnvironment {
+  struct Scope {
+    explicit Scope(const std::shared_ptr<Scope> &parent) : m_parent(parent) {}
 
-  explicit Scope(const std::shared_ptr<Scope> &parent) : m_parent(parent) {}
+    bool is_present(BindingId id) {
+      if (m_bound_identifiers.contains(id)) {
+        return true;
+      }
+      if (m_parent == nullptr) {
+        return false;
+      }
+      return m_parent->is_present(id);
+    }
 
-  bool is_present(BindingId id) {
-    if (m_bound_identifiers.contains(id)) {
-      return true;
-    }
-    if (m_parent == nullptr) {
-      return false;
-    }
-    return m_parent->is_present(id);
+    void define(BindingId id) { m_bound_identifiers.insert(id); }
+
+  private:
+    std::unordered_set<BindingId> m_bound_identifiers;
+    std::shared_ptr<Scope> m_parent;
+  };
+
+  BoundVariableEnvironment() {
+    m_scopes.emplace_back(std::make_shared<Scope>(nullptr));
   }
-
-  void define(BindingId id) { m_bound_identifiers.insert(id); }
-
-private:
-  std::unordered_set<BindingId> m_bound_identifiers;
-  std::shared_ptr<Scope> m_parent;
-};
-
-struct Environment {
-  Environment() { m_scopes.emplace_back(std::make_shared<Scope>(nullptr)); }
 
   void push_scope() {
     m_scopes.emplace_back(std::make_shared<Scope>(m_scopes.back()));
@@ -63,7 +64,7 @@ private:
   std::vector<std::shared_ptr<Scope>> m_scopes;
 };
 
-using ScopeGuard = core::ScopeGuard<Environment>;
+using BoundVariableScopeGuard = core::ScopeGuard<BoundVariableEnvironment>;
 
 struct FreeVariableCollector {
 
@@ -90,7 +91,7 @@ struct FreeVariableCollector {
   }
 
   FreeVariables collect(const Block &block) {
-    ScopeGuard guard{m_env};
+    BoundVariableScopeGuard guard{m_env};
     FreeVariables free_variables;
     for (const auto &statement : block.m_statements) {
       // Look for LetBindings, because their binding ids should be added to the
@@ -200,7 +201,7 @@ struct FreeVariableCollector {
   }
 
   FreeVariables operator()(const LambdaExpr &lambda_expr) {
-    ScopeGuard guard{m_env};
+    BoundVariableScopeGuard guard{m_env};
     FreeVariables free_variables;
 
     // Need to mark the parameters as bound in the body
@@ -215,7 +216,7 @@ struct FreeVariableCollector {
   }
 
   Context &m_ctx;
-  Environment m_env;
+  BoundVariableEnvironment m_env;
 };
 
 //****************************************************************************

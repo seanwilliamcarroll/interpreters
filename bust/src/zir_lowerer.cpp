@@ -41,7 +41,15 @@ zir::Program ZirLowerer::operator()(hir::Program program) {
                         .m_unifier_state = std::move(unifier_state)};
 
   auto context = zir::Context{.m_type_registry = type_registry,
-                              .m_resolver = std::move(resolver)};
+                              .m_resolver = std::move(resolver),
+                              .m_env{},
+                              .m_global_bindings{}};
+
+  // Collect global bindings into context
+  auto collector = zir::TopItemCollector{.m_ctx = context};
+  for (const auto &top_item : program.m_top_items) {
+    collector.collect(top_item);
+  }
 
   std::vector<zir::TopItem> new_top_items;
   new_top_items.reserve(program.m_top_items.size());

@@ -20,6 +20,8 @@
 #include <variant>
 #include <vector>
 
+#include "zir/environment.hpp"
+
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
@@ -30,19 +32,23 @@ TopItem TopItemLowerer::lower(const hir::TopItem &top_item) {
 
 TopItem TopItemLowerer::TopItemLowerer::operator()(
     const hir::FunctionDef &function_def) {
-  auto new_type_id = m_ctx.convert(function_def.m_signature.m_type);
+  auto binding_id =
+      m_ctx.m_global_bindings.at(function_def.m_signature.m_function_id);
 
-  auto binding = Binding{.m_name = function_def.m_signature.m_function_id,
-                         .m_type = new_type_id};
-  auto binding_id = m_ctx.m_arena.push(std::move(binding));
+  m_ctx.m_env.define(function_def.m_signature.m_function_id, binding_id);
 
-  auto new_block = ExpressionLowerer{m_ctx}.lower(function_def.m_body);
+  // Push scope before we define the parameters
+  ScopeGuard guard{m_ctx.m_env};
 
   std::vector<BindingId> parameters;
   parameters.reserve(function_def.m_signature.m_parameters.size());
   for (const auto &parameter : function_def.m_signature.m_parameters) {
-    parameters.emplace_back(ExpressionLowerer{m_ctx}.lower(parameter).m_id);
+    auto new_identifier = ExpressionLowerer{m_ctx}.lower(parameter);
+    m_ctx.m_env.define(parameter.m_name, new_identifier.m_id);
+    parameters.emplace_back(new_identifier.m_id);
   }
+
+  auto new_block = ExpressionLowerer{m_ctx}.lower(function_def.m_body);
 
   return FunctionDef{.m_id = binding_id,
                      .m_parameters = std::move(parameters),
@@ -51,13 +57,11 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
 
 TopItem TopItemLowerer::TopItemLowerer::operator()(
     const hir::ExternFunctionDeclaration &extern_function_declaration) {
-  auto new_type_id =
-      m_ctx.convert(extern_function_declaration.m_signature.m_type);
+  auto binding_id = m_ctx.m_global_bindings.at(
+      extern_function_declaration.m_signature.m_function_id);
 
-  auto binding =
-      Binding{.m_name = extern_function_declaration.m_signature.m_function_id,
-              .m_type = new_type_id};
-  auto binding_id = m_ctx.m_arena.push(std::move(binding));
+  m_ctx.m_env.define(extern_function_declaration.m_signature.m_function_id,
+                     binding_id);
 
   // All we need is the binding id, since we don't even need the parameter
   // names, just their types for a call site later on
@@ -65,7 +69,14 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
 }
 
 TopItem TopItemLowerer::operator()(const hir::LetBinding &let_binding) {
-  return LetBindingLowerer{m_ctx}.lower(let_binding);
+  // Potentially shadowing, so do a definition lowering
+  auto binding_id = m_ctx.m_global_bindings.at(let_binding.m_variable.m_name);
+
+  m_ctx.m_env.define(let_binding.m_variable.m_name, binding_id);
+
+  auto expr_id = ExpressionLowerer{m_ctx}.lower(let_binding.m_expression);
+
+  return LetBinding{.m_identifier = binding_id, .m_expression = expr_id};
 }
 
 //****************************************************************************

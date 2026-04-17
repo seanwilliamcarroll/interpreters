@@ -25,6 +25,7 @@
 #include <variant>
 #include <vector>
 
+#include "zir/environment.hpp"
 #include "zir/free_variable_collector.hpp"
 
 //****************************************************************************
@@ -48,8 +49,29 @@ ExprId ExpressionLowerer::lower(const hir::Expression &expression) {
 IdentifierExpr ExpressionLowerer::lower(const hir::Identifier &identifier) {
   auto new_type = m_ctx.convert(identifier.m_type);
 
+  auto maybe_id = m_ctx.m_env.lookup(identifier.m_name);
+
+  if (maybe_id.has_value()) {
+    return {.m_id = maybe_id.value()};
+  }
+  // Not yet seen
   auto binding = Binding{.m_name = identifier.m_name, .m_type = new_type};
   auto binding_id = m_ctx.m_arena.push(std::move(binding));
+
+  m_ctx.m_env.define(identifier.m_name, binding_id);
+
+  return {.m_id = binding_id};
+}
+
+IdentifierExpr
+ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
+  // Always create a fresh BindingId when defining
+  auto new_type = m_ctx.convert(identifier.m_type);
+
+  auto binding = Binding{.m_name = identifier.m_name, .m_type = new_type};
+  auto binding_id = m_ctx.m_arena.push(std::move(binding));
+
+  m_ctx.m_env.define(identifier.m_name, binding_id);
 
   return {.m_id = binding_id};
 }
@@ -83,6 +105,7 @@ ExprKind ExpressionLowerer::operator()(const hir::LiteralChar &literal) {
 }
 
 Block ExpressionLowerer::lower(const hir::Block &block) {
+  ScopeGuard guard{m_ctx.m_env};
   std::vector<Statement> new_statements;
   new_statements.reserve(block.m_statements.size());
   for (const auto &statement : block.m_statements) {
@@ -115,7 +138,6 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::IfExpr> &if_expr) {
 
 ExprKind
 ExpressionLowerer::operator()(const std::unique_ptr<hir::CallExpr> &call_expr) {
-
   std::vector<ExprId> arguments;
   arguments.reserve(call_expr->m_arguments.size());
   std::transform(call_expr->m_arguments.begin(), call_expr->m_arguments.end(),
@@ -158,16 +180,26 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::CastExpr> &cast_expr) {
 
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::LambdaExpr> &lambda_expr) {
+  ScopeGuard guard{m_ctx.m_env};
+
+  std::vector<IdentifierExpr> initial_bindings;
   std::vector<IdentifierExpr> parameters;
   parameters.reserve(lambda_expr->m_parameters.size());
-  std::transform(lambda_expr->m_parameters.begin(),
-                 lambda_expr->m_parameters.end(),
-                 std::back_inserter(parameters),
-                 [&](const auto &parameter) { return lower(parameter); });
+  for (const auto &parameter : lambda_expr->m_parameters) {
+    auto new_identifier = lower_definition(parameter);
+    m_ctx.m_env.define(parameter.m_name, new_identifier.m_id);
+    parameters.emplace_back(new_identifier);
+    initial_bindings.emplace_back(new_identifier);
+  }
+
+  for (const auto &[_, global_id] : m_ctx.m_global_bindings) {
+    initial_bindings.emplace_back(IdentifierExpr{.m_id = global_id});
+  }
 
   auto body = lower(lambda_expr->m_body);
 
-  auto capture_set = FreeVariableCollector(m_ctx, parameters).collect(body);
+  auto capture_set =
+      FreeVariableCollector(m_ctx, initial_bindings).collect(body);
   auto captures =
       std::vector<IdentifierExpr>(std::make_move_iterator(capture_set.begin()),
                                   std::make_move_iterator(capture_set.end()));

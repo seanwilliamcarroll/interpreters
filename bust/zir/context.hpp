@@ -10,7 +10,12 @@
 
 #include <hir/type_registry.hpp>
 #include <zir/arena.hpp>
+#include <zir/environment.hpp>
 #include <zir/type_resolver.hpp>
+
+#include <unordered_map>
+
+#include "zir/nodes.hpp"
 
 //****************************************************************************
 namespace bust::zir {
@@ -31,6 +36,8 @@ struct Context {
   hir::TypeRegistry &m_type_registry;
   TypeResolver m_resolver;
   Arena m_arena{};
+  Environment m_env;
+  std::unordered_map<std::string, BindingId> m_global_bindings;
 };
 
 //****************************************************************************

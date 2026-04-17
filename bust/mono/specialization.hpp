@@ -66,7 +66,7 @@ struct Scope {
   const Specialization *lookup(hir::BindingId id, hir::TypeId type_id) {
     // Given an original let binding and computed typeid, find the
     // specialization if it exists at this scope, else look to parents
-    auto key = ScopeKey{id, type_id};
+    auto key = ScopeKey{.m_id = id, .m_type_id = type_id};
     return lookup(key);
   }
 
@@ -83,7 +83,7 @@ struct Scope {
 
   void define(hir::BindingId id, hir::TypeId type_id,
               Specialization specialization) {
-    auto key = ScopeKey{id, type_id};
+    auto key = ScopeKey{.m_id = id, .m_type_id = type_id};
     m_table.insert_or_assign(
         key, std::make_unique<Specialization>(std::move(specialization)));
   }
