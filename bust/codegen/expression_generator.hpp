@@ -44,7 +44,9 @@ struct ExpressionGenerator {
   Handle operator()(const zir::UnaryExpr &);
   Handle operator()(const zir::ReturnExpr &);
   Handle operator()(const zir::CastExpr &);
+
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
+  Handle malloc_struct(BasicBlock &, const Handle &struct_type_name);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

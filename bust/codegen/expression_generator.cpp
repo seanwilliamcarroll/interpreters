@@ -608,6 +608,37 @@ struct FunctionScopeGuard {
   Function &m_original_function;
 };
 
+Handle ExpressionGenerator::malloc_struct(BasicBlock &block,
+                                          const Handle &struct_type_name) {
+  auto malloc_handle = m_ctx.symbols().lookup("malloc");
+  auto temp_size_bytes_ptr = m_ctx.symbols().next_ssa_temporary();
+  block.add_instruction(GetElementPtrInstruction{
+      .m_destination = temp_size_bytes_ptr,
+      .m_struct_type = struct_type_name,
+      .m_struct_handle = LiteralHandle{"null"},
+      .m_initial_index =
+          Argument{.m_name = LiteralHandle{"1"}, .m_type = LLVMType::I32},
+      .m_additional_indices = {}});
+
+  auto temp_size_bytes_i64 = m_ctx.symbols().next_ssa_temporary();
+  block.add_instruction(PtrToIntInstruction{
+      .m_destination = temp_size_bytes_i64,
+      .m_source = temp_size_bytes_ptr,
+      .m_destination_type = LLVMType::I64,
+  });
+
+  auto target_handle = m_ctx.symbols().next_ssa_temporary();
+  // Allocate the env
+  block.add_instruction(CallInstruction{
+      .m_target = target_handle,
+      .m_callee = malloc_handle,
+      .m_arguments = {Argument{.m_name = temp_size_bytes_i64,
+                               .m_type = LLVMType::I64}},
+      .m_return_type = LLVMType::PTR,
+  });
+  return target_handle;
+}
+
 Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   ScopeGuard scope_guard(m_ctx.symbols());
   FunctionScopeGuard function_guard(m_ctx);
@@ -668,34 +699,10 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
     }
 
     // At creation site, we need to store these parameters
-    auto malloc_handle = m_ctx.symbols().lookup("malloc");
-    auto temp_size_bytes_ptr = m_ctx.symbols().next_ssa_temporary();
-    lambda_creation_basic_block.add_instruction(GetElementPtrInstruction{
-        .m_destination = temp_size_bytes_ptr,
-        .m_struct_type = capture_env_type_handle,
-        .m_struct_handle = LiteralHandle{"null"},
-        .m_initial_index =
-            Argument{.m_name = LiteralHandle{"1"}, .m_type = LLVMType::I32},
-        .m_additional_indices = {}});
-
-    auto temp_size_bytes_i64 = m_ctx.symbols().next_ssa_temporary();
-    lambda_creation_basic_block.add_instruction(PtrToIntInstruction{
-        .m_destination = temp_size_bytes_i64,
-        .m_source = temp_size_bytes_ptr,
-        .m_destination_type = LLVMType::I64,
-    });
 
     // How do we store this env handle? In fat ptr?
-    env_handle = m_ctx.symbols().define_env_handle(CAPTURE_ENV_STRING_LITERAL);
-
-    // Allocate the env
-    lambda_creation_basic_block.add_instruction(CallInstruction{
-        .m_target = env_handle,
-        .m_callee = malloc_handle,
-        .m_arguments = {Argument{.m_name = temp_size_bytes_i64,
-                                 .m_type = LLVMType::I64}},
-        .m_return_type = LLVMType::PTR,
-    });
+    env_handle =
+        malloc_struct(lambda_creation_basic_block, capture_env_type_handle);
 
     for (const auto &[index, capture] :
          std::views::zip(std::views::iota(0ULL), captured_bindings)) {
@@ -734,35 +741,9 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   // then return ptr to that
 
   // At return site, need to return fat pointer, first alloc struct
-  auto malloc_handle = m_ctx.symbols().lookup("malloc");
-  auto temp_size_bytes_ptr = m_ctx.symbols().next_ssa_temporary();
   const auto &closure_struct = m_ctx.module().get_capture_env("__closure");
-
-  lambda_creation_basic_block.add_instruction(GetElementPtrInstruction{
-      .m_destination = temp_size_bytes_ptr,
-      .m_struct_type = closure_struct.m_type_name,
-      .m_struct_handle = LiteralHandle{"null"},
-      .m_initial_index =
-          Argument{.m_name = LiteralHandle{"1"}, .m_type = LLVMType::I32},
-      .m_additional_indices = {}});
-
-  auto temp_size_bytes_i64 = m_ctx.symbols().next_ssa_temporary();
-  lambda_creation_basic_block.add_instruction(PtrToIntInstruction{
-      .m_destination = temp_size_bytes_i64,
-      .m_source = temp_size_bytes_ptr,
-      .m_destination_type = LLVMType::I64,
-  });
-
-  // How do we store this env handle? In fat ptr?
-  auto closure_handle = m_ctx.symbols().next_ssa_temporary();
-  // Allocate the env
-  lambda_creation_basic_block.add_instruction(CallInstruction{
-      .m_target = closure_handle,
-      .m_callee = malloc_handle,
-      .m_arguments = {Argument{.m_name = temp_size_bytes_i64,
-                               .m_type = LLVMType::I64}},
-      .m_return_type = LLVMType::PTR,
-  });
+  auto closure_handle =
+      malloc_struct(lambda_creation_basic_block, closure_struct.m_type_name);
 
   {
     // Store env and lambda handles
