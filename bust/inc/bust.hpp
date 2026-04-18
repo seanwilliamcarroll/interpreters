@@ -15,6 +15,7 @@
 namespace bust {
 
 struct Options {
+  bool dump_source = false;
   bool dump_ast = false;
   bool dump_hir = false;
   bool dump_mono = false;

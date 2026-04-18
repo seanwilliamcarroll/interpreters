@@ -20,7 +20,9 @@ int main(int argc, const char *argv[]) {
   bust::Options options;
   const char *filename = nullptr;
   for (int i = 1; i < argc; ++i) {
-    if (std::strcmp(argv[i], "--dump-ast") == 0) {
+    if (std::strcmp(argv[i], "--dump-source") == 0) {
+      options.dump_source = true;
+    } else if (std::strcmp(argv[i], "--dump-ast") == 0) {
       options.dump_ast = true;
     } else if (std::strcmp(argv[i], "--dump-hir") == 0) {
       options.dump_hir = true;
@@ -36,8 +38,8 @@ int main(int argc, const char *argv[]) {
     } else if (filename == nullptr) {
       filename = argv[i];
     } else {
-      std::cerr << "Usage: bust [--dump-ast] [--dump-hir] [--dump-mono] "
-                   "[--dump-zir] [--dump-llvm-ir] <script.bu>\n";
+      std::cerr << "Usage: bust [--dump-source] [--dump-ast] [--dump-hir] "
+                   "[--dump-mono] [--dump-zir] [--dump-llvm-ir] <script.bu>\n";
       return 1;
     }
   }
