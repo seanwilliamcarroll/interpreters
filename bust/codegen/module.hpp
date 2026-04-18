@@ -39,7 +39,7 @@ struct Global {
 
 struct CaptureEnv {
   TypeHandle m_type_name;
-  std::vector<Parameter> m_captures;
+  std::vector<Argument> m_captures;
 };
 
 struct Module {
@@ -48,10 +48,10 @@ struct Module {
     m_handle_to_capture_env["__closure"] = CaptureEnv{
         .m_type_name = TypeHandle{.m_handle = FAT_PTR_STRING_LITERAL},
         .m_captures = {
-            Parameter{.m_name = ParameterHandle{FAT_PTR_FN_PTR_STRING_LITERAL},
-                      .m_type = LLVMType::PTR},
-            Parameter{.m_name = ParameterHandle{FAT_PTR_ENV_PTR_STRING_LITERAL},
-                      .m_type = LLVMType::PTR}}};
+            Argument{.m_name = ParameterHandle{FAT_PTR_FN_PTR_STRING_LITERAL},
+                     .m_type = LLVMType::PTR},
+            Argument{.m_name = ParameterHandle{FAT_PTR_ENV_PTR_STRING_LITERAL},
+                     .m_type = LLVMType::PTR}}};
   }
 
   Function &new_function(FunctionDeclaration signature) {
@@ -83,7 +83,7 @@ struct Module {
   }
 
   Handle add_capture_env(const std::string &handle,
-                         const std::vector<Parameter> &captures) {
+                         const std::vector<Argument> &captures) {
     auto type_handle =
         TypeHandle{.m_handle = CAPTURE_ENV_STRING_LITERAL + std::string(".") +
                                std::to_string(m_next_capture_env_index++)};

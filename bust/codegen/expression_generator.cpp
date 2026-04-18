@@ -678,14 +678,14 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
   if (!lambda_expr.m_captures.empty()) {
     // We need to load all the captured bindings before we execute the body
-    std::vector<Parameter> captured_bindings;
+    std::vector<Argument> captured_bindings;
     captured_bindings.reserve(lambda_expr.m_captures.size());
     for (const auto &capture : lambda_expr.m_captures) {
       auto binding = m_ctx.arena().get(capture.m_id);
 
       captured_bindings.emplace_back(
-          Parameter{.m_name = ParameterHandle{binding.m_name},
-                    .m_type = m_ctx.to_type(binding.m_type)});
+          Argument{.m_name = m_ctx.symbols().lookup(binding.m_name),
+                   .m_type = m_ctx.to_type(binding.m_type)});
     }
     auto capture_env_type_handle = m_ctx.module().add_capture_env(
         get_raw_handle(lambda_handle), captured_bindings);
@@ -716,13 +716,21 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
     for (const auto &[index, capture] :
          std::views::zip(std::views::iota(0ULL), captured_bindings)) {
-      store_to_struct(
-          lambda_creation_basic_block, capture_env_type_handle, env_handle,
-          index,
-          Argument{
-              .m_name = m_ctx.symbols().lookup(capture.m_name.m_handle),
-              .m_type = capture.m_type,
-          });
+      // Load the value to a temp first
+      auto temp_storage = m_ctx.symbols().next_ssa_temporary();
+
+      lambda_creation_basic_block.add_instruction(LoadInstruction{
+          .m_destination = temp_storage,
+          .m_source = capture.m_name,
+          .m_type = capture.m_type,
+      });
+
+      store_to_struct(lambda_creation_basic_block, capture_env_type_handle,
+                      env_handle, index,
+                      Argument{
+                          .m_name = temp_storage,
+                          .m_type = capture.m_type,
+                      });
     }
   }
 
