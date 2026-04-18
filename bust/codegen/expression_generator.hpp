@@ -14,6 +14,8 @@
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
+#include "codegen/parameter.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -47,6 +49,9 @@ struct ExpressionGenerator {
 
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
   Handle malloc_struct(BasicBlock &, const Handle &struct_type_name);
+  void store_to_struct(BasicBlock &, const Handle &struct_type_name,
+                       const Handle &struct_handle, size_t field_index,
+                       const Argument &value);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;
