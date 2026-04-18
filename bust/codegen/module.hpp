@@ -19,6 +19,7 @@
 #include "codegen/handle.hpp"
 #include "codegen/parameter.hpp"
 #include "codegen/types.hpp"
+#include "exceptions.hpp"
 #include "zir/nodes.hpp"
 
 //****************************************************************************
@@ -95,6 +96,15 @@ struct Module {
   [[nodiscard]] const std::unordered_map<std::string, CaptureEnv> &
   handles_to_capture_envs() const {
     return m_handle_to_capture_env;
+  }
+
+  const CaptureEnv &get_capture_env(const std::string &handle) {
+    auto iter = m_handle_to_capture_env.find(handle);
+    if (iter == m_handle_to_capture_env.end()) {
+      throw core::InternalCompilerError(
+          "Could not find capture env stored under: " + handle);
+    }
+    return iter->second;
   }
 
 private:

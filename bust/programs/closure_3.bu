@@ -1,0 +1,8 @@
+extern fn putchar(c: i32) -> i32;
+extern fn malloc(size: i64) -> i64;
+
+fn main() -> i64 {
+  let n = 5;
+  let add_five = |x: i64| -> i64 { x + n };
+  add_five(3)
+}
