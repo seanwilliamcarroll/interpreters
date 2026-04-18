@@ -24,6 +24,9 @@
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
+static constexpr const char *FAT_PTR_STRING_LITERAL = "closure";
+static constexpr const char *FAT_PTR_FN_PTR_STRING_LITERAL = "fn_ptr";
+static constexpr const char *FAT_PTR_ENV_PTR_STRING_LITERAL = "env_ptr";
 static constexpr const char *CAPTURE_ENV_STRING_LITERAL = "env";
 static constexpr Parameter CAPTURE_ENV_PARAMETER =
     Parameter{.m_name = ParameterHandle{CAPTURE_ENV_STRING_LITERAL},
@@ -34,12 +37,22 @@ struct Global {
 };
 
 struct CaptureEnv {
-
   TypeHandle m_type_name;
   std::vector<Parameter> m_captures;
 };
 
 struct Module {
+
+  explicit Module() {
+    m_handle_to_capture_env["__closure"] = CaptureEnv{
+        .m_type_name = TypeHandle{.m_handle = FAT_PTR_STRING_LITERAL},
+        .m_captures = {
+            Parameter{.m_name = ParameterHandle{FAT_PTR_FN_PTR_STRING_LITERAL},
+                      .m_type = LLVMType::PTR},
+            Parameter{.m_name = ParameterHandle{FAT_PTR_ENV_PTR_STRING_LITERAL},
+                      .m_type = LLVMType::PTR}}};
+  }
+
   Function &new_function(FunctionDeclaration signature) {
     m_functions.emplace_back(std::make_unique<Function>(std::move(signature)));
     return *m_functions.back();

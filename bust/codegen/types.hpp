@@ -38,17 +38,31 @@ inline std::ostream &operator<<(std::ostream &out, LLVMType type) {
   return out << type_names[std::to_underlying(type)];
 }
 
+inline size_t width_bytes(LLVMType type) {
+  switch (type) {
+  case LLVMType::I1:
+    return 1;
+  case LLVMType::I8:
+    return sizeof(int8_t);
+  case LLVMType::I32:
+    return sizeof(int32_t);
+  case LLVMType::I64:
+  case LLVMType::PTR:
+    return sizeof(int64_t);
+  case LLVMType::VOID:
+    std::unreachable();
+  }
+}
+
 inline size_t width_bits(LLVMType type) {
   switch (type) {
   case LLVMType::I1:
     return 1;
   case LLVMType::I8:
-    return BITS_PER_BYTE * sizeof(int8_t);
   case LLVMType::I32:
-    return BITS_PER_BYTE * sizeof(int32_t);
   case LLVMType::I64:
   case LLVMType::PTR:
-    return BITS_PER_BYTE * sizeof(int64_t);
+    return BITS_PER_BYTE * width_bytes(type);
   case LLVMType::VOID:
     std::unreachable();
   }

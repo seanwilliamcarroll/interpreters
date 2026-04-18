@@ -76,8 +76,14 @@ struct GetElementPtrInstruction {
   Handle m_destination;
   Handle m_struct_type;
   Handle m_struct_handle;
-  Argument m_array_index;
-  Argument m_field_index;
+  Argument m_initial_index;
+  std::vector<Argument> m_additional_indices;
+};
+
+struct PtrToIntInstruction {
+  Handle m_destination;
+  Handle m_source;
+  LLVMType m_destination_type;
 };
 
 struct CallVoidInstruction {
@@ -107,8 +113,8 @@ struct ReturnVoidInstruction {};
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
                  LoadInstruction, StoreInstruction, CastInstruction,
-                 GetElementPtrInstruction, CallVoidInstruction, CallInstruction,
-                 AllocaInstruction>;
+                 GetElementPtrInstruction, PtrToIntInstruction,
+                 CallVoidInstruction, CallInstruction, AllocaInstruction>;
 
 using Terminator = std::variant<BranchInstruction, JumpInstruction,
                                 ReturnInstruction, ReturnVoidInstruction>;

@@ -578,6 +578,10 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
   auto lambda_handle = signature.m_function_id;
 
+  // Before we create the lambda, add the capture storage and malloc
+
+  auto &lambda_creation_basic_block = m_ctx.function().entry_basic_block();
+
   auto &lambda_function = m_ctx.module().new_function(std::move(signature));
   m_ctx.module().set_current_function(lambda_function);
 
@@ -604,17 +608,70 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
               .m_destination = temp_dest,
               .m_struct_type = capture_env_type_handle,
               .m_struct_handle = ParameterHandle{CAPTURE_ENV_STRING_LITERAL},
-              .m_array_index = Argument{.m_name = LiteralHandle{"0"},
-                                        .m_type = LLVMType::I32},
-              .m_field_index =
+              .m_initial_index = Argument{.m_name = LiteralHandle{"0"},
+                                          .m_type = LLVMType::I32},
+              .m_additional_indices = {
                   Argument{.m_name = LiteralHandle{std::to_string(index)},
-                           .m_type = LLVMType::I32}});
+                           .m_type = LLVMType::I32}}});
 
       // Store the value itself
       m_ctx.function().current_basic_block().add_instruction(
           LoadInstruction{.m_destination = capture.m_name,
                           .m_source = temp_dest,
                           .m_type = capture.m_type});
+    }
+
+    // At creation site, we need to store these parameters
+    auto malloc_handle = m_ctx.symbols().lookup("malloc");
+    auto temp_size_bytes_ptr = m_ctx.symbols().next_ssa_temporary();
+    lambda_creation_basic_block.add_instruction(GetElementPtrInstruction{
+        .m_destination = temp_size_bytes_ptr,
+        .m_struct_type = capture_env_type_handle,
+        .m_struct_handle = LiteralHandle{"null"},
+        .m_initial_index =
+            Argument{.m_name = LiteralHandle{"1"}, .m_type = LLVMType::I32},
+        .m_additional_indices = {}});
+
+    auto temp_size_bytes_i64 = m_ctx.symbols().next_ssa_temporary();
+    lambda_creation_basic_block.add_instruction(PtrToIntInstruction{
+        .m_destination = temp_size_bytes_i64,
+        .m_source = temp_size_bytes_ptr,
+        .m_destination_type = LLVMType::I64,
+    });
+
+    // How do we store this env handle? In fat ptr?
+    auto env_handle =
+        m_ctx.symbols().define_env_handle(CAPTURE_ENV_STRING_LITERAL);
+
+    // Allocate the env
+    lambda_creation_basic_block.add_instruction(CallInstruction{
+        .m_target = env_handle,
+        .m_callee = malloc_handle,
+        .m_arguments = {Argument{.m_name = temp_size_bytes_i64,
+                                 .m_type = LLVMType::I64}},
+        .m_return_type = LLVMType::PTR,
+    });
+
+    for (const auto &[index, capture] :
+         std::views::zip(std::views::iota(0ULL), captured_bindings)) {
+      // For each capture, we need to get a pointer
+      auto temp_dest = m_ctx.symbols().next_ssa_temporary();
+      // Load the env value ptr
+      lambda_creation_basic_block.add_instruction(GetElementPtrInstruction{
+          .m_destination = temp_dest,
+          .m_struct_type = capture_env_type_handle,
+          .m_struct_handle = env_handle,
+          .m_initial_index =
+              Argument{.m_name = LiteralHandle{"0"}, .m_type = LLVMType::I32},
+          .m_additional_indices = {
+              Argument{.m_name = LiteralHandle{std::to_string(index)},
+                       .m_type = LLVMType::I32}}});
+
+      // Store the value itself
+      lambda_creation_basic_block.add_instruction(
+          StoreInstruction{.m_destination = temp_dest,
+                           .m_source = capture.m_name,
+                           .m_type = capture.m_type});
     }
   }
 
@@ -627,6 +684,9 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
         ReturnInstruction{.m_value = return_value,
                           .m_type = m_ctx.to_type(lambda_expr.m_return_type)});
   }
+
+  // Need to store lambda (function) handle and env handle in a closure struct,
+  // then return ptr to that
 
   return lambda_handle;
 }

@@ -69,19 +69,22 @@ void Formatter::format(const auto &to_format) { (*this)(to_format); }
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
 
+  m_out << ";------------------------------------------------------------------"
+           "--------------\n";
+
   for (const auto &[_, capture_env] : mod.handles_to_capture_envs()) {
     define_struct_type(capture_env);
   }
 
-  newline();
-  newline();
+  m_out << ";------------------------------------------------------------------"
+           "--------------\n";
 
   for (const auto &function_declaration : mod.extern_functions()) {
     declare(*function_declaration);
   }
 
-  newline();
-  newline();
+  m_out << ";------------------------------------------------------------------"
+           "--------------\n";
 
   for (const auto &function : mod.functions()) {
     format(*function);
@@ -259,10 +262,24 @@ void Formatter::operator()(const GetElementPtrInstruction &instruction) {
         << " = getelementptr "
         << std::visit(m_handle_converter, instruction.m_struct_type) << ", ptr "
         << std::visit(m_handle_converter, instruction.m_struct_handle) << ", "
-        << instruction.m_array_index.m_type << " "
-        << std::visit(m_handle_converter, instruction.m_array_index.m_name)
-        << ", " << instruction.m_field_index.m_type << " "
-        << std::visit(m_handle_converter, instruction.m_field_index.m_name);
+        << instruction.m_initial_index.m_type << " "
+        << std::visit(m_handle_converter, instruction.m_initial_index.m_name);
+
+  for (const auto &additional_index : instruction.m_additional_indices) {
+    m_out << ", " << additional_index.m_type << " "
+          << std::visit(m_handle_converter, additional_index.m_name);
+  }
+
+  newline();
+}
+
+void Formatter::operator()(const PtrToIntInstruction &instruction) {
+  indent();
+
+  m_out << std::visit(m_handle_converter, instruction.m_destination)
+        << " = ptrtoint ptr "
+        << std::visit(m_handle_converter, instruction.m_source) << " to "
+        << instruction.m_destination_type;
 
   newline();
 }
