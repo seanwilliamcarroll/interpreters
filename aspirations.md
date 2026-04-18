@@ -35,7 +35,13 @@ on each other are marked with arrows (→ means "enables").
 
 ## Codegen (LLVM IR)
 
-- [ ] Lambda expressions in LLVM IR generation
+- [ ] Lambda/closure codegen
+  - [x] Uniform calling convention (`ptr %env` first param on all user functions except main)
+  - [x] Extern thunks (`.thunk` wrappers so externs can be used as first-class values)
+  - [x] Env type creation and loading captures in lambda bodies
+  - [ ] Env allocation (malloc) and storing captures at lambda creation sites
+  - [ ] Fat pointer construction (`{fn_ptr, env_ptr}`) for closure values
+  - [ ] Indirect calls through closure values (extract fn_ptr + env_ptr)
 - [x] Non-i64 integer types in codegen
 - [x] Cast expressions in codegen
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
@@ -84,3 +90,18 @@ Goal: polymorphic lambdas work end-to-end through codegen.
   monomorphization. The zonker becomes a lowering pass from HIR to the
   arena-backed ZIR. Read-only passes after zonking (codegen, future
   optimizations) work against the arena.
+
+## Memory Management
+
+- [ ] Reference counting for heap-allocated closures (env structs)
+  — Currently leaking malloc'd env structs. Refcounting is sufficient since
+  no mutation means no cycles; tracing GC is overkill for now.
+
+## Module System / Standard Library
+
+- [ ] Module or include system
+  — So users don't have to manually declare externs like `putchar` and `malloc`.
+  Could be an implicit prelude, explicit `import`/`use` syntax, or both.
+- [ ] Core standard library
+  — Built on top of the module system; wraps common libc functions and
+  provides bust-native utilities.
