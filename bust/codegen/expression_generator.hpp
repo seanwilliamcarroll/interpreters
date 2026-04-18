@@ -52,6 +52,9 @@ struct ExpressionGenerator {
   void store_to_struct(BasicBlock &, const Handle &struct_type_name,
                        const Handle &struct_handle, size_t field_index,
                        const Argument &value);
+  Handle load_from_struct(BasicBlock &, const Handle &struct_type_name,
+                          const Handle &struct_handle, size_t field_index,
+                          LLVMType destination_type);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

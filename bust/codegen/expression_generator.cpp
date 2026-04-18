@@ -208,47 +208,12 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
   const auto &closure_struct = m_ctx.module().get_capture_env("__closure");
 
   auto closure_handle = generate(call_expression.m_callee);
-  auto callee_handle = m_ctx.symbols().next_ssa_temporary();
-  auto env_handle = m_ctx.symbols().next_ssa_temporary();
-
-  // Decide if env is null or not
-  {
-    auto temp_dest = m_ctx.symbols().next_ssa_temporary();
-    // Load the env value ptr
-    m_ctx.function().current_basic_block().add_instruction(
-        GetElementPtrInstruction{
-            .m_destination = temp_dest,
-            .m_struct_type = closure_struct.m_type_name,
-            .m_struct_handle = closure_handle,
-            .m_initial_index =
-                Argument{.m_name = LiteralHandle{"0"}, .m_type = LLVMType::I32},
-            .m_additional_indices = {Argument{.m_name = LiteralHandle{"0"},
-                                              .m_type = LLVMType::I32}}});
-
-    m_ctx.function().current_basic_block().add_instruction(
-        LoadInstruction{.m_destination = callee_handle,
-                        .m_source = temp_dest,
-                        .m_type = LLVMType::PTR});
-  }
-
-  {
-    auto temp_dest = m_ctx.symbols().next_ssa_temporary();
-    // Load the env value ptr
-    m_ctx.function().current_basic_block().add_instruction(
-        GetElementPtrInstruction{
-            .m_destination = temp_dest,
-            .m_struct_type = closure_struct.m_type_name,
-            .m_struct_handle = closure_handle,
-            .m_initial_index =
-                Argument{.m_name = LiteralHandle{"0"}, .m_type = LLVMType::I32},
-            .m_additional_indices = {Argument{.m_name = LiteralHandle{"1"},
-                                              .m_type = LLVMType::I32}}});
-
-    m_ctx.function().current_basic_block().add_instruction(
-        LoadInstruction{.m_destination = env_handle,
-                        .m_source = temp_dest,
-                        .m_type = LLVMType::PTR});
-  }
+  auto callee_handle = load_from_struct(m_ctx.function().current_basic_block(),
+                                        closure_struct.m_type_name,
+                                        closure_handle, 0, LLVMType::PTR);
+  auto env_handle = load_from_struct(m_ctx.function().current_basic_block(),
+                                     closure_struct.m_type_name, closure_handle,
+                                     1, LLVMType::PTR);
 
   std::vector<Argument> arguments;
   arguments.emplace_back(
@@ -663,6 +628,31 @@ void ExpressionGenerator::store_to_struct(BasicBlock &block,
                                          .m_type = value.m_type});
 }
 
+Handle ExpressionGenerator::load_from_struct(BasicBlock &block,
+                                             const Handle &struct_type_name,
+                                             const Handle &struct_handle,
+                                             size_t field_index,
+                                             LLVMType destination_type) {
+  auto ptr_to_struct_field = m_ctx.symbols().next_ssa_temporary();
+  // Load the env value ptr
+  block.add_instruction(GetElementPtrInstruction{
+      .m_destination = ptr_to_struct_field,
+      .m_struct_type = struct_type_name,
+      .m_struct_handle = struct_handle,
+      .m_initial_index =
+          Argument{.m_name = LiteralHandle{"0"}, .m_type = LLVMType::I32},
+      .m_additional_indices = {
+          Argument{.m_name = LiteralHandle{std::to_string(field_index)},
+                   .m_type = LLVMType::I32}}});
+
+  auto destination = m_ctx.symbols().next_ssa_temporary();
+  // Load the value
+  block.add_instruction(LoadInstruction{.m_destination = destination,
+                                        .m_source = ptr_to_struct_field,
+                                        .m_type = destination_type});
+  return destination;
+}
+
 Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   ScopeGuard scope_guard(m_ctx.symbols());
   FunctionScopeGuard function_guard(m_ctx);
@@ -702,24 +692,20 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
     for (const auto &[index, capture] :
          std::views::zip(std::views::iota(0ULL), captured_bindings)) {
-      auto temp_dest = m_ctx.symbols().next_ssa_temporary();
-      // Load the env value ptr
-      m_ctx.function().current_basic_block().add_instruction(
-          GetElementPtrInstruction{
-              .m_destination = temp_dest,
-              .m_struct_type = capture_env_type_handle,
-              .m_struct_handle = ParameterHandle{CAPTURE_ENV_STRING_LITERAL},
-              .m_initial_index = Argument{.m_name = LiteralHandle{"0"},
-                                          .m_type = LLVMType::I32},
-              .m_additional_indices = {
-                  Argument{.m_name = LiteralHandle{std::to_string(index)},
-                           .m_type = LLVMType::I32}}});
+      m_ctx.function().add_alloca_instruction(AllocaInstruction{
+          .m_handle = capture.m_name,
+          .m_type = capture.m_type,
+      });
 
-      // Store the value itself
-      m_ctx.function().current_basic_block().add_instruction(
-          LoadInstruction{.m_destination = capture.m_name,
-                          .m_source = temp_dest,
-                          .m_type = capture.m_type});
+      auto temp_dest = load_from_struct(
+          m_ctx.function().current_basic_block(), capture_env_type_handle,
+          ParameterHandle{CAPTURE_ENV_STRING_LITERAL}, index, capture.m_type);
+
+      m_ctx.function().current_basic_block().add_instruction(StoreInstruction{
+          .m_destination = capture.m_name,
+          .m_source = temp_dest,
+          .m_type = capture.m_type,
+      });
     }
 
     // At creation site, we need to store these parameters
