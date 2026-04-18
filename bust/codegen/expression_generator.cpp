@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -533,8 +534,7 @@ Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
     const zir::LambdaExpr &lambda_expr) {
   std::vector<Parameter> parameters;
-  parameters.emplace_back(
-      Parameter{.m_name = ParameterHandle{"env"}, .m_type = LLVMType::PTR});
+  parameters.emplace_back(CAPTURE_ENV_PARAMETER);
   std::ranges::transform(
       lambda_expr.m_parameters, std::back_inserter(parameters),
       [this](const zir::IdentifierExpr &parameter) -> Parameter {
@@ -580,6 +580,43 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
   auto &lambda_function = m_ctx.module().new_function(std::move(signature));
   m_ctx.module().set_current_function(lambda_function);
+
+  if (!lambda_expr.m_captures.empty()) {
+    // We need to load all the captured bindings before we execute the body
+    std::vector<Parameter> captured_bindings;
+    captured_bindings.reserve(lambda_expr.m_captures.size());
+    for (const auto &capture : lambda_expr.m_captures) {
+      auto binding = m_ctx.arena().get(capture.m_id);
+
+      captured_bindings.emplace_back(
+          Parameter{.m_name = ParameterHandle{binding.m_name},
+                    .m_type = m_ctx.to_type(binding.m_type)});
+    }
+    auto capture_env_type_handle = m_ctx.module().add_capture_env(
+        get_raw_handle(lambda_handle), captured_bindings);
+
+    for (const auto &[index, capture] :
+         std::views::zip(std::views::iota(0ULL), captured_bindings)) {
+      auto temp_dest = m_ctx.symbols().next_ssa_temporary();
+      // Load the env value ptr
+      m_ctx.function().current_basic_block().add_instruction(
+          GetElementPtrInstruction{
+              .m_destination = temp_dest,
+              .m_struct_type = capture_env_type_handle,
+              .m_struct_handle = ParameterHandle{CAPTURE_ENV_STRING_LITERAL},
+              .m_array_index = Argument{.m_name = LiteralHandle{"0"},
+                                        .m_type = LLVMType::I32},
+              .m_field_index =
+                  Argument{.m_name = LiteralHandle{std::to_string(index)},
+                           .m_type = LLVMType::I32}});
+
+      // Store the value itself
+      m_ctx.function().current_basic_block().add_instruction(
+          LoadInstruction{.m_destination = capture.m_name,
+                          .m_source = temp_dest,
+                          .m_type = capture.m_type});
+    }
+  }
 
   auto return_value = generate(lambda_expr.m_body);
 

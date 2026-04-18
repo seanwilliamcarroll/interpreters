@@ -72,6 +72,14 @@ struct CastInstruction {
   LLVMType m_to;
 };
 
+struct GetElementPtrInstruction {
+  Handle m_destination;
+  Handle m_struct_type;
+  Handle m_struct_handle;
+  Argument m_array_index;
+  Argument m_field_index;
+};
+
 struct CallVoidInstruction {
   Handle m_callee;
   std::vector<Argument> m_arguments;
@@ -99,7 +107,8 @@ struct ReturnVoidInstruction {};
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
                  LoadInstruction, StoreInstruction, CastInstruction,
-                 CallVoidInstruction, CallInstruction, AllocaInstruction>;
+                 GetElementPtrInstruction, CallVoidInstruction, CallInstruction,
+                 AllocaInstruction>;
 
 using Terminator = std::variant<BranchInstruction, JumpInstruction,
                                 ReturnInstruction, ReturnVoidInstruction>;

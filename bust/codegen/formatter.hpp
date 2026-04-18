@@ -34,6 +34,7 @@ struct HandleToString {
   std::string operator()(const ParameterHandle &);
   std::string operator()(const GlobalHandle &);
   std::string operator()(const ThunkWrapperHandle &);
+  std::string operator()(const TypeHandle &);
 
   size_t m_temporary_count = 0;
   std::unordered_map<size_t, size_t> m_ssa_mapping;
@@ -46,6 +47,7 @@ struct Formatter {
 
   void format(const auto &);
 
+  void define_struct_type(const CaptureEnv &);
   void operator()(const Module &);
 
   void operator()(const Parameter &);
@@ -62,6 +64,7 @@ struct Formatter {
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
   void operator()(const CastInstruction &);
+  void operator()(const GetElementPtrInstruction &);
 
   void operator()(const Argument &);
   void function_arguments(const std::vector<Argument> &);

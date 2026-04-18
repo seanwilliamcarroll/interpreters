@@ -40,8 +40,13 @@ struct ThunkWrapperHandle {
   std::string m_handle;
 };
 
-using Handle = std::variant<LiteralHandle, TemporaryHandle, LocalHandle,
-                            ParameterHandle, GlobalHandle, ThunkWrapperHandle>;
+struct TypeHandle {
+  std::string m_handle;
+};
+
+using Handle =
+    std::variant<LiteralHandle, TemporaryHandle, LocalHandle, ParameterHandle,
+                 GlobalHandle, ThunkWrapperHandle, TypeHandle>;
 
 inline std::string get_raw_handle(const Handle &handle) {
   return std::visit(

@@ -60,18 +60,47 @@ std::string HandleToString::operator()(const ThunkWrapperHandle &handle) {
   return "@" + handle.m_handle + ".thunk";
 }
 
+std::string HandleToString::operator()(const TypeHandle &handle) {
+  return "%" + handle.m_handle;
+}
+
 void Formatter::format(const auto &to_format) { (*this)(to_format); }
 
 void Formatter::operator()(const Module &mod) {
   // TODO: Globals
 
+  for (const auto &[_, capture_env] : mod.handles_to_capture_envs()) {
+    define_struct_type(capture_env);
+  }
+
+  newline();
+  newline();
+
   for (const auto &function_declaration : mod.extern_functions()) {
     declare(*function_declaration);
   }
 
+  newline();
+  newline();
+
   for (const auto &function : mod.functions()) {
     format(*function);
   }
+}
+
+void Formatter::define_struct_type(const CaptureEnv &capture_env) {
+
+  m_out << m_handle_converter(capture_env.m_type_name) << " = type { ";
+
+  for (size_t index = 0; index < capture_env.m_captures.size() - 1; ++index) {
+    m_out << capture_env.m_captures[index].m_type << ", ";
+  }
+  m_out << capture_env.m_captures.back().m_type;
+
+  m_out << " }";
+
+  newline();
+  newline();
 }
 
 void Formatter::operator()(const Parameter &parameter) {
@@ -219,6 +248,21 @@ void Formatter::operator()(const CastInstruction &instruction) {
         << instruction.m_operator << " " << instruction.m_from << " "
         << std::visit(m_handle_converter, instruction.m_source) << " to "
         << instruction.m_to;
+
+  newline();
+}
+
+void Formatter::operator()(const GetElementPtrInstruction &instruction) {
+  indent();
+
+  m_out << std::visit(m_handle_converter, instruction.m_destination)
+        << " = getelementptr "
+        << std::visit(m_handle_converter, instruction.m_struct_type) << ", ptr "
+        << std::visit(m_handle_converter, instruction.m_struct_handle) << ", "
+        << instruction.m_array_index.m_type << " "
+        << std::visit(m_handle_converter, instruction.m_array_index.m_name)
+        << ", " << instruction.m_field_index.m_type << " "
+        << std::visit(m_handle_converter, instruction.m_field_index.m_name);
 
   newline();
 }

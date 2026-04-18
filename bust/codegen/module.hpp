@@ -10,15 +10,33 @@
 
 #include <codegen/function.hpp>
 
+#include <cstddef>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
+
+#include "codegen/handle.hpp"
+#include "codegen/parameter.hpp"
+#include "codegen/types.hpp"
+#include "zir/nodes.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
+static constexpr const char *CAPTURE_ENV_STRING_LITERAL = "env";
+static constexpr Parameter CAPTURE_ENV_PARAMETER =
+    Parameter{.m_name = ParameterHandle{CAPTURE_ENV_STRING_LITERAL},
+              .m_type = LLVMType::PTR};
 
 struct Global {
   // TODO
+};
+
+struct CaptureEnv {
+
+  TypeHandle m_type_name;
+  std::vector<Parameter> m_captures;
 };
 
 struct Module {
@@ -50,11 +68,29 @@ struct Module {
     return m_extern_functions;
   }
 
+  Handle add_capture_env(const std::string &handle,
+                         const std::vector<Parameter> &captures) {
+    auto type_handle =
+        TypeHandle{.m_handle = CAPTURE_ENV_STRING_LITERAL + std::string(".") +
+                               std::to_string(m_next_capture_env_index++)};
+    auto capture_env =
+        CaptureEnv{.m_type_name = type_handle, .m_captures = captures};
+    m_handle_to_capture_env[handle] = capture_env;
+    return type_handle;
+  }
+
+  [[nodiscard]] const std::unordered_map<std::string, CaptureEnv> &
+  handles_to_capture_envs() const {
+    return m_handle_to_capture_env;
+  }
+
 private:
   std::vector<Global> m_globals;
   std::vector<std::unique_ptr<Function>> m_functions;
   std::vector<std::unique_ptr<FunctionDeclaration>> m_extern_functions;
   Function *m_current_function = nullptr;
+  std::unordered_map<std::string, CaptureEnv> m_handle_to_capture_env;
+  size_t m_next_capture_env_index = 0;
 };
 
 //****************************************************************************

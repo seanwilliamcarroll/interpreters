@@ -67,8 +67,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
 
   std::vector<Parameter> parameters;
   if (binding.m_name != "main") {
-    parameters.emplace_back(
-        Parameter{.m_name = ParameterHandle{"env"}, .m_type = LLVMType::PTR});
+    parameters.emplace_back(CAPTURE_ENV_PARAMETER);
   }
   std::ranges::transform(
       function_def.m_parameters, std::back_inserter(parameters),
@@ -140,8 +139,7 @@ void TopItemGenerator::operator()(
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
   std::vector<Parameter> parameters;
-  parameters.emplace_back(Parameter{
-      .m_name = ParameterHandle{.m_handle = "env"}, .m_type = LLVMType::PTR});
+  parameters.emplace_back(CAPTURE_ENV_PARAMETER);
   std::vector<Argument> arguments;
   for (auto [index, type_id] :
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
