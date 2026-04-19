@@ -39,11 +39,18 @@ on each other are marked with arrows (→ means "enables").
   - [x] Uniform calling convention (`ptr %env` first param on all user functions except main)
   - [x] Extern thunks (`.thunk` wrappers so externs can be used as first-class values)
   - [x] Env type creation and loading captures in lambda bodies
-  - [ ] Env allocation (malloc) and storing captures at lambda creation sites
-  - [ ] Fat pointer construction (`{fn_ptr, env_ptr}`) for closure values
-  - [ ] Indirect calls through closure values (extract fn_ptr + env_ptr)
+  - [x] Env allocation (malloc) and storing captures at lambda creation sites
+  - [x] Fat pointer construction (`{fn_ptr, env_ptr}`) for closure values
+  - [x] Indirect calls through closure values (extract fn_ptr + env_ptr)
+  - [ ] Constant closure globals for top-level functions and thunks (`@foo.closure = constant %closure { ptr @foo, ptr null }`)
 - [x] Non-i64 integer types in codegen
 - [x] Cast expressions in codegen
+- [ ] Codegen type arena
+  — Unify `LLVMType` enum and `TypeHandle` into a single type representation.
+  `CodegenTypeId` indexes into an arena of `CodegenType = variant<PrimitiveType, StructType>`.
+  `StructType` holds a name + list of `CodegenTypeId` fields. Arena pre-registers
+  primitives (i1, i8, i32, i64, ptr, void). Subsumes the type-registry role of
+  `CaptureEnv` in `Module`. Parallels the ZIR type arena design.
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
 
 ## Control Flow / Return Analysis
