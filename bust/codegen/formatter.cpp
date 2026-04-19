@@ -148,7 +148,15 @@ void Formatter::define(const FunctionDeclaration &signature) {
 }
 
 void Formatter::operator()(const Function &function) {
+  // Reset for each function for readability
   m_handle_converter = HandleToString{};
+
+  m_out << std::visit(m_handle_converter, function.signature().m_function_id) +
+               ".closure = constant %closure { ptr "
+        << std::visit(m_handle_converter, function.signature().m_function_id)
+        << ", ptr null }";
+  newline();
+
   define(function.signature());
 
   m_out << " {";

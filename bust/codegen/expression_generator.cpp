@@ -219,9 +219,7 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
   arguments.emplace_back(
       Argument{.m_name = env_handle, .m_type = LLVMType::PTR});
   std::ranges::transform(
-      call_expression.m_arguments,
-
-      std::back_inserter(arguments),
+      call_expression.m_arguments, std::back_inserter(arguments),
       [this](const auto &argument_expr_id) -> Argument {
         auto expression = m_ctx.arena().get(argument_expr_id);
         auto handle = generate(expression);
@@ -609,9 +607,7 @@ void ExpressionGenerator::store_to_struct(BasicBlock &block,
                                           const Handle &struct_handle,
                                           size_t field_index,
                                           const Argument &value) {
-  // For each capture, we need to get a pointer
   auto temp_dest = m_ctx.symbols().next_ssa_temporary();
-  // Load the env value ptr
   block.add_instruction(GetElementPtrInstruction{
       .m_destination = temp_dest,
       .m_struct_type = struct_type_name,
@@ -622,7 +618,6 @@ void ExpressionGenerator::store_to_struct(BasicBlock &block,
           Argument{.m_name = LiteralHandle{std::to_string(field_index)},
                    .m_type = LLVMType::I32}}});
 
-  // Store the value itself
   block.add_instruction(StoreInstruction{.m_destination = temp_dest,
                                          .m_source = value.m_name,
                                          .m_type = value.m_type});
@@ -634,7 +629,6 @@ Handle ExpressionGenerator::load_from_struct(BasicBlock &block,
                                              size_t field_index,
                                              LLVMType destination_type) {
   auto ptr_to_struct_field = m_ctx.symbols().next_ssa_temporary();
-  // Load the env value ptr
   block.add_instruction(GetElementPtrInstruction{
       .m_destination = ptr_to_struct_field,
       .m_struct_type = struct_type_name,
@@ -646,7 +640,6 @@ Handle ExpressionGenerator::load_from_struct(BasicBlock &block,
                    .m_type = LLVMType::I32}}});
 
   auto destination = m_ctx.symbols().next_ssa_temporary();
-  // Load the value
   block.add_instruction(LoadInstruction{.m_destination = destination,
                                         .m_source = ptr_to_struct_field,
                                         .m_type = destination_type});
@@ -710,7 +703,6 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
     // At creation site, we need to store these parameters
 
-    // How do we store this env handle? In fat ptr?
     env_handle =
         malloc_struct(lambda_creation_basic_block, capture_env_type_handle);
 
