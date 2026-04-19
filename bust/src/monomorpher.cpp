@@ -9,7 +9,7 @@
 #include <exceptions.hpp>
 #include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/unifier_state.hpp>
 #include <mono/context.hpp>
@@ -36,7 +36,7 @@ hir::Program Monomorpher::operator()(hir::Program program) {
   }
 
   auto context = mono::Context(
-      program.m_type_registry, std::move(program.m_unifier_state.value()),
+      program.m_type_arena, std::move(program.m_unifier_state.value()),
       program.m_instantiation_records, program.m_next_let_binding_id);
 
   std::vector<hir::TopItem> top_items;
@@ -49,7 +49,7 @@ hir::Program Monomorpher::operator()(hir::Program program) {
   }
 
   return {{program.m_location},
-          std::move(program.m_type_registry),
+          std::move(program.m_type_arena),
           std::move(top_items),
           std::move(program.m_unifier_state),
           {}};

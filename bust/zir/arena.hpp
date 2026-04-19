@@ -10,8 +10,6 @@
 
 #include <arena.hpp>
 #include <exceptions.hpp>
-#include <hir/type_registry.hpp>
-#include <hir/types.hpp>
 #include <types.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>

@@ -1,7 +1,7 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Interning registry for HIR types.
+//*  Purpose : Interning arena for HIR types.
 //*
 //*
 //****************************************************************************
@@ -22,8 +22,8 @@
 namespace bust::hir {
 //****************************************************************************
 
-struct TypeRegistry {
-  TypeRegistry()
+struct TypeArena {
+  TypeArena()
       : m_unit(intern(PrimitiveTypeValue{PrimitiveType::UNIT})),
         m_i8(intern(PrimitiveTypeValue{PrimitiveType::I8})),
         m_i32(intern(PrimitiveTypeValue{PrimitiveType::I32})),
@@ -37,7 +37,7 @@ struct TypeRegistry {
       return iter->second;
     }
     throw core::InternalCompilerError(
-        "With a const TypeRegistry, expect to be able to find TypeKind!");
+        "With a const TypeArena, expect to be able to find TypeKind!");
   }
 
   TypeId intern(const TypeKind &kind) {
@@ -54,7 +54,7 @@ struct TypeRegistry {
   [[nodiscard]] const TypeKind &get(TypeId id) const {
     if (id.m_id >= m_types.size()) {
       throw core::InternalCompilerError(
-          "TypeRegistry::get() out of bounds: id " + std::to_string(id.m_id) +
+          "TypeArena::get() out of bounds: id " + std::to_string(id.m_id) +
           ", size " + std::to_string(m_types.size()));
     }
     return m_types[id.m_id];
@@ -68,7 +68,7 @@ struct TypeRegistry {
     const auto &type_kind = get(type_id);
     if (!std::holds_alternative<VariantType>(type_kind)) {
       throw core::InternalCompilerError(std::string(function) +
-                                        " Bad access to registry with " +
+                                        " Bad access to arena with " +
                                         to_string(type_id));
     }
     return std::get<VariantType>(type_kind);

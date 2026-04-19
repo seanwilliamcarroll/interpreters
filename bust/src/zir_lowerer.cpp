@@ -8,7 +8,7 @@
 
 #include <exceptions.hpp>
 #include <hir/nodes.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/unifier_state.hpp>
 #include <zir/arena.hpp>
 #include <zir/context.hpp>
@@ -28,7 +28,7 @@ namespace bust {
 //****************************************************************************
 
 zir::Program ZirLowerer::operator()(hir::Program program) {
-  auto type_registry = std::move(program.m_type_registry);
+  auto type_arena = std::move(program.m_type_arena);
 
   if (!program.m_unifier_state.has_value()) {
     throw core::InternalCompilerError("UniferState required for ZIR lowering!");
@@ -36,7 +36,7 @@ zir::Program ZirLowerer::operator()(hir::Program program) {
 
   auto unifier_state = std::move(program.m_unifier_state.value());
 
-  auto context = zir::Context(type_registry, std::move(unifier_state));
+  auto context = zir::Context(type_arena, std::move(unifier_state));
 
   // Collect global bindings into context
   auto collector = zir::TopItemCollector{.m_ctx = context};

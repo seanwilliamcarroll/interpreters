@@ -20,7 +20,7 @@ struct FreeTypeVariableCollector {
   explicit FreeTypeVariableCollector(Context &ctx) : m_ctx(ctx) {}
 
   void collect(const TypeKind &type) { std::visit(*this, type); }
-  void collect(const TypeId &type) { collect(m_ctx.m_type_registry.get(type)); }
+  void collect(const TypeId &type) { collect(m_ctx.m_type_arena.get(type)); }
 
   void operator()(const PrimitiveTypeValue & /*unused*/) {}
 

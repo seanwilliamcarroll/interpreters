@@ -10,7 +10,7 @@
 //****************************************************************************
 
 #include <exceptions.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
 
@@ -21,13 +21,12 @@ namespace bust::zir {
 //****************************************************************************
 
 struct TypeResolver {
-  explicit TypeResolver(const hir::TypeRegistry &type_registry,
+  explicit TypeResolver(const hir::TypeArena &type_arena,
                         hir::UnifierState unifier_state)
-      : m_type_registry(type_registry),
-        m_unifier_state(std::move(unifier_state)) {}
+      : m_type_arena(type_arena), m_unifier_state(std::move(unifier_state)) {}
 
   hir::TypeId resolve(hir::TypeId type_id) {
-    const auto &type = m_type_registry.get(type_id);
+    const auto &type = m_type_arena.get(type_id);
     if (!std::holds_alternative<hir::TypeVariable>(type)) {
       return type_id;
     }
@@ -44,11 +43,11 @@ struct TypeResolver {
     throw core::InternalCompilerError(
         "We assume all type variables should "
         "have been resolved before ZIR lowering!\nCould not resolve: " +
-        m_type_registry.to_string(type_id));
+        m_type_arena.to_string(type_id));
   }
 
 private:
-  const hir::TypeRegistry &m_type_registry;
+  const hir::TypeArena &m_type_arena;
   hir::UnifierState m_unifier_state;
 };
 

@@ -9,7 +9,7 @@
 //****************************************************************************
 
 #include <exceptions.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/unifier_state.hpp>
 #include <zir/arena.hpp>
 #include <zir/environment.hpp>
@@ -23,10 +23,10 @@ namespace bust::zir {
 //****************************************************************************
 
 struct Context {
-  explicit Context(const hir::TypeRegistry &type_registry,
+  explicit Context(const hir::TypeArena &type_arena,
                    hir::UnifierState unifier_state)
-      : m_type_registry(type_registry),
-        m_resolver(type_registry, std::move(unifier_state)) {}
+      : m_type_arena(type_arena),
+        m_resolver(type_arena, std::move(unifier_state)) {}
 
   TypeId convert(const hir::TypeKind &type_kind) {
     // Translate concrete hir TypeKind into zir Type and intern
@@ -71,7 +71,7 @@ struct Context {
 
   TypeId convert(hir::TypeId type) {
     auto resolved_type_id = m_resolver.resolve(type);
-    return convert(m_type_registry.get(resolved_type_id));
+    return convert(m_type_arena.get(resolved_type_id));
   }
 
   void set_global_binding(const std::string &name, BindingId id) {
@@ -95,11 +95,11 @@ struct Context {
   Arena &arena() { return m_arena; }
 
   [[nodiscard]] std::string to_string(hir::TypeId type) const {
-    return m_type_registry.to_string(type);
+    return m_type_arena.to_string(type);
   }
 
 private:
-  const hir::TypeRegistry &m_type_registry;
+  const hir::TypeArena &m_type_arena;
   TypeResolver m_resolver;
   Arena m_arena;
   Environment m_env;

@@ -15,8 +15,8 @@
 #include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/type_converter.hpp>
-#include <hir/type_registry.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
@@ -46,7 +46,7 @@ void TopItemChecker::collect_function_signature(
 
   auto return_type_id =
       TypeConverter{m_ctx}.get_type(declaration.m_return_type);
-  const auto &return_type = m_ctx.m_type_registry.get(return_type_id);
+  const auto &return_type = m_ctx.m_type_arena.get(return_type_id);
   if (std::holds_alternative<TypeVariable>(return_type)) {
     throw core::InternalCompilerError(
         "return type inference for top-level functions not yet implemented");
@@ -55,7 +55,7 @@ void TopItemChecker::collect_function_signature(
   auto [_, parameter_types] =
       TypeConverter{m_ctx}.convert_parameters(declaration.m_parameters);
 
-  auto function_type_id = m_ctx.m_type_registry.intern(
+  auto function_type_id = m_ctx.m_type_arena.intern(
       FunctionType{.m_parameters = std::move(parameter_types),
                    .m_return_type = return_type_id});
 

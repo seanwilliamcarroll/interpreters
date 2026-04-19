@@ -14,8 +14,8 @@
 #include <hir/expression_checker.hpp>
 #include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/type_converter.hpp>
-#include <hir/type_registry.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
 #include <nodes.hpp>
@@ -172,7 +172,7 @@ Expression ExpressionChecker::operator()(
     }
     function_type.m_return_type = m_ctx.m_type_unifier.new_type_var();
 
-    auto function_type_id = m_ctx.m_type_registry.intern(function_type);
+    auto function_type_id = m_ctx.m_type_arena.intern(function_type);
 
     // Do single unification
     try {
@@ -225,7 +225,7 @@ Expression ExpressionChecker::operator()(
     if (m_ctx.is_type_variable(type_id)) {
       m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(type_id), required);
     } else if (!is_type_in_type_class(required,
-                                      m_ctx.m_type_registry.get(type_id))) {
+                                      m_ctx.m_type_arena.get(type_id))) {
       throw core::CompilerException("TypeChecker",
                                     "Type " + m_ctx.to_string(type_id) +
                                         " is disallowed by binary operator: " +
@@ -239,7 +239,7 @@ Expression ExpressionChecker::operator()(
   }
 
   auto final_type = is_comparison_op(binary_expression->m_operator)
-                        ? m_ctx.m_type_registry.m_bool
+                        ? m_ctx.m_type_arena.m_bool
                         : m_ctx.m_type_unifier.find(type_id);
 
   return {{location},
@@ -261,7 +261,7 @@ Expression ExpressionChecker::operator()(
                                      required_type_class);
     } else if (!is_type_in_type_class(
                    required_type_class,
-                   m_ctx.m_type_registry.get(expression.m_type))) {
+                   m_ctx.m_type_arena.get(expression.m_type))) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
@@ -292,7 +292,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   auto condition = check_expression(if_expression->m_condition);
 
   try {
-    m_ctx.m_type_unifier.unify(condition.m_type, m_ctx.m_type_registry.m_bool);
+    m_ctx.m_type_unifier.unify(condition.m_type, m_ctx.m_type_arena.m_bool);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
@@ -312,8 +312,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
     // Just then branch
 
     try {
-      m_ctx.m_type_unifier.unify(m_ctx.m_type_registry.m_unit,
-                                 then_block.m_type);
+      m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, then_block.m_type);
     } catch (std::runtime_error &error) {
       throw core::CompilerException(
           "TypeChecker",
@@ -321,7 +320,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
     }
 
     return {{location},
-            m_ctx.m_type_registry.m_unit,
+            m_ctx.m_type_arena.m_unit,
             std::make_unique<IfExpr>(IfExpr{
                 std::move(resolved_condition), std::move(then_block), {}})};
   }
@@ -337,7 +336,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
         location);
   }
 
-  auto type = m_ctx.m_type_registry.m_never == then_block.m_type
+  auto type = m_ctx.m_type_arena.m_never == then_block.m_type
                   ? m_ctx.m_type_unifier.find(else_block.m_type)
                   : m_ctx.m_type_unifier.find(then_block.m_type);
 
@@ -424,7 +423,7 @@ Expression ExpressionChecker::operator()(
 
   return {
       {location},
-      m_ctx.m_type_registry.m_never,
+      m_ctx.m_type_arena.m_never,
       std::make_unique<ReturnExpr>(ReturnExpr{std::move(final_expression)})};
 }
 
@@ -460,7 +459,7 @@ Expression ExpressionChecker::operator()(
         location);
   }
 
-  auto function_type_id = m_ctx.m_type_registry.intern(
+  auto function_type_id = m_ctx.m_type_arena.intern(
       FunctionType{.m_parameters = std::move(parameter_types),
                    .m_return_type = return_type_id});
 
@@ -484,41 +483,41 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
 Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_registry.m_i8,
+          m_ctx.m_type_arena.m_i8,
           LiteralI8{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI32 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_registry.m_i32,
+          m_ctx.m_type_arena.m_i32,
           LiteralI32{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralI64 &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_registry.m_i64,
+          m_ctx.m_type_arena.m_i64,
           LiteralI64{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralBool &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_registry.m_bool,
+          m_ctx.m_type_arena.m_bool,
           LiteralBool{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralChar &literal,
                                          const core::SourceLocation &location) {
   return {{location},
-          m_ctx.m_type_registry.m_char,
+          m_ctx.m_type_arena.m_char,
           LiteralChar{{location}, literal.m_value}};
 }
 
 Expression ExpressionChecker::operator()(const ast::LiteralUnit & /*unused*/,
                                          const core::SourceLocation &location) {
-  return {{location}, m_ctx.m_type_registry.m_unit, LiteralUnit{{location}}};
+  return {{location}, m_ctx.m_type_arena.m_unit, LiteralUnit{{location}}};
 }
 
 //****************************************************************************

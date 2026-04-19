@@ -51,8 +51,8 @@ TEST_SUITE("bust.monomorpher") {
   auto(var) = mono_string_impl(src);                                           \
   INFO("HIR:\n" << hir::Dumper::dump(var))
 
-  static bool is_concrete(const hir::TypeRegistry &registry, hir::TypeId id) {
-    return !std::holds_alternative<hir::TypeVariable>(registry.get(id));
+  static bool is_concrete(const hir::TypeArena &arena, hir::TypeId id) {
+    return !std::holds_alternative<hir::TypeVariable>(arena.get(id));
   }
 
   // Collect all let bindings in a block whose name starts with the given
@@ -231,7 +231,7 @@ TEST_SUITE("bust.monomorpher") {
     const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
         specializations[0]->m_expression.m_expression);
     for (const auto &param : lambda->m_parameters) {
-      CHECK(is_concrete(program.m_type_registry, param.m_type));
+      CHECK(is_concrete(program.m_type_arena, param.m_type));
     }
   }
 
@@ -245,7 +245,7 @@ TEST_SUITE("bust.monomorpher") {
     REQUIRE(specializations.size() == 1);
     const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
         specializations[0]->m_expression.m_expression);
-    CHECK(is_concrete(program.m_type_registry, lambda->m_return_type));
+    CHECK(is_concrete(program.m_type_arena, lambda->m_return_type));
   }
 
   TEST_CASE("specialization's bound-name type is concrete") {
@@ -256,9 +256,9 @@ TEST_SUITE("bust.monomorpher") {
     auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
     auto specializations = find_let_bindings_with_prefix(func.m_body, "id");
     REQUIRE(specializations.size() == 1);
-    CHECK(is_concrete(program.m_type_registry,
+    CHECK(is_concrete(program.m_type_arena,
                       specializations[0]->m_variable.m_type));
-    CHECK(is_concrete(program.m_type_registry,
+    CHECK(is_concrete(program.m_type_arena,
                       specializations[0]->m_expression.m_type));
   }
 
@@ -368,9 +368,9 @@ TEST_SUITE("bust.monomorpher") {
       const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
           spec->m_expression.m_expression);
       for (const auto &param : lambda->m_parameters) {
-        CHECK(is_concrete(program.m_type_registry, param.m_type));
+        CHECK(is_concrete(program.m_type_arena, param.m_type));
       }
-      CHECK(is_concrete(program.m_type_registry, lambda->m_return_type));
+      CHECK(is_concrete(program.m_type_arena, lambda->m_return_type));
     }
   }
 

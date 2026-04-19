@@ -14,7 +14,7 @@
 #include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
 #include <hir/statement_checker.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
 
@@ -30,7 +30,7 @@ TypeId BlockChecker::get_statement_type(const Statement &statement) {
   if (std::holds_alternative<Expression>(statement)) {
     return std::get<Expression>(statement).m_type;
   }
-  return m_ctx.m_type_registry.m_unit;
+  return m_ctx.m_type_arena.m_unit;
 }
 
 Block BlockChecker::check_block(const ast::Block &block) {
@@ -49,7 +49,7 @@ Block BlockChecker::check_block(const ast::Block &block) {
       });
 
   auto type = final_expression.has_value() ? final_expression.value().m_type
-                                           : m_ctx.m_type_registry.m_unit;
+                                           : m_ctx.m_type_arena.m_unit;
 
   return {{block.m_location},
           type,

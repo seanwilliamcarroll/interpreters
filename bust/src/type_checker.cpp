@@ -11,7 +11,7 @@
 #include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/unifier_state.hpp>
 #include <source_location.hpp>
 #include <type_checker.hpp>
@@ -56,7 +56,7 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
   auto post_check_state = context.get_post_check_data();
 
   return {{program.m_location},
-          std::move(post_check_state.m_type_registry),
+          std::move(post_check_state.m_type_arena),
           std::move(typed_items),
           std::move(post_check_state.m_unifier_state),
           std::move(post_check_state.m_instantiation_records),

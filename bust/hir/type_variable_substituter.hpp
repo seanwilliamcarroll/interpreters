@@ -8,7 +8,7 @@
 #pragma once
 //****************************************************************************
 
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
 
@@ -25,15 +25,15 @@ struct TypeVariableSubstituter {
   TypeId substitute(const TypeKind &type) { return std::visit(*this, type); }
 
   TypeId substitute(const TypeId &type) {
-    return substitute(m_type_registry.get(type));
+    return substitute(m_type_arena.get(type));
   }
 
   TypeId operator()(const PrimitiveTypeValue &type) {
-    return m_type_registry.intern(type);
+    return m_type_arena.intern(type);
   }
 
   TypeId operator()(const TypeVariable &type) {
-    auto type_id = m_type_registry.intern(type);
+    auto type_id = m_type_arena.intern(type);
     auto iter = m_new_mapping.find(type_id);
 
     if (iter == m_new_mapping.end()) {
@@ -42,7 +42,7 @@ struct TypeVariableSubstituter {
       if (resolved_iter != m_new_mapping.end()) {
         return resolved_iter->second;
       }
-      if (m_type_registry.is_type_variable(resolved_type_id)) {
+      if (m_type_arena.is_type_variable(resolved_type_id)) {
         return resolved_type_id;
       }
       // Otherwise, recurse on it?
@@ -56,19 +56,19 @@ struct TypeVariableSubstituter {
     std::vector<TypeId> parameters;
     parameters.reserve(type.m_parameters.size());
     for (const auto &parameter : type.m_parameters) {
-      parameters.emplace_back(substitute(m_type_registry.get(parameter)));
+      parameters.emplace_back(substitute(m_type_arena.get(parameter)));
     }
 
-    return m_type_registry.intern(FunctionType{
+    return m_type_arena.intern(FunctionType{
         .m_parameters = std::move(parameters),
-        .m_return_type = substitute(m_type_registry.get(type.m_return_type))});
+        .m_return_type = substitute(m_type_arena.get(type.m_return_type))});
   }
 
   TypeId operator()(const NeverType & /*unused*/) {
-    return m_type_registry.m_never;
+    return m_type_arena.m_never;
   }
 
-  TypeRegistry &m_type_registry;
+  TypeArena &m_type_arena;
   TypeUnifier &m_type_unifier;
   const std::unordered_map<TypeId, TypeId> &m_new_mapping;
 };

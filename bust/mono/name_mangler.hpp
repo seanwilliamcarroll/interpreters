@@ -12,7 +12,7 @@
 
 #include <exceptions.hpp>
 #include <hir/instantiation_record.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <types.hpp>
 
@@ -26,8 +26,7 @@ namespace bust::mono {
 
 struct Mangler {
 
-  explicit Mangler(hir::TypeRegistry &type_registry)
-      : m_type_registry(type_registry) {}
+  explicit Mangler(hir::TypeArena &type_arena) : m_type_arena(type_arena) {}
 
   // Entry point
   std::string mangle(const std::string &original_identifier,
@@ -63,10 +62,10 @@ struct Mangler {
                 "Cannot mangle names with NeverType or TypeVariables");
           }
         },
-        m_type_registry.get(type_id));
+        m_type_arena.get(type_id));
   }
 
-  const hir::TypeRegistry &m_type_registry;
+  const hir::TypeArena &m_type_arena;
   std::stringstream m_out;
 };
 

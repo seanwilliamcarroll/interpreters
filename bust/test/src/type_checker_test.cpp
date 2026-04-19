@@ -58,9 +58,9 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &expr = *func.m_body.m_final_expression;
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(expr.m_type)));
+        hir.m_type_arena.get(expr.m_type)));
     auto &ptype =
-        std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(expr.m_type));
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -76,9 +76,9 @@ TEST_SUITE("bust.type_checker") {
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr = let.m_expression;
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(expr.m_type)));
+        hir.m_type_arena.get(expr.m_type)));
     auto &ptype =
-        std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(expr.m_type));
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
     CHECK(ptype.m_type == PrimitiveType::BOOL);
   }
 
@@ -94,9 +94,9 @@ TEST_SUITE("bust.type_checker") {
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr = let.m_expression;
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(expr.m_type)));
+        hir.m_type_arena.get(expr.m_type)));
     auto &ptype =
-        std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(expr.m_type));
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
     CHECK(ptype.m_type == PrimitiveType::UNIT);
   }
 
@@ -115,7 +115,7 @@ TEST_SUITE("bust.type_checker") {
     auto &let = std::get<hir::LetBinding>(stmt);
     CHECK(let.m_variable.m_name == "x");
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::I64);
   }
 
@@ -130,7 +130,7 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(!func.m_body.m_statements.empty());
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::I64);
   }
 
@@ -143,7 +143,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -172,13 +172,13 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     CHECK(func.m_signature.m_function_id == "main");
     CHECK(std::get<hir::FunctionType>(
-              hir.m_type_registry.get(func.m_signature.m_type))
+              hir.m_type_arena.get(func.m_signature.m_type))
               .m_parameters.empty());
 
-    auto &ret = std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(
-        std::get<hir::FunctionType>(
-            hir.m_type_registry.get(func.m_signature.m_type))
-            .m_return_type));
+    auto &ret = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(std::get<hir::FunctionType>(
+                                 hir.m_type_arena.get(func.m_signature.m_type))
+                                 .m_return_type));
     CHECK(ret.m_type == PrimitiveType::I64);
   }
 
@@ -192,11 +192,11 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(func.m_signature.m_parameters.size() == 2);
     CHECK(func.m_signature.m_parameters[0].m_name == "a");
     auto &a_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_signature.m_parameters[0].m_type));
+        hir.m_type_arena.get(func.m_signature.m_parameters[0].m_type));
     CHECK(a_type.m_type == PrimitiveType::I64);
     CHECK(func.m_signature.m_parameters[1].m_name == "b");
     REQUIRE(std::get<hir::FunctionType>(
-                hir.m_type_registry.get(func.m_signature.m_type))
+                hir.m_type_arena.get(func.m_signature.m_type))
                 .m_parameters.size() == 2);
   }
 
@@ -219,7 +219,7 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &expr = *func.m_body.m_final_expression;
     auto &ptype =
-        std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(expr.m_type));
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -232,7 +232,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -250,7 +250,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -263,7 +263,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -276,7 +276,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -289,7 +289,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -302,7 +302,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -313,7 +313,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::BOOL);
   }
 
@@ -346,7 +346,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -359,7 +359,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -371,7 +371,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -384,7 +384,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -411,7 +411,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -446,9 +446,9 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(!func.m_body.m_statements.empty());
     auto &expr = std::get<hir::Expression>(func.m_body.m_statements[0]);
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(expr.m_type)));
+        hir.m_type_arena.get(expr.m_type)));
     auto &ptype =
-        std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(expr.m_type));
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
     CHECK(ptype.m_type == PrimitiveType::UNIT);
   }
 
@@ -462,9 +462,9 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(!func.m_body.m_statements.empty());
     auto &expr = std::get<hir::Expression>(func.m_body.m_statements[0]);
     CHECK(std::holds_alternative<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(expr.m_type)));
+        hir.m_type_arena.get(expr.m_type)));
     auto &ptype =
-        std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(expr.m_type));
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
     CHECK(ptype.m_type == PrimitiveType::UNIT);
   }
 
@@ -495,7 +495,7 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(func.m_body.m_final_expression.has_value());
     // The if-else type should be i64 (never unifies with i64)
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -508,7 +508,7 @@ TEST_SUITE("bust.type_checker") {
     auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
     REQUIRE(main_func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(main_func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(main_func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -534,7 +534,7 @@ TEST_SUITE("bust.type_checker") {
     CHECK(func.m_signature.m_function_id == "countdown");
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -549,7 +549,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -580,7 +580,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -594,7 +594,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -619,7 +619,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -634,7 +634,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -648,7 +648,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -673,7 +673,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -701,7 +701,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -725,7 +725,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -766,7 +766,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -777,7 +777,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -827,7 +827,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -839,7 +839,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -852,7 +852,7 @@ TEST_SUITE("bust.type_checker") {
     auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(main_func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(main_func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(main_func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -898,12 +898,12 @@ TEST_SUITE("bust.type_checker") {
     // id(true) returns bool
     auto &let_a = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
     auto &a_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let_a.m_variable.m_type));
+        hir.m_type_arena.get(let_a.m_variable.m_type));
     CHECK(a_type.m_type == PrimitiveType::BOOL);
     // id(42) returns i64
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -922,7 +922,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -937,7 +937,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -953,7 +953,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -971,7 +971,7 @@ TEST_SUITE("bust.type_checker") {
     auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
     REQUIRE(main_func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(main_func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(main_func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -994,7 +994,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1010,7 +1010,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1025,7 +1025,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -1043,7 +1043,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1061,7 +1061,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1080,7 +1080,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1106,7 +1106,7 @@ TEST_SUITE("bust.type_checker") {
     auto &main_func = std::get<hir::FunctionDef>(hir.m_top_items[1]);
     REQUIRE(main_func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(main_func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(main_func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1204,7 +1204,7 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(hir.m_top_items.size() == 2);
     auto &let = std::get<hir::LetBinding>(hir.m_top_items[0]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::I64);
   }
 
@@ -1228,7 +1228,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1241,7 +1241,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &expr_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_expression.m_type));
+        hir.m_type_arena.get(let.m_expression.m_type));
     CHECK(expr_type.m_type == PrimitiveType::UNIT);
   }
 
@@ -1274,7 +1274,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1335,7 +1335,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1353,7 +1353,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1367,7 +1367,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1384,7 +1384,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[2]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::BOOL);
   }
 
@@ -1399,7 +1399,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(let.m_variable.m_type));
+        hir.m_type_arena.get(let.m_variable.m_type));
     CHECK(var_type.m_type == PrimitiveType::CHAR);
   }
 
@@ -1409,7 +1409,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::CHAR);
   }
 
@@ -1419,7 +1419,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::CHAR);
   }
 
@@ -1438,10 +1438,10 @@ TEST_SUITE("bust.type_checker") {
                           "fn main() -> i64 { 0 }");
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    auto &ret = std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(
-        std::get<hir::FunctionType>(
-            hir.m_type_registry.get(func.m_signature.m_type))
-            .m_return_type));
+    auto &ret = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(std::get<hir::FunctionType>(
+                                 hir.m_type_arena.get(func.m_signature.m_type))
+                                 .m_return_type));
     CHECK(ret.m_type == PrimitiveType::I8);
   }
 
@@ -1450,10 +1450,10 @@ TEST_SUITE("bust.type_checker") {
                           "fn main() -> i64 { 0 }");
     DUMP_HIR(hir);
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
-    auto &ret = std::get<hir::PrimitiveTypeValue>(hir.m_type_registry.get(
-        std::get<hir::FunctionType>(
-            hir.m_type_registry.get(func.m_signature.m_type))
-            .m_return_type));
+    auto &ret = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(std::get<hir::FunctionType>(
+                                 hir.m_type_arena.get(func.m_signature.m_type))
+                                 .m_return_type));
     CHECK(ret.m_type == PrimitiveType::I32);
   }
 
@@ -1464,7 +1464,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
     auto &p_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_signature.m_parameters[0].m_type));
+        hir.m_type_arena.get(func.m_signature.m_parameters[0].m_type));
     CHECK(p_type.m_type == PrimitiveType::I8);
   }
 
@@ -1492,7 +1492,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I8);
   }
 
@@ -1502,7 +1502,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I32);
   }
 
@@ -1513,7 +1513,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1524,7 +1524,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I32);
   }
 
@@ -1535,7 +1535,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1545,7 +1545,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1555,7 +1555,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::CHAR);
   }
 
@@ -1565,7 +1565,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1575,7 +1575,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1585,7 +1585,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::CHAR);
   }
 
@@ -1627,7 +1627,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I8);
   }
 
@@ -1637,7 +1637,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1649,7 +1649,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1662,7 +1662,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
     auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        (hir.m_type_registry.get(let.m_variable.m_type)));
+        (hir.m_type_arena.get(let.m_variable.m_type)));
     CHECK(var_type.m_type == PrimitiveType::I8);
   }
 
@@ -1691,7 +1691,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I64);
   }
 
@@ -1704,7 +1704,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I8);
   }
 
@@ -1715,7 +1715,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I32);
   }
 
@@ -1726,7 +1726,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I8);
   }
 
@@ -1737,7 +1737,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I32);
   }
 
@@ -1748,7 +1748,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::BOOL);
   }
 
@@ -1759,7 +1759,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::BOOL);
   }
 
@@ -1770,7 +1770,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::BOOL);
   }
 
@@ -1799,7 +1799,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I8);
   }
 
@@ -1810,7 +1810,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
     auto &ptype = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(func.m_body.m_final_expression->m_type));
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
     CHECK(ptype.m_type == PrimitiveType::I32);
   }
 
@@ -1831,15 +1831,15 @@ TEST_SUITE("bust.type_checker") {
     CHECK(ext.m_signature.m_function_id == "putchar");
 
     auto &fn_type = std::get<hir::FunctionType>(
-        hir.m_type_registry.get(ext.m_signature.m_type));
+        hir.m_type_arena.get(ext.m_signature.m_type));
     REQUIRE(fn_type.m_parameters.size() == 1);
 
     auto &param_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(fn_type.m_parameters[0]));
+        hir.m_type_arena.get(fn_type.m_parameters[0]));
     CHECK(param_type.m_type == PrimitiveType::I32);
 
     auto &ret_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(fn_type.m_return_type));
+        hir.m_type_arena.get(fn_type.m_return_type));
     CHECK(ret_type.m_type == PrimitiveType::I32);
   }
 
@@ -1851,9 +1851,9 @@ TEST_SUITE("bust.type_checker") {
     auto &ext = std::get<hir::ExternFunctionDeclaration>(hir.m_top_items[0]);
 
     auto &fn_type = std::get<hir::FunctionType>(
-        hir.m_type_registry.get(ext.m_signature.m_type));
+        hir.m_type_arena.get(ext.m_signature.m_type));
     auto &ret_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_registry.get(fn_type.m_return_type));
+        hir.m_type_arena.get(fn_type.m_return_type));
     CHECK(ret_type.m_type == PrimitiveType::UNIT);
   }
 
@@ -1884,7 +1884,7 @@ TEST_SUITE("bust.type_checker") {
   // Fails the test if the TypeId isn't a primitive.
   static PrimitiveType resolved_primitive(const hir::Program &hir,
                                           hir::TypeId id) {
-    const auto &kind = hir.m_type_registry.get(id);
+    const auto &kind = hir.m_type_arena.get(id);
     REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
     return std::get<hir::PrimitiveTypeValue>(kind).m_type;
   }
@@ -2110,17 +2110,17 @@ TEST_SUITE("bust.type_checker") {
     REQUIRE(lambda->m_parameters.size() == 2);
     // Parameter types still carry the post-checker (pre-zir lowering) type ids.
     // The substituter can resolve these via the unifier; asking the
-    // registry directly gives us the raw node. That should still be a
+    // arena directly gives us the raw node. That should still be a
     // FunctionType once the checker's work has settled — or, if the AST
     // retains the original type-var, at least not be outright broken.
     // We assert that after resolving through the program's unifier state,
     // the f parameter is either a FunctionType or a type variable whose
     // union-find root resolves to a FunctionType.
-    hir::TypeUnifier unifier{hir.m_type_registry};
+    hir::TypeUnifier unifier{hir.m_type_arena};
     REQUIRE(hir.m_unifier_state.has_value());
     unifier.adopt_state(std::move(hir.m_unifier_state.value()));
     auto resolved = unifier.find(lambda->m_parameters[0].m_type);
-    const auto &kind = hir.m_type_registry.get(resolved);
+    const auto &kind = hir.m_type_arena.get(resolved);
     CHECK(std::holds_alternative<hir::FunctionType>(kind));
   }
 
