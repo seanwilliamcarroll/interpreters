@@ -31,6 +31,7 @@ add_library(bust-lib STATIC
   hir/top_item_checker.cpp
   hir/type_registry.cpp
   src/codegen.cpp
+  codegen/arena.cpp
   codegen/expression_generator.cpp
   codegen/formatter.cpp
   codegen/let_binding_generator.cpp
