@@ -538,7 +538,7 @@ TEST_SUITE("bust.type_unifier.constraints") {
   }
 
   TEST_CASE("constrain COMPARABLE then resolve with char succeeds") {
-    hir::Typearena type_arena{};
+    hir::TypeArena type_arena{};
     hir::TypeUnifier unifier{type_arena};
     auto t0 = unifier.new_type_var();
     unifier.constrain(t0, PrimitiveTypeClass::COMPARABLE);

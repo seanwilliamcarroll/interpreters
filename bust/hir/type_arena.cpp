@@ -51,7 +51,7 @@ std::string TypeArena::to_string(const TypeKind &type_kind) const {
 }
 
 std::string TypeArena::to_string(TypeId type_id) const {
-  return to_string(m_types.at(type_id.m_id));
+  return to_string(get(type_id));
 }
 
 //****************************************************************************

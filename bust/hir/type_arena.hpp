@@ -8,21 +8,19 @@
 #pragma once
 //****************************************************************************
 
+#include <arena.hpp>
 #include <exceptions.hpp>
 #include <hir/types.hpp>
 #include <types.hpp>
 
 #include <string>
-#include <string_view>
-#include <unordered_map>
 #include <variant>
-#include <vector>
 
 //****************************************************************************
 namespace bust::hir {
 //****************************************************************************
 
-struct TypeArena {
+struct TypeArena : public AbstractInternArena<TypeId, TypeKind> {
   TypeArena()
       : m_unit(intern(PrimitiveTypeValue{PrimitiveType::UNIT})),
         m_i8(intern(PrimitiveTypeValue{PrimitiveType::I8})),
@@ -32,47 +30,8 @@ struct TypeArena {
         m_bool(intern(PrimitiveTypeValue{PrimitiveType::BOOL})),
         m_never(intern(NeverType{})) {}
 
-  [[nodiscard]] TypeId intern(const TypeKind &kind) const {
-    if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {
-      return iter->second;
-    }
-    throw core::InternalCompilerError(
-        "With a const TypeArena, expect to be able to find TypeKind!");
-  }
-
-  TypeId intern(const TypeKind &kind) {
-    if (auto iter = m_mapping.find(kind); iter != m_mapping.end()) {
-      return iter->second;
-    }
-
-    auto next_type_id = TypeId{m_types.size()};
-    m_types.push_back(kind);
-    m_mapping.emplace(m_types.back(), next_type_id);
-    return next_type_id;
-  }
-
-  [[nodiscard]] const TypeKind &get(TypeId id) const {
-    if (id.m_id >= m_types.size()) {
-      throw core::InternalCompilerError(
-          "TypeArena::get() out of bounds: id " + std::to_string(id.m_id) +
-          ", size " + std::to_string(m_types.size()));
-    }
-    return m_types[id.m_id];
-  }
-
-  [[nodiscard]] std::string to_string(const TypeKind &) const;
-  [[nodiscard]] std::string to_string(TypeId) const;
-
-  template <typename VariantType>
-  const VariantType &as(TypeId type_id, const char *function) const {
-    const auto &type_kind = get(type_id);
-    if (!std::holds_alternative<VariantType>(type_kind)) {
-      throw core::InternalCompilerError(std::string(function) +
-                                        " Bad access to arena with " +
-                                        to_string(type_id));
-    }
-    return std::get<VariantType>(type_kind);
-  }
+  [[nodiscard]] std::string to_string(const TypeKind &) const override;
+  [[nodiscard]] std::string to_string(TypeId) const override;
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
@@ -86,13 +45,6 @@ struct TypeArena {
     return as<TypeVariable>(type_id, __PRETTY_FUNCTION__);
   }
 
-  template <typename VariantType>
-  [[nodiscard]] [[nodiscard]] [[nodiscard]] [[nodiscard]] bool
-  is(TypeId type_id) const {
-    const auto &type_kind = get(type_id);
-    return std::holds_alternative<VariantType>(type_kind);
-  }
-
   [[nodiscard]] bool is_function(TypeId type_id) const {
     return is<FunctionType>(type_id);
   }
@@ -104,10 +56,6 @@ struct TypeArena {
   [[nodiscard]] bool is_type_variable(TypeId type_id) const {
     return is<TypeVariable>(type_id);
   }
-
-private:
-  std::vector<TypeKind> m_types;
-  std::unordered_map<TypeKind, TypeId> m_mapping;
 
 public:
   const TypeId m_unit;

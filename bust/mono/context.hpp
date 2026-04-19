@@ -50,7 +50,7 @@ struct SubstitutionContext {
         .substitute(type_id);
   }
 
-  hir::Typearena &type_arena() { return m_parent.type_arena(); }
+  hir::TypeArena &type_arena() { return m_parent.type_arena(); }
 
   hir::TypeSubstitution &substitution_mapping() {
     return m_substitution_mapping;
