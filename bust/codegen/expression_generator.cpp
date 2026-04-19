@@ -115,7 +115,7 @@ zir::TypeId ExpressionGenerator::get_block_type(const zir::Block &block) const {
         m_ctx.arena().get(block.m_final_expression.value());
     return expression.m_type_id;
   }
-  return m_ctx.arena().type().m_unit;
+  return m_ctx.arena().m_unit;
 }
 
 Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
@@ -171,7 +171,7 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   // AND the types of the then and else expressions are NOT Unit
   const auto &if_return_type_id = get_block_type(if_expression.m_then_block);
 
-  const auto if_type_is_unit = if_return_type_id == m_ctx.arena().type().m_unit;
+  const auto if_type_is_unit = if_return_type_id == m_ctx.arena().m_unit;
   auto if_statement_returns_value =
       if_expression.m_else_block.has_value() && !if_type_is_unit;
   if (!if_statement_returns_value) {
@@ -232,7 +232,7 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
   auto function_return_type_id =
       m_ctx.arena().as_function(callee_expr.m_type_id).m_return_type;
 
-  if (function_return_type_id == m_ctx.arena().type().m_unit) {
+  if (function_return_type_id == m_ctx.arena().m_unit) {
     m_ctx.block().add_instruction(
         CallVoidInstruction{.m_callee = std::move(callee_handle),
                             .m_arguments = std::move(arguments)});
@@ -728,7 +728,7 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
   auto return_value = generate(lambda_expr.m_body);
 
-  if (lambda_expr.m_return_type == m_ctx.arena().type().m_unit) {
+  if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
     lambda_function.current_basic_block().add_terminal(ReturnVoidInstruction{});
   } else {
     lambda_function.current_basic_block().add_terminal(

@@ -225,17 +225,13 @@ TEST_SUITE("bust.zir_lowerer") {
     auto zir = lower_string("fn main() -> i64 { 42 }");
     // TypeArena pre-interns all primitives; check they're consistent
     auto &arena = zir.m_arena;
-    CHECK(
-        std::holds_alternative<zir::UnitType>(arena.get(arena.type().m_unit)));
-    CHECK(
-        std::holds_alternative<zir::BoolType>(arena.get(arena.type().m_bool)));
-    CHECK(
-        std::holds_alternative<zir::CharType>(arena.get(arena.type().m_char)));
-    CHECK(std::holds_alternative<zir::I8Type>(arena.get(arena.type().m_i8)));
-    CHECK(std::holds_alternative<zir::I32Type>(arena.get(arena.type().m_i32)));
-    CHECK(std::holds_alternative<zir::I64Type>(arena.get(arena.type().m_i64)));
-    CHECK(std::holds_alternative<zir::NeverType>(
-        arena.get(arena.type().m_never)));
+    CHECK(std::holds_alternative<zir::UnitType>(arena.get(arena.m_unit)));
+    CHECK(std::holds_alternative<zir::BoolType>(arena.get(arena.m_bool)));
+    CHECK(std::holds_alternative<zir::CharType>(arena.get(arena.m_char)));
+    CHECK(std::holds_alternative<zir::I8Type>(arena.get(arena.m_i8)));
+    CHECK(std::holds_alternative<zir::I32Type>(arena.get(arena.m_i32)));
+    CHECK(std::holds_alternative<zir::I64Type>(arena.get(arena.m_i64)));
+    CHECK(std::holds_alternative<zir::NeverType>(arena.get(arena.m_never)));
   }
 
   // --- Let bindings ----------------------------------------------------------

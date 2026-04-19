@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include <arena.hpp>
 #include <exceptions.hpp>
 #include <hir/type_registry.hpp>
 #include <hir/types.hpp>
@@ -16,109 +17,54 @@
 #include <zir/types.hpp>
 
 #include <string>
-#include <unordered_map>
 #include <utility>
-#include <variant>
-#include <vector>
 
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
 
-struct TypeArena {
-  explicit TypeArena()
-      : m_unit(intern(UnitType{})), m_bool(intern(BoolType{})),
-        m_char(intern(CharType{})), m_i8(intern(I8Type{})),
-        m_i32(intern(I32Type{})), m_i64(intern(I64Type{})),
-        m_never(intern(NeverType{})) {}
-
-  TypeId intern(const Type &);
-  [[nodiscard]] TypeId intern(const Type &) const;
-
-  [[nodiscard]] const Type &get(TypeId) const;
-
-  TypeId convert(hir::TypeId, const hir::TypeRegistry &);
-
-  TypeId convert(const hir::TypeKind &, const hir::TypeRegistry &);
-
-  template <typename VariantType>
-  const VariantType &as(TypeId type_id, const char *function) const {
-    const auto &type_kind = get(type_id);
-    if (!std::holds_alternative<VariantType>(type_kind)) {
-      throw core::InternalCompilerError(std::string(function) +
-                                        " Bad access to registry with " +
-                                        to_string(type_id));
-    }
-    return std::get<VariantType>(type_kind);
-  }
+struct TypeArena : public AbstractInternArena<TypeId, Type> {
+  explicit TypeArena() = default;
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
   }
 
-  template <typename VariantType>
-  [[nodiscard]] [[nodiscard]] bool is(TypeId type_id) const {
-    const auto &type_kind = get(type_id);
-    return std::holds_alternative<VariantType>(type_kind);
-  }
-
-  [[nodiscard]] bool is_function(TypeId type_id) const {
-    return is<FunctionType>(type_id);
-  }
-
-  [[nodiscard]] std::string to_string(TypeId) const;
-  [[nodiscard]] std::string to_string(const Type &) const;
-
-private:
-  std::unordered_map<Type, TypeId> m_type_to_type_id;
-  std::vector<Type> m_type_id_to_type;
-
-public:
-  TypeId m_unit;
-  TypeId m_bool;
-  TypeId m_char;
-  TypeId m_i8;
-  TypeId m_i32;
-  TypeId m_i64;
-  TypeId m_never;
+  [[nodiscard]] std::string to_string(TypeId) const override;
+  [[nodiscard]] std::string to_string(const Type &) const override;
 };
 
-template <typename ActualType, typename IdType> struct AbstractArena {
-  IdType push(ActualType actual) {
-    auto new_id = m_id_to_actual.size();
-    m_actual_to_id.emplace(actual, new_id);
-    m_id_to_actual.emplace_back(std::move(actual));
-    return {new_id};
+struct ExpressionArena : public AbstractPushArena<ExprId, Expression> {
+  // TODO
+  [[nodiscard]] std::string to_string(ExprId) const override { return {}; }
+  [[nodiscard]] std::string to_string(const Expression &) const override {
+    return {};
   }
+};
 
-  [[nodiscard]] const ActualType &get(IdType type_id) const {
-    if (type_id.m_id >= m_id_to_actual.size()) {
-      throw core::InternalCompilerError("Failed to call get on type_id: " +
-                                        std::to_string(type_id.m_id));
-    }
-    return m_id_to_actual[type_id.m_id];
+struct BindingArena : public AbstractPushArena<BindingId, Binding> {
+  // TODO
+  [[nodiscard]] std::string to_string(BindingId) const override { return {}; }
+  [[nodiscard]] std::string to_string(const Binding &) const override {
+    return {};
   }
-
-private:
-  std::unordered_map<ActualType, IdType> m_actual_to_id{};
-  std::vector<ActualType> m_id_to_actual{};
 };
 
 struct Arena {
-  explicit Arena() = default;
+  explicit Arena()
+      : m_unit(type().intern(UnitType{})), m_bool(type().intern(BoolType{})),
+        m_char(type().intern(CharType{})), m_i8(type().intern(I8Type{})),
+        m_i32(type().intern(I32Type{})), m_i64(type().intern(I64Type{})),
+        m_never(type().intern(NeverType{})) {}
 
   TypeArena &type() { return m_type_arena; }
   [[nodiscard]] const TypeArena &type() const { return m_type_arena; }
 
-  AbstractArena<Expression, ExprId> &expr() { return m_expr_arena; }
-  [[nodiscard]] const AbstractArena<Expression, ExprId> &expr() const {
-    return m_expr_arena;
-  }
+  ExpressionArena &expr() { return m_expr_arena; }
+  [[nodiscard]] const ExpressionArena &expr() const { return m_expr_arena; }
 
-  AbstractArena<Binding, BindingId> &binding() { return m_binding_arena; }
-  [[nodiscard]] const AbstractArena<Binding, BindingId> &binding() const {
-    return m_binding_arena;
-  }
+  BindingArena &binding() { return m_binding_arena; }
+  [[nodiscard]] const BindingArena &binding() const { return m_binding_arena; }
 
   [[nodiscard]] const Type &get(TypeId id) const { return type().get(id); }
   [[nodiscard]] const Expression &get(ExprId id) const {
@@ -132,13 +78,6 @@ struct Arena {
   BindingId push(Binding actual) { return binding().push(std::move(actual)); }
 
   TypeId intern(const Type &input_type) { return type().intern(input_type); }
-
-  TypeId convert(const hir::TypeKind &type_kind, const hir::TypeRegistry &reg) {
-    return type().convert(type_kind, reg);
-  }
-  TypeId convert(hir::TypeId type_id, const hir::TypeRegistry &reg) {
-    return type().convert(type_id, reg);
-  }
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return type().as_function(type_id);
@@ -154,8 +93,17 @@ struct Arena {
 
 private:
   TypeArena m_type_arena;
-  AbstractArena<Expression, ExprId> m_expr_arena{};
-  AbstractArena<Binding, BindingId> m_binding_arena{};
+  ExpressionArena m_expr_arena{};
+  BindingArena m_binding_arena{};
+
+public:
+  TypeId m_unit;
+  TypeId m_bool;
+  TypeId m_char;
+  TypeId m_i8;
+  TypeId m_i32;
+  TypeId m_i64;
+  TypeId m_never;
 };
 
 //****************************************************************************

@@ -28,14 +28,50 @@ struct Context {
       : m_type_registry(type_registry),
         m_resolver(type_registry, std::move(unifier_state)) {}
 
-  TypeId convert(const hir::TypeKind &type) {
-    auto type_id = m_type_registry.intern(type);
-    return convert(type_id);
+  TypeId convert(const hir::TypeKind &type_kind) {
+    // Translate concrete hir TypeKind into zir Type and intern
+    auto new_type = std::visit(
+        [&](const auto &tk) -> Type {
+          using T = std::decay_t<decltype(tk)>;
+          if constexpr (std::is_same_v<T, hir::PrimitiveTypeValue>) {
+            switch (tk.m_type) {
+            case PrimitiveType::UNIT:
+              return UnitType{};
+            case PrimitiveType::BOOL:
+              return BoolType{};
+            case PrimitiveType::CHAR:
+              return CharType{};
+            case PrimitiveType::I8:
+              return I8Type{};
+            case PrimitiveType::I32:
+              return I32Type{};
+            case PrimitiveType::I64:
+              return I64Type{};
+            }
+          } else if constexpr (std::is_same_v<T, hir::FunctionType>) {
+            std::vector<TypeId> parameters;
+            parameters.reserve(tk.m_parameters.size());
+            for (const auto &parameter : tk.m_parameters) {
+              parameters.emplace_back(convert(parameter));
+            }
+            auto return_type = convert(tk.m_return_type);
+            return FunctionType{.m_parameters = std::move(parameters),
+                                .m_return_type = return_type};
+          } else if constexpr (std::is_same_v<T, hir::NeverType>) {
+            return NeverType{};
+          } else {
+            // TypeVariable shouldn't be passed here?
+            std::unreachable();
+          }
+        },
+        type_kind);
+
+    return m_arena.intern(new_type);
   }
 
   TypeId convert(hir::TypeId type) {
     auto resolved_type_id = m_resolver.resolve(type);
-    return m_arena.convert(resolved_type_id, m_type_registry);
+    return convert(m_type_registry.get(resolved_type_id));
   }
 
   void set_global_binding(const std::string &name, BindingId id) {

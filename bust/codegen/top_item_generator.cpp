@@ -113,7 +113,7 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   const auto &return_type_id =
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
-  if (return_type_id == m_ctx.arena().type().m_unit) {
+  if (return_type_id == m_ctx.arena().m_unit) {
     function.current_basic_block().add_terminal(ReturnVoidInstruction{});
   } else {
     // Wherever we are, we need to add this terminal to the final
@@ -159,7 +159,7 @@ void TopItemGenerator::operator()(
   const auto &return_type_id =
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
-  if (return_type_id == m_ctx.arena().type().m_unit) {
+  if (return_type_id == m_ctx.arena().m_unit) {
     function.current_basic_block().add_instruction(
         CallVoidInstruction{.m_callee = GlobalHandle{binding.m_name},
                             .m_arguments = std::move(arguments)});

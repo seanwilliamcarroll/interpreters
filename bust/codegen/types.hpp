@@ -21,6 +21,9 @@
 namespace bust::codegen {
 //****************************************************************************
 
+struct CodegenNamespace {};
+using TypeId = bust::TypeId<CodegenNamespace>;
+
 constexpr size_t BITS_PER_BYTE = 8;
 
 enum class LLVMType : uint8_t {

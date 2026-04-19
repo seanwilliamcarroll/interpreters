@@ -10,23 +10,18 @@
 #pragma once
 //****************************************************************************
 #include <hash_combine.hpp>
+#include <types.hpp>
 
-#include <compare>
 #include <cstddef>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
 
-using InnerTypeIdType = std::size_t;
-
-struct TypeId {
-  InnerTypeIdType m_id;
-  auto operator<=>(const TypeId &) const = default;
-};
+struct ZirNamespace {};
+using TypeId = bust::TypeId<ZirNamespace>;
 
 struct UnitType {
   auto operator<=>(const UnitType &) const = default;
@@ -99,12 +94,6 @@ using Type = std::variant<UnitType, BoolType, CharType, I8Type, I32Type,
 //****************************************************************************
 namespace std {
 //****************************************************************************
-
-template <> struct hash<bust::zir::TypeId> {
-  size_t operator()(const bust::zir::TypeId &id) const noexcept {
-    return hash<bust::zir::InnerTypeIdType>{}(id.m_id);
-  }
-};
 
 template <> struct hash<bust::zir::FunctionType> {
   size_t operator()(const bust::zir::FunctionType &id) const noexcept {
