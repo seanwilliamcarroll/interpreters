@@ -3,6 +3,142 @@
 Open work threads, loosely grouped by theme. Items within a group that depend
 on each other are marked with arrows (→ means "enables").
 
+## Codegen Cleanup — HIGH PRIORITY
+
+`bust/codegen` has accumulated enough mess that new features (aggregate types,
+optimizations, multi-backend) will be painful without a cleanup pass. Summary
+of the issues, grouped by theme. Running checklist lives in
+`codegen_cleanup_todos.md`.
+
+### Raw string literals are doing three different jobs
+
+Strings in codegen play three distinct roles that are currently mixed together:
+
+- **LLVM IR syntax tokens** — `" = load "`, `"br i1 "`, `"store "`, `"alloca "`,
+  `"getelementptr "`, `"call void "`, `"ret void"`, etc. scattered throughout
+  `formatter.cpp`. These are the syntax of the target dialect; a change in
+  LLVM version or a move to a different textual form touches dozens of sites.
+- **Runtime ABI / convention names** — `"malloc"` (hardcoded in
+  `expression_generator.cpp`), `"env"`, `"entry"`, `"main"` (string-compared
+  in `top_item_generator.cpp`), `"param_"` prefix, `"lambda"`, `"if_result"`,
+  `"short_circuit_logic_result"`, block labels `"then"` / `"else"` / `"merge"`
+  / `"rhs"`. These define the closure ABI and naming discipline.
+- **IR literal spellings** — `"0"`, `"1"`, `"null"`, `"true"`, `"false"`,
+  `"-1"`. These are textual forms of IR constants frozen into C++ strings.
+
+`naming_conventions.hpp` is the right idea but only covers a small slice. The
+principle: if a string appears in code, someone has to recognize it and
+typos pass the compiler. If it is a named constant, the compiler helps. Beyond
+that, grouping constants by role makes the seam between codegen layers
+obvious — the formatter should only know about syntax tokens, the lambda
+generator should only know about ABI names.
+
+### Confusing logic
+
+- **`IfExpr` generator** interleaves control-flow construction with the
+  "does this if-expression produce a value?" decision. The decision is made
+  *after* both arms are emitted, which makes the routine hard to read
+  top-to-bottom. Natural shape: decide yields-value up front, allocate the
+  result slot if so, emit each arm with its own store+jump, emit the merge
+  with a load.
+- **`LambdaExpr` generator** is ~120 lines mixing ~7 concerns: scope
+  management, signature creation, env-struct typing, capture-load prologue
+  (inside the new function), capture-store (at the creation site in the
+  outer function), body generation, and fat-pointer packaging.
+- **`FunctionScopeGuard`** is defined mid-way through `expression_generator.cpp`
+  and papers over the fact that `Module::current_function` is a single
+  mutable raw pointer when it semantically wants to be a stack (entering a
+  lambda mid-function).
+- **`get_block_type`** is a method on `ExpressionGenerator` but needs nothing
+  from that class; it is a pure query over `zir::Block` that landed on the
+  wrong owner.
+- **`malloc_struct` hardcodes `GlobalHandle{"malloc"}`**, coupling codegen
+  to the C ABI. Allocator choice should be configurable via `Context` or a
+  dedicated runtime-ABI module.
+
+### Repeated structure
+
+- **Void/non-void instruction variants.** `CallVoidInstruction` vs
+  `CallInstruction`, `ReturnVoidInstruction` vs `ReturnInstruction`. The
+  split causes three+ near-identical emission sites (`CallExpr`,
+  `ExternFunctionDeclaration` thunk, `FunctionDef` terminator). LLVM treats
+  a void call as a call with no result name — collapsing to
+  `std::optional<Handle> m_target` removes a whole axis of branching.
+- **`alloca + store + … + load`** appears in the if-merge, the short-circuit
+  merge, capture-load prologue, and let-bindings. That is a high-level
+  operation ("materialize a value through memory") without a name.
+- **Comma-separated printing** (`function_parameters`, `function_arguments`)
+  is the same loop written twice.
+- **`std::visit(m_handle_converter, X)`** appears ~30 times across the
+  formatter; a one-liner helper makes it vanish.
+- **Signed/unsigned compare switch** (`to_llvm_compare_condition`) has four
+  near-identical pairs of cases. A data table keyed by
+  `(BinaryOperator, signed?)` is cleaner and extends more easily to new
+  numeric types.
+
+### The missing abstraction — an IR builder
+
+Most sites in `ExpressionGenerator` follow a four-step incantation: mint a
+temp, construct the instruction struct with designated initializers, append
+to the current block, return the temp. Every caller knows the insertion
+point, the SSA-temp allocator, and the struct layout — a Law of Demeter
+violation. Callers reach through `m_ctx.function().current_basic_block()`.
+
+The right abstraction is a stateful construction helper in the style of
+`llvm::IRBuilder`: an object that owns the insertion point, the SSA counter,
+and provides high-level `create_*` methods. What it unlocks:
+
+- **One-line instruction emission** — `create_load(src, ty)` replaces the
+  four-step pattern.
+- **Scoped insertion-point management** — `auto _ = builder.at(block)` RAII
+  restores the previous insertion point. Replaces the handwritten
+  `FunctionScopeGuard` and the explicit `set_insertion_point` calls in
+  `IfExpr`, `BinaryExpr` short-circuit, and `LambdaExpr`.
+- **Natural home for high-level helpers** — `store_to_struct` /
+  `load_from_struct` / `malloc_struct` already exist but live on
+  `ExpressionGenerator` (wrong owner). They belong on the builder, with the
+  allocator symbol configurable.
+- **Composition point for domain builders** — `ClosureBuilder` wraps
+  `IRBuilder` to hide env-struct creation, malloc, capture stores, and fat
+  pointer packaging. The 120-line lambda method shrinks to a dozen lines of
+  choreography.
+
+Tradeoff: a stateful builder concentrates mutable state, so it's easier to
+use and harder to reason about under concurrency. For a single-threaded
+codegen it's pure upside.
+
+### Paving the way for future work
+
+Three structural investments that unblock future features:
+
+- **Type-property visitor/table.** `is_signed_type`, `width_bits`,
+  `to_llvm_type`, and the `StructType` branch in formatting are each a
+  separate visit over `zir::Type` / `LLVMType`. Adding `ArrayType` means
+  editing every site ("shotgun surgery"). One `type_traits(ty)` returning
+  `{ signed, width, llvm_name, category }` centralizes it.
+- **Def/use introspection on instructions.** `Instruction` is a variant of
+  POD structs — fine for emission, nothing for analysis. Every optimization
+  (DCE, CSE, constant folding) and even a validity checker wants to
+  enumerate the handles an instruction defines vs uses. Two free functions
+  `result(const Instruction&) -> optional<Handle>` and
+  `operands(const Instruction&) -> vector<Handle>` unlock every future pass.
+- **Stricter handle typing.** `BranchInstruction::m_iftrue` is typed
+  `Handle` but must semantically be a block label. `CallInstruction::m_callee`
+  must be a function pointer or global. A distinct `BlockLabel` type (and
+  similar narrowing) makes illegal IR unrepresentable — bugs caught at
+  compile time instead of producing malformed IR that LLVM rejects.
+
+### Suggested attack order
+
+1. Extract string constants by role (cheap, mechanical, immediate cleanup).
+2. Collapse void/non-void instruction duplication via `optional<Handle>`.
+3. Introduce the `IRBuilder` and migrate `ExpressionGenerator` method by
+   method — biggest structural win.
+4. Pull struct/malloc helpers onto the builder; build `ClosureBuilder` on
+   top; shrink `LambdaExpr`.
+5. Add `operands()` / `result()` for instructions. Prerequisite for passes.
+6. Tighten handle types at branch targets and call callees.
+
 ## Type System
 
 - [x] Collapse unified type variables to their root before generalization
