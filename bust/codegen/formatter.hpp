@@ -29,6 +29,9 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct HandleToString {
+
+  std::string str(const Handle &);
+
   std::string operator()(const LiteralHandle &);
   std::string operator()(const TemporaryHandle &);
   std::string operator()(const LocalHandle &);
@@ -45,6 +48,8 @@ struct Formatter {
   constexpr static const char *INDENT = "  ";
 
   void format(const auto &);
+
+  std::string str(const Handle &);
 
   void define_struct_type(TypeId);
   void operator()(const Module &);

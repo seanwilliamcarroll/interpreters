@@ -54,7 +54,7 @@ Check off as completed. See `aspirations.md` § "Codegen Cleanup" for rationale.
 
 ## Formatter cleanup
 
-- [ ] Add `str(const Handle&)` helper to replace repeated `std::visit(m_handle_converter, X)`
+- [x] Add `str(const Handle&)` helper to replace repeated `std::visit(m_handle_converter, X)`
 - [ ] Extract comma-separated printer to replace `function_parameters` / `function_arguments` duplication
 - [ ] Consider RAII line builder (indent on construct, newline on destruct)
 - [ ] Move the `.closure = constant ...` emission into a dedicated `declare_closure_global` method
