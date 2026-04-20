@@ -11,6 +11,7 @@
 #include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
+#include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
@@ -28,7 +29,8 @@ namespace bust::codegen {
 
 struct Context {
   Context(const zir::Arena &arena)
-      : m_arena(arena), m_void(m_type_arena.intern(VoidType{})),
+      : m_arena(arena), m_builder(*this),
+        m_void(m_type_arena.intern(VoidType{})),
         m_i1(m_type_arena.intern(I1Type{})),
         m_i8(m_type_arena.intern(I8Type{})),
         m_i32(m_type_arena.intern(I32Type{})),
@@ -76,11 +78,14 @@ struct Context {
     };
   }
 
+  IRBuilder &builder() { return m_builder; }
+
 private:
   Module m_module;
   SymbolTable m_symbol_table;
   const zir::Arena &m_arena;
   TypeArena m_type_arena;
+  IRBuilder m_builder;
 
 public:
   TypeId m_void;
