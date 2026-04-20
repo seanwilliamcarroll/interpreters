@@ -15,6 +15,7 @@
 #include <codegen/instructions.hpp>
 #include <codegen/let_binding_generator.hpp>
 #include <codegen/module.hpp>
+#include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/top_item_generator.hpp>
@@ -41,15 +42,16 @@ void TopItemDeclarationCollector::collect(const zir::TopItem &top_item) {
 void TopItemDeclarationCollector::operator()(
     const zir::FunctionDef &function_def) {
   const auto &binding = m_ctx.arena().get(function_def.m_id);
-  m_ctx.symbols().define_custom_global(binding.m_name,
-                                       binding.m_name + ".closure");
+  m_ctx.symbols().define_custom_global(
+      binding.m_name, conventions::make_closure_name(binding.m_name));
 }
 
 void TopItemDeclarationCollector::operator()(
     const zir::ExternFunctionDeclaration &extern_func) {
   const auto &binding = m_ctx.arena().get(extern_func.m_id);
-  m_ctx.symbols().define_custom_global(binding.m_name,
-                                       binding.m_name + ".thunk.closure");
+  m_ctx.symbols().define_custom_global(
+      binding.m_name,
+      conventions::make_closure_name(conventions::make_thunk(binding.m_name)));
 }
 
 void TopItemDeclarationCollector::operator()(
@@ -151,7 +153,7 @@ void TopItemGenerator::operator()(
         Argument{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
   }
   auto thunked_signature = FunctionDeclaration{
-      .m_function_id = GlobalHandle{binding.m_name + ".thunk"},
+      .m_function_id = GlobalHandle{conventions::make_thunk(binding.m_name)},
       .m_return_type = m_ctx.to_type(type.m_return_type),
       .m_parameters = std::move(parameters)};
 

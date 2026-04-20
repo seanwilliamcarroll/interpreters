@@ -17,6 +17,10 @@ namespace bust::codegen {
 
 struct LiteralHandle {
   std::string m_handle;
+
+  static LiteralHandle zero() { return {"0"}; }
+  static LiteralHandle one() { return {"1"}; }
+  static LiteralHandle null() { return {"null"}; }
 };
 
 struct TemporaryHandle {

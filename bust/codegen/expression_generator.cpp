@@ -578,9 +578,9 @@ Handle ExpressionGenerator::malloc_struct(BasicBlock &block,
   block.add_instruction(GetElementPtrInstruction{
       .m_destination = temp_size_bytes_ptr,
       .m_struct_type = struct_type_id,
-      .m_struct_handle = LiteralHandle{"null"},
+      .m_struct_handle = LiteralHandle::null(),
       .m_initial_index =
-          Argument{.m_name = LiteralHandle{"1"}, .m_type = m_ctx.m_i32},
+          Argument{.m_name = LiteralHandle::one(), .m_type = m_ctx.m_i32},
       .m_additional_indices = {}});
 
   auto temp_size_bytes_i64 = m_ctx.symbols().next_ssa_temporary();
@@ -613,7 +613,7 @@ void ExpressionGenerator::store_to_struct(BasicBlock &block,
       .m_struct_type = struct_type_id,
       .m_struct_handle = struct_handle,
       .m_initial_index =
-          Argument{.m_name = LiteralHandle{"0"}, .m_type = m_ctx.m_i32},
+          Argument{.m_name = LiteralHandle::zero(), .m_type = m_ctx.m_i32},
       .m_additional_indices = {
           Argument{.m_name = LiteralHandle{std::to_string(field_index)},
                    .m_type = m_ctx.m_i32}}});
@@ -634,7 +634,7 @@ Handle ExpressionGenerator::load_from_struct(BasicBlock &block,
       .m_struct_type = struct_type_id,
       .m_struct_handle = struct_handle,
       .m_initial_index =
-          Argument{.m_name = LiteralHandle{"0"}, .m_type = m_ctx.m_i32},
+          Argument{.m_name = LiteralHandle::zero(), .m_type = m_ctx.m_i32},
       .m_additional_indices = {
           Argument{.m_name = LiteralHandle{std::to_string(field_index)},
                    .m_type = m_ctx.m_i32}}});
@@ -667,7 +667,7 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   auto &lambda_function = m_ctx.module().new_function(std::move(signature));
   m_ctx.module().set_current_function(lambda_function);
 
-  Handle env_handle = LiteralHandle{"null"};
+  Handle env_handle = LiteralHandle::null();
 
   if (!lambda_expr.m_captures.empty()) {
     // We need to load all the captured bindings before we execute the body
