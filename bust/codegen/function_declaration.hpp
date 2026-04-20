@@ -20,7 +20,7 @@ namespace bust::codegen {
 
 struct FunctionDeclaration {
   Handle m_function_id;
-  LLVMType m_return_type;
+  TypeId m_return_type;
   std::vector<Parameter> m_parameters;
 };
 

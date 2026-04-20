@@ -36,7 +36,7 @@ std::string CodeGen::operator()(const zir::Program &program) {
 
   // How to do top level let bindings?
   std::stringstream out;
-  auto formatter = codegen::Formatter(out);
+  auto formatter = codegen::Formatter(context, out);
   formatter(context.module());
 
   return out.str();

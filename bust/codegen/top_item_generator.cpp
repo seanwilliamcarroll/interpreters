@@ -41,13 +41,15 @@ void TopItemDeclarationCollector::collect(const zir::TopItem &top_item) {
 void TopItemDeclarationCollector::operator()(
     const zir::FunctionDef &function_def) {
   const auto &binding = m_ctx.arena().get(function_def.m_id);
-  m_ctx.symbols().define_global(binding.m_name);
+  m_ctx.symbols().define_custom_global(binding.m_name,
+                                       binding.m_name + ".closure");
 }
 
 void TopItemDeclarationCollector::operator()(
     const zir::ExternFunctionDeclaration &extern_func) {
   const auto &binding = m_ctx.arena().get(extern_func.m_id);
-  m_ctx.symbols().define_thunked(binding.m_name);
+  m_ctx.symbols().define_custom_global(binding.m_name,
+                                       binding.m_name + ".thunk.closure");
 }
 
 void TopItemDeclarationCollector::operator()(
@@ -64,7 +66,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
 
   std::vector<Parameter> parameters;
   if (binding.m_name != "main") {
-    parameters.emplace_back(CAPTURE_ENV_PARAMETER);
+    parameters.emplace_back(m_ctx.env_parameter());
   }
   std::ranges::transform(
       function_def.m_parameters, std::back_inserter(parameters),
@@ -136,7 +138,7 @@ void TopItemGenerator::operator()(
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
   std::vector<Parameter> parameters;
-  parameters.emplace_back(CAPTURE_ENV_PARAMETER);
+  parameters.emplace_back(m_ctx.env_parameter());
   std::vector<Argument> arguments;
   for (auto [index, type_id] :
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
@@ -149,7 +151,7 @@ void TopItemGenerator::operator()(
         Argument{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
   }
   auto thunked_signature = FunctionDeclaration{
-      .m_function_id = m_ctx.symbols().lookup(binding.m_name),
+      .m_function_id = GlobalHandle{binding.m_name + ".thunk"},
       .m_return_type = m_ctx.to_type(type.m_return_type),
       .m_parameters = std::move(parameters)};
 

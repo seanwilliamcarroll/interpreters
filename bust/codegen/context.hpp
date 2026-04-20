@@ -18,12 +18,23 @@
 
 #include <cassert>
 
+#include "codegen/arena.hpp"
+#include "codegen/parameter.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
 struct Context {
-  Context(const zir::Arena &arena) : m_arena(arena) {}
+  Context(const zir::Arena &arena)
+      : m_arena(arena), m_void(m_type_arena.intern(VoidType{})),
+        m_i1(m_type_arena.intern(I1Type{})),
+        m_i8(m_type_arena.intern(I8Type{})),
+        m_i32(m_type_arena.intern(I32Type{})),
+        m_i64(m_type_arena.intern(I64Type{})),
+        m_ptr(m_type_arena.intern(PtrType{})),
+        m_fat_ptr(m_type_arena.intern_global_struct(
+            "closure", StructType{.m_fields = {m_ptr, m_ptr}})) {}
 
   Module &module() { return m_module; }
   SymbolTable &symbols() { return m_symbol_table; }
@@ -32,18 +43,51 @@ struct Context {
 
   [[nodiscard]] const zir::Arena &arena() const { return m_arena; }
 
-  std::string to_string(const auto &type) const {
+  [[nodiscard]] std::string to_string(const zir::Type &type) const {
     return m_arena.to_string(type);
   }
 
-  [[nodiscard]] LLVMType to_type(zir::TypeId type_id) const {
-    return to_llvm_type(arena().get(type_id));
+  [[nodiscard]] std::string to_string(TypeId type) const {
+    return m_type_arena.to_string(type);
+  }
+
+  [[nodiscard]] std::string to_string(const LLVMType &type) const {
+    return m_type_arena.to_string(type);
+  }
+
+  [[nodiscard]] TypeId to_type(zir::TypeId type_id) const {
+    return m_type_arena.intern(to_llvm_type(arena().get(type_id)));
+  }
+
+  TypeArena &type() { return m_type_arena; }
+
+  [[nodiscard]]
+  const TypeArena &type() const {
+    return m_type_arena;
+  }
+
+  [[nodiscard]]
+  Parameter env_parameter() const {
+    return {
+        .m_name = ParameterHandle{"env"},
+        .m_type = m_ptr,
+    };
   }
 
 private:
   Module m_module{};
   SymbolTable m_symbol_table;
   const zir::Arena &m_arena;
+  TypeArena m_type_arena;
+
+public:
+  TypeId m_void;
+  TypeId m_i1;
+  TypeId m_i8;
+  TypeId m_i32;
+  TypeId m_i64;
+  TypeId m_ptr;
+  TypeId m_fat_ptr;
 };
 
 //****************************************************************************

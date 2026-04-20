@@ -48,13 +48,13 @@ struct ExpressionGenerator {
   Handle operator()(const zir::CastExpr &);
 
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
-  Handle malloc_struct(BasicBlock &, const Handle &struct_type_name);
-  void store_to_struct(BasicBlock &, const Handle &struct_type_name,
+  Handle malloc_struct(BasicBlock &, TypeId struct_type_id);
+  void store_to_struct(BasicBlock &, TypeId struct_type_id,
                        const Handle &struct_handle, size_t field_index,
                        const Argument &value);
-  Handle load_from_struct(BasicBlock &, const Handle &struct_type_name,
+  Handle load_from_struct(BasicBlock &, TypeId struct_type_id,
                           const Handle &struct_handle, size_t field_index,
-                          LLVMType destination_type);
+                          TypeId destination_type);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

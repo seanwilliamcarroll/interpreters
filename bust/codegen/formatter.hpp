@@ -23,6 +23,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "codegen/context.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -33,7 +35,6 @@ struct HandleToString {
   std::string operator()(const LocalHandle &);
   std::string operator()(const ParameterHandle &);
   std::string operator()(const GlobalHandle &);
-  std::string operator()(const ThunkWrapperHandle &);
   std::string operator()(const TypeHandle &);
 
   size_t m_temporary_count = 0;
@@ -41,13 +42,13 @@ struct HandleToString {
 };
 
 struct Formatter {
-  Formatter(std::ostream &out) : m_out(out) {}
+  Formatter(const Context &ctx, std::ostream &out) : m_ctx(ctx), m_out(out) {}
 
   constexpr static const char *INDENT = "  ";
 
   void format(const auto &);
 
-  void define_struct_type(const CaptureEnv &);
+  void define_struct_type(TypeId);
   void operator()(const Module &);
 
   void operator()(const Parameter &);
@@ -88,6 +89,7 @@ struct Formatter {
   }
 
 private:
+  const Context &m_ctx;
   std::ostream &m_out;
   HandleToString m_handle_converter{};
 };

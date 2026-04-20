@@ -14,8 +14,11 @@
 #include <cassert>
 #include <cstdint>
 #include <ostream>
+#include <type_traits>
 #include <utility>
 #include <variant>
+
+#include "exceptions.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
@@ -24,74 +27,79 @@ namespace bust::codegen {
 struct CodegenNamespace {};
 using TypeId = bust::TypeId<CodegenNamespace>;
 
+struct VoidType {
+  auto operator<=>(const VoidType &) const = default;
+};
+struct I1Type {
+  auto operator<=>(const I1Type &) const = default;
+  static constexpr size_t width_bits = 1;
+};
+struct I8Type {
+  auto operator<=>(const I8Type &) const = default;
+  static constexpr size_t width_bits = 8;
+};
+struct I32Type {
+  auto operator<=>(const I32Type &) const = default;
+  static constexpr size_t width_bits = 32;
+};
+struct I64Type {
+  auto operator<=>(const I64Type &) const = default;
+  static constexpr size_t width_bits = 64;
+};
+struct PtrType {
+  auto operator<=>(const PtrType &) const = default;
+  static constexpr size_t width_bits = 64;
+};
+struct StructType {
+  auto operator<=>(const StructType &) const = default;
+  std::vector<TypeId> m_fields;
+};
+// TODO
+// struct ArrayType {  auto operator<=>(const ArrayType &) const = default;
+// };
+
+using LLVMType = std::variant<VoidType, I1Type, I8Type, I32Type, I64Type,
+                              PtrType, StructType>;
+
 constexpr size_t BITS_PER_BYTE = 8;
 
-enum class LLVMType : uint8_t {
-  I1,
-  I8,
-  I32,
-  I64,
-  PTR,
-  VOID,
-};
-
-inline std::ostream &operator<<(std::ostream &out, LLVMType type) {
-  constexpr static std::array type_names{"i1",  "i8",  "i32",
-                                         "i64", "ptr", "void"};
-  return out << type_names[std::to_underlying(type)];
-}
-
-inline size_t width_bytes(LLVMType type) {
-  switch (type) {
-  case LLVMType::I1:
-    return 1;
-  case LLVMType::I8:
-    return sizeof(int8_t);
-  case LLVMType::I32:
-    return sizeof(int32_t);
-  case LLVMType::I64:
-  case LLVMType::PTR:
-    return sizeof(int64_t);
-  case LLVMType::VOID:
-    std::unreachable();
-  }
-}
-
 inline size_t width_bits(LLVMType type) {
-  switch (type) {
-  case LLVMType::I1:
-    return 1;
-  case LLVMType::I8:
-  case LLVMType::I32:
-  case LLVMType::I64:
-  case LLVMType::PTR:
-    return BITS_PER_BYTE * width_bytes(type);
-  case LLVMType::VOID:
-    std::unreachable();
-  }
+  return std::visit(
+      [](const auto &t) -> size_t {
+        using T = std::decay_t<decltype(t)>;
+        if constexpr (std::is_same_v<T, I1Type> || std::is_same_v<T, I8Type> ||
+                      std::is_same_v<T, I32Type> ||
+                      std::is_same_v<T, I64Type> ||
+                      std::is_same_v<T, PtrType>) {
+          return std::remove_reference_t<decltype(t)>::width_bits;
+        } else {
+          throw core::InternalCompilerError("Bad type to call width_bytes on");
+        }
+      },
+      type);
 }
 
 inline LLVMType to_llvm_type(const zir::Type &type) {
   return std::visit(
-      [](const auto &t) {
+      [](const auto &t) -> LLVMType {
         using T = std::decay_t<decltype(t)>;
         if constexpr (std::is_same_v<T, zir::UnitType>) {
-          return LLVMType::VOID;
+          return VoidType{};
         } else if constexpr (std::is_same_v<T, zir::BoolType>) {
-          return LLVMType::I1;
+          return I1Type{};
         } else if constexpr (std::is_same_v<T, zir::I8Type> ||
                              std::is_same_v<T, zir::CharType>) {
-          return LLVMType::I8;
+          return I8Type{};
         } else if constexpr (std::is_same_v<T, zir::I32Type>) {
-          return LLVMType::I32;
+          return I32Type{};
         } else if constexpr (std::is_same_v<T, zir::I64Type>) {
-          return LLVMType::I64;
+          return I64Type{};
         } else if constexpr (std::is_same_v<T, zir::FunctionType>) {
-          return LLVMType::PTR;
+          return PtrType{};
         } else {
           assert(false && "codegen only handles primitive types and function "
                           "types for now");
-          return LLVMType::VOID;
+          return VoidType{};
         }
       },
       type);
@@ -144,4 +152,64 @@ inline std::ostream &operator<<(std::ostream &out, LLVMCastOperator op) {
 
 //****************************************************************************
 } // namespace bust::codegen
+//****************************************************************************
+
+//****************************************************************************
+namespace std {
+//****************************************************************************
+
+template <> struct hash<bust::codegen::VoidType> {
+  static constexpr size_t HASH_VALUE = 0;
+  size_t operator()(const bust::codegen::VoidType & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <> struct hash<bust::codegen::I1Type> {
+  static constexpr size_t HASH_VALUE = 1;
+  size_t operator()(const bust::codegen::I1Type & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <> struct hash<bust::codegen::I8Type> {
+  static constexpr size_t HASH_VALUE = 2;
+  size_t operator()(const bust::codegen::I8Type & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <> struct hash<bust::codegen::I32Type> {
+  static constexpr size_t HASH_VALUE = 3;
+  size_t operator()(const bust::codegen::I32Type & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <> struct hash<bust::codegen::I64Type> {
+  static constexpr size_t HASH_VALUE = 4;
+  size_t operator()(const bust::codegen::I64Type & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <> struct hash<bust::codegen::PtrType> {
+  static constexpr size_t HASH_VALUE = 5;
+  size_t operator()(const bust::codegen::PtrType & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <> struct hash<bust::codegen::StructType> {
+  size_t operator()(const bust::codegen::StructType &id) const noexcept {
+    size_t seed = 0;
+    for (const auto &field : id.m_fields) {
+      core::hash_combine(seed, field);
+    }
+    return seed;
+  }
+};
+
+//****************************************************************************
+} // namespace std
 //****************************************************************************

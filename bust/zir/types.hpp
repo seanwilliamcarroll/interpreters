@@ -114,42 +114,42 @@ template <> struct hash<bust::zir::UnitType> {
 };
 
 template <> struct hash<bust::zir::BoolType> {
-  static constexpr size_t HASH_VALUE = 0;
+  static constexpr size_t HASH_VALUE = 1;
   size_t operator()(const bust::zir::BoolType & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::CharType> {
-  static constexpr size_t HASH_VALUE = 0;
+  static constexpr size_t HASH_VALUE = 2;
   size_t operator()(const bust::zir::CharType & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I8Type> {
-  static constexpr size_t HASH_VALUE = 0;
+  static constexpr size_t HASH_VALUE = 3;
   size_t operator()(const bust::zir::I8Type & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I32Type> {
-  static constexpr size_t HASH_VALUE = 0;
+  static constexpr size_t HASH_VALUE = 4;
   size_t operator()(const bust::zir::I32Type & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I64Type> {
-  static constexpr size_t HASH_VALUE = 0;
+  static constexpr size_t HASH_VALUE = 5;
   size_t operator()(const bust::zir::I64Type & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::NeverType> {
-  static constexpr size_t HASH_VALUE = 0;
+  static constexpr size_t HASH_VALUE = 6;
   size_t operator()(const bust::zir::NeverType & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }

@@ -86,14 +86,15 @@ struct SymbolTable {
     return new_handle;
   }
 
-  GlobalHandle define_uniqued_global(const std::string &name) {
-    return define_global(m_name_tracker.uniquify(name));
+  GlobalHandle define_custom_global(const std::string &lookup_name,
+                                    const std::string &actual_name) {
+    GlobalHandle new_handle{actual_name};
+    m_scopes.front().define(lookup_name, new_handle);
+    return new_handle;
   }
 
-  ThunkWrapperHandle define_thunked(const std::string &name) {
-    ThunkWrapperHandle new_handle{name};
-    m_scopes.front().define(name, new_handle);
-    return new_handle;
+  GlobalHandle define_uniqued_global(const std::string &name) {
+    return define_global(m_name_tracker.uniquify(name));
   }
 
   [[nodiscard]] Handle lookup(const std::string &name) const {
