@@ -12,6 +12,7 @@
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
+#include <codegen/naming_conventions.hpp>
 #include <codegen/symbol_table.hpp>
 
 #include <cstddef>
@@ -26,7 +27,8 @@ namespace bust::codegen {
 
 struct Function {
   Function(FunctionDeclaration signature) : m_signature(std::move(signature)) {
-    set_insertion_point(new_basic_block("entry"));
+    set_insertion_point(
+        new_basic_block(std::string{conventions::entry_block_label}));
   }
 
   FunctionDeclaration &signature() { return m_signature; }

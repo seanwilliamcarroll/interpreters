@@ -27,7 +27,6 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
-#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -67,7 +66,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
   std::vector<Parameter> parameters;
-  if (binding.m_name != "main") {
+  if (!conventions::is_main(binding.m_name)) {
     parameters.emplace_back(m_ctx.env_parameter());
   }
   std::ranges::transform(
@@ -94,7 +93,7 @@ FunctionDeclaration TopItemGenerator::generate_signature(
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
     // Don't actually need names on externs, but doesn't hurt
     auto handle =
-        m_ctx.symbols().define_parameter("param_" + std::to_string(index));
+        m_ctx.symbols().define_parameter(conventions::make_param_name(index));
     parameters.emplace_back(
         Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
   }
@@ -146,7 +145,7 @@ void TopItemGenerator::operator()(
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
     // Don't actually need names on externs, but doesn't hurt
     auto handle =
-        m_ctx.symbols().define_parameter("param_" + std::to_string(index));
+        m_ctx.symbols().define_parameter(conventions::make_param_name(index));
     parameters.emplace_back(
         Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
     arguments.emplace_back(

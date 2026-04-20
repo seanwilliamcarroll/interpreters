@@ -12,6 +12,8 @@
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
+#include <codegen/ir_literals.hpp>
+#include <codegen/ir_syntax.hpp>
 #include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
@@ -85,7 +87,8 @@ void Formatter::operator()(const Module &mod) {
 
 void Formatter::define_struct_type(TypeId struct_type_id) {
 
-  m_out << m_ctx.to_string(struct_type_id) << " = type { ";
+  m_out << m_ctx.to_string(struct_type_id) << " = " << ir_syntax::type_keyword
+        << " { ";
 
   const auto &struct_type =
       m_ctx.type().as<StructType>(struct_type_id, __PRETTY_FUNCTION__);
@@ -119,8 +122,8 @@ void Formatter::function_parameters(const FunctionDeclaration &signature) {
 }
 
 void Formatter::declare(const FunctionDeclaration &signature) {
-  m_out << "declare " << m_ctx.to_string(signature.m_return_type) << " "
-        << std::visit(m_handle_converter, signature.m_function_id);
+  m_out << ir_syntax::declare << " " << m_ctx.to_string(signature.m_return_type)
+        << " " << std::visit(m_handle_converter, signature.m_function_id);
 
   m_out << "(";
 
@@ -133,8 +136,8 @@ void Formatter::declare(const FunctionDeclaration &signature) {
 }
 
 void Formatter::define(const FunctionDeclaration &signature) {
-  m_out << "define " << m_ctx.to_string(signature.m_return_type) << " "
-        << std::visit(m_handle_converter, signature.m_function_id);
+  m_out << ir_syntax::define << " " << m_ctx.to_string(signature.m_return_type)
+        << " " << std::visit(m_handle_converter, signature.m_function_id);
 
   m_out << "(";
 
@@ -147,11 +150,11 @@ void Formatter::operator()(const Function &function) {
   // Reset for each function for readability
   m_handle_converter = HandleToString{};
 
-  m_out << std::visit(m_handle_converter, function.signature().m_function_id) +
-               ".closure = constant " + m_ctx.to_string(m_ctx.m_fat_ptr) +
-               " { ptr "
+  m_out << std::visit(m_handle_converter, function.signature().m_function_id)
+        << ".closure = " << ir_syntax::constant << " "
+        << m_ctx.to_string(m_ctx.m_fat_ptr) << " { " << ir_syntax::ptr << " "
         << std::visit(m_handle_converter, function.signature().m_function_id)
-        << ", ptr null }";
+        << ", " << ir_syntax::ptr << " " << ir_literals::null << " }";
   newline();
 
   define(function.signature());
@@ -202,16 +205,18 @@ void Formatter::operator()(const UnaryInstruction &instruction) {
 
   switch (instruction.m_operator) {
   case UnaryOperator::MINUS:
-    m_out << std::visit(m_handle_converter, instruction.m_result) << " = sub "
-          << " " << m_ctx.to_string(instruction.m_type) << " 0, "
+    m_out << std::visit(m_handle_converter, instruction.m_result) << " = "
+          << ir_syntax::sub << "  " << m_ctx.to_string(instruction.m_type)
+          << " " << ir_literals::zero << ", "
           << std::visit(m_handle_converter, instruction.m_input);
     break;
   case UnaryOperator::NOT:
-    const char *true_equivalent =
-        (m_ctx.m_i1 == instruction.m_type) ? "true" : "-1";
-    m_out << std::visit(m_handle_converter, instruction.m_result) << " = xor "
-          << " " << m_ctx.to_string(instruction.m_type) << " "
-          << true_equivalent << ", "
+    const auto &true_equivalent = (m_ctx.m_i1 == instruction.m_type)
+                                      ? ir_literals::true_
+                                      : ir_literals::all_ones;
+    m_out << std::visit(m_handle_converter, instruction.m_result) << " = "
+          << ir_syntax::xor_op << "  " << m_ctx.to_string(instruction.m_type)
+          << " " << true_equivalent << ", "
           << std::visit(m_handle_converter, instruction.m_input);
     break;
   }
@@ -222,9 +227,10 @@ void Formatter::operator()(const UnaryInstruction &instruction) {
 void Formatter::operator()(const IntegerCompareInstruction &instruction) {
   indent();
 
-  m_out << std::visit(m_handle_converter, instruction.m_result) << " = icmp "
-        << instruction.m_condition << " " << m_ctx.to_string(instruction.m_type)
-        << " " << std::visit(m_handle_converter, instruction.m_lhs) << ", "
+  m_out << std::visit(m_handle_converter, instruction.m_result) << " = "
+        << ir_syntax::icmp << " " << instruction.m_condition << " "
+        << m_ctx.to_string(instruction.m_type) << " "
+        << std::visit(m_handle_converter, instruction.m_lhs) << ", "
         << std::visit(m_handle_converter, instruction.m_rhs);
 
   newline();
@@ -233,8 +239,9 @@ void Formatter::operator()(const IntegerCompareInstruction &instruction) {
 void Formatter::operator()(const LoadInstruction &instruction) {
   indent();
 
-  m_out << std::visit(m_handle_converter, instruction.m_destination)
-        << " = load " << m_ctx.to_string(instruction.m_type) << ", ptr "
+  m_out << std::visit(m_handle_converter, instruction.m_destination) << " = "
+        << ir_syntax::load << " " << m_ctx.to_string(instruction.m_type) << ", "
+        << ir_syntax::ptr << " "
         << std::visit(m_handle_converter, instruction.m_source);
 
   newline();
@@ -243,8 +250,9 @@ void Formatter::operator()(const LoadInstruction &instruction) {
 void Formatter::operator()(const StoreInstruction &instruction) {
   indent();
 
-  m_out << "store " << m_ctx.to_string(instruction.m_type) << " "
-        << std::visit(m_handle_converter, instruction.m_source) << ", ptr "
+  m_out << ir_syntax::store << " " << m_ctx.to_string(instruction.m_type) << " "
+        << std::visit(m_handle_converter, instruction.m_source) << ", "
+        << ir_syntax::ptr << " "
         << std::visit(m_handle_converter, instruction.m_destination);
 
   newline();
@@ -255,8 +263,8 @@ void Formatter::operator()(const CastInstruction &instruction) {
 
   m_out << std::visit(m_handle_converter, instruction.m_destination) << " = "
         << instruction.m_operator << " " << m_ctx.to_string(instruction.m_from)
-        << " " << std::visit(m_handle_converter, instruction.m_source) << " to "
-        << m_ctx.to_string(instruction.m_to);
+        << " " << std::visit(m_handle_converter, instruction.m_source) << " "
+        << ir_syntax::to << " " << m_ctx.to_string(instruction.m_to);
 
   newline();
 }
@@ -264,11 +272,11 @@ void Formatter::operator()(const CastInstruction &instruction) {
 void Formatter::operator()(const GetElementPtrInstruction &instruction) {
   indent();
 
-  m_out << std::visit(m_handle_converter, instruction.m_destination)
-        << " = getelementptr " << m_ctx.to_string(instruction.m_struct_type)
-        << ", ptr "
-        << std::visit(m_handle_converter, instruction.m_struct_handle) << ", "
-        << m_ctx.to_string(instruction.m_initial_index.m_type) << " "
+  m_out << std::visit(m_handle_converter, instruction.m_destination) << " = "
+        << ir_syntax::getelementptr << " "
+        << m_ctx.to_string(instruction.m_struct_type) << ", " << ir_syntax::ptr
+        << " " << std::visit(m_handle_converter, instruction.m_struct_handle)
+        << ", " << m_ctx.to_string(instruction.m_initial_index.m_type) << " "
         << std::visit(m_handle_converter, instruction.m_initial_index.m_name);
 
   for (const auto &additional_index : instruction.m_additional_indices) {
@@ -282,9 +290,10 @@ void Formatter::operator()(const GetElementPtrInstruction &instruction) {
 void Formatter::operator()(const PtrToIntInstruction &instruction) {
   indent();
 
-  m_out << std::visit(m_handle_converter, instruction.m_destination)
-        << " = ptrtoint ptr "
-        << std::visit(m_handle_converter, instruction.m_source) << " to "
+  m_out << std::visit(m_handle_converter, instruction.m_destination) << " = "
+        << ir_syntax::ptrtoint << " " << ir_syntax::ptr << " "
+        << std::visit(m_handle_converter, instruction.m_source) << " "
+        << ir_syntax::to << " "
         << m_ctx.to_string(instruction.m_destination_type);
 
   newline();
@@ -310,7 +319,8 @@ void Formatter::function_arguments(const std::vector<Argument> &arguments) {
 void Formatter::operator()(const CallVoidInstruction &instruction) {
   indent();
 
-  m_out << "call void " << std::visit(m_handle_converter, instruction.m_callee);
+  m_out << ir_syntax::call_void << " "
+        << std::visit(m_handle_converter, instruction.m_callee);
 
   m_out << "(";
   function_arguments(instruction.m_arguments);
@@ -322,9 +332,9 @@ void Formatter::operator()(const CallVoidInstruction &instruction) {
 void Formatter::operator()(const CallInstruction &instruction) {
   indent();
 
-  m_out << std::visit(m_handle_converter, instruction.m_target) << " = call "
-        << m_ctx.to_string(instruction.m_return_type) << " "
-        << std::visit(m_handle_converter, instruction.m_callee);
+  m_out << std::visit(m_handle_converter, instruction.m_target) << " = "
+        << ir_syntax::call << " " << m_ctx.to_string(instruction.m_return_type)
+        << " " << std::visit(m_handle_converter, instruction.m_callee);
 
   m_out << "(";
   function_arguments(instruction.m_arguments);
@@ -336,8 +346,8 @@ void Formatter::operator()(const CallInstruction &instruction) {
 void Formatter::operator()(const AllocaInstruction &instruction) {
   indent();
 
-  m_out << std::visit(m_handle_converter, instruction.m_handle) << " = alloca "
-        << m_ctx.to_string(instruction.m_type);
+  m_out << std::visit(m_handle_converter, instruction.m_handle) << " = "
+        << ir_syntax::alloca_op << " " << m_ctx.to_string(instruction.m_type);
 
   newline();
 }
@@ -345,9 +355,12 @@ void Formatter::operator()(const AllocaInstruction &instruction) {
 void Formatter::operator()(const BranchInstruction &instruction) {
   indent();
 
-  m_out << "br i1 " << std::visit(m_handle_converter, instruction.m_condition)
-        << ", label " << std::visit(m_handle_converter, instruction.m_iftrue)
-        << ", label " << std::visit(m_handle_converter, instruction.m_iffalse);
+  m_out << ir_syntax::br << " " << ir_syntax::i1 << " "
+        << std::visit(m_handle_converter, instruction.m_condition) << ", "
+        << ir_syntax::label << " "
+        << std::visit(m_handle_converter, instruction.m_iftrue) << ", "
+        << ir_syntax::label << " "
+        << std::visit(m_handle_converter, instruction.m_iffalse);
 
   newline();
 }
@@ -355,21 +368,22 @@ void Formatter::operator()(const BranchInstruction &instruction) {
 void Formatter::operator()(const JumpInstruction &instruction) {
   indent();
 
-  m_out << "br label " << std::visit(m_handle_converter, instruction.m_target);
+  m_out << ir_syntax::br << " " << ir_syntax::label << " "
+        << std::visit(m_handle_converter, instruction.m_target);
 
   newline();
 }
 
 void Formatter::operator()(const ReturnVoidInstruction & /*unused*/) {
   indent();
-  m_out << "ret void";
+  m_out << ir_syntax::ret_void;
   newline();
 }
 
 void Formatter::operator()(const ReturnInstruction &instruction) {
   indent();
 
-  m_out << "ret " << m_ctx.to_string(instruction.m_type) << " "
+  m_out << ir_syntax::ret << " " << m_ctx.to_string(instruction.m_type) << " "
         << std::visit(m_handle_converter, instruction.m_value);
 
   newline();

@@ -12,6 +12,7 @@
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
 #include <codegen/module.hpp>
+#include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
@@ -19,6 +20,7 @@
 #include <zir/types.hpp>
 
 #include <cassert>
+#include <string>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -33,7 +35,8 @@ struct Context {
         m_i64(m_type_arena.intern(I64Type{})),
         m_ptr(m_type_arena.intern(PtrType{})),
         m_fat_ptr(m_type_arena.intern_global_struct(
-            "closure", StructType{.m_fields = {m_ptr, m_ptr}})) {}
+            std::string{conventions::closure_type},
+            StructType{.m_fields = {m_ptr, m_ptr}})) {}
 
   Module &module() { return m_module; }
   SymbolTable &symbols() { return m_symbol_table; }
@@ -68,7 +71,7 @@ struct Context {
   [[nodiscard]]
   Parameter env_parameter() const {
     return {
-        .m_name = ParameterHandle{"env"},
+        .m_name = ParameterHandle{std::string{conventions::env_parameter_name}},
         .m_type = m_ptr,
     };
   }

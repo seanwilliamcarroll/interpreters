@@ -13,7 +13,9 @@
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
+#include <codegen/ir_literals.hpp>
 #include <codegen/module.hpp>
+#include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/statement_generator.hpp>
 #include <codegen/symbol_table.hpp>
@@ -90,7 +92,8 @@ Handle ExpressionGenerator::operator()(const zir::I64 &literal) {
 }
 
 Handle ExpressionGenerator::operator()(const zir::Bool &literal) {
-  return LiteralHandle{literal.m_value ? "true" : "false"};
+  return LiteralHandle{
+      std::string{literal.m_value ? ir_literals::true_ : ir_literals::false_}};
 }
 
 Handle ExpressionGenerator::operator()(const zir::Char &literal) {
@@ -127,8 +130,10 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   auto &final_condition_block = function.current_basic_block();
 
   // Create starting blocks that will always exist, then and merge
-  auto &starting_then_block = function.new_basic_block("then");
-  auto &starting_merge_block = function.new_basic_block("merge");
+  auto &starting_then_block =
+      function.new_basic_block(std::string{conventions::then_block_label});
+  auto &starting_merge_block =
+      function.new_basic_block(std::string{conventions::merge_block_label});
 
   // Do then branch, capture the final block for later if needed
   function.set_insertion_point(starting_then_block);
@@ -151,7 +156,8 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
 
   // Now we handle the else, capturing first block and last block related to
   // this branch
-  auto &starting_else_block = function.new_basic_block("else");
+  auto &starting_else_block =
+      function.new_basic_block(std::string{conventions::else_block_label});
   function.set_insertion_point(starting_else_block);
   auto else_target = generate(if_expression.m_else_block.value());
   auto &final_else_block = function.current_basic_block();
@@ -179,7 +185,8 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
     return {};
   }
 
-  auto result_handle = m_ctx.symbols().define_local("if_result");
+  auto result_handle =
+      m_ctx.symbols().define_local(std::string{conventions::if_result_local});
 
   function.add_alloca_instruction(AllocaInstruction{
       .m_handle = result_handle, .m_type = m_ctx.to_type(if_return_type_id)});
@@ -404,8 +411,8 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // rhs jumps to merge
   // at merge, we still need to do a compare on the result
 
-  auto result_handle =
-      m_ctx.symbols().define_local("short_circuit_logic_result");
+  auto result_handle = m_ctx.symbols().define_local(
+      std::string{conventions::short_circuit_result_local});
 
   m_ctx.function().add_alloca_instruction(
       AllocaInstruction{.m_handle = result_handle, .m_type = m_ctx.m_i1});
@@ -419,7 +426,8 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_type = m_ctx.m_i1,
   });
 
-  auto &starting_rhs_block = m_ctx.function().new_basic_block("rhs");
+  auto &starting_rhs_block = m_ctx.function().new_basic_block(
+      std::string{conventions::rhs_block_label});
   m_ctx.function().set_insertion_point(starting_rhs_block);
   auto rhs_handle = generate(binary_expression.m_rhs);
   auto &final_rhs_block = m_ctx.block();
@@ -430,7 +438,8 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
       .m_type = m_ctx.m_i1,
   });
 
-  auto &starting_merge_block = m_ctx.function().new_basic_block("merge");
+  auto &starting_merge_block = m_ctx.function().new_basic_block(
+      std::string{conventions::merge_block_label});
   m_ctx.function().set_insertion_point(starting_merge_block);
 
   // Figure out terminal instructions now
@@ -551,7 +560,8 @@ FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
                          .m_type = m_ctx.to_type(binding.m_type)};
       });
 
-  auto lambda_handle = m_ctx.symbols().define_uniqued_global("lambda");
+  auto lambda_handle = m_ctx.symbols().define_uniqued_global(
+      std::string{conventions::lambda_global});
 
   return FunctionDeclaration{.m_function_id = lambda_handle,
                              .m_return_type =
@@ -572,8 +582,10 @@ struct FunctionScopeGuard {
 
 Handle ExpressionGenerator::malloc_struct(BasicBlock &block,
                                           TypeId struct_type_id) {
-  // Special function
-  auto malloc_handle = GlobalHandle{"malloc"};
+  // Special function. TODO: make the allocator configurable on Context rather
+  // than hard-wired to the C ABI.
+  auto malloc_handle =
+      GlobalHandle{std::string{conventions::allocator_function}};
   auto temp_size_bytes_ptr = m_ctx.symbols().next_ssa_temporary();
   block.add_instruction(GetElementPtrInstruction{
       .m_destination = temp_size_bytes_ptr,
@@ -684,7 +696,8 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
       struct_types.emplace_back(type_id);
     }
     auto closure_type_id = m_ctx.type().intern_struct(
-        "env", StructType{.m_fields = std::move(struct_types)});
+        std::string{conventions::env_struct_name},
+        StructType{.m_fields = std::move(struct_types)});
 
     for (const auto &[index, capture] :
          std::views::zip(std::views::iota(0ULL), captured_bindings)) {

@@ -4,16 +4,16 @@ Check off as completed. See `aspirations.md` § "Codegen Cleanup" for rationale.
 
 ## Extract string constants
 
-- [ ] Create `ir_syntax.hpp` with LLVM IR keyword constants (`load`, `store`, `alloca`, `getelementptr`, `br`, `ret`, `call`, `icmp`, `ptrtoint`, etc.)
-- [ ] Create `ir_literals.hpp` with LLVM literal spellings (`null`, `true`, `false`, `-1`, `0`, `1`)
-- [ ] Expand `naming_conventions.hpp` to cover all ABI/convention names
-- [ ] Move `"env"` out of `Context::env_parameter()`
-- [ ] Move `"entry"` out of `Function` constructor
+- [x] Create `ir_syntax.hpp` with LLVM IR keyword constants (`load`, `store`, `alloca`, `getelementptr`, `br`, `ret`, `call`, `icmp`, `ptrtoint`, etc.)
+- [x] Create `ir_literals.hpp` with LLVM literal spellings (`null`, `true`, `false`, `-1`, `0`, `1`)
+- [x] Expand `naming_conventions.hpp` to cover all ABI/convention names
+- [x] Move `"env"` out of `Context::env_parameter()`
+- [x] Move `"entry"` out of `Function` constructor
 - [ ] Move `"malloc"` out of `ExpressionGenerator::malloc_struct` (make allocator configurable on `Context`)
-- [ ] Move block-label strings (`"then"`, `"else"`, `"merge"`, `"rhs"`) into naming conventions
-- [ ] Move synthetic local names (`"if_result"`, `"short_circuit_logic_result"`, `"lambda"`, `"param_"`) into naming conventions
+- [x] Move block-label strings (`"then"`, `"else"`, `"merge"`, `"rhs"`) into naming conventions
+- [x] Move synthetic local names (`"if_result"`, `"short_circuit_logic_result"`, `"lambda"`, `"param_"`) into naming conventions
 - [ ] Replace `binding.m_name == "main"` string compare with a typed/named predicate
-- [ ] Migrate `formatter.cpp` to use the new syntax/literal headers
+- [x] Migrate `formatter.cpp` to use the new syntax/literal headers
 
 ## Collapse void/non-void instruction variants
 
