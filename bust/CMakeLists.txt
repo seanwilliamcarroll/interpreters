@@ -34,6 +34,7 @@ add_library(bust-lib STATIC
   codegen/arena.cpp
   codegen/expression_generator.cpp
   codegen/formatter.cpp
+  codegen/ir_builder.cpp
   codegen/let_binding_generator.cpp
   codegen/statement_generator.cpp
   codegen/top_item_generator.cpp

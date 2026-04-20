@@ -15,13 +15,6 @@ Check off as completed. See `aspirations.md` § "Codegen Cleanup" for rationale.
 - [ ] Replace `binding.m_name == "main"` string compare with a typed/named predicate
 - [x] Migrate `formatter.cpp` to use the new syntax/literal headers
 
-## Collapse void/non-void instruction variants
-
-- [ ] Replace `CallInstruction` + `CallVoidInstruction` with a single `CallInstruction { optional<Handle> m_target; ... }`
-- [ ] Replace `ReturnInstruction` + `ReturnVoidInstruction` with a single `ReturnInstruction { optional<Handle> m_value; ... }`
-- [ ] Update formatter to branch on `has_value()` instead of variant case
-- [ ] Update emission sites in `ExpressionGenerator`, `TopItemGenerator`, `LetBindingGenerator`
-
 ## IR builder abstraction
 
 - [ ] Design `IRBuilder` owning `Context&`, insertion-point pointer, SSA counter
