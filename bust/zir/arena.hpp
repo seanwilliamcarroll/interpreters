@@ -28,22 +28,28 @@ struct TypeArena : public AbstractInternArena<TypeId, Type> {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
   }
 
-  [[nodiscard]] std::string to_string(TypeId) const override;
-  [[nodiscard]] std::string to_string(const Type &) const override;
+  [[nodiscard]] std::string to_string(TypeId type_id) const override;
+  [[nodiscard]] std::string to_string(const Type &type) const override;
 };
 
 struct ExpressionArena : public AbstractPushArena<ExprId, Expression> {
   // TODO
-  [[nodiscard]] std::string to_string(ExprId) const override { return {}; }
-  [[nodiscard]] std::string to_string(const Expression &) const override {
+  [[nodiscard]] std::string to_string(ExprId /*unused*/) const override {
+    return {};
+  }
+  [[nodiscard]] std::string
+  to_string(const Expression & /*unused*/) const override {
     return {};
   }
 };
 
 struct BindingArena : public AbstractPushArena<BindingId, Binding> {
   // TODO
-  [[nodiscard]] std::string to_string(BindingId) const override { return {}; }
-  [[nodiscard]] std::string to_string(const Binding &) const override {
+  [[nodiscard]] std::string to_string(BindingId /*unused*/) const override {
+    return {};
+  }
+  [[nodiscard]] std::string
+  to_string(const Binding & /*unused*/) const override {
     return {};
   }
 };

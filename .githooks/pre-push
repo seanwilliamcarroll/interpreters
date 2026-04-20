@@ -155,6 +155,8 @@ if [ -n "$CLANG_TIDY" ]; then
   FAILURES=0
 
   for src in $CHANGED_FILES; do
+    [ -f "$src" ] || continue
+
     FILE_OUTPUT=$("$CLANG_TIDY" -p build "$src" 2>&1 || true)
 
     if echo "$FILE_OUTPUT" | grep -qE '(warning|error):'; then

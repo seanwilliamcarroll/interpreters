@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include <exceptions.hpp>
 #include <zir/types.hpp>
 
 #include <array>
@@ -17,8 +18,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-#include "exceptions.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

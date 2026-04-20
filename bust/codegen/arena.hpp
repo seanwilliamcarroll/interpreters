@@ -10,10 +10,9 @@
 #include <arena.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
+#include <exceptions.hpp>
 
 #include <optional>
-
-#include "exceptions.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

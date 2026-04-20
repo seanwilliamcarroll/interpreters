@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include <codegen/basic_block.hpp>
+#include <codegen/context.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
@@ -22,8 +23,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "codegen/context.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

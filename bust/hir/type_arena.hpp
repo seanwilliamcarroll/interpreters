@@ -30,8 +30,8 @@ struct TypeArena : public AbstractInternArena<TypeId, TypeKind> {
         m_bool(intern(PrimitiveTypeValue{PrimitiveType::BOOL})),
         m_never(intern(NeverType{})) {}
 
-  [[nodiscard]] std::string to_string(const TypeKind &) const override;
-  [[nodiscard]] std::string to_string(TypeId) const override;
+  [[nodiscard]] std::string to_string(const TypeKind &type_kind) const override;
+  [[nodiscard]] std::string to_string(TypeId type_id) const override;
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);

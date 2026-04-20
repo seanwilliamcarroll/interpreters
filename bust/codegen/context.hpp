@@ -8,18 +8,17 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
 #include <codegen/module.hpp>
+#include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
 #include <zir/arena.hpp>
 #include <zir/types.hpp>
 
 #include <cassert>
-
-#include "codegen/arena.hpp"
-#include "codegen/parameter.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
@@ -75,7 +74,7 @@ struct Context {
   }
 
 private:
-  Module m_module{};
+  Module m_module;
   SymbolTable m_symbol_table;
   const zir::Arena &m_arena;
   TypeArena m_type_arena;
