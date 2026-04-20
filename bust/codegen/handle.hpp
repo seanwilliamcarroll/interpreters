@@ -36,12 +36,8 @@ struct GlobalHandle {
   std::string m_handle;
 };
 
-struct TypeHandle {
-  std::string m_handle;
-};
-
 using Handle = std::variant<LiteralHandle, TemporaryHandle, LocalHandle,
-                            ParameterHandle, GlobalHandle, TypeHandle>;
+                            ParameterHandle, GlobalHandle>;
 
 inline std::string get_raw_handle(const Handle &handle) {
   return std::visit(

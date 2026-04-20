@@ -56,10 +56,6 @@ std::string HandleToString::operator()(const GlobalHandle &handle) {
   return "@" + handle.m_handle;
 }
 
-std::string HandleToString::operator()(const TypeHandle &handle) {
-  return "%" + handle.m_handle;
-}
-
 void Formatter::format(const auto &to_format) { (*this)(to_format); }
 
 void Formatter::operator()(const Module &mod) {
