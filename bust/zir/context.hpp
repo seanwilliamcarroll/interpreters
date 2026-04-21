@@ -101,7 +101,7 @@ struct Context {
 
 private:
   const hir::TypeArena &m_type_arena;
-  TypeResolver m_resolver;
+  const TypeResolver m_resolver;
   Arena m_arena;
   Environment m_env;
   std::unordered_map<std::string, BindingId> m_global_bindings;
