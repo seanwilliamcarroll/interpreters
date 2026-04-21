@@ -196,9 +196,7 @@ Handle IRBuilder::malloc_struct(TypeId struct_type) const {
       Argument{.m_name = LiteralHandle::one(), .m_type = m_ctx.m_i32}, {});
   auto size_i64 = create_ptr_to_int(size_ptr, m_ctx.m_i64);
   // TODO: Move this out and generalize allocator
-  auto malloc_handle =
-      GlobalHandle{std::string{conventions::allocator_function}};
-  return create_call(malloc_handle,
+  return create_call(m_ctx.allocator_symbol(),
                      {Argument{.m_name = size_i64, .m_type = m_ctx.m_i64}},
                      m_ctx.m_ptr);
 }

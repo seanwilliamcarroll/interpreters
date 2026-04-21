@@ -23,6 +23,8 @@
 #include <cassert>
 #include <string>
 
+#include "codegen/handle.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -30,6 +32,7 @@ namespace bust::codegen {
 struct Context {
   Context(const zir::Arena &arena)
       : m_arena(arena), m_builder(*this),
+        m_allocator_symbol({std::string{conventions::allocator_function}}),
         m_void(m_type_arena.intern(VoidType{})),
         m_i1(m_type_arena.intern(I1Type{})),
         m_i8(m_type_arena.intern(I8Type{})),
@@ -78,12 +81,17 @@ struct Context {
 
   IRBuilder &builder() { return m_builder; }
 
+  [[nodiscard]] const GlobalHandle &allocator_symbol() const {
+    return m_allocator_symbol;
+  }
+
 private:
   Module m_module;
   SymbolTable m_symbol_table;
   const zir::Arena &m_arena;
   TypeArena m_type_arena;
   IRBuilder m_builder;
+  GlobalHandle m_allocator_symbol;
 
 public:
   TypeId m_void;
