@@ -45,10 +45,6 @@ generator should only know about ABI names.
   management, signature creation, env-struct typing, capture-load prologue
   (inside the new function), capture-store (at the creation site in the
   outer function), body generation, and fat-pointer packaging.
-- **`FunctionScopeGuard`** is defined mid-way through `expression_generator.cpp`
-  and papers over the fact that `Module::current_function` is a single
-  mutable raw pointer when it semantically wants to be a stack (entering a
-  lambda mid-function).
 - **`get_block_type`** is a method on `ExpressionGenerator` but needs nothing
   from that class; it is a pure query over `zir::Block` that landed on the
   wrong owner.
@@ -58,12 +54,6 @@ generator should only know about ABI names.
 
 ### Repeated structure
 
-- **Void/non-void instruction variants.** `CallVoidInstruction` vs
-  `CallInstruction`, `ReturnVoidInstruction` vs `ReturnInstruction`. The
-  split causes three+ near-identical emission sites (`CallExpr`,
-  `ExternFunctionDeclaration` thunk, `FunctionDef` terminator). LLVM treats
-  a void call as a call with no result name — collapsing to
-  `std::optional<Handle> m_target` removes a whole axis of branching.
 - **`alloca + store + … + load`** appears in the if-merge, the short-circuit
   merge, capture-load prologue, and let-bindings. That is a high-level
   operation ("materialize a value through memory") without a name.
@@ -131,13 +121,12 @@ Three structural investments that unblock future features:
 ### Suggested attack order
 
 1. Extract string constants by role (cheap, mechanical, immediate cleanup).
-2. Collapse void/non-void instruction duplication via `optional<Handle>`.
-3. Introduce the `IRBuilder` and migrate `ExpressionGenerator` method by
+2. Introduce the `IRBuilder` and migrate `ExpressionGenerator` method by
    method — biggest structural win.
-4. Pull struct/malloc helpers onto the builder; build `ClosureBuilder` on
+3. Pull struct/malloc helpers onto the builder; build `ClosureBuilder` on
    top; shrink `LambdaExpr`.
-5. Add `operands()` / `result()` for instructions. Prerequisite for passes.
-6. Tighten handle types at branch targets and call callees.
+4. Add `operands()` / `result()` for instructions. Prerequisite for passes.
+5. Tighten handle types at branch targets and call callees.
 
 ## Type System
 
@@ -179,6 +168,15 @@ Three structural investments that unblock future features:
   - [x] Fat pointer construction (`{fn_ptr, env_ptr}`) for closure values
   - [x] Indirect calls through closure values (extract fn_ptr + env_ptr)
   - [ ] Constant closure globals for top-level functions and thunks (`@foo.closure = constant %closure { ptr @foo, ptr null }`)
+  - [ ] Direct calls for statically-known callees (skip fat pointer entirely)
+    — When a `CallExpr`'s callee is syntactically a top-level function or
+    extern (not a value captured into a local), emit `call @foo(null, args...)`
+    instead of loading `{fn_ptr, env_ptr}` from the closure struct and
+    doing an indirect call. Dispatch is syntactic (walk the callee expression
+    before lowering), not based on Handle variant or type. Also eliminates
+    the thunk hop for direct extern calls (`putchar(c)` → `call @putchar(c)`
+    instead of `call @putchar.thunk(null, c)`). Pure optimization atop the
+    constant-closure ABI — does not change fat-pointer representation.
 - [x] Non-i64 integer types in codegen
 - [x] Cast expressions in codegen
 - [ ] Codegen type arena
@@ -239,6 +237,12 @@ Goal: polymorphic lambdas work end-to-end through codegen.
 - [ ] Reference counting for heap-allocated closures (env structs)
   — Currently leaking malloc'd env structs. Refcounting is sufficient since
   no mutation means no cycles; tracing GC is overkill for now.
+- [ ] Stack-allocate the fat-pointer struct when the closure doesn't escape
+  — Today `package_fat_pointer` mallocs the `{fn_ptr, env_ptr}` struct even
+  when the closure is consumed immediately by a local call. If escape
+  analysis can prove the fat pointer doesn't outlive its creation scope,
+  an `alloca` is free. Recognizing when this is safe is itself interesting
+  (prerequisite: some form of use-site tracking or an escape analysis pass).
 
 ## Module System / Standard Library
 

@@ -1,72 +1,48 @@
-# Codegen Cleanup TODOs
+# Closure Rework Plan
 
-Check off as completed. See `aspirations.md` § "Codegen Cleanup" for rationale.
+Current action plan for the lambda/closure decomposition. See `aspirations.md`
+§ "Codegen (LLVM IR)" and § "Codegen Cleanup" for rationale and for remaining
+cleanup items not covered here.
 
-## Extract string constants
+## 1. Scaffold `ClosureBuilder`
 
-- [x] Create `ir_syntax.hpp` with LLVM IR keyword constants (`load`, `store`, `alloca`, `getelementptr`, `br`, `ret`, `call`, `icmp`, `ptrtoint`, etc.)
-- [x] Create `ir_literals.hpp` with LLVM literal spellings (`null`, `true`, `false`, `-1`, `0`, `1`)
-- [x] Expand `naming_conventions.hpp` to cover all ABI/convention names
-- [x] Move `"env"` out of `Context::env_parameter()`
-- [x] Move `"entry"` out of `Function` constructor
-- [ ] Move `"malloc"` out of `ExpressionGenerator::malloc_struct` (make allocator configurable on `Context`)
-- [x] Move block-label strings (`"then"`, `"else"`, `"merge"`, `"rhs"`) into naming conventions
-- [x] Move synthetic local names (`"if_result"`, `"short_circuit_logic_result"`, `"lambda"`, `"param_"`) into naming conventions
-- [ ] Replace `binding.m_name == "main"` string compare with a typed/named predicate
-- [x] Migrate `formatter.cpp` to use the new syntax/literal headers
+- [ ] Create `bust/codegen/closure_builder.hpp` + `.cpp`
+- [ ] Ctor `(Context&, const std::vector<zir::IdentifierExpr>& captures)` — moves `analyze_captures` logic: intern env type, resolve capture handles into `std::vector<Argument>`
+- [ ] `allocate_and_populate_env() -> Handle` (malloc env + store-captures loop, including the alloca-load branch)
+- [ ] `emit_capture_load_prologue()` (alloca + load-from-env + store per capture)
+- [ ] `package_fat_pointer(GlobalHandle lambda_handle, Handle env_handle) -> Handle`
+- [ ] Add to CMake
 
-## IR builder abstraction
+## 2. Rewrite `LambdaExpr` on with-captures path
 
-- [ ] Design `IRBuilder` owning `Context&`, insertion-point pointer, SSA counter
-- [ ] Add scoped insertion-point guard (`builder.at(block)` RAII)
-- [ ] Add `create_load` / `create_store` / `create_alloca` / `create_binary` / `create_unary` / `create_icmp` / `create_cast` / `create_gep` / `create_call` / `create_branch` / `create_jump` / `create_return`
-- [ ] Move `malloc_struct`, `store_to_struct`, `load_from_struct` from `ExpressionGenerator` onto `IRBuilder`
-- [ ] Migrate `ExpressionGenerator::operator()` methods to use the builder
-- [ ] Migrate `LetBindingGenerator`, `StatementGenerator`, `TopItemGenerator` to use the builder
-- [ ] Delete `FunctionScopeGuard` (replaced by builder's scoped insertion point)
+- [ ] Branch at top: `if (captures.empty())` → temporary fallback to old code
+- [ ] Non-empty branch uses `ClosureBuilder` end-to-end
+- [ ] Delete `analyze_captures` (absorbed into `ClosureBuilder` ctor)
+- [ ] Keep `generate_lambda_signature` (still used by both paths)
+- [ ] Verify existing tests pass
 
-## Lambda / closure decomposition
+## 3. Lift capture-less lambdas to top-level functions
 
-- [ ] Extract `emit_capture_load_prologue` from `LambdaExpr` generator
-- [ ] Extract `emit_capture_store_at_creation_site` from `LambdaExpr` generator
-- [ ] Extract `package_as_fat_pointer` from `LambdaExpr` generator
-- [ ] Extract env-struct type creation into its own helper
-- [ ] Build `ClosureBuilder` on top of `IRBuilder`
-- [ ] Rewrite `operator()(const zir::LambdaExpr &)` on top of `ClosureBuilder`
+- [ ] Audit `Module` for a constant-globals mechanism; add one if missing
+- [ ] New helper `lift_free_lambda(lambda_expr) -> GlobalHandle` — emits top-level function + `@<name>.closure = constant %closure { ptr @<name>, ptr null }`, no env, no prologue
+- [ ] Wire into the `empty()` branch of `LambdaExpr`; remove stub fallback
 
-## If-expression cleanup
+## 4. Constant closures for top-level functions and externs
 
-- [ ] Decide yields-value up front (hoist the `get_block_type` check)
-- [ ] Split into `emit_if_value` and `emit_if_statement` paths
-- [ ] Relocate `get_block_type` off `ExpressionGenerator` (free function or `zir::` helper)
+- [ ] `TopItemGenerator::operator()(FunctionDef)` emits `@foo.closure` after the function body
+- [ ] `TopItemGenerator::operator()(ExternFunctionDeclaration)` emits the closure global pointing to the thunk
+- [ ] Audit current `IdentifierExpr` resolution for top-level functions; change it to hand back the address of the closure global instead of freshly malloc'ing a fat pointer
+- [ ] Check close `aspirations.md` sub-bullet "Constant closure globals for top-level functions and thunks"
 
-## Module / function-stack correctness
+## 5. Verify and clean up
 
-- [ ] Replace `Module::current_function` raw pointer with a proper stack
-- [ ] Make "enter function" / "leave function" explicit on `Module`
+- [ ] Existing test suite passes unchanged (uniform ABI = no test updates)
+- [ ] Hand-inspect IR output for one lambda-with-captures and one capture-less case: confirm no-capture path does not malloc
+- [ ] Delete any now-unreachable code in `expression_generator.cpp`
 
-## Formatter cleanup
+## Out of scope (tracked in aspirations.md)
 
-- [x] Add `str(const Handle&)` helper to replace repeated `std::visit(m_handle_converter, X)`
-- [ ] Extract comma-separated printer to replace `function_parameters` / `function_arguments` duplication
-- [ ] Consider RAII line builder (indent on construct, newline on destruct)
-- [ ] Move the `.closure = constant ...` emission into a dedicated `declare_closure_global` method
-
-## Type-property centralization
-
-- [ ] Build single `type_traits(LLVMType)` returning `{ signed, width, llvm_name, category }`
-- [ ] Replace `is_signed_type`, `width_bits`, ad-hoc `to_string` branches with calls to the traits function
-- [ ] Replace `to_llvm_compare_condition` switch with a data table keyed by `(BinaryOperator, signed)`
-
-## Def/use introspection on instructions
-
-- [ ] Implement `operands(const Instruction&) -> vector<Handle>`
-- [ ] Implement `result(const Instruction&) -> optional<Handle>`
-- [ ] Write first pass that consumes them (e.g. SSA-validity checker)
-
-## Handle type narrowing
-
-- [ ] Introduce `BlockLabel` as a distinct type (not `Handle`)
-- [ ] Retype `BranchInstruction::m_iftrue` / `m_iffalse` / `JumpInstruction::m_target` as `BlockLabel`
-- [ ] Tighten `CallInstruction::m_callee` to a function-pointer-or-global type
-- [ ] Audit `Handle` variant for other spots where a narrower type applies
+- Stack-allocating fat pointers when closures don't escape
+- Direct-call optimization for statically-known callees (Phase 2)
+- Refcounting env structs
+- `ConstantClosureBuilder` — only if emitting constants grows beyond a one-liner helper
