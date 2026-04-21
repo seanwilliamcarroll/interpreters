@@ -177,6 +177,18 @@ void IRBuilder::create_return_void() const {
   block().add_terminal(ReturnVoidInstruction{});
 }
 
+void IRBuilder::emit_parameter_prologue(
+    const std::vector<Parameter> &parameters) {
+  // Make allocas for all parameters
+  for (const auto &parameter : parameters) {
+    auto source_name = get_raw_handle(parameter.m_name);
+    auto new_handle = m_ctx.builder().add_alloca(
+        conventions::make_alloca_name(source_name), parameter.m_type);
+    m_ctx.builder().create_store(
+        new_handle, {.m_name = parameter.m_name, .m_type = parameter.m_type});
+  }
+}
+
 Handle IRBuilder::malloc_struct(TypeId struct_type) const {
   auto size_ptr = create_gep(
       struct_type, LiteralHandle::null(),

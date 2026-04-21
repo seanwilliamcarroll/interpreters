@@ -105,9 +105,11 @@ FunctionDeclaration TopItemGenerator::generate_signature(
 void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   ScopeGuard guard(m_ctx.symbols());
 
-  auto function =
-      m_ctx.builder().make_function(generate_signature(function_def));
+  auto signature = generate_signature(function_def);
+  auto function = m_ctx.builder().make_function(signature);
   m_ctx.builder().enter_function(function);
+
+  m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
 
   auto return_value = ExpressionGenerator{m_ctx}.generate(function_def.m_body);
 

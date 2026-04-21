@@ -474,6 +474,8 @@ ExpressionGenerator::lift_free_lambda(const zir::LambdaExpr &lambda_expr) {
   {
     auto function_guard = m_ctx.builder().push_new_function(signature);
 
+    m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
+
     auto return_value = generate(lambda_expr.m_body);
     if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().create_return_void();
@@ -513,6 +515,8 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   // Emit code for new lambda function
   {
     auto function_guard = m_ctx.builder().push_new_function(signature);
+
+    m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
 
     closure_builder.emit_capture_load_prologue();
 

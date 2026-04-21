@@ -89,6 +89,8 @@ struct IRBuilder {
   void create_return(Handle value, TypeId type) const;
   void create_return_void() const;
 
+  void emit_parameter_prologue(const std::vector<Parameter> &);
+
   [[nodiscard]] Handle malloc_struct(TypeId struct_type) const;
   void store_to_struct(TypeId struct_type, Handle base, size_t index,
                        Argument value) const;
