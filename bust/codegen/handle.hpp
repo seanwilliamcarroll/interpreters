@@ -30,7 +30,7 @@ struct TemporaryHandle {
   size_t m_id = m_unique_id++;
 };
 
-struct LocalHandle {
+struct NamedHandle {
   std::string m_handle;
 };
 
@@ -39,7 +39,7 @@ struct GlobalHandle {
 };
 
 using Handle =
-    std::variant<LiteralHandle, TemporaryHandle, LocalHandle, GlobalHandle>;
+    std::variant<LiteralHandle, TemporaryHandle, NamedHandle, GlobalHandle>;
 
 inline std::string get_raw_handle(const Handle &handle) {
   return std::visit(

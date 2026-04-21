@@ -52,7 +52,7 @@ std::string HandleToString::operator()(const TemporaryHandle &handle) {
   return "%" + std::to_string(new_mapping);
 }
 
-std::string HandleToString::operator()(const LocalHandle &handle) {
+std::string HandleToString::operator()(const NamedHandle &handle) {
   return "%" + handle.m_handle;
 }
 

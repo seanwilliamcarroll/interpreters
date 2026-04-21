@@ -82,7 +82,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
 }
 
 FunctionDeclaration TopItemGenerator::generate_signature(
-    const zir::ExternFunctionDeclaration &extern_function_declaration) {
+    const zir::ExternFunctionDeclaration &extern_function_declaration) const {
   const auto &binding = m_ctx.arena().get(extern_function_declaration.m_id);
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
@@ -153,7 +153,7 @@ void TopItemGenerator::operator()(
                   .m_type = m_ctx.to_type(type_id)});
     // ??
     arguments.emplace_back(
-        Argument{.m_name = LocalHandle{conventions::make_param_name(index)},
+        Argument{.m_name = NamedHandle{conventions::make_param_name(index)},
                  .m_type = m_ctx.to_type(type_id)});
   }
   auto thunked_signature = FunctionDeclaration{

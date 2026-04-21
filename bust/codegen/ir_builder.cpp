@@ -26,9 +26,9 @@ BlockLabel IRBuilder::entry_block_of(FunctionHandle function) {
   return BlockLabel{&function.m_function->entry_basic_block()};
 }
 
-LocalHandle IRBuilder::add_alloca(const std::string &name,
+NamedHandle IRBuilder::add_alloca(const std::string &name,
                                   TypeId type_id) const {
-  auto output_handle = m_ctx.symbols().define_local(name);
+  auto output_handle = m_ctx.symbols().define_named(name);
 
   current_function_handle().m_function->add_alloca_instruction(
       {.m_handle = output_handle, .m_type = type_id});
@@ -186,7 +186,7 @@ void IRBuilder::emit_parameter_prologue(
 
     m_ctx.builder().create_store(
         alloca_handle,
-        {.m_name = LocalHandle{parameter.m_name}, .m_type = parameter.m_type});
+        {.m_name = NamedHandle{parameter.m_name}, .m_type = parameter.m_type});
   }
 }
 

@@ -30,8 +30,8 @@ struct TopItemGenerator {
   void generate(const zir::TopItem &);
 
   FunctionDeclaration generate_signature(const zir::FunctionDef &);
-  FunctionDeclaration
-  generate_signature(const zir::ExternFunctionDeclaration &);
+  [[nodiscard]] FunctionDeclaration
+  generate_signature(const zir::ExternFunctionDeclaration &) const;
 
   void operator()(const zir::FunctionDef &);
   void operator()(const zir::ExternFunctionDeclaration &);
