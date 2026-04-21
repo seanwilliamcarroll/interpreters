@@ -74,7 +74,10 @@ add_executable(bust-test
   test/src/parser_test.cpp
   test/src/type_checker_test.cpp
   test/src/type_unifier_test.cpp
-  test/src/codegen_test.cpp
+  test/src/codegen_expressions_test.cpp
+  test/src/codegen_functions_test.cpp
+  test/src/codegen_side_effects_test.cpp
+  test/src/codegen_lambdas_test.cpp
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/monomorpher_test.cpp
@@ -125,6 +128,9 @@ add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
 add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
 add_test(NAME bust.zir_lowerer COMMAND bust-test -ts=bust.zir_lowerer)
 add_test(NAME bust.free_variable_collector COMMAND bust-test -ts=bust.free_variable_collector)
-add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
+add_test(NAME bust.codegen.expressions COMMAND bust-test -ts=bust.codegen.expressions)
+add_test(NAME bust.codegen.functions COMMAND bust-test -ts=bust.codegen.functions)
+add_test(NAME bust.codegen.side_effects COMMAND bust-test -ts=bust.codegen.side_effects)
+add_test(NAME bust.codegen.lambdas COMMAND bust-test -ts=bust.codegen.lambdas)
 
 #*****************************************************************************
