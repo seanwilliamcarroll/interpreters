@@ -61,9 +61,9 @@ Handle ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
   auto binding = m_ctx.arena().get(identifier.m_id);
   auto identifier_handle = m_ctx.symbols().lookup(binding.m_name);
 
-  // GlobalHandle (functions) and ParameterHandle (SSA args) are used directly.
-  // Only LocalHandle (alloca slots) need a load.
-  if (!std::holds_alternative<LocalHandle>(identifier_handle)) {
+  // GlobalHandles (functions) are used directly.
+  // Everything else is alloca'd and needs a load.
+  if (std::holds_alternative<GlobalHandle>(identifier_handle)) {
     return identifier_handle;
   }
 

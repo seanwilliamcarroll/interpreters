@@ -182,8 +182,7 @@ void IRBuilder::emit_parameter_prologue(
   // Make allocas for all parameters
   for (const auto &parameter : parameters) {
     auto source_name = get_raw_handle(parameter.m_name);
-    auto new_handle = m_ctx.builder().add_alloca(
-        conventions::make_alloca_name(source_name), parameter.m_type);
+    auto new_handle = m_ctx.builder().add_alloca(source_name, parameter.m_type);
     m_ctx.builder().create_store(
         new_handle, {.m_name = parameter.m_name, .m_type = parameter.m_type});
   }
