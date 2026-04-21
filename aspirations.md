@@ -3,52 +3,14 @@
 Open work threads, loosely grouped by theme. Items within a group that depend
 on each other are marked with arrows (→ means "enables").
 
-## Codegen Cleanup — HIGH PRIORITY
-
-`bust/codegen` has accumulated enough mess that new features (aggregate types,
-optimizations, multi-backend) will be painful without a cleanup pass. Summary
-of the issues, grouped by theme. Running checklist lives in
-`codegen_cleanup_todos.md`.
-
-### Raw string literals are doing three different jobs
-
-Strings in codegen play three distinct roles that are currently mixed together:
-
-- **LLVM IR syntax tokens** — `" = load "`, `"br i1 "`, `"store "`, `"alloca "`,
-  `"getelementptr "`, `"call void "`, `"ret void"`, etc. scattered throughout
-  `formatter.cpp`. These are the syntax of the target dialect; a change in
-  LLVM version or a move to a different textual form touches dozens of sites.
-- **Runtime ABI / convention names** — `"malloc"` (hardcoded in
-  `expression_generator.cpp`), `"env"`, `"entry"`, `"main"` (string-compared
-  in `top_item_generator.cpp`), `"param_"` prefix, `"lambda"`, `"if_result"`,
-  `"short_circuit_logic_result"`, block labels `"then"` / `"else"` / `"merge"`
-  / `"rhs"`. These define the closure ABI and naming discipline.
-- **IR literal spellings** — `"0"`, `"1"`, `"null"`, `"true"`, `"false"`,
-  `"-1"`. These are textual forms of IR constants frozen into C++ strings.
-
-`naming_conventions.hpp` is the right idea but only covers a small slice. The
-principle: if a string appears in code, someone has to recognize it and
-typos pass the compiler. If it is a named constant, the compiler helps. Beyond
-that, grouping constants by role makes the seam between codegen layers
-obvious — the formatter should only know about syntax tokens, the lambda
-generator should only know about ABI names.
+## Codegen Cleanup
 
 ### Confusing logic
 
-- **`IfExpr` generator** interleaves control-flow construction with the
-  "does this if-expression produce a value?" decision. The decision is made
-  *after* both arms are emitted, which makes the routine hard to read
-  top-to-bottom. Natural shape: decide yields-value up front, allocate the
-  result slot if so, emit each arm with its own store+jump, emit the merge
-  with a load.
-- **`LambdaExpr` generator** is ~120 lines mixing ~7 concerns: scope
-  management, signature creation, env-struct typing, capture-load prologue
-  (inside the new function), capture-store (at the creation site in the
-  outer function), body generation, and fat-pointer packaging.
 - **`get_block_type`** is a method on `ExpressionGenerator` but needs nothing
   from that class; it is a pure query over `zir::Block` that landed on the
   wrong owner.
-- **`malloc_struct` hardcodes `GlobalHandle{"malloc"}`**, coupling codegen
+- **`malloc_struct` hardcodes the allocator symbol**, coupling codegen
   to the C ABI. Allocator choice should be configurable via `Context` or a
   dedicated runtime-ABI module.
 
@@ -59,43 +21,10 @@ generator should only know about ABI names.
   operation ("materialize a value through memory") without a name.
 - **Comma-separated printing** (`function_parameters`, `function_arguments`)
   is the same loop written twice.
-- **`std::visit(m_handle_converter, X)`** appears ~30 times across the
-  formatter; a one-liner helper makes it vanish.
 - **Signed/unsigned compare switch** (`to_llvm_compare_condition`) has four
   near-identical pairs of cases. A data table keyed by
   `(BinaryOperator, signed?)` is cleaner and extends more easily to new
   numeric types.
-
-### The missing abstraction — an IR builder
-
-Most sites in `ExpressionGenerator` follow a four-step incantation: mint a
-temp, construct the instruction struct with designated initializers, append
-to the current block, return the temp. Every caller knows the insertion
-point, the SSA-temp allocator, and the struct layout — a Law of Demeter
-violation. Callers reach through `m_ctx.function().current_basic_block()`.
-
-The right abstraction is a stateful construction helper in the style of
-`llvm::IRBuilder`: an object that owns the insertion point, the SSA counter,
-and provides high-level `create_*` methods. What it unlocks:
-
-- **One-line instruction emission** — `create_load(src, ty)` replaces the
-  four-step pattern.
-- **Scoped insertion-point management** — `auto _ = builder.at(block)` RAII
-  restores the previous insertion point. Replaces the handwritten
-  `FunctionScopeGuard` and the explicit `set_insertion_point` calls in
-  `IfExpr`, `BinaryExpr` short-circuit, and `LambdaExpr`.
-- **Natural home for high-level helpers** — `store_to_struct` /
-  `load_from_struct` / `malloc_struct` already exist but live on
-  `ExpressionGenerator` (wrong owner). They belong on the builder, with the
-  allocator symbol configurable.
-- **Composition point for domain builders** — `ClosureBuilder` wraps
-  `IRBuilder` to hide env-struct creation, malloc, capture stores, and fat
-  pointer packaging. The 120-line lambda method shrinks to a dozen lines of
-  choreography.
-
-Tradeoff: a stateful builder concentrates mutable state, so it's easier to
-use and harder to reason about under concurrency. For a single-threaded
-codegen it's pure upside.
 
 ### Paving the way for future work
 
@@ -120,32 +49,8 @@ Three structural investments that unblock future features:
 
 ### Suggested attack order
 
-1. Extract string constants by role (cheap, mechanical, immediate cleanup).
-2. Introduce the `IRBuilder` and migrate `ExpressionGenerator` method by
-   method — biggest structural win.
-3. Pull struct/malloc helpers onto the builder; build `ClosureBuilder` on
-   top; shrink `LambdaExpr`.
-4. Add `operands()` / `result()` for instructions. Prerequisite for passes.
-5. Tighten handle types at branch targets and call callees.
-
-## Type System
-
-- [x] Collapse unified type variables to their root before generalization
-  — When `x + y` unifies `?T<0>` and `?T<1>`, the unifier knows they're
-  the same type but stores them as two entries pointing to the same root.
-  Before generalization decides which variables are polymorphic, substitute
-  all unified variables with their root representative so the system sees
-  one variable, not two aliases. Without this, monomorphization would try
-  to substitute two independent type parameters when there's really one.
-  Prerequisite for monomorphization (see Pipeline Overhaul).
-
-## New Types and FFI
-
-- [x] char, i8, i32, and cast expressions (landed)
-- [x] Extern function declarations (syntax, parsing, type checking, codegen)
-- [x] `putchar` via libc
-
-  Extern declarations → putchar
+1. Add `operands()` / `result()` for instructions. Prerequisite for passes.
+2. Tighten handle types at branch targets and call callees.
 
 ## Aggregate Types
 
@@ -160,31 +65,15 @@ Three structural investments that unblock future features:
 
 ## Codegen (LLVM IR)
 
-- [ ] Lambda/closure codegen
-  - [x] Uniform calling convention (`ptr %env` first param on all user functions except main)
-  - [x] Extern thunks (`.thunk` wrappers so externs can be used as first-class values)
-  - [x] Env type creation and loading captures in lambda bodies
-  - [x] Env allocation (malloc) and storing captures at lambda creation sites
-  - [x] Fat pointer construction (`{fn_ptr, env_ptr}`) for closure values
-  - [x] Indirect calls through closure values (extract fn_ptr + env_ptr)
-  - [ ] Constant closure globals for top-level functions and thunks (`@foo.closure = constant %closure { ptr @foo, ptr null }`)
-  - [ ] Direct calls for statically-known callees (skip fat pointer entirely)
-    — When a `CallExpr`'s callee is syntactically a top-level function or
-    extern (not a value captured into a local), emit `call @foo(null, args...)`
-    instead of loading `{fn_ptr, env_ptr}` from the closure struct and
-    doing an indirect call. Dispatch is syntactic (walk the callee expression
-    before lowering), not based on Handle variant or type. Also eliminates
-    the thunk hop for direct extern calls (`putchar(c)` → `call @putchar(c)`
-    instead of `call @putchar.thunk(null, c)`). Pure optimization atop the
-    constant-closure ABI — does not change fat-pointer representation.
-- [x] Non-i64 integer types in codegen
-- [x] Cast expressions in codegen
-- [ ] Codegen type arena
-  — Unify `LLVMType` enum and `TypeHandle` into a single type representation.
-  `CodegenTypeId` indexes into an arena of `CodegenType = variant<PrimitiveType, StructType>`.
-  `StructType` holds a name + list of `CodegenTypeId` fields. Arena pre-registers
-  primitives (i1, i8, i32, i64, ptr, void). Subsumes the type-registry role of
-  `CaptureEnv` in `Module`. Parallels the ZIR type arena design.
+- [ ] Direct calls for statically-known callees (skip fat pointer entirely)
+  — When a `CallExpr`'s callee is syntactically a top-level function or
+  extern (not a value captured into a local), emit `call @foo(null, args...)`
+  instead of loading `{fn_ptr, env_ptr}` from the closure struct and
+  doing an indirect call. Dispatch is syntactic (walk the callee expression
+  before lowering), not based on Handle variant or type. Also eliminates
+  the thunk hop for direct extern calls (`putchar(c)` → `call @putchar(c)`
+  instead of `call @putchar.thunk(null, c)`). Pure optimization atop the
+  constant-closure ABI — does not change fat-pointer representation.
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
 
 ## Control Flow / Return Analysis
@@ -208,29 +97,6 @@ Three structural investments that unblock future features:
   Marking the union-find storage `mutable` lets const callers (e.g. a
   post-type-check resolution pass) invoke `find` while preserving the
   path-compression optimization.
-
-## Pipeline Overhaul
-
-Goal: polymorphic lambdas work end-to-end through codegen.
-
-- [x] Drop evaluator (remove from CMake build, evaluator no longer maintained)
-- [x] Monomorphization pass
-  - Sits between type checking and zonking
-  - Canonicalization → monomorphization → polymorphic lambdas resolve cleanly
-- [ ] ZIR: arena-based zonked intermediate representation
-  - New representation produced by the zonker, replacing reuse of `hir::Program`
-  - Expression arena (flat `ExprId` indexing instead of `unique_ptr<Expr>`)
-  - Concrete types only, no `UnifierState`
-  - Codegen reads ZIR instead of HIR
-- [ ] Codegen targets ZIR
-  - Migrate codegen to consume ZIR instead of `hir::Program`
-
-  Drop evaluator → monomorphization → ZIR → codegen targets ZIR
-
-  The HIR (with `unique_ptr` trees) stays as-is for type checking and
-  monomorphization. The zonker becomes a lowering pass from HIR to the
-  arena-backed ZIR. Read-only passes after zonking (codegen, future
-  optimizations) work against the arena.
 
 ## Memory Management
 
