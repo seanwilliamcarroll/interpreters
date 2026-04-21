@@ -9,13 +9,12 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <operators.hpp>
 
 #include <sstream>
 #include <string>
-
-#include "hir/type_arena.hpp"
 
 //****************************************************************************
 namespace bust::hir {

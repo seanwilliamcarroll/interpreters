@@ -1,7 +1,7 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : HIR dump utility for debugging.
+//*  Purpose : Mono dump utility for debugging.
 //*
 //*
 //****************************************************************************

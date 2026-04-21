@@ -14,13 +14,12 @@
 #include <exceptions.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
+#include <pipeline.hpp>
 #include <validate_main.hpp>
 
 #include <sstream>
 
 #include <doctest/doctest.h>
-
-#include "pipeline.hpp"
 
 //****************************************************************************
 namespace bust {
