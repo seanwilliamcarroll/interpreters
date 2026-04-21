@@ -8,6 +8,8 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/ir_literals.hpp>
+
 #include <string>
 #include <variant>
 
@@ -17,6 +19,10 @@ namespace bust::codegen {
 
 struct LiteralHandle {
   std::string m_handle;
+
+  static LiteralHandle zero() { return {std::string{ir_literals::zero}}; }
+  static LiteralHandle one() { return {std::string{ir_literals::one}}; }
+  static LiteralHandle null() { return {std::string{ir_literals::null}}; }
 };
 
 struct TemporaryHandle {

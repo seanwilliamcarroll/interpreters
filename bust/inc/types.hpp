@@ -16,6 +16,13 @@
 namespace bust {
 //****************************************************************************
 
+using InnerTypeIdType = std::size_t;
+
+template <typename TypeTag> struct TypeId {
+  InnerTypeIdType m_id;
+  auto operator<=>(const TypeId &) const = default;
+};
+
 enum class PrimitiveTypeClass : uint8_t {
   NUMERIC,
   COMPARABLE,
@@ -170,4 +177,18 @@ inline bool can_cast(PrimitiveType from, PrimitiveType to) {
 
 //****************************************************************************
 } // namespace bust
+//****************************************************************************
+
+//****************************************************************************
+namespace std {
+//****************************************************************************
+
+template <typename TypeTag> struct hash<bust::TypeId<TypeTag>> {
+  size_t operator()(const bust::TypeId<TypeTag> &id) const noexcept {
+    return hash<bust::InnerTypeIdType>{}(id.m_id);
+  }
+};
+
+//****************************************************************************
+} // namespace std
 //****************************************************************************

@@ -1,12 +1,12 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Implementation of the HIR type interning registry.
+//*  Purpose : Implementation of the HIR type interning arena.
 //*
 //*
 //****************************************************************************
 
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <types.hpp>
 
@@ -18,7 +18,7 @@
 namespace bust::hir {
 //****************************************************************************
 
-std::string TypeRegistry::to_string(const TypeKind &type_kind) const {
+std::string TypeArena::to_string(const TypeKind &type_kind) const {
   return std::visit(
       [&](const auto &tk) -> std::string {
         using T = std::decay_t<decltype(tk)>;
@@ -50,8 +50,8 @@ std::string TypeRegistry::to_string(const TypeKind &type_kind) const {
       type_kind);
 }
 
-std::string TypeRegistry::to_string(TypeId type_id) const {
-  return to_string(m_types.at(type_id.m_id));
+std::string TypeArena::to_string(TypeId type_id) const {
+  return to_string(get(type_id));
 }
 
 //****************************************************************************

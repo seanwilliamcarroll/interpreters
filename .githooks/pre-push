@@ -145,70 +145,8 @@ fi
 # ── clang-tidy (INCREMENTAL + PARALLEL) ─────────────────────────────────────
 
 CLANG_TIDY=$(command -v clang-tidy || true)
-RUN_CLANG_TIDY=$(command -v run-clang-tidy || true)
-
-if [ -n "$CLANG_TIDY" ] && [ -n "$RUN_CLANG_TIDY" ]; then
-  step "Running clang-tidy (incremental + parallel)"
-  dim "Using: $RUN_CLANG_TIDY"
-
-  # Determine base branch (fallback to origin/main)
-  BASE_REF="origin/main"
-  if git show-ref --verify --quiet refs/remotes/origin/main; then
-    BASE_REF="origin/main"
-  elif git show-ref --verify --quiet refs/remotes/origin/master; then
-    BASE_REF="origin/master"
-  fi
-
-  # Get changed C++ files
-  CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD \
-    | grep -E '\.(cpp|cc|cxx|hpp|h)$' | grep -v '/test/' || true)
-
-  if [ -z "$CHANGED_FILES" ]; then
-    dim "No changed C++ files — skipping clang-tidy"
-  else
-    FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
-    dim "Checking ${FILE_COUNT} changed files..."
-
-    # Detect core count (portable-ish)
-    if command -v nproc >/dev/null 2>&1; then
-      JOBS=$(nproc)
-    else
-      JOBS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
-    fi
-
-    dim "Running with ${JOBS} parallel jobs..."
-
-    echo ""
-
-    # Convert newline-separated → array (safe for spaces)
-    mapfile -t FILE_ARRAY <<< "$CHANGED_FILES"
-
-    OUTPUT=$("$RUN_CLANG_TIDY" -p build -j "$JOBS" "${FILE_ARRAY[@]}" 2>&1 || true)
-
-    echo "$OUTPUT"
-
-    echo ""
-    step "Unique issues"
-
-    echo "$OUTPUT" | awk '
-      /warning:|error:/ {
-        if (!seen[$0]++) print
-      }
-    '
-
-    # Gate on warnings/errors
-    if echo "$OUTPUT" | grep -qE '(warning|error):'; then
-      echo ""
-      fail "clang-tidy reported issues"
-      exit 1
-    else
-      pass "clang-tidy clean"
-    fi
-  fi
-
-elif [ -n "$CLANG_TIDY" ]; then
+if [ -n "$CLANG_TIDY" ]; then
   step "clang-tidy"
-  warn "run-clang-tidy not found — falling back to serial mode"
 
   # Fallback: incremental but serial
   CHANGED_FILES=$(git diff --name-only origin/main...HEAD \
@@ -217,6 +155,8 @@ elif [ -n "$CLANG_TIDY" ]; then
   FAILURES=0
 
   for src in $CHANGED_FILES; do
+    [ -f "$src" ] || continue
+
     FILE_OUTPUT=$("$CLANG_TIDY" -p build "$src" 2>&1 || true)
 
     if echo "$FILE_OUTPUT" | grep -qE '(warning|error):'; then

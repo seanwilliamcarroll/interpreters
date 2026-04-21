@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include <codegen/basic_block.hpp>
+#include <codegen/context.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
@@ -16,8 +17,7 @@
 #include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <iosfwd>
 #include <ostream>
 #include <string>
@@ -29,6 +29,9 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct HandleToString {
+
+  std::string str(const Handle &);
+
   std::string operator()(const LiteralHandle &);
   std::string operator()(const TemporaryHandle &);
   std::string operator()(const LocalHandle &);
@@ -40,12 +43,15 @@ struct HandleToString {
 };
 
 struct Formatter {
-  Formatter(std::ostream &out) : m_out(out) {}
+  Formatter(const Context &ctx, std::ostream &out) : m_ctx(ctx), m_out(out) {}
 
   constexpr static const char *INDENT = "  ";
 
   void format(const auto &);
 
+  std::string str(const Handle &);
+
+  void define_struct_type(TypeId);
   void operator()(const Module &);
 
   void operator()(const Parameter &);
@@ -62,6 +68,8 @@ struct Formatter {
   void operator()(const LoadInstruction &);
   void operator()(const StoreInstruction &);
   void operator()(const CastInstruction &);
+  void operator()(const GetElementPtrInstruction &);
+  void operator()(const PtrToIntInstruction &);
 
   void operator()(const Argument &);
   void function_arguments(const std::vector<Argument> &);
@@ -84,6 +92,7 @@ struct Formatter {
   }
 
 private:
+  const Context &m_ctx;
   std::ostream &m_out;
   HandleToString m_handle_converter{};
 };

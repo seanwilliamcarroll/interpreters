@@ -29,10 +29,14 @@ add_library(bust-lib STATIC
   src/parser.cpp
   hir/statement_checker.cpp
   hir/top_item_checker.cpp
-  hir/type_registry.cpp
+  hir/type_arena.cpp
   src/codegen.cpp
+  codegen/arena.cpp
+  codegen/block_label.cpp
   codegen/expression_generator.cpp
   codegen/formatter.cpp
+  codegen/function_handle.cpp
+  codegen/ir_builder.cpp
   codegen/let_binding_generator.cpp
   codegen/statement_generator.cpp
   codegen/top_item_generator.cpp
@@ -73,7 +77,8 @@ add_executable(bust-test
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/monomorpher_test.cpp
-  test/src/zir_lowerer_test.cpp)
+  test/src/zir_lowerer_test.cpp
+  test/src/free_variable_collector_test.cpp)
 
 target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
@@ -118,6 +123,7 @@ add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
 add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
 add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
 add_test(NAME bust.zir_lowerer COMMAND bust-test -ts=bust.zir_lowerer)
+add_test(NAME bust.free_variable_collector COMMAND bust-test -ts=bust.free_variable_collector)
 add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
 
 #*****************************************************************************

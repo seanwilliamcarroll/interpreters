@@ -19,11 +19,11 @@ struct TypeVariableCollapser {
 
   TypeId collapse(const TypeKind &type) { return std::visit(*this, type); }
   TypeId collapse(const TypeId &type) {
-    return collapse(m_ctx.m_type_registry.get(type));
+    return collapse(m_ctx.m_type_arena.get(type));
   }
 
   TypeId operator()(const PrimitiveTypeValue &type) {
-    return m_ctx.m_type_registry.intern(type);
+    return m_ctx.m_type_arena.intern(type);
   }
 
   TypeId operator()(const TypeVariable &type) {
@@ -41,10 +41,12 @@ struct TypeVariableCollapser {
     auto function_type =
         FunctionType{.m_parameters = std::move(parameters),
                      .m_return_type = collapse(type.m_return_type)};
-    return m_ctx.m_type_registry.intern(function_type);
+    return m_ctx.m_type_arena.intern(function_type);
   }
 
-  TypeId operator()(const NeverType &) { return m_ctx.m_type_registry.m_never; }
+  TypeId operator()(const NeverType & /*unused*/) {
+    return m_ctx.m_type_arena.m_never;
+  }
 
   hir::Context &m_ctx;
 };

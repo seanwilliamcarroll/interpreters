@@ -39,6 +39,15 @@ Bust::Bust(std::istream &input, const char *filename, Options options)
     : m_input(input), m_filename(filename), m_options(options) {}
 
 void Bust::run() {
+  if (m_options.dump_source) {
+    std::cout << "=== Source ===\n"
+              << std::string(std::istreambuf_iterator<char>(m_input),
+                             std::istreambuf_iterator<char>())
+              << "\n";
+    m_input.clear();
+    m_input.seekg(0);
+  }
+
   auto lexer = make_lexer(m_input, m_filename);
   Parser parser(std::move(lexer));
   auto program = parser.parse();

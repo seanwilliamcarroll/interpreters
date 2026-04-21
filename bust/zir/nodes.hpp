@@ -92,7 +92,14 @@ using UnaryExpr = UnaryExprBase<ExprId>;
 using ReturnExpr = ReturnExprBase<ExprId>;
 using CastExpr = CastExprBase<ExprId, TypeId>;
 using IfExpr = IfExprBase<ExprId, Block>;
-using LambdaExpr = LambdaExprBase<IdentifierExpr, Block, TypeId>;
+
+struct LambdaExpr {
+  std::vector<IdentifierExpr> m_parameters;
+  Block m_body;
+  TypeId m_return_type;
+  std::vector<IdentifierExpr> m_captures;
+  auto operator<=>(const LambdaExpr &) const = default;
+};
 
 using ExprKind = std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr,
                               CallExpr, BinaryExpr, UnaryExpr, ReturnExpr,
@@ -160,38 +167,44 @@ template <> struct hash<bust::zir::ExpressionStatement> {
 };
 
 template <> struct hash<bust::zir::Unit> {
-  size_t operator()(const bust::zir::Unit &) const noexcept {
-    return hash<size_t>{}(0);
+  static constexpr size_t HASH_VALUE = 0;
+  size_t operator()(const bust::zir::Unit & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::Bool> {
-  size_t operator()(const bust::zir::Bool &) const noexcept {
-    return hash<size_t>{}(1);
+  static constexpr size_t HASH_VALUE = 1;
+  size_t operator()(const bust::zir::Bool & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::Char> {
-  size_t operator()(const bust::zir::Char &) const noexcept {
-    return hash<size_t>{}(2);
+  static constexpr size_t HASH_VALUE = 2;
+  size_t operator()(const bust::zir::Char & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I8> {
-  size_t operator()(const bust::zir::I8 &) const noexcept {
-    return hash<size_t>{}(3);
+  static constexpr size_t HASH_VALUE = 3;
+  size_t operator()(const bust::zir::I8 & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I32> {
-  size_t operator()(const bust::zir::I32 &) const noexcept {
-    return hash<size_t>{}(4);
+  static constexpr size_t HASH_VALUE = 4;
+  size_t operator()(const bust::zir::I32 & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
 template <> struct hash<bust::zir::I64> {
-  size_t operator()(const bust::zir::I64 &) const noexcept {
-    return hash<size_t>{}(5);
+  static constexpr size_t HASH_VALUE = 5;
+  size_t operator()(const bust::zir::I64 & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
@@ -221,6 +234,23 @@ template <> struct hash<bust::zir::Block> {
     }
     if (block.m_final_expression.has_value()) {
       core::hash_combine(seed, block.m_final_expression.value());
+    }
+    return seed;
+  }
+};
+
+template <> struct hash<bust::zir::LambdaExpr> {
+  size_t operator()(const bust::zir::LambdaExpr &expr) const noexcept {
+    size_t seed = 0;
+    for (const auto &parameter : expr.m_parameters) {
+      core::hash_combine(seed,
+                         std::hash<bust::zir::IdentifierExpr>{}(parameter));
+    }
+    core::hash_combine(seed, std::hash<bust::zir::Block>{}(expr.m_body));
+    core::hash_combine(seed,
+                       std::hash<bust::zir::TypeId>{}(expr.m_return_type));
+    for (const auto &capture : expr.m_captures) {
+      core::hash_combine(seed, std::hash<bust::zir::IdentifierExpr>{}(capture));
     }
     return seed;
   }

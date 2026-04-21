@@ -17,10 +17,12 @@ namespace bust::hir {
 
 struct FreeTypeVariableCollector {
 
-  void collect(const TypeKind &type) { std::visit(*this, type); }
-  void collect(const TypeId &type) { collect(m_ctx.m_type_registry.get(type)); }
+  explicit FreeTypeVariableCollector(Context &ctx) : m_ctx(ctx) {}
 
-  void operator()(const PrimitiveTypeValue &) {}
+  void collect(const TypeKind &type) { std::visit(*this, type); }
+  void collect(const TypeId &type) { collect(m_ctx.m_type_arena.get(type)); }
+
+  void operator()(const PrimitiveTypeValue & /*unused*/) {}
 
   void operator()(const TypeVariable &type) {
     // Let's try to resolve the types first
@@ -39,10 +41,13 @@ struct FreeTypeVariableCollector {
     collect(type.m_return_type);
   }
 
-  void operator()(const NeverType &) {}
+  void operator()(const NeverType & /*unused*/) {}
 
+  std::vector<TypeId> &free_type_variables() { return m_free_type_variables; }
+
+private:
   hir::Context &m_ctx;
-  std::vector<TypeId> m_free_type_variables{};
+  std::vector<TypeId> m_free_type_variables;
 };
 
 //****************************************************************************

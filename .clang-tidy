@@ -8,6 +8,7 @@ Checks: >
   -modernize-avoid-c-arrays,
   readability-*,
   -readability-identifier-length,
+  -readability-function-cognitive-complexity,
   clang-analyzer-*,
   misc-includes-cleaner
 

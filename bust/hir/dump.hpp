@@ -75,13 +75,12 @@ private:
   }
 
   void dump_identifier(const Identifier &id) {
-    m_out << id.m_name << ": "
-          << m_program.m_type_registry.to_string(id.m_type);
+    m_out << id.m_name << ": " << m_program.m_type_arena.to_string(id.m_type);
   }
 
   void dump_func_declaration(const FunctionDeclaration &f) {
     m_out << f.m_function_id << ": "
-          << m_program.m_type_registry.to_string(f.m_type) << "\n";
+          << m_program.m_type_arena.to_string(f.m_type) << "\n";
     IndentGuard g(*this);
     indent();
     m_out << "params(";
@@ -146,7 +145,7 @@ private:
 
   void dump_expression(const Expression &e) {
     indent();
-    m_out << "[" << m_program.m_type_registry.to_string(e.m_type) << "] ";
+    m_out << "[" << m_program.m_type_arena.to_string(e.m_type) << "] ";
     // Reset indent for the inner content since we already indented
     std::visit(
         [this](const auto &v) {
@@ -213,8 +212,7 @@ private:
             m_out << "Cast\n";
             IndentGuard g(*this);
             dump_expression(v->m_expression);
-            m_out << " AS "
-                  << m_program.m_type_registry.to_string(v->m_new_type);
+            m_out << " AS " << m_program.m_type_arena.to_string(v->m_new_type);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
             m_out << "Lambda(";
             for (size_t i = 0; i < v->m_parameters.size(); ++i) {

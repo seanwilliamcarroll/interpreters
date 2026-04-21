@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/block_label.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
@@ -24,14 +25,14 @@ struct BinaryInstruction {
   Handle m_lhs;
   Handle m_rhs;
   LLVMBinaryOperator m_operator;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct UnaryInstruction {
   Handle m_result;
   Handle m_input;
   UnaryOperator m_operator;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct IntegerCompareInstruction {
@@ -39,37 +40,51 @@ struct IntegerCompareInstruction {
   Handle m_lhs;
   Handle m_rhs;
   LLVMIntegerCompareCondition m_condition;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct BranchInstruction {
   Handle m_condition;
-  Handle m_iftrue;
-  Handle m_iffalse;
+  BlockLabel m_iftrue;
+  BlockLabel m_iffalse;
 };
 
 struct JumpInstruction {
-  Handle m_target;
+  BlockLabel m_target;
 };
 
 struct LoadInstruction {
   Handle m_destination;
   Handle m_source;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct StoreInstruction {
   Handle m_destination;
   Handle m_source;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct CastInstruction {
   Handle m_destination;
   Handle m_source;
   LLVMCastOperator m_operator;
-  LLVMType m_from;
-  LLVMType m_to;
+  TypeId m_from;
+  TypeId m_to;
+};
+
+struct GetElementPtrInstruction {
+  Handle m_destination;
+  TypeId m_struct_type;
+  Handle m_struct_handle;
+  Argument m_initial_index;
+  std::vector<Argument> m_additional_indices;
+};
+
+struct PtrToIntInstruction {
+  Handle m_destination;
+  Handle m_source;
+  TypeId m_destination_type;
 };
 
 struct CallVoidInstruction {
@@ -81,17 +96,17 @@ struct CallInstruction {
   Handle m_target;
   Handle m_callee;
   std::vector<Argument> m_arguments;
-  LLVMType m_return_type;
+  TypeId m_return_type;
 };
 
 struct AllocaInstruction {
   Handle m_handle;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct ReturnInstruction {
   Handle m_value;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct ReturnVoidInstruction {};
@@ -99,6 +114,7 @@ struct ReturnVoidInstruction {};
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
                  LoadInstruction, StoreInstruction, CastInstruction,
+                 GetElementPtrInstruction, PtrToIntInstruction,
                  CallVoidInstruction, CallInstruction, AllocaInstruction>;
 
 using Terminator = std::variant<BranchInstruction, JumpInstruction,

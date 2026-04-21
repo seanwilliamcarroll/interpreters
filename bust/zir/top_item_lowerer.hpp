@@ -9,19 +9,53 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
+#include <hir/types.hpp>
 #include <zir/context.hpp>
 #include <zir/nodes.hpp>
+
+#include <variant>
 
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
+
+struct TopItemCollector {
+  void collect(const hir::TopItem &top_item) {
+
+    auto create_binding_and_define = [&](const std::string &name,
+                                         hir::TypeId type_id) {
+      auto new_type_id = m_ctx.convert(type_id);
+      auto binding = Binding{.m_name = name, .m_type = new_type_id};
+      auto binding_id = m_ctx.arena().push(std::move(binding));
+      m_ctx.set_global_binding(name, binding_id);
+      m_ctx.env().define(name, binding_id);
+    };
+
+    std::visit(
+        [&](const auto &item) {
+          using T = std::decay_t<decltype(item)>;
+          if constexpr (std::is_same_v<T, hir::LetBinding>) {
+            create_binding_and_define(item.m_variable.m_name,
+                                      item.m_expression.m_type);
+          } else if constexpr (std::is_same_v<T, hir::FunctionDef> ||
+                               std::is_same_v<T,
+                                              hir::ExternFunctionDeclaration>) {
+            create_binding_and_define(item.m_signature.m_function_id,
+                                      item.m_signature.m_type);
+          }
+        },
+        top_item);
+  }
+
+  Context &m_ctx;
+};
 
 struct TopItemLowerer {
 
   TopItem lower(const hir::TopItem &);
 
   TopItem operator()(const hir::FunctionDef &);
-  TopItem operator()(const hir::ExternFunctionDeclaration &);
+  TopItem operator()(const hir::ExternFunctionDeclaration &) const;
   TopItem operator()(const hir::LetBinding &);
 
   Context &m_ctx;

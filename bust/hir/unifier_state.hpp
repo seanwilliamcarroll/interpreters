@@ -21,9 +21,9 @@ namespace bust::hir {
 //****************************************************************************
 
 struct UnifierState {
-  UnionFind m_union_find{};
-  std::unordered_map<size_t, TypeId> m_resolved_type_id{};
-  std::unordered_map<size_t, PrimitiveTypeClass> m_resolved_type_class{};
+  UnionFind m_union_find;
+  std::unordered_map<size_t, TypeId> m_resolved_type_id;
+  std::unordered_map<size_t, PrimitiveTypeClass> m_resolved_type_class;
 };
 
 //****************************************************************************

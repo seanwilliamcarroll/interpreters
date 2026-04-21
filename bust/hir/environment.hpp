@@ -48,13 +48,16 @@ struct Scope {
   }
 
   void define(const std::string &name, BindingId id, TypeId type_id) {
-    m_identifier_to_type.insert_or_assign(name,
-                                          BoundTypeScheme{id, {type_id, {}}});
+    m_identifier_to_type.insert_or_assign(
+        name, BoundTypeScheme{.m_id = id,
+                              .m_type_scheme = {.m_type = type_id,
+                                                .m_free_type_variables = {}}});
   }
 
   void define(const std::string &name, BindingId id, TypeScheme type_scheme) {
     m_identifier_to_type.insert_or_assign(
-        name, BoundTypeScheme{id, std::move(type_scheme)});
+        name,
+        BoundTypeScheme{.m_id = id, .m_type_scheme = std::move(type_scheme)});
   }
 
 private:
@@ -96,7 +99,7 @@ struct Environment {
   }
 
 private:
-  std::vector<Scope> m_scopes{};
+  std::vector<Scope> m_scopes;
 };
 
 using ScopeGuard = core::ScopeGuard<Environment>;

@@ -11,6 +11,8 @@
 #include <codegen/context.hpp>
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
@@ -31,7 +33,7 @@ struct ExpressionGenerator {
   Handle operator()(const zir::Bool &);
   Handle operator()(const zir::Char &);
 
-  zir::TypeId get_block_type(const zir::Block &) const;
+  [[nodiscard]] zir::TypeId get_block_type(const zir::Block &) const;
   Handle operator()(const zir::Block &);
   Handle operator()(const zir::IfExpr &);
   Handle operator()(const zir::CallExpr &);
@@ -44,7 +46,11 @@ struct ExpressionGenerator {
   Handle operator()(const zir::UnaryExpr &);
   Handle operator()(const zir::ReturnExpr &);
   Handle operator()(const zir::CastExpr &);
+
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
+
+  std::pair<TypeId, std::vector<Argument>>
+  analyze_captures(const zir::LambdaExpr &);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

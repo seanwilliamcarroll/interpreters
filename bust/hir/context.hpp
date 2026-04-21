@@ -10,7 +10,7 @@
 
 #include <hir/environment.hpp>
 #include <hir/instantiation_record.hpp>
-#include <hir/type_registry.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/type_variable_substituter.hpp>
 #include <hir/types.hpp>
@@ -26,13 +26,14 @@ namespace bust::hir {
 //****************************************************************************
 
 struct PostTypeCheckedData {
-  TypeRegistry m_type_registry;
+  TypeArena m_type_arena;
   UnifierState m_unifier_state;
   BindingIdInstantiations m_instantiation_records;
   InnerTypeBindingId m_next_let_binding_id;
 };
 
 struct Context {
+  explicit Context() : m_type_unifier(m_type_arena) {}
 
   TypeId create_fresh_type_vars(BindingId id, const TypeScheme &type_scheme) {
     TypeSubstitution new_mapping;
@@ -47,36 +48,38 @@ struct Context {
       m_instantiation_records[id].push_back(InstantiationRecord{new_mapping});
     }
 
-    return TypeVariableSubstituter{m_type_registry, m_type_unifier, new_mapping}
+    return TypeVariableSubstituter{.m_type_arena = m_type_arena,
+                                   .m_type_unifier = m_type_unifier,
+                                   .m_new_mapping = new_mapping}
         .substitute(type_scheme.m_type);
   }
 
-  const FunctionType &as_function(TypeId type_id) const {
-    return m_type_registry.as_function(type_id);
+  [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
+    return m_type_arena.as_function(type_id);
   }
 
-  const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
-    return m_type_registry.as_primitive(type_id);
+  [[nodiscard]] const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
+    return m_type_arena.as_primitive(type_id);
   }
 
-  const TypeVariable &as_type_variable(TypeId type_id) const {
-    return m_type_registry.as_type_variable(type_id);
+  [[nodiscard]] const TypeVariable &as_type_variable(TypeId type_id) const {
+    return m_type_arena.as_type_variable(type_id);
   }
 
-  bool is_function(TypeId type_id) const {
-    return m_type_registry.is_function(type_id);
+  [[nodiscard]] bool is_function(TypeId type_id) const {
+    return m_type_arena.is_function(type_id);
   }
 
-  bool is_primitive(TypeId type_id) const {
-    return m_type_registry.is_primitive(type_id);
+  [[nodiscard]] bool is_primitive(TypeId type_id) const {
+    return m_type_arena.is_primitive(type_id);
   }
 
-  bool is_type_variable(TypeId type_id) const {
-    return m_type_registry.is_type_variable(type_id);
+  [[nodiscard]] bool is_type_variable(TypeId type_id) const {
+    return m_type_arena.is_type_variable(type_id);
   }
 
   std::string to_string(const auto &type) const {
-    return m_type_registry.to_string(type);
+    return m_type_arena.to_string(type);
   }
 
   BindingIdInstantiations resolve_instantiation_records() {
@@ -119,7 +122,7 @@ struct Context {
     auto instantiation_records = resolve_instantiation_records();
     auto unifier_state = m_type_unifier.extract_state();
     return {
-        .m_type_registry = std::move(m_type_registry),
+        .m_type_arena = std::move(m_type_arena),
         .m_unifier_state = std::move(unifier_state),
         .m_instantiation_records = std::move(instantiation_records),
         .m_next_let_binding_id = m_next_let_binding_id,
@@ -128,11 +131,11 @@ struct Context {
 
   BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
 
-  Environment m_env{};
-  TypeRegistry m_type_registry{};
-  std::vector<TypeId> m_return_type_stack{};
-  TypeUnifier m_type_unifier{m_type_registry};
-  BindingIdInstantiations m_instantiation_records{};
+  Environment m_env;
+  TypeArena m_type_arena;
+  std::vector<TypeId> m_return_type_stack;
+  TypeUnifier m_type_unifier;
+  BindingIdInstantiations m_instantiation_records;
   InnerTypeBindingId m_next_let_binding_id = 0;
 };
 

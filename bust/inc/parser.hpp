@@ -24,7 +24,7 @@ namespace bust {
 class Parser {
 public:
   explicit Parser(std::unique_ptr<LexerInterface> lexer)
-      : m_lexer(std::move(lexer)), m_current_token() {}
+      : m_lexer(std::move(lexer)) {}
 
   void reset() { m_current_token = nullptr; }
 

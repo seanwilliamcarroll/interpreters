@@ -210,7 +210,7 @@ private:
         e.m_expression);
   }
 
-  const char *binary_op_str(BinaryOperator op) {
+  static const char *binary_op_str(BinaryOperator op) {
     switch (op) {
     case BinaryOperator::PLUS:
       return "+";
@@ -241,7 +241,7 @@ private:
     }
   }
 
-  const char *unary_op_str(UnaryOperator op) {
+  static const char *unary_op_str(UnaryOperator op) {
     switch (op) {
     case UnaryOperator::MINUS:
       return "-";

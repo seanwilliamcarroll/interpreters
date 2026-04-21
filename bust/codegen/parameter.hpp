@@ -17,12 +17,12 @@ namespace bust::codegen {
 
 struct Parameter {
   ParameterHandle m_name;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 struct Argument {
   Handle m_name;
-  LLVMType m_type;
+  TypeId m_type;
 };
 
 //****************************************************************************

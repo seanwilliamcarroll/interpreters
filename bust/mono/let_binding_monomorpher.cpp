@@ -51,7 +51,7 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
 
     hir::TypeSubstitution combined = outer_substitution;
     auto substituter =
-        hir::TypeVariableSubstituter{.m_type_registry = m_ctx.type_registry(),
+        hir::TypeVariableSubstituter{.m_type_arena = m_ctx.type_arena(),
                                      .m_type_unifier = m_ctx.m_type_unifier,
                                      .m_new_mapping = outer_substitution};
     for (const auto &[original_type_id, substituted_type_id] :
@@ -60,14 +60,15 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
     }
 
     auto new_type =
-        hir::TypeVariableSubstituter{.m_type_registry = m_ctx.type_registry(),
+        hir::TypeVariableSubstituter{.m_type_arena = m_ctx.type_arena(),
                                      .m_type_unifier = m_ctx.m_type_unifier,
                                      .m_new_mapping = combined}
             .substitute(let_binding.m_expression.m_type);
 
     auto new_id = m_ctx.next_let_binding_id();
-    auto new_name = Mangler{.m_type_registry = m_ctx.type_registry()}.mangle(
-        let_binding.m_variable.m_name, let_binding.m_variable.m_id, new_type);
+    auto new_name = Mangler(m_ctx.type_arena())
+                        .mangle(let_binding.m_variable.m_name,
+                                let_binding.m_variable.m_id, new_type);
 
     m_ctx.m_env.define(
         let_binding.m_variable.m_id, new_type,

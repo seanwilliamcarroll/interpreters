@@ -19,12 +19,8 @@
 namespace bust::hir {
 //****************************************************************************
 
-using InnerTypeIdType = size_t;
-
-struct TypeId {
-  InnerTypeIdType m_id;
-  auto operator<=>(const TypeId &) const = default;
-};
+struct HirNamespace {};
+using TypeId = bust::TypeId<HirNamespace>;
 
 struct PrimitiveTypeValue {
   PrimitiveType m_type;
@@ -69,12 +65,6 @@ inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
 
 namespace std {
 
-template <> struct hash<bust::hir::TypeId> {
-  size_t operator()(const bust::hir::TypeId &id) const noexcept {
-    return hash<bust::hir::InnerTypeIdType>{}(id.m_id);
-  }
-};
-
 template <> struct hash<bust::hir::PrimitiveTypeValue> {
   size_t operator()(const bust::hir::PrimitiveTypeValue &id) const noexcept {
     using InnerType = std::underlying_type_t<bust::PrimitiveType>;
@@ -100,7 +90,7 @@ template <> struct hash<bust::hir::FunctionType> {
 };
 
 template <> struct hash<bust::hir::NeverType> {
-  size_t operator()(const bust::hir::NeverType &) const noexcept {
+  size_t operator()(const bust::hir::NeverType & /*unused*/) const noexcept {
     return hash<size_t>{}(0);
   }
 };

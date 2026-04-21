@@ -23,6 +23,7 @@ struct ExpressionLowerer {
   ExprId lower(const hir::Expression &);
 
   IdentifierExpr lower(const hir::Identifier &);
+  IdentifierExpr lower_definition(const hir::Identifier &);
   ExprKind operator()(const hir::Identifier &);
   ExprKind operator()(const hir::LiteralUnit &);
   ExprKind operator()(const hir::LiteralI8 &);

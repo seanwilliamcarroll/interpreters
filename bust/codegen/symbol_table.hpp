@@ -36,7 +36,7 @@ struct Scope {
     m_symbol_to_handle[name] = handle;
   }
 
-  std::optional<Handle> lookup(const std::string &name) const {
+  [[nodiscard]] std::optional<Handle> lookup(const std::string &name) const {
     auto iter = m_symbol_to_handle.find(name);
 
     if (iter == m_symbol_to_handle.end()) {
@@ -67,6 +67,13 @@ struct SymbolTable {
     return new_handle;
   }
 
+  LocalHandle define_env_handle(const std::string &name) {
+    LocalHandle new_handle{m_name_tracker.uniquify(name)};
+    // Put at global scope so it can always be found
+    m_scopes.front().define(name, new_handle);
+    return new_handle;
+  }
+
   ParameterHandle define_parameter(const std::string &name) {
     ParameterHandle new_handle{name};
     m_scopes.back().define(name, new_handle);
@@ -79,11 +86,18 @@ struct SymbolTable {
     return new_handle;
   }
 
+  GlobalHandle define_custom_global(const std::string &lookup_name,
+                                    const std::string &actual_name) {
+    GlobalHandle new_handle{actual_name};
+    m_scopes.front().define(lookup_name, new_handle);
+    return new_handle;
+  }
+
   GlobalHandle define_uniqued_global(const std::string &name) {
     return define_global(m_name_tracker.uniquify(name));
   }
 
-  Handle lookup(const std::string &name) const {
+  [[nodiscard]] Handle lookup(const std::string &name) const {
     for (const auto &scope : m_scopes | std::views::reverse) {
       auto maybe_handle = scope.lookup(name);
       if (maybe_handle.has_value()) {

@@ -8,8 +8,12 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/arena.hpp>
 #include <codegen/function.hpp>
+#include <codegen/types.hpp>
+#include <zir/arena.hpp>
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -18,25 +22,25 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Global {
-  // TODO
+  Handle m_name;
+  TypeId m_type;
+  // Value? LiteralHandle?
 };
 
 struct Module {
+
+  explicit Module() = default;
+
   Function &new_function(FunctionDeclaration signature) {
     m_functions.emplace_back(std::make_unique<Function>(std::move(signature)));
     return *m_functions.back();
   }
 
-  const std::vector<Global> &globals() const { return m_globals; }
+  [[nodiscard]] const std::vector<Global> &globals() const { return m_globals; }
 
-  const std::vector<std::unique_ptr<Function>> &functions() const {
+  [[nodiscard]] const std::vector<std::unique_ptr<Function>> &
+  functions() const {
     return m_functions;
-  }
-
-  Function &current_function() { return *m_current_function; }
-
-  void set_current_function(Function &function) {
-    m_current_function = &function;
   }
 
   void add_extern_function_declaration(
@@ -44,16 +48,19 @@ struct Module {
     m_extern_functions.emplace_back(std::move(func_declaration));
   }
 
-  const std::vector<std::unique_ptr<FunctionDeclaration>> &
+  [[nodiscard]] const std::vector<std::unique_ptr<FunctionDeclaration>> &
   extern_functions() const {
     return m_extern_functions;
+  }
+
+  void add_global_constant(const Global &global) {
+    m_globals.push_back(global);
   }
 
 private:
   std::vector<Global> m_globals;
   std::vector<std::unique_ptr<Function>> m_functions;
   std::vector<std::unique_ptr<FunctionDeclaration>> m_extern_functions;
-  Function *m_current_function = nullptr;
 };
 
 //****************************************************************************
