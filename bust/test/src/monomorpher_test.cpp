@@ -10,10 +10,11 @@
 //*
 //****************************************************************************
 
-#include <hir/dump.hpp>
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
 #include <lexer.hpp>
+#include <mono/dump.hpp>
+#include <mono/nodes.hpp>
 #include <monomorpher.hpp>
 #include <parser.hpp>
 #include <pipeline.hpp>
@@ -34,7 +35,7 @@ TEST_SUITE("bust.monomorpher") {
 
   // --- Helpers -------------------------------------------------------------
 
-  static hir::Program mono_string_impl(const std::string &source) {
+  static mono::Program mono_string_impl(const std::string &source) {
     std::istringstream input(source);
     auto lexer = make_lexer(input, "test");
     Parser parser(std::move(lexer));
@@ -49,7 +50,7 @@ TEST_SUITE("bust.monomorpher") {
   // fires for assertions in the block where it's declared.
 #define MONO_STRING(var, src)                                                  \
   auto(var) = mono_string_impl(src);                                           \
-  INFO("HIR:\n" << hir::Dumper::dump(var))
+  INFO("HIR:\n" << mono::Dumper::dump(var))
 
   static bool is_concrete(const hir::TypeArena &arena, hir::TypeId id) {
     return !std::holds_alternative<hir::TypeVariable>(arena.get(id));
@@ -391,16 +392,6 @@ TEST_SUITE("bust.monomorpher") {
       }
     }
     CHECK(found_add_one);
-  }
-
-  // --- Program-level post-conditions --------------------------------------
-
-  TEST_CASE("instantiation records are cleared after monomorphization") {
-    MONO_STRING(program, "fn main() -> i64 {\n"
-                         "  let id = |x| { x };\n"
-                         "  id(42)\n"
-                         "}");
-    CHECK(program.m_instantiation_records.empty());
   }
 
 } // TEST_SUITE

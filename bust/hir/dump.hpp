@@ -15,6 +15,8 @@
 #include <sstream>
 #include <string>
 
+#include "hir/type_arena.hpp"
+
 //****************************************************************************
 namespace bust::hir {
 //****************************************************************************
@@ -22,17 +24,24 @@ namespace bust::hir {
 class Dumper {
 public:
   static std::string dump(const Program &program) {
-    Dumper d(program);
-    d.dump_program(program);
+    return Dumper::dump(program.m_type_arena, program.m_top_items);
+  }
+
+  static std::string dump(const TypeArena &type_arena,
+                          const std::vector<TopItem> &top_items) {
+    Dumper d(type_arena, top_items);
+    d.dump_program();
     return d.m_out.str();
   }
 
 private:
-  const Program &m_program;
+  const TypeArena &m_type_arena;
+  const std::vector<TopItem> &m_top_items;
   std::ostringstream m_out;
   int m_indent = 0;
 
-  Dumper(const Program &program) : m_program(program) {}
+  Dumper(const TypeArena &type_arena, const std::vector<TopItem> &top_items)
+      : m_type_arena(type_arena), m_top_items(top_items) {}
 
   void indent() {
     for (int i = 0; i < m_indent; ++i) {
@@ -51,10 +60,10 @@ private:
     ~IndentGuard() { --d.m_indent; }
   };
 
-  void dump_program(const Program &p) {
+  void dump_program() {
     line("Program");
     IndentGuard g(*this);
-    for (const auto &item : p.m_top_items) {
+    for (const auto &item : m_top_items) {
       dump_top_item(item);
     }
   }
@@ -75,12 +84,12 @@ private:
   }
 
   void dump_identifier(const Identifier &id) {
-    m_out << id.m_name << ": " << m_program.m_type_arena.to_string(id.m_type);
+    m_out << id.m_name << ": " << m_type_arena.to_string(id.m_type);
   }
 
   void dump_func_declaration(const FunctionDeclaration &f) {
-    m_out << f.m_function_id << ": "
-          << m_program.m_type_arena.to_string(f.m_type) << "\n";
+    m_out << f.m_function_id << ": " << m_type_arena.to_string(f.m_type)
+          << "\n";
     IndentGuard g(*this);
     indent();
     m_out << "params(";
@@ -145,7 +154,7 @@ private:
 
   void dump_expression(const Expression &e) {
     indent();
-    m_out << "[" << m_program.m_type_arena.to_string(e.m_type) << "] ";
+    m_out << "[" << m_type_arena.to_string(e.m_type) << "] ";
     // Reset indent for the inner content since we already indented
     std::visit(
         [this](const auto &v) {
@@ -212,7 +221,7 @@ private:
             m_out << "Cast\n";
             IndentGuard g(*this);
             dump_expression(v->m_expression);
-            m_out << " AS " << m_program.m_type_arena.to_string(v->m_new_type);
+            m_out << " AS " << m_type_arena.to_string(v->m_new_type);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
             m_out << "Lambda(";
             for (size_t i = 0; i < v->m_parameters.size(); ++i) {

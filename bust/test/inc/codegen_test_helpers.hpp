@@ -13,6 +13,7 @@
 
 #include <codegen.hpp>
 #include <frontend.hpp>
+#include <monomorpher.hpp>
 #include <type_checker.hpp>
 #include <zir/dump.hpp>
 #include <zir/program.hpp>
@@ -40,8 +41,9 @@ inline zir::Program type_check(const std::string &source) {
   std::istringstream input(source);
   auto program = parse_program(input, "test");
   TypeChecker checker;
+  Monomorpher monomorpher;
   ZirLowerer zir_lowerer;
-  return zir_lowerer(checker(program));
+  return zir_lowerer(monomorpher(checker(program)));
 }
 
 struct GenResult {

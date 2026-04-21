@@ -1,28 +1,27 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : ZIR lowering pass — converts HIR (with resolved unifier
-//*            state) into the arena-backed ZIR.
+//*  Purpose : HIR dump utility for debugging.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
+#include <hir/dump.hpp>
 #include <mono/nodes.hpp>
-#include <zir/program.hpp>
 
 //****************************************************************************
-namespace bust {
+namespace bust::mono {
 //****************************************************************************
 
-/// ZIR lowering pass. Consumes HIR + unifier state and produces a ZIR
-/// program whose types contain no type variables and whose expressions
-/// live in a flat arena.
-struct ZirLowerer {
-  zir::Program operator()(mono::Program program);
+class Dumper {
+public:
+  static std::string dump(const Program &program) {
+    return hir::Dumper::dump(program.m_type_arena, program.m_top_items);
+  }
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::mono
 //****************************************************************************

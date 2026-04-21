@@ -11,6 +11,7 @@
 #include <codegen.hpp>
 #include <frontend.hpp>
 #include <hir/dump.hpp>
+#include <mono/dump.hpp>
 #include <monomorpher.hpp>
 #include <pipeline.hpp>
 #include <type_checker.hpp>
@@ -62,7 +63,7 @@ void Bust::run() {
 
   if (m_options.dump_mono) {
     std::cout << "=== Monomorphed HIR ===\n"
-              << hir::Dumper::dump(monomorphed) << "\n";
+              << mono::Dumper::dump(monomorphed) << "\n";
   }
 
   auto zir = run_pipeline(std::move(monomorphed), ZirLowerer{});

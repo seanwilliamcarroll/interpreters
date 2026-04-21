@@ -11,6 +11,7 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
+#include <mono/nodes.hpp>
 
 //****************************************************************************
 namespace bust {
@@ -20,7 +21,7 @@ namespace bust {
 /// the program and emits a new program in which every polymorphic let
 /// binding has been replaced by one or more concrete specializations.
 struct Monomorpher {
-  hir::Program operator()(hir::Program program);
+  mono::Program operator()(hir::Program program);
 };
 
 //****************************************************************************
