@@ -44,6 +44,8 @@ constexpr std::string_view to = "to";
 constexpr std::string_view ptr = "ptr";
 constexpr std::string_view i1 = "i1";
 
+constexpr std::string_view percent_symbol = "%";
+
 //****************************************************************************
 } // namespace bust::codegen::ir_syntax
 //****************************************************************************

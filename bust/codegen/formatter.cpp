@@ -25,6 +25,8 @@
 #include <variant>
 #include <vector>
 
+#include "codegen/block_label.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -182,7 +184,7 @@ void Formatter::operator()(const Function &function) {
 
 void Formatter::operator()(const BasicBlock &basic_block) {
 
-  m_out << get_raw_handle(basic_block.label()) << ":\n";
+  m_out << basic_block.label() << ":\n";
 
   for (const auto &instruction : basic_block.instructions()) {
     std::visit(*this, instruction);
@@ -349,13 +351,17 @@ void Formatter::operator()(const AllocaInstruction &instruction) {
   newline();
 }
 
+std::string format_block_ref(BlockLabel block_label) {
+  return std::string{ir_syntax::percent_symbol} + block_label.name();
+}
+
 void Formatter::operator()(const BranchInstruction &instruction) {
   indent();
 
   m_out << ir_syntax::br << " " << ir_syntax::i1 << " "
         << str(instruction.m_condition) << ", " << ir_syntax::label << " "
-        << str(instruction.m_iftrue) << ", " << ir_syntax::label << " "
-        << str(instruction.m_iffalse);
+        << format_block_ref(instruction.m_iftrue) << ", " << ir_syntax::label
+        << " " << format_block_ref(instruction.m_iffalse);
 
   newline();
 }
@@ -364,7 +370,7 @@ void Formatter::operator()(const JumpInstruction &instruction) {
   indent();
 
   m_out << ir_syntax::br << " " << ir_syntax::label << " "
-        << str(instruction.m_target);
+        << format_block_ref(instruction.m_target);
 
   newline();
 }

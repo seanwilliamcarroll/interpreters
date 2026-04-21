@@ -65,14 +65,8 @@ Handle ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
     return identifier_handle;
   }
 
-  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
-
-  m_ctx.block().add_instruction(
-      LoadInstruction{.m_destination = ssa_temp,
-                      .m_source = identifier_handle,
-                      .m_type = m_ctx.to_type(binding.m_type)});
-
-  return ssa_temp;
+  return m_ctx.builder().create_load(identifier_handle,
+                                     m_ctx.to_type(binding.m_type));
 }
 
 Handle ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
@@ -122,103 +116,69 @@ zir::TypeId ExpressionGenerator::get_block_type(const zir::Block &block) const {
 }
 
 Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
-  auto &function = m_ctx.function();
-
-  // Get handle to current after condition target generated, so even with nested
-  // blocks, we're still starting right after the condition
-  auto condition_target = generate(if_expression.m_condition);
-  auto &final_condition_block = function.current_basic_block();
-
-  // Create starting blocks that will always exist, then and merge
-  auto &starting_then_block =
-      function.new_basic_block(std::string{conventions::then_block_label});
-  auto &starting_merge_block =
-      function.new_basic_block(std::string{conventions::merge_block_label});
-
-  // Do then branch, capture the final block for later if needed
-  function.set_insertion_point(starting_then_block);
-  auto then_target = generate(if_expression.m_then_block);
-  auto &final_then_block = function.current_basic_block();
-  final_then_block.add_terminal(
-      JumpInstruction{.m_target = starting_merge_block.label()});
-
-  if (!if_expression.m_else_block.has_value()) {
-    // Just bare if, else is merge
-    final_condition_block.add_terminal(
-        BranchInstruction{.m_condition = condition_target,
-                          .m_iftrue = starting_then_block.label(),
-                          .m_iffalse = starting_merge_block.label()});
-    // Subsequent instructions should go into merge block
-    function.set_insertion_point(starting_merge_block);
-    // Void, no handle to return
-    return {};
-  }
-
-  // Now we handle the else, capturing first block and last block related to
-  // this branch
-  auto &starting_else_block =
-      function.new_basic_block(std::string{conventions::else_block_label});
-  function.set_insertion_point(starting_else_block);
-  auto else_target = generate(if_expression.m_else_block.value());
-  auto &final_else_block = function.current_basic_block();
-  final_else_block.add_terminal(
-      JumpInstruction{.m_target = starting_merge_block.label()});
-
-  // Now we can merge on then vs else
-  final_condition_block.add_terminal(
-      BranchInstruction{.m_condition = condition_target,
-                        .m_iftrue = starting_then_block.label(),
-                        .m_iffalse = starting_else_block.label()});
-
-  // Subsequent instructions should go into merge block
-  function.set_insertion_point(starting_merge_block);
-
-  // We only return a value when there is an else block
-  // AND the types of the then and else expressions are NOT Unit
   const auto &if_return_type_id = get_block_type(if_expression.m_then_block);
+  const auto &llvm_return_type_id = m_ctx.to_type(if_return_type_id);
 
-  const auto if_type_is_unit = if_return_type_id == m_ctx.arena().m_unit;
-  auto if_statement_returns_value =
-      if_expression.m_else_block.has_value() && !if_type_is_unit;
-  if (!if_statement_returns_value) {
-    // Void, no handle to return
-    return {};
+  const auto has_else_branch = if_expression.m_else_block.has_value();
+  const auto yields_value =
+      has_else_branch && if_return_type_id != m_ctx.arena().m_unit;
+
+  // Emit code for conditional
+  auto condition_target = generate(if_expression.m_condition);
+  auto result_storage =
+      yields_value
+          ? m_ctx.builder().add_alloca(
+                std::string{conventions::if_result_local}, llvm_return_type_id)
+          : Handle{};
+
+  auto then_label =
+      m_ctx.builder().make_block(std::string{conventions::then_block_label});
+  auto else_label = has_else_branch ? m_ctx.builder().make_block(std::string{
+                                          conventions::else_block_label})
+                                    : BlockLabel::null();
+  auto merge_label =
+      m_ctx.builder().make_block(std::string{conventions::merge_block_label});
+
+  m_ctx.builder().add_branch(condition_target, then_label,
+                             has_else_branch ? else_label : merge_label);
+
+  // Emit code for then
+  m_ctx.builder().enter_block(then_label);
+  auto then_target = generate(if_expression.m_then_block);
+  if (yields_value) {
+    m_ctx.builder().create_store(
+        result_storage,
+        Argument{.m_name = then_target, .m_type = llvm_return_type_id});
+  }
+  m_ctx.builder().add_jump(merge_label);
+
+  if (has_else_branch) {
+    // Emit code for else
+    m_ctx.builder().enter_block(else_label);
+    auto else_target = generate(if_expression.m_else_block.value());
+    if (yields_value) {
+      m_ctx.builder().create_store(
+          result_storage,
+          Argument{.m_name = else_target, .m_type = llvm_return_type_id});
+    }
+    m_ctx.builder().add_jump(merge_label);
   }
 
-  auto result_handle =
-      m_ctx.builder().add_alloca(std::string{conventions::if_result_local},
-                                 m_ctx.to_type(if_return_type_id));
-
-  // Need to store the value generated by each branch for use in the merge block
-  final_then_block.add_instruction(
-      StoreInstruction{.m_destination = result_handle,
-                       .m_source = then_target,
-                       .m_type = m_ctx.to_type(if_return_type_id)});
-
-  final_else_block.add_instruction(
-      StoreInstruction{.m_destination = result_handle,
-                       .m_source = else_target,
-                       .m_type = m_ctx.to_type(if_return_type_id)});
-
-  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
-  starting_merge_block.add_instruction(
-      LoadInstruction{.m_destination = ssa_temp,
-                      .m_source = {result_handle},
-                      .m_type = m_ctx.to_type(if_return_type_id)});
-  return ssa_temp;
+  // Finish with final load of merged value if it exists
+  m_ctx.builder().enter_block(merge_label);
+  return yields_value
+             ? m_ctx.builder().create_load(result_storage, llvm_return_type_id)
+             : Handle{};
 }
 
 Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
-
   const auto &closture_type_id = m_ctx.m_fat_ptr;
 
   auto closure_handle = generate(call_expression.m_callee);
-  auto callee_handle =
-      load_from_struct(m_ctx.function().current_basic_block(), closture_type_id,
-                       closure_handle, 0, m_ctx.m_ptr);
-  auto env_handle =
-      load_from_struct(m_ctx.function().current_basic_block(), closture_type_id,
-                       closure_handle, 1, m_ctx.m_ptr);
+  auto callee_handle = m_ctx.builder().load_from_struct(
+      closture_type_id, closure_handle, 0, m_ctx.m_ptr);
+  auto env_handle = m_ctx.builder().load_from_struct(
+      closture_type_id, closure_handle, 1, m_ctx.m_ptr);
 
   std::vector<Argument> arguments;
   arguments.emplace_back(Argument{.m_name = env_handle, .m_type = m_ctx.m_ptr});
@@ -237,20 +197,14 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
       m_ctx.arena().as_function(callee_expr.m_type_id).m_return_type;
 
   if (function_return_type_id == m_ctx.arena().m_unit) {
-    m_ctx.block().add_instruction(
-        CallVoidInstruction{.m_callee = std::move(callee_handle),
-                            .m_arguments = std::move(arguments)});
+    m_ctx.builder().create_call_void(std::move(callee_handle),
+                                     std::move(arguments));
     return {};
   }
 
-  auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
-  m_ctx.block().add_instruction(
-      CallInstruction{.m_target = ssa_temp,
-                      .m_callee = std::move(callee_handle),
-                      .m_arguments = std::move(arguments),
-                      .m_return_type = m_ctx.to_type(function_return_type_id)});
-
-  return ssa_temp;
+  return m_ctx.builder().create_call(std::move(callee_handle),
+                                     std::move(arguments),
+                                     m_ctx.to_type(function_return_type_id));
 }
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
@@ -367,16 +321,9 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
 
   auto rhs_handle = generate(binary_expression.m_rhs);
 
-  auto result_handle = m_ctx.symbols().next_ssa_temporary();
-
-  m_ctx.block().add_instruction(
-      IntegerCompareInstruction{.m_result = result_handle,
-                                .m_lhs = lhs_handle,
-                                .m_rhs = rhs_handle,
-                                .m_condition = compare_condition,
-                                .m_type = m_ctx.to_type(lhs.m_type_id)});
-
-  return result_handle;
+  return m_ctx.builder().create_icmp(std::move(lhs_handle),
+                                     std::move(rhs_handle), compare_condition,
+                                     m_ctx.to_type(lhs.m_type_id));
 }
 
 Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
@@ -388,16 +335,9 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 
   auto rhs_handle = generate(binary_expression.m_rhs);
 
-  auto result_handle = m_ctx.symbols().next_ssa_temporary();
-
-  m_ctx.block().add_instruction(
-      BinaryInstruction{.m_result = result_handle,
-                        .m_lhs = lhs_handle,
-                        .m_rhs = rhs_handle,
-                        .m_operator = to_llvm_op(binary_expression.m_operator),
-                        .m_type = m_ctx.to_type(lhs.m_type_id)});
-
-  return result_handle;
+  return m_ctx.builder().create_binary(
+      std::move(lhs_handle), std::move(rhs_handle),
+      to_llvm_op(binary_expression.m_operator), m_ctx.to_type(lhs.m_type_id));
 }
 
 Handle ExpressionGenerator::generate_logical_binary_instruction(
@@ -408,61 +348,35 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // For OR, branch to merge on positive, else to rhs
   // rhs jumps to merge
   // at merge, we still need to do a compare on the result
-
-  auto result_handle = m_ctx.builder().add_alloca(
+  auto result_storage = m_ctx.builder().add_alloca(
       std::string{conventions::short_circuit_result_local}, m_ctx.m_i1);
 
+  auto rhs_label =
+      m_ctx.builder().make_block(std::string{conventions::rhs_block_label});
+  auto merge_label =
+      m_ctx.builder().make_block(std::string{conventions::merge_block_label});
+
+  // Emit code for lhs
   auto lhs_handle = generate(binary_expression.m_lhs);
-  auto &final_lhs_block = m_ctx.block();
   // Store lhs in result handle
-  final_lhs_block.add_instruction(StoreInstruction{
-      .m_destination = result_handle,
-      .m_source = lhs_handle,
-      .m_type = m_ctx.m_i1,
-  });
-
-  auto &starting_rhs_block = m_ctx.function().new_basic_block(
-      std::string{conventions::rhs_block_label});
-  m_ctx.function().set_insertion_point(starting_rhs_block);
-  auto rhs_handle = generate(binary_expression.m_rhs);
-  auto &final_rhs_block = m_ctx.block();
-
-  final_rhs_block.add_instruction(StoreInstruction{
-      .m_destination = result_handle,
-      .m_source = rhs_handle,
-      .m_type = m_ctx.m_i1,
-  });
-
-  auto &starting_merge_block = m_ctx.function().new_basic_block(
-      std::string{conventions::merge_block_label});
-  m_ctx.function().set_insertion_point(starting_merge_block);
-
-  // Figure out terminal instructions now
-
-  // LHS always branches
+  m_ctx.builder().create_store(result_storage,
+                               {.m_name = lhs_handle, .m_type = m_ctx.m_i1});
   const auto is_and_op =
       binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
-  final_lhs_block.add_terminal(BranchInstruction{
-      .m_condition = lhs_handle,
-      .m_iftrue =
-          is_and_op ? starting_rhs_block.label() : starting_merge_block.label(),
-      .m_iffalse =
-          is_and_op ? starting_merge_block.label() : starting_rhs_block.label(),
-  });
+  m_ctx.builder().add_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
+                             is_and_op ? merge_label : rhs_label);
 
-  final_rhs_block.add_terminal(JumpInstruction{
-      .m_target = starting_merge_block.label(),
-  });
+  // Emit code for rhs
+  m_ctx.builder().enter_block(rhs_label);
+  auto rhs_handle = generate(binary_expression.m_rhs);
+  m_ctx.builder().create_store(result_storage,
+                               {.m_name = rhs_handle, .m_type = m_ctx.m_i1});
+  m_ctx.builder().add_jump(merge_label);
 
-  auto final_result = m_ctx.symbols().next_ssa_temporary();
+  // Emit code for merge
+  m_ctx.builder().enter_block(merge_label);
 
-  m_ctx.block().add_instruction(LoadInstruction{
-      .m_destination = final_result,
-      .m_source = result_handle,
-      .m_type = m_ctx.m_i1,
-  });
-
-  return final_result;
+  return m_ctx.builder().create_load(result_storage, m_ctx.m_i1);
 }
 
 Handle
@@ -479,21 +393,13 @@ ExpressionGenerator::operator()(const zir::BinaryExpr &binary_expression) {
 }
 
 Handle ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
-
   auto expression = m_ctx.arena().get(unary_expression.m_expression);
 
   auto input_handle = generate(unary_expression.m_expression);
 
-  auto result_handle = m_ctx.symbols().next_ssa_temporary();
-
-  m_ctx.block().add_instruction(UnaryInstruction{
-      .m_result = result_handle,
-      .m_input = input_handle,
-      .m_operator = unary_expression.m_operator,
-      .m_type = m_ctx.to_type(expression.m_type_id),
-  });
-
-  return result_handle;
+  return m_ctx.builder().create_unary(std::move(input_handle),
+                                      unary_expression.m_operator,
+                                      m_ctx.to_type(expression.m_type_id));
 }
 
 Handle ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
@@ -528,17 +434,8 @@ Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
     cast_op = LLVMCastOperator::SEXT;
   }
 
-  auto ssa_temporary = m_ctx.symbols().next_ssa_temporary();
-
-  m_ctx.block().add_instruction(CastInstruction{
-      .m_destination = ssa_temporary,
-      .m_source = input_handle,
-      .m_operator = cast_op,
-      .m_from = from,
-      .m_to = to,
-  });
-
-  return ssa_temporary;
+  return m_ctx.builder().create_cast(std::move(input_handle), cast_op, from,
+                                     to);
 }
 
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
@@ -564,211 +461,99 @@ FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
                              .m_parameters = std::move(parameters)};
 }
 
-struct FunctionScopeGuard {
-  FunctionScopeGuard(Context &ctx)
-      : m_ctx(ctx), m_original_function(ctx.module().current_function()) {}
-  ~FunctionScopeGuard() {
-    m_ctx.module().set_current_function(m_original_function);
+std::pair<TypeId, std::vector<Argument>>
+ExpressionGenerator::analyze_captures(const zir::LambdaExpr &lambda_expr) {
+  if (lambda_expr.m_captures.empty()) {
+    return {m_ctx.m_void, {}};
   }
+  std::vector<Argument> captured_bindings;
+  captured_bindings.reserve(lambda_expr.m_captures.size());
+  std::vector<TypeId> struct_types;
+  struct_types.reserve(lambda_expr.m_captures.size());
+  for (const auto &capture : lambda_expr.m_captures) {
+    auto binding = m_ctx.arena().get(capture.m_id);
 
-  Context &m_ctx;
-  Function &m_original_function;
-};
-
-Handle ExpressionGenerator::malloc_struct(BasicBlock &block,
-                                          TypeId struct_type_id) {
-  // Special function. TODO: make the allocator configurable on Context rather
-  // than hard-wired to the C ABI.
-  auto malloc_handle =
-      GlobalHandle{std::string{conventions::allocator_function}};
-  auto temp_size_bytes_ptr = m_ctx.symbols().next_ssa_temporary();
-  block.add_instruction(GetElementPtrInstruction{
-      .m_destination = temp_size_bytes_ptr,
-      .m_struct_type = struct_type_id,
-      .m_struct_handle = LiteralHandle::null(),
-      .m_initial_index =
-          Argument{.m_name = LiteralHandle::one(), .m_type = m_ctx.m_i32},
-      .m_additional_indices = {}});
-
-  auto temp_size_bytes_i64 = m_ctx.symbols().next_ssa_temporary();
-  block.add_instruction(PtrToIntInstruction{
-      .m_destination = temp_size_bytes_i64,
-      .m_source = temp_size_bytes_ptr,
-      .m_destination_type = m_ctx.m_i64,
-  });
-
-  auto target_handle = m_ctx.symbols().next_ssa_temporary();
-  // Allocate the env
-  block.add_instruction(CallInstruction{
-      .m_target = target_handle,
-      .m_callee = malloc_handle,
-      .m_arguments = {Argument{.m_name = temp_size_bytes_i64,
-                               .m_type = m_ctx.m_i64}},
-      .m_return_type = m_ctx.m_ptr,
-  });
-  return target_handle;
-}
-
-void ExpressionGenerator::store_to_struct(BasicBlock &block,
-                                          TypeId struct_type_id,
-                                          const Handle &struct_handle,
-                                          size_t field_index,
-                                          const Argument &value) {
-  auto temp_dest = m_ctx.symbols().next_ssa_temporary();
-  block.add_instruction(GetElementPtrInstruction{
-      .m_destination = temp_dest,
-      .m_struct_type = struct_type_id,
-      .m_struct_handle = struct_handle,
-      .m_initial_index =
-          Argument{.m_name = LiteralHandle::zero(), .m_type = m_ctx.m_i32},
-      .m_additional_indices = {
-          Argument{.m_name = LiteralHandle{std::to_string(field_index)},
-                   .m_type = m_ctx.m_i32}}});
-
-  block.add_instruction(StoreInstruction{.m_destination = temp_dest,
-                                         .m_source = value.m_name,
-                                         .m_type = value.m_type});
-}
-
-Handle ExpressionGenerator::load_from_struct(BasicBlock &block,
-                                             TypeId struct_type_id,
-                                             const Handle &struct_handle,
-                                             size_t field_index,
-                                             TypeId destination_type) {
-  auto ptr_to_struct_field = m_ctx.symbols().next_ssa_temporary();
-  block.add_instruction(GetElementPtrInstruction{
-      .m_destination = ptr_to_struct_field,
-      .m_struct_type = struct_type_id,
-      .m_struct_handle = struct_handle,
-      .m_initial_index =
-          Argument{.m_name = LiteralHandle::zero(), .m_type = m_ctx.m_i32},
-      .m_additional_indices = {
-          Argument{.m_name = LiteralHandle{std::to_string(field_index)},
-                   .m_type = m_ctx.m_i32}}});
-
-  auto destination = m_ctx.symbols().next_ssa_temporary();
-  block.add_instruction(LoadInstruction{.m_destination = destination,
-                                        .m_source = ptr_to_struct_field,
-                                        .m_type = destination_type});
-  return destination;
+    auto type_id = m_ctx.to_type(binding.m_type);
+    captured_bindings.emplace_back(Argument{
+        .m_name = m_ctx.symbols().lookup(binding.m_name), .m_type = type_id});
+    struct_types.emplace_back(type_id);
+  }
+  auto closure_type_id = m_ctx.type().intern_struct(
+      std::string{conventions::env_struct_name},
+      StructType{.m_fields = std::move(struct_types)});
+  return {closure_type_id, captured_bindings};
 }
 
 Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   ScopeGuard scope_guard(m_ctx.symbols());
-  FunctionScopeGuard function_guard(m_ctx);
-  // Need to capture any variables into an environment struct for this
-  // particular lambda
-  // Need to generate a top level function, uniquified name
-  // Need to generate a func/env ptr pair to return, returning a handle to them
-
-  // Start with pure lambda, no captures
 
   auto signature = generate_lambda_signature(lambda_expr);
 
   auto lambda_handle = signature.m_function_id;
 
-  // Before we create the lambda, add the capture storage and malloc
+  auto [env_struct_type_id, captures] = analyze_captures(lambda_expr);
 
-  auto &lambda_creation_basic_block = m_ctx.function().entry_basic_block();
+  auto env_handle = captures.empty()
+                        ? LiteralHandle::null()
+                        : m_ctx.builder().malloc_struct(env_struct_type_id);
 
-  auto &lambda_function = m_ctx.module().new_function(std::move(signature));
-  m_ctx.module().set_current_function(lambda_function);
+  // Emit the code to store captures into env
+  for (const auto &[index, capture] :
+       std::views::zip(std::views::iota(0ULL), captures)) {
+    // If it is alloca, we need to load it before using
+    auto stored_location =
+        std::holds_alternative<LocalHandle>(capture.m_name)
+            ? m_ctx.builder().create_load(capture.m_name, capture.m_type)
+            : capture.m_name;
+    m_ctx.builder().store_to_struct(env_struct_type_id, env_handle, index,
+                                    Argument{
+                                        .m_name = stored_location,
+                                        .m_type = capture.m_type,
+                                    });
+  }
 
-  Handle env_handle = LiteralHandle::null();
-
-  if (!lambda_expr.m_captures.empty()) {
-    // We need to load all the captured bindings before we execute the body
-    std::vector<Argument> captured_bindings;
-    captured_bindings.reserve(lambda_expr.m_captures.size());
-    std::vector<TypeId> struct_types;
-    struct_types.reserve(lambda_expr.m_captures.size());
-    for (const auto &capture : lambda_expr.m_captures) {
-      auto binding = m_ctx.arena().get(capture.m_id);
-
-      auto type_id = m_ctx.to_type(binding.m_type);
-      captured_bindings.emplace_back(Argument{
-          .m_name = m_ctx.symbols().lookup(binding.m_name), .m_type = type_id});
-      struct_types.emplace_back(type_id);
-    }
-    auto closure_type_id = m_ctx.type().intern_struct(
-        std::string{conventions::env_struct_name},
-        StructType{.m_fields = std::move(struct_types)});
+  // Emit code for new lambda function
+  {
+    auto function_guard = m_ctx.builder().push_new_function(signature);
 
     for (const auto &[index, capture] :
-         std::views::zip(std::views::iota(0ULL), captured_bindings)) {
+         std::views::zip(std::views::iota(0ULL), captures)) {
 
       auto capture_temp_handle = m_ctx.builder().add_alloca(
           get_raw_handle(capture.m_name), capture.m_type);
 
-      auto temp_dest = load_from_struct(
-          m_ctx.function().current_basic_block(), closure_type_id,
-          m_ctx.env_parameter().m_name, index, capture.m_type);
+      auto value = m_ctx.builder().load_from_struct(
+          env_struct_type_id, m_ctx.env_parameter().m_name, index,
+          capture.m_type);
 
-      m_ctx.function().current_basic_block().add_instruction(StoreInstruction{
-          .m_destination = capture_temp_handle,
-          .m_source = temp_dest,
-          .m_type = capture.m_type,
-      });
+      m_ctx.builder().create_store(capture_temp_handle,
+                                   {.m_name = value, .m_type = capture.m_type});
     }
 
-    // At creation site, we need to store these parameters
-
-    env_handle = malloc_struct(lambda_creation_basic_block, closure_type_id);
-
-    for (const auto &[index, capture] :
-         std::views::zip(std::views::iota(0ULL), captured_bindings)) {
-      // Load the value to a temp first if ptr
-      auto temp_storage = capture.m_name;
-      if (capture.m_type == m_ctx.m_ptr) {
-        temp_storage = m_ctx.symbols().next_ssa_temporary();
-
-        lambda_creation_basic_block.add_instruction(LoadInstruction{
-            .m_destination = temp_storage,
-            .m_source = capture.m_name,
-            .m_type = capture.m_type,
-        });
-      }
-
-      store_to_struct(lambda_creation_basic_block, closure_type_id, env_handle,
-                      index,
-                      Argument{
-                          .m_name = temp_storage,
-                          .m_type = capture.m_type,
-                      });
+    auto return_value = generate(lambda_expr.m_body);
+    if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
+      m_ctx.builder().create_return_void();
+    } else {
+      m_ctx.builder().create_return(return_value,
+                                    m_ctx.to_type(lambda_expr.m_return_type));
     }
   }
 
-  auto return_value = generate(lambda_expr.m_body);
+  // Emit code to package lambda as a fat pointer
+  const auto &closure_type_id = m_ctx.m_fat_ptr;
+  auto closure_handle = m_ctx.builder().malloc_struct(closure_type_id);
 
-  if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
-    lambda_function.current_basic_block().add_terminal(ReturnVoidInstruction{});
-  } else {
-    lambda_function.current_basic_block().add_terminal(
-        ReturnInstruction{.m_value = return_value,
-                          .m_type = m_ctx.to_type(lambda_expr.m_return_type)});
-  }
+  m_ctx.builder().store_to_struct(closure_type_id, closure_handle, 0,
+                                  Argument{
+                                      .m_name = lambda_handle,
+                                      .m_type = m_ctx.m_ptr,
+                                  });
 
-  // Need to store lambda (function) handle and env handle in a closure struct,
-  // then return ptr to that
-
-  // At return site, need to return fat pointer, first alloc struct
-  const auto &closture_type_id = m_ctx.m_fat_ptr;
-  auto closure_handle =
-      malloc_struct(lambda_creation_basic_block, closture_type_id);
-
-  store_to_struct(lambda_creation_basic_block, closture_type_id, closure_handle,
-                  0,
-                  Argument{
-                      .m_name = lambda_handle,
-                      .m_type = m_ctx.m_ptr,
-                  });
-
-  store_to_struct(lambda_creation_basic_block, closture_type_id, closure_handle,
-                  1,
-                  Argument{
-                      .m_name = env_handle,
-                      .m_type = m_ctx.m_ptr,
-                  });
+  m_ctx.builder().store_to_struct(closure_type_id, closure_handle, 1,
+                                  Argument{
+                                      .m_name = env_handle,
+                                      .m_type = m_ctx.m_ptr,
+                                  });
 
   return closure_handle;
 }

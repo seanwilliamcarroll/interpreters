@@ -15,6 +15,8 @@
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
+#include "codegen/types.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -47,13 +49,9 @@ struct ExpressionGenerator {
   Handle operator()(const zir::CastExpr &);
 
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
-  Handle malloc_struct(BasicBlock &, TypeId struct_type_id);
-  void store_to_struct(BasicBlock &, TypeId struct_type_id,
-                       const Handle &struct_handle, size_t field_index,
-                       const Argument &value);
-  Handle load_from_struct(BasicBlock &, TypeId struct_type_id,
-                          const Handle &struct_handle, size_t field_index,
-                          TypeId destination_type);
+
+  std::pair<TypeId, std::vector<Argument>>
+  analyze_captures(const zir::LambdaExpr &);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

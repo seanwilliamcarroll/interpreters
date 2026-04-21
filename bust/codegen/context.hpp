@@ -42,8 +42,6 @@ struct Context {
 
   Module &module() { return m_module; }
   SymbolTable &symbols() { return m_symbol_table; }
-  Function &function() { return m_module.current_function(); }
-  BasicBlock &block() { return function().current_basic_block(); }
 
   [[nodiscard]] const zir::Arena &arena() const { return m_arena; }
 

@@ -8,6 +8,7 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/block_label.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
@@ -44,12 +45,12 @@ struct IntegerCompareInstruction {
 
 struct BranchInstruction {
   Handle m_condition;
-  Handle m_iftrue;
-  Handle m_iffalse;
+  BlockLabel m_iftrue;
+  BlockLabel m_iffalse;
 };
 
 struct JumpInstruction {
-  Handle m_target;
+  BlockLabel m_target;
 };
 
 struct LoadInstruction {

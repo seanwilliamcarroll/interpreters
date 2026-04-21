@@ -20,9 +20,9 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct BasicBlock {
-  BasicBlock(Handle label) : m_label(std::move(label)) {}
+  BasicBlock(std::string label) : m_label(std::move(label)) {}
 
-  [[nodiscard]] const Handle &label() const { return m_label; }
+  [[nodiscard]] const std::string &label() const { return m_label; }
 
   [[nodiscard]] const auto &instructions() const { return m_instructions; }
 
@@ -45,7 +45,7 @@ struct BasicBlock {
   }
 
 private:
-  Handle m_label;
+  std::string m_label;
   std::vector<Instruction> m_instructions;
   std::optional<Terminator> m_terminal_instruction;
 };

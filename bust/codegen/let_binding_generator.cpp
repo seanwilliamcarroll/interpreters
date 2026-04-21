@@ -27,16 +27,12 @@ void LetBindingGenerator::generate(const zir::LetBinding &let_binding) {
 
   auto binding = m_ctx.arena().get(let_binding.m_identifier);
 
-  auto identifier_handle = m_ctx.symbols().define_local(binding.m_name);
+  auto identifier_handle =
+      m_ctx.builder().add_alloca(binding.m_name, m_ctx.to_type(binding.m_type));
 
-  m_ctx.function().add_alloca_instruction(AllocaInstruction{
-      .m_handle = identifier_handle, .m_type = m_ctx.to_type(binding.m_type)});
-
-  m_ctx.block().add_instruction(StoreInstruction{
-      .m_destination = identifier_handle,
-      .m_source = value_handle,
-      .m_type = m_ctx.to_type(binding.m_type),
-  });
+  m_ctx.builder().create_store(
+      identifier_handle,
+      {.m_name = value_handle, .m_type = m_ctx.to_type(binding.m_type)});
 }
 
 //****************************************************************************

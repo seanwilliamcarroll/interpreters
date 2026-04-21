@@ -105,9 +105,9 @@ FunctionDeclaration TopItemGenerator::generate_signature(
 void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   ScopeGuard guard(m_ctx.symbols());
 
-  auto &function =
-      m_ctx.module().new_function(generate_signature(function_def));
-  m_ctx.module().set_current_function(function);
+  auto function =
+      m_ctx.builder().make_function(generate_signature(function_def));
+  m_ctx.builder().enter_function(function);
 
   auto return_value = ExpressionGenerator{m_ctx}.generate(function_def.m_body);
 
@@ -117,11 +117,10 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
   if (return_type_id == m_ctx.arena().m_unit) {
-    function.current_basic_block().add_terminal(ReturnVoidInstruction{});
+    m_ctx.builder().create_return_void();
   } else {
     // Wherever we are, we need to add this terminal to the final
-    function.current_basic_block().add_terminal(ReturnInstruction{
-        .m_value = return_value, .m_type = m_ctx.to_type(return_type_id)});
+    m_ctx.builder().create_return(return_value, m_ctx.to_type(return_type_id));
   }
 }
 
@@ -156,27 +155,23 @@ void TopItemGenerator::operator()(
       .m_return_type = m_ctx.to_type(type.m_return_type),
       .m_parameters = std::move(parameters)};
 
-  auto &function = m_ctx.module().new_function(thunked_signature);
-  m_ctx.module().set_current_function(function);
+  auto function = m_ctx.builder().make_function(thunked_signature);
+  m_ctx.builder().enter_function(function);
 
   const auto &return_type_id =
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
   if (return_type_id == m_ctx.arena().m_unit) {
-    function.current_basic_block().add_instruction(
-        CallVoidInstruction{.m_callee = GlobalHandle{binding.m_name},
-                            .m_arguments = std::move(arguments)});
-    function.current_basic_block().add_terminal(ReturnVoidInstruction{});
+    m_ctx.builder().create_call_void(GlobalHandle{binding.m_name},
+                                     std::move(arguments));
+    m_ctx.builder().create_return_void();
   } else {
-    auto ssa_temp = m_ctx.symbols().next_ssa_temporary();
-    m_ctx.block().add_instruction(
-        CallInstruction{.m_target = ssa_temp,
-                        .m_callee = GlobalHandle{.m_handle = binding.m_name},
-                        .m_arguments = std::move(arguments),
-                        .m_return_type = m_ctx.to_type(return_type_id)});
+    auto callee_return = m_ctx.builder().create_call(
+        GlobalHandle{.m_handle = binding.m_name}, std::move(arguments),
+        m_ctx.to_type(return_type_id));
+
     // Wherever we are, we need to add this terminal to the final
-    function.current_basic_block().add_terminal(ReturnInstruction{
-        .m_value = ssa_temp, .m_type = m_ctx.to_type(return_type_id)});
+    m_ctx.builder().create_return(callee_return, m_ctx.to_type(return_type_id));
   }
 }
 
