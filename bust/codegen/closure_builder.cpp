@@ -42,10 +42,8 @@ Handle ClosureBuilder::allocate_and_populate_env() {
        std::views::zip(std::views::iota(0ULL), m_captured_bindings)) {
     // If it is alloca, we need to load it before using
     auto stored_location =
-        std::holds_alternative<LocalHandle>(capture.m_outer_handle)
-            ? m_ctx.builder().create_load(capture.m_outer_handle,
-                                          capture.m_type_id)
-            : capture.m_outer_handle;
+        m_ctx.builder().create_load(capture.m_outer_handle, capture.m_type_id);
+
     m_ctx.builder().store_to_struct(m_type_id, env_handle, index,
                                     Argument{
                                         .m_name = stored_location,
