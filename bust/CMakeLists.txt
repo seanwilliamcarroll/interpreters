@@ -15,12 +15,21 @@
 
 project(bust VERSION 0.1.0)
 
+# Embed the bust prelude source at configure time. The prelude is prepended
+# to every user program so that compiler-required symbols (e.g. malloc) do
+# not need to be declared by the user.
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/std/prelude.bs PRELUDE_SOURCE)
+configure_file(inc/prelude_source.hpp.in prelude_source.hpp @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/std/prelude.bs)
+
 add_executable(bust-exe src/main.cpp)
 
 set_target_properties(bust-exe PROPERTIES OUTPUT_NAME bust)
 
 add_library(bust-lib STATIC
   src/bust.cpp
+  src/frontend.cpp
   src/tokens.cpp
   hir/block_checker.cpp
   hir/expression_checker.cpp
@@ -56,7 +65,7 @@ add_library(bust-lib STATIC
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 
-target_include_directories(bust-lib PUBLIC inc .)
+target_include_directories(bust-lib PUBLIC inc . ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_options(bust-lib PRIVATE ${PROJECT_WARNINGS})
 

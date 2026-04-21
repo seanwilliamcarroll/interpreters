@@ -36,8 +36,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   // out of the fat pointer and invoke normally.
 
   TEST_CASE("basic lambda call") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let add = |a: i64, b: i64| -> i64 { a + b };\n"
               "  add(3, 4)\n"
               "}",
@@ -45,8 +44,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda with explicit parameter type") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let double = |x: i64| -> i64 { x + x };\n"
               "  double(5)\n"
               "}",
@@ -54,8 +52,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda passed as argument to function") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }\n"
+    CHECK_RUN("fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }\n"
               "fn main() -> i64 {\n"
               "  let inc = |x: i64| -> i64 { x + 1 };\n"
               "  apply(inc, 41)\n"
@@ -64,8 +61,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda with no parameters") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let f = || -> i64 { 99 };\n"
               "  f()\n"
               "}",
@@ -73,8 +69,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda calling another function") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn helper(x: i64) -> i64 { x * 2 }\n"
+    CHECK_RUN("fn helper(x: i64) -> i64 { x * 2 }\n"
               "fn main() -> i64 {\n"
               "  let f = |x: i64| -> i64 { helper(x) + 1 };\n"
               "  f(20)\n"
@@ -83,8 +78,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("multiple lambdas in same function") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let add = |a: i64, b: i64| -> i64 { a + b };\n"
               "  let mul = |a: i64, b: i64| -> i64 { a * b };\n"
               "  add(mul(3, 4), 2)\n"
@@ -93,8 +87,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda result used in arithmetic") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let f = |x: i64| -> i64 { x + 1 };\n"
               "  f(10) + f(20)\n"
               "}",
@@ -102,8 +95,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda in if condition") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let is_big = |x: i64| -> bool { x > 10 };\n"
               "  if is_big(20) { 1 } else { 0 }\n"
               "}",
@@ -111,8 +103,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("identity lambda") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let id = |x: i64| -> i64 { x };\n"
               "  id(42)\n"
               "}",
@@ -129,8 +120,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   TEST_CASE("lambda captures single local i64") {
     // The lambda reads `n` from its environment rather than from the
     // caller's stack; if capture were broken the value would be garbage.
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let n = 5;\n"
               "  let add_n = |x: i64| -> i64 { x + n };\n"
               "  add_n(10)\n"
@@ -139,8 +129,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("lambda captures multiple locals") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let a = 3;\n"
               "  let b = 4;\n"
               "  let sum = || -> i64 { a + b };\n"
@@ -152,8 +141,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   TEST_CASE("lambda reads same capture twice") {
     // Exercises that each read of `n` inside the lambda body goes back
     // through the env pointer — one load per use, not cached across.
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let n = 6;\n"
               "  let double_n = || -> i64 { n + n };\n"
               "  double_n()\n"
@@ -162,8 +150,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   }
 
   TEST_CASE("capturing lambda mixes captured and parameter values") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn main() -> i64 {\n"
+    CHECK_RUN("fn main() -> i64 {\n"
               "  let base = 10;\n"
               "  let offset = 2;\n"
               "  let combine = |x: i64| -> i64 { base + x * offset };\n"
@@ -194,8 +181,7 @@ TEST_SUITE("bust.codegen.lambdas") {
   // add5 would read garbage once make_adder returned.
 
   TEST_CASE("make_adder returns a capturing closure") {
-    CHECK_RUN("extern fn malloc(size: i64) -> i64;\n"
-              "fn make_adder(n: i64) -> fn(i64) -> i64 {\n"
+    CHECK_RUN("fn make_adder(n: i64) -> fn(i64) -> i64 {\n"
               "  |x: i64| -> i64 { x + n }\n"
               "}\n"
               "fn main() -> i64 {\n"

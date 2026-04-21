@@ -12,8 +12,7 @@
 //****************************************************************************
 
 #include <codegen.hpp>
-#include <lexer.hpp>
-#include <parser.hpp>
+#include <frontend.hpp>
 #include <type_checker.hpp>
 #include <zir/dump.hpp>
 #include <zir/program.hpp>
@@ -39,9 +38,7 @@ namespace bust::test {
 
 inline zir::Program type_check(const std::string &source) {
   std::istringstream input(source);
-  auto lexer = make_lexer(input, "test");
-  Parser parser(std::move(lexer));
-  auto program = parser.parse();
+  auto program = parse_program(input, "test");
   TypeChecker checker;
   ZirLowerer zir_lowerer;
   return zir_lowerer(checker(program));

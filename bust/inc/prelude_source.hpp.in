@@ -1,0 +1,22 @@
+//**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
+//*
+//*
+//*  Purpose : Generated header containing the bust prelude source text,
+//*            embedded at configure time from bust/std/prelude.bs.
+//*
+//*
+//****************************************************************************
+#pragma once
+//****************************************************************************
+
+#include <string_view>
+
+//****************************************************************************
+namespace bust {
+//****************************************************************************
+
+inline constexpr std::string_view prelude_source = R"bust_prelude(@PRELUDE_SOURCE@)bust_prelude";
+
+//****************************************************************************
+} // namespace bust
+//****************************************************************************
