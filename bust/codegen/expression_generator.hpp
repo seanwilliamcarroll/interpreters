@@ -12,10 +12,9 @@
 #include <codegen/function_declaration.hpp>
 #include <codegen/handle.hpp>
 #include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
-
-#include "codegen/types.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

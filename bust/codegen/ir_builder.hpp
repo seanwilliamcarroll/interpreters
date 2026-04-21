@@ -10,15 +10,14 @@
 
 #include <codegen/basic_block.hpp>
 #include <codegen/block_label.hpp>
+#include <codegen/function_declaration.hpp>
 #include <codegen/function_handle.hpp>
 #include <codegen/handle.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
+#include <operators.hpp>
 
 #include <cassert>
-
-#include "codegen/function_declaration.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
-#include "operators.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

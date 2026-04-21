@@ -7,15 +7,14 @@
 //****************************************************************************
 
 #include <codegen/context.hpp>
+#include <codegen/function_declaration.hpp>
+#include <codegen/handle.hpp>
+#include <codegen/instructions.hpp>
 #include <codegen/ir_builder.hpp>
+#include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 
 #include <cassert>
-
-#include "codegen/function_declaration.hpp"
-#include "codegen/handle.hpp"
-#include "codegen/instructions.hpp"
-#include "codegen/parameter.hpp"
-#include "codegen/types.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

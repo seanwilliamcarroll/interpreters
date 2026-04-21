@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <codegen/basic_block.hpp>
+#include <codegen/block_label.hpp>
 #include <codegen/formatter.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
@@ -24,8 +25,6 @@
 #include <stdexcept>
 #include <variant>
 #include <vector>
-
-#include "codegen/block_label.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
