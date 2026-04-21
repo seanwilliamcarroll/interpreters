@@ -30,7 +30,7 @@ bool try_validate_main(const ast::FunctionDef &function_def) {
           function_def.m_signature.m_return_type)) {
     throw core::CompilerException(
         "ValidateMain",
-        "main function can only return i64 type, not" +
+        "main function can only return i64 type, not " +
             type_identifier_to_string(function_def.m_signature.m_return_type),
         function_def.m_location);
   }
@@ -40,7 +40,7 @@ bool try_validate_main(const ast::FunctionDef &function_def) {
   if (primitive_type.m_type != PrimitiveType::I64) {
     throw core::CompilerException(
         "ValidateMain",
-        "main function can only return i64 type, not" +
+        "main function can only return i64 type, not " +
             type_identifier_to_string(function_def.m_signature.m_return_type),
         function_def.m_location);
   }
