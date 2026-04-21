@@ -403,17 +403,6 @@ TEST_SUITE("bust.monomorpher") {
     CHECK(program.m_instantiation_records.empty());
   }
 
-  TEST_CASE("unifier state is still present after monomorphization") {
-    // Unifier state is consumed by the ZIR Lowerer, not by mono.
-    MONO_STRING(program, "fn main() -> i64 { 42 }");
-    CHECK(program.m_unifier_state.has_value());
-  }
-
-  TEST_CASE("monomorpher throws without unifier state") {
-    hir::Program program;
-    CHECK_THROWS(Monomorpher{}(std::move(program)));
-  }
-
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

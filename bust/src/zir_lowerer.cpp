@@ -30,11 +30,7 @@ namespace bust {
 zir::Program ZirLowerer::operator()(hir::Program program) {
   auto type_arena = std::move(program.m_type_arena);
 
-  if (!program.m_unifier_state.has_value()) {
-    throw core::InternalCompilerError("UniferState required for ZIR lowering!");
-  }
-
-  auto unifier_state = std::move(program.m_unifier_state.value());
+  auto unifier_state = std::move(program.m_unifier_state);
 
   auto context = zir::Context(type_arena, std::move(unifier_state));
 

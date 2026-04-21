@@ -2117,8 +2117,7 @@ TEST_SUITE("bust.type_checker") {
     // the f parameter is either a FunctionType or a type variable whose
     // union-find root resolves to a FunctionType.
     hir::TypeUnifier unifier{hir.m_type_arena};
-    REQUIRE(hir.m_unifier_state.has_value());
-    unifier.adopt_state(std::move(hir.m_unifier_state.value()));
+    unifier.adopt_state(std::move(hir.m_unifier_state));
     auto resolved = unifier.find(lambda->m_parameters[0].m_type);
     const auto &kind = hir.m_type_arena.get(resolved);
     CHECK(std::holds_alternative<hir::FunctionType>(kind));
