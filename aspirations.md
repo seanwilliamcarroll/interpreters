@@ -84,9 +84,13 @@ Three structural investments that unblock future features:
 
 ## Module System / Standard Library
 
-- [ ] Module or include system
-  — So users don't have to manually declare externs like `putchar` and `malloc`.
-  Could be an implicit prelude, explicit `import`/`use` syntax, or both.
+- [ ] Multi-file module system for user code
+  — `import`/`use` syntax so programs can span files. Requires path syntax,
+  visibility rules, cyclic-import detection, and cross-file type resolution.
+- [ ] Expand the prelude
+  — Curate a set of libc externs (`putchar`, `getchar`, `puts`, `free`, …)
+  into `bust/std/prelude.bs`. Mechanism is in place; this is a curation
+  decision, not a design one.
 - [ ] Core standard library
   — Built on top of the module system; wraps common libc functions and
   provides bust-native utilities.
