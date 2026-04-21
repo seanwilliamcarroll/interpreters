@@ -5,29 +5,6 @@ on each other are marked with arrows (→ means "enables").
 
 ## Codegen Cleanup
 
-### Confusing logic
-
-- **`get_block_type`** is a method on `ExpressionGenerator` but needs nothing
-  from that class; it is a pure query over `zir::Block` that landed on the
-  wrong owner.
-- **`malloc_struct` hardcodes the allocator symbol**, coupling codegen
-  to the C ABI. Allocator choice should be configurable via `Context` or a
-  dedicated runtime-ABI module.
-
-### Repeated structure
-
-- **`alloca + store + … + load`** appears in the if-merge, the short-circuit
-  merge, capture-load prologue, and let-bindings. That is a high-level
-  operation ("materialize a value through memory") without a name.
-- **Comma-separated printing** (`function_parameters`, `function_arguments`)
-  is the same loop written twice.
-- **Signed/unsigned compare switch** (`to_llvm_compare_condition`) has four
-  near-identical pairs of cases. A data table keyed by
-  `(BinaryOperator, signed?)` is cleaner and extends more easily to new
-  numeric types.
-
-### Paving the way for future work
-
 Three structural investments that unblock future features:
 
 - **Type-property visitor/table.** `is_signed_type`, `width_bits`,
@@ -46,11 +23,6 @@ Three structural investments that unblock future features:
   must be a function pointer or global. A distinct `BlockLabel` type (and
   similar narrowing) makes illegal IR unrepresentable — bugs caught at
   compile time instead of producing malformed IR that LLVM rejects.
-
-### Suggested attack order
-
-1. Add `operands()` / `result()` for instructions. Prerequisite for passes.
-2. Tighten handle types at branch targets and call callees.
 
 ## Aggregate Types
 
