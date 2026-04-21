@@ -18,7 +18,7 @@ namespace bust::codegen {
 struct Function;
 
 struct FunctionHandle {
-  [[nodiscard]] const Handle &name() const;
+  [[nodiscard]] const GlobalHandle &name() const;
 
 private:
   explicit FunctionHandle(Function *function) : m_function(function) {}

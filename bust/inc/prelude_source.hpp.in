@@ -1,22 +1,22 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Out-of-line definitions for FunctionHandle.
+//*  Purpose : Generated header containing the bust prelude source text,
+//*            embedded at configure time from bust/std/prelude.bs.
 //*
 //*
 //****************************************************************************
-
-#include <codegen/function.hpp>
-#include <codegen/function_handle.hpp>
-
-//****************************************************************************
-namespace bust::codegen {
+#pragma once
 //****************************************************************************
 
-const GlobalHandle &FunctionHandle::name() const {
-  return m_function->signature().m_function_id;
-}
+#include <string_view>
 
 //****************************************************************************
-} // namespace bust::codegen
+namespace bust {
+//****************************************************************************
+
+inline constexpr std::string_view prelude_source = R"bust_prelude(@PRELUDE_SOURCE@)bust_prelude";
+
+//****************************************************************************
+} // namespace bust
 //****************************************************************************

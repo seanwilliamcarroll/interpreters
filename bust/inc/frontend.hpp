@@ -1,22 +1,24 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Out-of-line definitions for FunctionHandle.
+//*  Purpose : Frontend entry point: lex + parse a bust source stream into
+//*            an ast::Program with the compiler-shipped prelude prepended.
 //*
 //*
 //****************************************************************************
-
-#include <codegen/function.hpp>
-#include <codegen/function_handle.hpp>
-
-//****************************************************************************
-namespace bust::codegen {
+#pragma once
 //****************************************************************************
 
-const GlobalHandle &FunctionHandle::name() const {
-  return m_function->signature().m_function_id;
-}
+#include <ast/nodes.hpp>
+
+#include <iosfwd>
 
 //****************************************************************************
-} // namespace bust::codegen
+namespace bust {
+//****************************************************************************
+
+ast::Program parse_program(std::istream &input, const char *filename);
+
+//****************************************************************************
+} // namespace bust
 //****************************************************************************

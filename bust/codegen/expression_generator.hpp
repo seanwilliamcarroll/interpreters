@@ -33,7 +33,6 @@ struct ExpressionGenerator {
   Handle operator()(const zir::Bool &);
   Handle operator()(const zir::Char &);
 
-  [[nodiscard]] zir::TypeId get_block_type(const zir::Block &) const;
   Handle operator()(const zir::Block &);
   Handle operator()(const zir::IfExpr &);
   Handle operator()(const zir::CallExpr &);
@@ -49,8 +48,7 @@ struct ExpressionGenerator {
 
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
 
-  std::pair<TypeId, std::vector<Argument>>
-  analyze_captures(const zir::LambdaExpr &);
+  GlobalHandle lift_free_lambda(const zir::LambdaExpr &);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

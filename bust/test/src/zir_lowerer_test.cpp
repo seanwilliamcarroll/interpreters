@@ -627,15 +627,6 @@ TEST_SUITE("bust.zir_lowerer") {
     REQUIRE(func.m_body.m_final_expression.has_value());
   }
 
-  // --- Error handling --------------------------------------------------------
-
-  TEST_CASE("lowering program without unifier state throws") {
-    // Construct an empty HIR program without unifier state
-    hir::Program program{};
-    CHECK_THROWS_AS(ZirLowerer{}(std::move(program)),
-                    core::InternalCompilerError);
-  }
-
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

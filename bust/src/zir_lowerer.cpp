@@ -10,6 +10,7 @@
 #include <hir/nodes.hpp>
 #include <hir/type_arena.hpp>
 #include <hir/unifier_state.hpp>
+#include <mono/nodes.hpp>
 #include <zir/arena.hpp>
 #include <zir/context.hpp>
 #include <zir/nodes.hpp>
@@ -27,14 +28,10 @@
 namespace bust {
 //****************************************************************************
 
-zir::Program ZirLowerer::operator()(hir::Program program) {
+zir::Program ZirLowerer::operator()(mono::Program program) {
   auto type_arena = std::move(program.m_type_arena);
 
-  if (!program.m_unifier_state.has_value()) {
-    throw core::InternalCompilerError("UniferState required for ZIR lowering!");
-  }
-
-  auto unifier_state = std::move(program.m_unifier_state.value());
+  auto unifier_state = std::move(program.m_unifier_state);
 
   auto context = zir::Context(type_arena, std::move(unifier_state));
 

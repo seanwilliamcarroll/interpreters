@@ -1,28 +1,30 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : ZIR lowering pass — converts HIR (with resolved unifier
-//*            state) into the arena-backed ZIR.
+//*  Purpose : Monomorphed AST node definitions for bust.
 //*
 //*
 //****************************************************************************
 #pragma once
 //****************************************************************************
 
-#include <mono/nodes.hpp>
-#include <zir/program.hpp>
+#include <hir/nodes.hpp>
+#include <hir/type_arena.hpp>
+#include <hir/types.hpp>
+#include <hir/unifier_state.hpp>
 
 //****************************************************************************
-namespace bust {
+namespace bust::mono {
 //****************************************************************************
 
-/// ZIR lowering pass. Consumes HIR + unifier state and produces a ZIR
-/// program whose types contain no type variables and whose expressions
-/// live in a flat arena.
-struct ZirLowerer {
-  zir::Program operator()(mono::Program program);
+// --- Program ---------------------------------------------------------------
+
+struct Program : public core::HasLocation {
+  hir::TypeArena m_type_arena;
+  std::vector<hir::TopItem> m_top_items;
+  hir::UnifierState m_unifier_state;
 };
 
 //****************************************************************************
-} // namespace bust
+} // namespace bust::mono
 //****************************************************************************

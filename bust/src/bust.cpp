@@ -9,10 +9,10 @@
 #include <ast/dump.hpp>
 #include <bust.hpp>
 #include <codegen.hpp>
+#include <frontend.hpp>
 #include <hir/dump.hpp>
-#include <lexer.hpp>
+#include <mono/dump.hpp>
 #include <monomorpher.hpp>
-#include <parser.hpp>
 #include <pipeline.hpp>
 #include <type_checker.hpp>
 #include <validate_main.hpp>
@@ -24,7 +24,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -48,9 +47,7 @@ void Bust::run() {
     m_input.seekg(0);
   }
 
-  auto lexer = make_lexer(m_input, m_filename);
-  Parser parser(std::move(lexer));
-  auto program = parser.parse();
+  auto program = parse_program(m_input, m_filename);
 
   if (m_options.dump_ast) {
     std::cout << "=== AST ===\n" << ast::Dumper::dump(program) << "\n";
@@ -66,7 +63,7 @@ void Bust::run() {
 
   if (m_options.dump_mono) {
     std::cout << "=== Monomorphed HIR ===\n"
-              << hir::Dumper::dump(monomorphed) << "\n";
+              << mono::Dumper::dump(monomorphed) << "\n";
   }
 
   auto zir = run_pipeline(std::move(monomorphed), ZirLowerer{});

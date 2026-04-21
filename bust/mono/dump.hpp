@@ -1,22 +1,27 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Out-of-line definitions for FunctionHandle.
+//*  Purpose : Mono dump utility for debugging.
 //*
 //*
 //****************************************************************************
-
-#include <codegen/function.hpp>
-#include <codegen/function_handle.hpp>
-
-//****************************************************************************
-namespace bust::codegen {
+#pragma once
 //****************************************************************************
 
-const GlobalHandle &FunctionHandle::name() const {
-  return m_function->signature().m_function_id;
-}
+#include <hir/dump.hpp>
+#include <mono/nodes.hpp>
 
 //****************************************************************************
-} // namespace bust::codegen
+namespace bust::mono {
+//****************************************************************************
+
+class Dumper {
+public:
+  static std::string dump(const Program &program) {
+    return hir::Dumper::dump(program.m_type_arena, program.m_top_items);
+  }
+};
+
+//****************************************************************************
+} // namespace bust::mono
 //****************************************************************************

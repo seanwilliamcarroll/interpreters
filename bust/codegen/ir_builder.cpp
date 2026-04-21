@@ -26,9 +26,9 @@ BlockLabel IRBuilder::entry_block_of(FunctionHandle function) {
   return BlockLabel{&function.m_function->entry_basic_block()};
 }
 
-LocalHandle IRBuilder::add_alloca(const std::string &name,
+NamedHandle IRBuilder::add_alloca(const std::string &name,
                                   TypeId type_id) const {
-  auto output_handle = m_ctx.symbols().define_local(name);
+  auto output_handle = m_ctx.symbols().define_named(name);
 
   current_function_handle().m_function->add_alloca_instruction(
       {.m_handle = output_handle, .m_type = type_id});
@@ -177,15 +177,26 @@ void IRBuilder::create_return_void() const {
   block().add_terminal(ReturnVoidInstruction{});
 }
 
+void IRBuilder::emit_parameter_prologue(
+    const std::vector<Parameter> &parameters) {
+  // Make allocas for all parameters
+  for (const auto &parameter : parameters) {
+    auto alloca_handle =
+        m_ctx.builder().add_alloca(parameter.m_name, parameter.m_type);
+
+    m_ctx.builder().create_store(
+        alloca_handle,
+        {.m_name = NamedHandle{parameter.m_name}, .m_type = parameter.m_type});
+  }
+}
+
 Handle IRBuilder::malloc_struct(TypeId struct_type) const {
   auto size_ptr = create_gep(
       struct_type, LiteralHandle::null(),
       Argument{.m_name = LiteralHandle::one(), .m_type = m_ctx.m_i32}, {});
   auto size_i64 = create_ptr_to_int(size_ptr, m_ctx.m_i64);
   // TODO: Move this out and generalize allocator
-  auto malloc_handle =
-      GlobalHandle{std::string{conventions::allocator_function}};
-  return create_call(malloc_handle,
+  return create_call(m_ctx.allocator_symbol(),
                      {Argument{.m_name = size_i64, .m_type = m_ctx.m_i64}},
                      m_ctx.m_ptr);
 }

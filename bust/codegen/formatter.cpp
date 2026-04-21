@@ -20,6 +20,7 @@
 #include <codegen/types.hpp>
 #include <operators.hpp>
 
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -51,11 +52,7 @@ std::string HandleToString::operator()(const TemporaryHandle &handle) {
   return "%" + std::to_string(new_mapping);
 }
 
-std::string HandleToString::operator()(const LocalHandle &handle) {
-  return "%" + handle.m_handle;
-}
-
-std::string HandleToString::operator()(const ParameterHandle &handle) {
+std::string HandleToString::operator()(const NamedHandle &handle) {
   return "%" + handle.m_handle;
 }
 
@@ -89,9 +86,36 @@ void Formatter::operator()(const Module &mod) {
   m_out << ";------------------------------------------------------------------"
            "--------------\n";
 
+  for (const auto &constant_closure : mod.constant_closures()) {
+    format(constant_closure);
+  }
+
+  m_out << ";------------------------------------------------------------------"
+           "--------------\n";
+
   for (const auto &function : mod.functions()) {
     format(*function);
   }
+}
+
+void Formatter::operator()(const ConstantClosure &constant_closure) {
+  const auto &struct_type = m_ctx.type().as<StructType>(
+      constant_closure.m_type_id, __PRETTY_FUNCTION__);
+
+  m_out << str(constant_closure.m_name) << " = " << ir_syntax::constant << " "
+        << m_ctx.to_string(constant_closure.m_type_id) << " { ";
+
+  assert(struct_type.m_fields.size() == 2 &&
+         "Expected 2 fields for this type!");
+
+  m_out << m_ctx.to_string(struct_type.m_fields[0]) << " "
+        << str(constant_closure.m_function) << ", ";
+
+  m_out << m_ctx.to_string(struct_type.m_fields[1]) << " " << ir_literals::null;
+
+  m_out << " }";
+  newline();
+  newline();
 }
 
 void Formatter::define_struct_type(TypeId struct_type_id) {
@@ -102,10 +126,9 @@ void Formatter::define_struct_type(TypeId struct_type_id) {
   const auto &struct_type =
       m_ctx.type().as<StructType>(struct_type_id, __PRETTY_FUNCTION__);
 
-  for (size_t index = 0; index < struct_type.m_fields.size() - 1; ++index) {
-    m_out << m_ctx.to_string(struct_type.m_fields[index]) << ", ";
-  }
-  m_out << m_ctx.to_string(struct_type.m_fields.back());
+  format_as_comma_separated_list(struct_type.m_fields, [&](const auto &field) {
+    m_out << m_ctx.to_string(field);
+  });
 
   m_out << " }";
 
@@ -114,20 +137,7 @@ void Formatter::define_struct_type(TypeId struct_type_id) {
 }
 
 void Formatter::operator()(const Parameter &parameter) {
-  m_out << m_ctx.to_string(parameter.m_type) << " "
-        << m_handle_converter(parameter.m_name);
-}
-
-void Formatter::function_parameters(const FunctionDeclaration &signature) {
-  if (signature.m_parameters.empty()) {
-    return;
-  }
-  for (size_t index = 0; index < signature.m_parameters.size() - 1; ++index) {
-    const auto &parameter = signature.m_parameters[index];
-    format(parameter);
-    m_out << ", ";
-  }
-  format(signature.m_parameters.back());
+  m_out << m_ctx.to_string(parameter.m_type) << " %" << parameter.m_name;
 }
 
 void Formatter::declare(const FunctionDeclaration &signature) {
@@ -136,7 +146,9 @@ void Formatter::declare(const FunctionDeclaration &signature) {
 
   m_out << "(";
 
-  function_parameters(signature);
+  format_as_comma_separated_list(
+      signature.m_parameters,
+      [&](const auto &parameter) { format(parameter); });
 
   m_out << ")";
 
@@ -150,7 +162,9 @@ void Formatter::define(const FunctionDeclaration &signature) {
 
   m_out << "(";
 
-  function_parameters(signature);
+  format_as_comma_separated_list(
+      signature.m_parameters,
+      [&](const auto &parameter) { format(parameter); });
 
   m_out << ")";
 }
@@ -158,13 +172,6 @@ void Formatter::define(const FunctionDeclaration &signature) {
 void Formatter::operator()(const Function &function) {
   // Reset for each function for readability
   m_handle_converter = HandleToString{};
-
-  m_out << str(function.signature().m_function_id)
-        << ".closure = " << ir_syntax::constant << " "
-        << m_ctx.to_string(m_ctx.m_fat_ptr) << " { " << ir_syntax::ptr << " "
-        << str(function.signature().m_function_id) << ", " << ir_syntax::ptr
-        << " " << ir_literals::null << " }";
-  newline();
 
   define(function.signature());
 
@@ -303,25 +310,16 @@ void Formatter::operator()(const Argument &argument) {
   m_out << m_ctx.to_string(argument.m_type) << " " << str(argument.m_name);
 }
 
-void Formatter::function_arguments(const std::vector<Argument> &arguments) {
-  if (arguments.empty()) {
-    return;
-  }
-  for (size_t index = 0; index < arguments.size() - 1; ++index) {
-    const auto &argument = arguments[index];
-    format(argument);
-    m_out << ", ";
-  }
-  format(arguments.back());
-}
-
 void Formatter::operator()(const CallVoidInstruction &instruction) {
   indent();
 
   m_out << ir_syntax::call_void << " " << str(instruction.m_callee);
 
   m_out << "(";
-  function_arguments(instruction.m_arguments);
+
+  format_as_comma_separated_list(
+      instruction.m_arguments, [&](const auto &argument) { format(argument); });
+
   m_out << ")";
 
   newline();
@@ -335,7 +333,8 @@ void Formatter::operator()(const CallInstruction &instruction) {
         << str(instruction.m_callee);
 
   m_out << "(";
-  function_arguments(instruction.m_arguments);
+  format_as_comma_separated_list(
+      instruction.m_arguments, [&](const auto &argument) { format(argument); });
   m_out << ")";
 
   newline();

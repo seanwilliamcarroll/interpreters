@@ -67,8 +67,14 @@ constexpr std::string_view lambda_global = "lambda";
 
 constexpr std::string_view param_prefix = "param_";
 
+constexpr std::string_view parameter_alloca_suffix = "addr";
+
 inline std::string make_param_name(std::size_t index) {
   return std::string{param_prefix} + std::to_string(index);
+}
+
+inline std::string make_alloca_name(const std::string &input) {
+  return input + "." + std::string{parameter_alloca_suffix};
 }
 
 //****************************************************************************

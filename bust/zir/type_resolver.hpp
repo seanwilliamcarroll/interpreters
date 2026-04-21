@@ -25,7 +25,8 @@ struct TypeResolver {
                         hir::UnifierState unifier_state)
       : m_type_arena(type_arena), m_unifier_state(std::move(unifier_state)) {}
 
-  hir::TypeId resolve(hir::TypeId type_id) {
+  [[nodiscard]]
+  hir::TypeId resolve(hir::TypeId type_id) const {
     const auto &type = m_type_arena.get(type_id);
     if (!std::holds_alternative<hir::TypeVariable>(type)) {
       return type_id;
@@ -48,7 +49,7 @@ struct TypeResolver {
 
 private:
   const hir::TypeArena &m_type_arena;
-  hir::UnifierState m_unifier_state;
+  const hir::UnifierState m_unifier_state;
 };
 
 //****************************************************************************

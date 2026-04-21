@@ -145,7 +145,7 @@ struct FunctionDef : public core::HasLocation {
 struct Program : public core::HasLocation {
   TypeArena m_type_arena;
   std::vector<TopItem> m_top_items;
-  std::optional<UnifierState> m_unifier_state;
+  UnifierState m_unifier_state;
   BindingIdInstantiations m_instantiation_records;
   InnerTypeBindingId m_next_let_binding_id{};
 };

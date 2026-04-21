@@ -61,21 +61,8 @@ struct SymbolTable {
     m_scopes.pop_back();
   }
 
-  LocalHandle define_local(const std::string &name) {
-    LocalHandle new_handle{m_name_tracker.uniquify(name)};
-    m_scopes.back().define(name, new_handle);
-    return new_handle;
-  }
-
-  LocalHandle define_env_handle(const std::string &name) {
-    LocalHandle new_handle{m_name_tracker.uniquify(name)};
-    // Put at global scope so it can always be found
-    m_scopes.front().define(name, new_handle);
-    return new_handle;
-  }
-
-  ParameterHandle define_parameter(const std::string &name) {
-    ParameterHandle new_handle{name};
+  NamedHandle define_named(const std::string &name) {
+    NamedHandle new_handle{m_name_tracker.uniquify(name)};
     m_scopes.back().define(name, new_handle);
     return new_handle;
   }

@@ -73,9 +73,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
       function_def.m_parameters, std::back_inserter(parameters),
       [&](const auto &id) -> Parameter {
         const auto &parameter_binding = m_ctx.arena().get(id);
-        auto handle =
-            m_ctx.symbols().define_parameter(parameter_binding.m_name);
-        return Parameter{.m_name = std::move(handle),
+        return Parameter{.m_name = parameter_binding.m_name,
                          .m_type = m_ctx.to_type(parameter_binding.m_type)};
       });
   return {.m_function_id = GlobalHandle{binding.m_name},
@@ -84,7 +82,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
 }
 
 FunctionDeclaration TopItemGenerator::generate_signature(
-    const zir::ExternFunctionDeclaration &extern_function_declaration) {
+    const zir::ExternFunctionDeclaration &extern_function_declaration) const {
   const auto &binding = m_ctx.arena().get(extern_function_declaration.m_id);
   const auto &type = m_ctx.arena().as_function(binding.m_type);
 
@@ -92,10 +90,9 @@ FunctionDeclaration TopItemGenerator::generate_signature(
   for (auto [index, type_id] :
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
     // Don't actually need names on externs, but doesn't hurt
-    auto handle =
-        m_ctx.symbols().define_parameter(conventions::make_param_name(index));
     parameters.emplace_back(
-        Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+        Parameter{.m_name = conventions::make_param_name(index),
+                  .m_type = m_ctx.to_type(type_id)});
   }
   return {.m_function_id = GlobalHandle{binding.m_name},
           .m_return_type = m_ctx.to_type(type.m_return_type),
@@ -105,9 +102,11 @@ FunctionDeclaration TopItemGenerator::generate_signature(
 void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   ScopeGuard guard(m_ctx.symbols());
 
-  auto function =
-      m_ctx.builder().make_function(generate_signature(function_def));
+  auto signature = generate_signature(function_def);
+  auto function = m_ctx.builder().make_function(signature);
   m_ctx.builder().enter_function(function);
+
+  m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
 
   auto return_value = ExpressionGenerator{m_ctx}.generate(function_def.m_body);
 
@@ -122,6 +121,12 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
     // Wherever we are, we need to add this terminal to the final
     m_ctx.builder().create_return(return_value, m_ctx.to_type(return_type_id));
   }
+
+  m_ctx.module().add_constant_closure({
+      .m_name = {conventions::make_closure_name(function.name().m_handle)},
+      .m_function = function.name(),
+      .m_type_id = m_ctx.m_fat_ptr,
+  });
 }
 
 void TopItemGenerator::operator()(
@@ -143,12 +148,13 @@ void TopItemGenerator::operator()(
   for (auto [index, type_id] :
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
     // Don't actually need names on externs, but doesn't hurt
-    auto handle =
-        m_ctx.symbols().define_parameter(conventions::make_param_name(index));
     parameters.emplace_back(
-        Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+        Parameter{.m_name = conventions::make_param_name(index),
+                  .m_type = m_ctx.to_type(type_id)});
+    // ??
     arguments.emplace_back(
-        Argument{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+        Argument{.m_name = NamedHandle{conventions::make_param_name(index)},
+                 .m_type = m_ctx.to_type(type_id)});
   }
   auto thunked_signature = FunctionDeclaration{
       .m_function_id = GlobalHandle{conventions::make_thunk(binding.m_name)},
@@ -173,6 +179,13 @@ void TopItemGenerator::operator()(
     // Wherever we are, we need to add this terminal to the final
     m_ctx.builder().create_return(callee_return, m_ctx.to_type(return_type_id));
   }
+
+  m_ctx.module().add_constant_closure({
+      .m_name = {conventions::make_closure_name(
+          thunked_signature.m_function_id.m_handle)},
+      .m_function = thunked_signature.m_function_id,
+      .m_type_id = m_ctx.m_fat_ptr,
+  });
 }
 
 void TopItemGenerator::operator()(const zir::LetBinding &let_binding) {

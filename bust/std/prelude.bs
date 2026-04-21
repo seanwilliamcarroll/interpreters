@@ -1,0 +1,1 @@
+extern fn malloc(size: i64) -> i64;

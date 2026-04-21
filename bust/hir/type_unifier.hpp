@@ -29,6 +29,12 @@ struct TypeUnifier {
 
   explicit TypeUnifier(TypeArena &type_arena) : m_type_arena(type_arena) {}
 
+  explicit TypeUnifier(TypeArena &type_arena, UnifierState unifier_state)
+      : m_type_arena(type_arena),
+        m_union_find(std::move(unifier_state.m_union_find)),
+        m_resolved_type_id(std::move(unifier_state.m_resolved_type_id)),
+        m_resolved_type_class(std::move(unifier_state.m_resolved_type_class)) {}
+
   // Adopt an existing UnifierState (e.g. carried forward on hir::Program
   // between passes) by moving its contents into this unifier's own fields.
   // The source state is left empty. Intended for the "aggregate-init an

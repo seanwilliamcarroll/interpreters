@@ -59,7 +59,7 @@ struct IRBuilder {
       : m_ctx(ctx), m_current_function_handle(nullptr),
         m_current_block_label(nullptr) {}
 
-  [[nodiscard]] LocalHandle add_alloca(const std::string &name, TypeId) const;
+  [[nodiscard]] NamedHandle add_alloca(const std::string &name, TypeId) const;
   void add_branch(Handle condition, BlockLabel if_true,
                   BlockLabel if_false) const;
   void add_jump(BlockLabel) const;
@@ -88,6 +88,8 @@ struct IRBuilder {
                                    TypeId from, TypeId to) const;
   void create_return(Handle value, TypeId type) const;
   void create_return_void() const;
+
+  void emit_parameter_prologue(const std::vector<Parameter> &);
 
   [[nodiscard]] Handle malloc_struct(TypeId struct_type) const;
   void store_to_struct(TypeId struct_type, Handle base, size_t index,

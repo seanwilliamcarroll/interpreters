@@ -15,12 +15,21 @@
 
 project(bust VERSION 0.1.0)
 
+# Embed the bust prelude source at configure time. The prelude is prepended
+# to every user program so that compiler-required symbols (e.g. malloc) do
+# not need to be declared by the user.
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/std/prelude.bs PRELUDE_SOURCE)
+configure_file(inc/prelude_source.hpp.in prelude_source.hpp @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/std/prelude.bs)
+
 add_executable(bust-exe src/main.cpp)
 
 set_target_properties(bust-exe PROPERTIES OUTPUT_NAME bust)
 
 add_library(bust-lib STATIC
   src/bust.cpp
+  src/frontend.cpp
   src/tokens.cpp
   hir/block_checker.cpp
   hir/expression_checker.cpp
@@ -33,6 +42,7 @@ add_library(bust-lib STATIC
   src/codegen.cpp
   codegen/arena.cpp
   codegen/block_label.cpp
+  codegen/closure_builder.cpp
   codegen/expression_generator.cpp
   codegen/formatter.cpp
   codegen/function_handle.cpp
@@ -55,7 +65,7 @@ add_library(bust-lib STATIC
 
 set_target_properties(bust-lib PROPERTIES OUTPUT_NAME bust)
 
-target_include_directories(bust-lib PUBLIC inc .)
+target_include_directories(bust-lib PUBLIC inc . ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_options(bust-lib PRIVATE ${PROJECT_WARNINGS})
 
@@ -67,13 +77,21 @@ target_link_libraries(bust-exe bust-lib)
 
 #*****************************************************************************
 
+add_library(bust-testlib INTERFACE)
+
+target_include_directories(bust-testlib INTERFACE test/inc)
+
+
 add_executable(bust-test
   test/src/main.cpp
   test/src/lexer_test.cpp
   test/src/parser_test.cpp
   test/src/type_checker_test.cpp
   test/src/type_unifier_test.cpp
-  test/src/codegen_test.cpp
+  test/src/codegen_expressions_test.cpp
+  test/src/codegen_functions_test.cpp
+  test/src/codegen_side_effects_test.cpp
+  test/src/codegen_lambdas_test.cpp
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/monomorpher_test.cpp
@@ -84,6 +102,7 @@ target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
 target_link_libraries(bust-test
   bust-lib
+  bust-testlib
   rapidcheck
   doctest::doctest)
 
@@ -124,6 +143,9 @@ add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
 add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
 add_test(NAME bust.zir_lowerer COMMAND bust-test -ts=bust.zir_lowerer)
 add_test(NAME bust.free_variable_collector COMMAND bust-test -ts=bust.free_variable_collector)
-add_test(NAME bust.codegen COMMAND bust-test -ts=bust.codegen)
+add_test(NAME bust.codegen.expressions COMMAND bust-test -ts=bust.codegen.expressions)
+add_test(NAME bust.codegen.functions COMMAND bust-test -ts=bust.codegen.functions)
+add_test(NAME bust.codegen.side_effects COMMAND bust-test -ts=bust.codegen.side_effects)
+add_test(NAME bust.codegen.lambdas COMMAND bust-test -ts=bust.codegen.lambdas)
 
 #*****************************************************************************

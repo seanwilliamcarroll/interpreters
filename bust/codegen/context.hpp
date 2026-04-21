@@ -11,6 +11,7 @@
 #include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
+#include <codegen/handle.hpp>
 #include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
@@ -30,6 +31,7 @@ namespace bust::codegen {
 struct Context {
   Context(const zir::Arena &arena)
       : m_arena(arena), m_builder(*this),
+        m_allocator_symbol({std::string{conventions::allocator_function}}),
         m_void(m_type_arena.intern(VoidType{})),
         m_i1(m_type_arena.intern(I1Type{})),
         m_i8(m_type_arena.intern(I8Type{})),
@@ -71,12 +73,16 @@ struct Context {
   [[nodiscard]]
   Parameter env_parameter() const {
     return {
-        .m_name = ParameterHandle{std::string{conventions::env_parameter_name}},
+        .m_name = {std::string{conventions::env_parameter_name}},
         .m_type = m_ptr,
     };
   }
 
   IRBuilder &builder() { return m_builder; }
+
+  [[nodiscard]] const GlobalHandle &allocator_symbol() const {
+    return m_allocator_symbol;
+  }
 
 private:
   Module m_module;
@@ -84,6 +90,7 @@ private:
   const zir::Arena &m_arena;
   TypeArena m_type_arena;
   IRBuilder m_builder;
+  GlobalHandle m_allocator_symbol;
 
 public:
   TypeId m_void;

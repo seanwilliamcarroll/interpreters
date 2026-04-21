@@ -18,8 +18,6 @@
 #include <source_location.hpp>
 
 #include <iterator>
-#include <optional>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -27,16 +25,10 @@
 namespace bust {
 //****************************************************************************
 
-hir::Program Monomorpher::operator()(hir::Program program) {
+mono::Program Monomorpher::operator()(hir::Program program) {
   // We have a program and within it are instantiation records
-  //
-  if (!program.m_unifier_state.has_value()) {
-    throw core::InternalCompilerError(
-        "Cannot monomorphize a program without unification state!");
-  }
-
   auto context = mono::Context(
-      program.m_type_arena, std::move(program.m_unifier_state.value()),
+      program.m_type_arena, std::move(program.m_unifier_state),
       program.m_instantiation_records, program.m_next_let_binding_id);
 
   std::vector<hir::TopItem> top_items;
@@ -51,8 +43,7 @@ hir::Program Monomorpher::operator()(hir::Program program) {
   return {{program.m_location},
           std::move(program.m_type_arena),
           std::move(top_items),
-          std::move(program.m_unifier_state),
-          {}};
+          std::move(program.m_unifier_state)};
 }
 
 //****************************************************************************

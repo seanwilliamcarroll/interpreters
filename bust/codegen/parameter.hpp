@@ -16,7 +16,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct Parameter {
-  ParameterHandle m_name;
+  std::string m_name;
   TypeId m_type;
 };
 
