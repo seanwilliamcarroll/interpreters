@@ -67,12 +67,6 @@ struct SymbolTable {
     return new_handle;
   }
 
-  ParameterHandle define_parameter(const std::string &name) {
-    ParameterHandle new_handle{name};
-    m_scopes.back().define(name, new_handle);
-    return new_handle;
-  }
-
   GlobalHandle define_global(const std::string &name) {
     GlobalHandle new_handle{name};
     m_scopes.front().define(name, new_handle);

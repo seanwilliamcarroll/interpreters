@@ -449,8 +449,7 @@ FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
       [this](const zir::IdentifierExpr &parameter) -> Parameter {
         auto binding = m_ctx.arena().get(parameter.m_id);
 
-        auto handle = m_ctx.symbols().define_parameter(binding.m_name);
-        return Parameter{.m_name = std::move(handle),
+        return Parameter{.m_name = binding.m_name,
                          .m_type = m_ctx.to_type(binding.m_type)};
       });
 

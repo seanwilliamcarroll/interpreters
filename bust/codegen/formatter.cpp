@@ -56,10 +56,6 @@ std::string HandleToString::operator()(const LocalHandle &handle) {
   return "%" + handle.m_handle;
 }
 
-std::string HandleToString::operator()(const ParameterHandle &handle) {
-  return "%" + handle.m_handle;
-}
-
 std::string HandleToString::operator()(const GlobalHandle &handle) {
   return "@" + handle.m_handle;
 }
@@ -142,8 +138,7 @@ void Formatter::define_struct_type(TypeId struct_type_id) {
 }
 
 void Formatter::operator()(const Parameter &parameter) {
-  m_out << m_ctx.to_string(parameter.m_type) << " "
-        << m_handle_converter(parameter.m_name);
+  m_out << m_ctx.to_string(parameter.m_type) << " %" << parameter.m_name;
 }
 
 void Formatter::function_parameters(const FunctionDeclaration &signature) {

@@ -8,6 +8,8 @@
 
 #include <codegen/closure_builder.hpp>
 
+#include "codegen/handle.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -60,7 +62,8 @@ void ClosureBuilder::emit_capture_load_prologue() {
     auto capture_temp_handle =
         m_ctx.builder().add_alloca(capture.m_source_name, capture.m_type_id);
     auto value = m_ctx.builder().load_from_struct(
-        m_type_id, m_ctx.env_parameter().m_name, index, capture.m_type_id);
+        m_type_id, LocalHandle{m_ctx.env_parameter().m_name}, index,
+        capture.m_type_id);
     m_ctx.builder().create_store(
         capture_temp_handle, {.m_name = value, .m_type = capture.m_type_id});
   }

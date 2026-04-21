@@ -73,9 +73,7 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
       function_def.m_parameters, std::back_inserter(parameters),
       [&](const auto &id) -> Parameter {
         const auto &parameter_binding = m_ctx.arena().get(id);
-        auto handle =
-            m_ctx.symbols().define_parameter(parameter_binding.m_name);
-        return Parameter{.m_name = std::move(handle),
+        return Parameter{.m_name = parameter_binding.m_name,
                          .m_type = m_ctx.to_type(parameter_binding.m_type)};
       });
   return {.m_function_id = GlobalHandle{binding.m_name},
@@ -92,10 +90,9 @@ FunctionDeclaration TopItemGenerator::generate_signature(
   for (auto [index, type_id] :
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
     // Don't actually need names on externs, but doesn't hurt
-    auto handle =
-        m_ctx.symbols().define_parameter(conventions::make_param_name(index));
     parameters.emplace_back(
-        Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+        Parameter{.m_name = conventions::make_param_name(index),
+                  .m_type = m_ctx.to_type(type_id)});
   }
   return {.m_function_id = GlobalHandle{binding.m_name},
           .m_return_type = m_ctx.to_type(type.m_return_type),
@@ -151,12 +148,13 @@ void TopItemGenerator::operator()(
   for (auto [index, type_id] :
        std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
     // Don't actually need names on externs, but doesn't hurt
-    auto handle =
-        m_ctx.symbols().define_parameter(conventions::make_param_name(index));
     parameters.emplace_back(
-        Parameter{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+        Parameter{.m_name = conventions::make_param_name(index),
+                  .m_type = m_ctx.to_type(type_id)});
+    // ??
     arguments.emplace_back(
-        Argument{.m_name = handle, .m_type = m_ctx.to_type(type_id)});
+        Argument{.m_name = LocalHandle{conventions::make_param_name(index)},
+                 .m_type = m_ctx.to_type(type_id)});
   }
   auto thunked_signature = FunctionDeclaration{
       .m_function_id = GlobalHandle{conventions::make_thunk(binding.m_name)},

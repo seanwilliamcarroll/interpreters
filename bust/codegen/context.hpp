@@ -71,7 +71,7 @@ struct Context {
   [[nodiscard]]
   Parameter env_parameter() const {
     return {
-        .m_name = ParameterHandle{std::string{conventions::env_parameter_name}},
+        .m_name = {std::string{conventions::env_parameter_name}},
         .m_type = m_ptr,
     };
   }

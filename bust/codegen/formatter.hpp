@@ -35,7 +35,6 @@ struct HandleToString {
   std::string operator()(const LiteralHandle &);
   std::string operator()(const TemporaryHandle &);
   std::string operator()(const LocalHandle &);
-  std::string operator()(const ParameterHandle &);
   std::string operator()(const GlobalHandle &);
 
   size_t m_temporary_count = 0;

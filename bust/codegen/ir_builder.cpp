@@ -181,10 +181,12 @@ void IRBuilder::emit_parameter_prologue(
     const std::vector<Parameter> &parameters) {
   // Make allocas for all parameters
   for (const auto &parameter : parameters) {
-    auto source_name = get_raw_handle(parameter.m_name);
-    auto new_handle = m_ctx.builder().add_alloca(source_name, parameter.m_type);
+    auto alloca_handle =
+        m_ctx.builder().add_alloca(parameter.m_name, parameter.m_type);
+
     m_ctx.builder().create_store(
-        new_handle, {.m_name = parameter.m_name, .m_type = parameter.m_type});
+        alloca_handle,
+        {.m_name = LocalHandle{parameter.m_name}, .m_type = parameter.m_type});
   }
 }
 
