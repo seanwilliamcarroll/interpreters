@@ -33,6 +33,7 @@ add_library(bust-lib STATIC
   src/codegen.cpp
   codegen/arena.cpp
   codegen/block_label.cpp
+  codegen/closure_builder.cpp
   codegen/expression_generator.cpp
   codegen/formatter.cpp
   codegen/function_handle.cpp
