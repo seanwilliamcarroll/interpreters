@@ -17,14 +17,16 @@
 #include <memory>
 #include <vector>
 
+#include "codegen/handle.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
 
-struct Global {
-  Handle m_name;
-  TypeId m_type;
-  // Value? LiteralHandle?
+struct ConstantClosure {
+  GlobalHandle m_name;
+  GlobalHandle m_function;
+  TypeId m_type_id;
 };
 
 struct Module {
@@ -35,8 +37,6 @@ struct Module {
     m_functions.emplace_back(std::make_unique<Function>(std::move(signature)));
     return *m_functions.back();
   }
-
-  [[nodiscard]] const std::vector<Global> &globals() const { return m_globals; }
 
   [[nodiscard]] const std::vector<std::unique_ptr<Function>> &
   functions() const {
@@ -53,12 +53,16 @@ struct Module {
     return m_extern_functions;
   }
 
-  void add_global_constant(const Global &global) {
-    m_globals.push_back(global);
+  void add_constant_closure(ConstantClosure constant_closure) {
+    m_constant_closures.emplace_back(std::move(constant_closure));
+  }
+
+  [[nodiscard]] const std::vector<ConstantClosure> &constant_closures() const {
+    return m_constant_closures;
   }
 
 private:
-  std::vector<Global> m_globals;
+  std::vector<ConstantClosure> m_constant_closures;
   std::vector<std::unique_ptr<Function>> m_functions;
   std::vector<std::unique_ptr<FunctionDeclaration>> m_extern_functions;
 };

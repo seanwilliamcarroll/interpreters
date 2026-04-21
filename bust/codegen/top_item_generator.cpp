@@ -122,6 +122,12 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
     // Wherever we are, we need to add this terminal to the final
     m_ctx.builder().create_return(return_value, m_ctx.to_type(return_type_id));
   }
+
+  m_ctx.module().add_constant_closure({
+      .m_name = {conventions::make_closure_name(function.name().m_handle)},
+      .m_function = function.name(),
+      .m_type_id = m_ctx.m_fat_ptr,
+  });
 }
 
 void TopItemGenerator::operator()(
@@ -173,6 +179,13 @@ void TopItemGenerator::operator()(
     // Wherever we are, we need to add this terminal to the final
     m_ctx.builder().create_return(callee_return, m_ctx.to_type(return_type_id));
   }
+
+  m_ctx.module().add_constant_closure({
+      .m_name = {conventions::make_closure_name(
+          thunked_signature.m_function_id.m_handle)},
+      .m_function = thunked_signature.m_function_id,
+      .m_type_id = m_ctx.m_fat_ptr,
+  });
 }
 
 void TopItemGenerator::operator()(const zir::LetBinding &let_binding) {

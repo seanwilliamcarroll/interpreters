@@ -463,17 +463,48 @@ FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
                              .m_parameters = std::move(parameters)};
 }
 
-Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
-  ScopeGuard scope_guard(m_ctx.symbols());
+GlobalHandle
+ExpressionGenerator::lift_free_lambda(const zir::LambdaExpr &lambda_expr) {
 
   auto signature = generate_lambda_signature(lambda_expr);
 
   auto lambda_handle = signature.m_function_id;
 
+  // Emit code for new lambda function
+  {
+    auto function_guard = m_ctx.builder().push_new_function(signature);
+
+    auto return_value = generate(lambda_expr.m_body);
+    if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
+      m_ctx.builder().create_return_void();
+    } else {
+      m_ctx.builder().create_return(return_value,
+                                    m_ctx.to_type(lambda_expr.m_return_type));
+    }
+  }
+
+  auto closure_name =
+      GlobalHandle{conventions::make_closure_name(lambda_handle.m_handle)};
+  m_ctx.module().add_constant_closure({
+      .m_name = closure_name,
+      .m_function = lambda_handle,
+      .m_type_id = m_ctx.m_fat_ptr,
+  });
+
+  return closure_name;
+}
+
+Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
+  ScopeGuard scope_guard(m_ctx.symbols());
+
   if (lambda_expr.m_captures.empty()) {
     // Lift lambda to regular top level function
-    throw core::InternalCompilerError("UNIMPLEMENTED");
+    return lift_free_lambda(lambda_expr);
   }
+
+  auto signature = generate_lambda_signature(lambda_expr);
+
+  auto lambda_handle = signature.m_function_id;
 
   auto closure_builder = ClosureBuilder(m_ctx, lambda_expr.m_captures);
 
@@ -495,8 +526,7 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   }
 
   // Emit code to package lambda as a fat pointer
-  return closure_builder.package_fat_pointer(
-      std::get<GlobalHandle>(lambda_handle), env_handle);
+  return closure_builder.package_fat_pointer(lambda_handle, env_handle);
 }
 
 //****************************************************************************

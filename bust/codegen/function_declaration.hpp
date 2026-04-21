@@ -19,7 +19,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct FunctionDeclaration {
-  Handle m_function_id;
+  GlobalHandle m_function_id;
   TypeId m_return_type;
   std::vector<Parameter> m_parameters;
 };

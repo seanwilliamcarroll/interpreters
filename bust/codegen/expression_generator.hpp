@@ -49,6 +49,7 @@ struct ExpressionGenerator {
 
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
 
+  GlobalHandle lift_free_lambda(const zir::LambdaExpr &);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

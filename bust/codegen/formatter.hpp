@@ -53,6 +53,7 @@ struct Formatter {
 
   void define_struct_type(TypeId);
   void operator()(const Module &);
+  void operator()(const ConstantClosure &);
 
   void operator()(const Parameter &);
   void function_parameters(const FunctionDeclaration &);

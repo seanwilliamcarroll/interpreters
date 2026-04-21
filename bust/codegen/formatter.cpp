@@ -20,6 +20,7 @@
 #include <codegen/types.hpp>
 #include <operators.hpp>
 
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -89,9 +90,36 @@ void Formatter::operator()(const Module &mod) {
   m_out << ";------------------------------------------------------------------"
            "--------------\n";
 
+  for (const auto &constant_closure : mod.constant_closures()) {
+    format(constant_closure);
+  }
+
+  m_out << ";------------------------------------------------------------------"
+           "--------------\n";
+
   for (const auto &function : mod.functions()) {
     format(*function);
   }
+}
+
+void Formatter::operator()(const ConstantClosure &constant_closure) {
+  const auto &struct_type = m_ctx.type().as<StructType>(
+      constant_closure.m_type_id, __PRETTY_FUNCTION__);
+
+  m_out << str(constant_closure.m_name) << " = " << ir_syntax::constant << " "
+        << m_ctx.to_string(constant_closure.m_type_id) << " { ";
+
+  assert(struct_type.m_fields.size() == 2 &&
+         "Expected 2 fields for this type!");
+
+  m_out << m_ctx.to_string(struct_type.m_fields[0]) << " "
+        << str(constant_closure.m_function) << ", ";
+
+  m_out << m_ctx.to_string(struct_type.m_fields[1]) << " " << ir_literals::null;
+
+  m_out << " }";
+  newline();
+  newline();
 }
 
 void Formatter::define_struct_type(TypeId struct_type_id) {
@@ -158,13 +186,6 @@ void Formatter::define(const FunctionDeclaration &signature) {
 void Formatter::operator()(const Function &function) {
   // Reset for each function for readability
   m_handle_converter = HandleToString{};
-
-  m_out << str(function.signature().m_function_id)
-        << ".closure = " << ir_syntax::constant << " "
-        << m_ctx.to_string(m_ctx.m_fat_ptr) << " { " << ir_syntax::ptr << " "
-        << str(function.signature().m_function_id) << ", " << ir_syntax::ptr
-        << " " << ir_literals::null << " }";
-  newline();
 
   define(function.signature());
 

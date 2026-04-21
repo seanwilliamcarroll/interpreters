@@ -13,7 +13,7 @@
 namespace bust::codegen {
 //****************************************************************************
 
-const Handle &FunctionHandle::name() const {
+const GlobalHandle &FunctionHandle::name() const {
   return m_function->signature().m_function_id;
 }
 
