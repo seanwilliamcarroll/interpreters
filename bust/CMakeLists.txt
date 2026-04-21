@@ -77,6 +77,11 @@ target_link_libraries(bust-exe bust-lib)
 
 #*****************************************************************************
 
+add_library(bust-testlib INTERFACE)
+
+target_include_directories(bust-testlib INTERFACE test/inc)
+
+
 add_executable(bust-test
   test/src/main.cpp
   test/src/lexer_test.cpp
@@ -97,6 +102,7 @@ target_compile_options(bust-test PRIVATE ${PROJECT_WARNINGS})
 
 target_link_libraries(bust-test
   bust-lib
+  bust-testlib
   rapidcheck
   doctest::doctest)
 

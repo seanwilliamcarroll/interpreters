@@ -24,11 +24,10 @@ struct Context {
   explicit Context(hir::TypeArena &type_arena, hir::UnifierState unifier_state,
                    const hir::BindingIdInstantiations &instantiation_records,
                    hir::InnerTypeBindingId next_let_binding_id)
-      : m_type_arena(type_arena), m_type_unifier(type_arena),
+      : m_type_arena(type_arena),
+        m_type_unifier(type_arena, std::move(unifier_state)),
         m_instantiation_records(instantiation_records),
-        m_next_let_binding_id(next_let_binding_id) {
-    m_type_unifier.adopt_state(std::move(unifier_state));
-  }
+        m_next_let_binding_id(next_let_binding_id) {}
 
   hir::TypeArena &type_arena() { return m_type_arena; }
 

@@ -48,7 +48,7 @@ struct TypeResolver {
 
 private:
   const hir::TypeArena &m_type_arena;
-  hir::UnifierState m_unifier_state;
+  const hir::UnifierState m_unifier_state;
 };
 
 //****************************************************************************

@@ -11,6 +11,7 @@
 #include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
+#include <codegen/handle.hpp>
 #include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
@@ -22,8 +23,6 @@
 
 #include <cassert>
 #include <string>
-
-#include "codegen/handle.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

@@ -10,14 +10,13 @@
 
 #include <codegen/arena.hpp>
 #include <codegen/function.hpp>
+#include <codegen/handle.hpp>
 #include <codegen/types.hpp>
 #include <zir/arena.hpp>
 
 #include <cstddef>
 #include <memory>
 #include <vector>
-
-#include "codegen/handle.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

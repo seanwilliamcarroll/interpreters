@@ -7,8 +7,7 @@
 //****************************************************************************
 
 #include <codegen/closure_builder.hpp>
-
-#include "codegen/handle.hpp"
+#include <codegen/handle.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

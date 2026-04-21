@@ -14,9 +14,9 @@
 //*
 //****************************************************************************
 
-#include <doctest/doctest.h>
+#include <test/inc/codegen_test_helpers.hpp>
 
-#include "codegen_test_helpers.hpp"
+#include <doctest/doctest.h>
 
 //****************************************************************************
 namespace bust {

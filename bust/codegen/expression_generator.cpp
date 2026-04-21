@@ -7,6 +7,7 @@
 //****************************************************************************
 
 #include <codegen/basic_block.hpp>
+#include <codegen/closure_builder.hpp>
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
@@ -38,8 +39,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "codegen/closure_builder.hpp"
 
 //****************************************************************************
 namespace bust::codegen {

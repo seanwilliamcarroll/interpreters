@@ -12,11 +12,11 @@
 //*
 //****************************************************************************
 
+#include <test/inc/codegen_test_helpers.hpp>
+
 #include <string>
 
 #include <doctest/doctest.h>
-
-#include "codegen_test_helpers.hpp"
 
 //****************************************************************************
 namespace bust {
