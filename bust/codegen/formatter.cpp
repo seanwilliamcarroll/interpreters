@@ -126,10 +126,9 @@ void Formatter::define_struct_type(TypeId struct_type_id) {
   const auto &struct_type =
       m_ctx.type().as<StructType>(struct_type_id, __PRETTY_FUNCTION__);
 
-  for (size_t index = 0; index < struct_type.m_fields.size() - 1; ++index) {
-    m_out << m_ctx.to_string(struct_type.m_fields[index]) << ", ";
-  }
-  m_out << m_ctx.to_string(struct_type.m_fields.back());
+  format_as_comma_separated_list(struct_type.m_fields, [&](const auto &field) {
+    m_out << m_ctx.to_string(field);
+  });
 
   m_out << " }";
 
@@ -141,25 +140,15 @@ void Formatter::operator()(const Parameter &parameter) {
   m_out << m_ctx.to_string(parameter.m_type) << " %" << parameter.m_name;
 }
 
-void Formatter::function_parameters(const FunctionDeclaration &signature) {
-  if (signature.m_parameters.empty()) {
-    return;
-  }
-  for (size_t index = 0; index < signature.m_parameters.size() - 1; ++index) {
-    const auto &parameter = signature.m_parameters[index];
-    format(parameter);
-    m_out << ", ";
-  }
-  format(signature.m_parameters.back());
-}
-
 void Formatter::declare(const FunctionDeclaration &signature) {
   m_out << ir_syntax::declare << " " << m_ctx.to_string(signature.m_return_type)
         << " " << str(signature.m_function_id);
 
   m_out << "(";
 
-  function_parameters(signature);
+  format_as_comma_separated_list(
+      signature.m_parameters,
+      [&](const auto &parameter) { format(parameter); });
 
   m_out << ")";
 
@@ -173,7 +162,9 @@ void Formatter::define(const FunctionDeclaration &signature) {
 
   m_out << "(";
 
-  function_parameters(signature);
+  format_as_comma_separated_list(
+      signature.m_parameters,
+      [&](const auto &parameter) { format(parameter); });
 
   m_out << ")";
 }
@@ -319,25 +310,16 @@ void Formatter::operator()(const Argument &argument) {
   m_out << m_ctx.to_string(argument.m_type) << " " << str(argument.m_name);
 }
 
-void Formatter::function_arguments(const std::vector<Argument> &arguments) {
-  if (arguments.empty()) {
-    return;
-  }
-  for (size_t index = 0; index < arguments.size() - 1; ++index) {
-    const auto &argument = arguments[index];
-    format(argument);
-    m_out << ", ";
-  }
-  format(arguments.back());
-}
-
 void Formatter::operator()(const CallVoidInstruction &instruction) {
   indent();
 
   m_out << ir_syntax::call_void << " " << str(instruction.m_callee);
 
   m_out << "(";
-  function_arguments(instruction.m_arguments);
+
+  format_as_comma_separated_list(
+      instruction.m_arguments, [&](const auto &argument) { format(argument); });
+
   m_out << ")";
 
   newline();
@@ -351,7 +333,8 @@ void Formatter::operator()(const CallInstruction &instruction) {
         << str(instruction.m_callee);
 
   m_out << "(";
-  function_arguments(instruction.m_arguments);
+  format_as_comma_separated_list(
+      instruction.m_arguments, [&](const auto &argument) { format(argument); });
   m_out << ")";
 
   newline();

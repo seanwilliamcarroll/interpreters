@@ -55,7 +55,6 @@ struct Formatter {
   void operator()(const ConstantClosure &);
 
   void operator()(const Parameter &);
-  void function_parameters(const FunctionDeclaration &);
   void declare(const FunctionDeclaration &);
   void define(const FunctionDeclaration &);
   void operator()(const Function &);
@@ -72,7 +71,6 @@ struct Formatter {
   void operator()(const PtrToIntInstruction &);
 
   void operator()(const Argument &);
-  void function_arguments(const std::vector<Argument> &);
   void operator()(const CallVoidInstruction &);
   void operator()(const CallInstruction &);
   void operator()(const AllocaInstruction &);
@@ -82,6 +80,7 @@ struct Formatter {
   void operator()(const ReturnInstruction &);
   void operator()(const ReturnVoidInstruction &);
 
+private:
   void newline() { m_out << "\n"; }
 
   void indent() { m_out << INDENT; }
@@ -91,7 +90,18 @@ struct Formatter {
     indent();
   }
 
-private:
+  void format_as_comma_separated_list(const auto &list_to_format,
+                                      auto formatting_function) {
+    if (list_to_format.empty()) {
+      return;
+    }
+    for (size_t index = 0; index < list_to_format.size() - 1; ++index) {
+      formatting_function(list_to_format[index]);
+      m_out << ", ";
+    }
+    formatting_function(list_to_format.back());
+  }
+
   const Context &m_ctx;
   std::ostream &m_out;
   HandleToString m_handle_converter{};
