@@ -108,17 +108,9 @@ Handle ExpressionGenerator::operator()(const zir::Block &block) {
   return {};
 }
 
-zir::TypeId ExpressionGenerator::get_block_type(const zir::Block &block) const {
-  if (block.m_final_expression.has_value()) {
-    const auto &expression =
-        m_ctx.arena().get(block.m_final_expression.value());
-    return expression.m_type_id;
-  }
-  return m_ctx.arena().m_unit;
-}
-
 Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
-  const auto &if_return_type_id = get_block_type(if_expression.m_then_block);
+  const auto &if_return_type_id =
+      m_ctx.arena().get_block_type(if_expression.m_then_block);
   const auto &llvm_return_type_id = m_ctx.to_type(if_return_type_id);
 
   const auto has_else_branch = if_expression.m_else_block.has_value();

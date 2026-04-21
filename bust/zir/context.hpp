@@ -93,6 +93,7 @@ struct Context {
   }
   Environment &env() { return m_env; }
   Arena &arena() { return m_arena; }
+  [[nodiscard]] const Arena &arena() const { return m_arena; }
 
   [[nodiscard]] std::string to_string(hir::TypeId type) const {
     return m_type_arena.to_string(type);

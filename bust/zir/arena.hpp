@@ -95,6 +95,14 @@ struct Arena {
     return m_type_arena.to_string(type_id);
   }
 
+  [[nodiscard]] TypeId get_block_type(const Block &block) const {
+    if (block.m_final_expression.has_value()) {
+      const auto &expression = get(block.m_final_expression.value());
+      return expression.m_type_id;
+    }
+    return m_unit;
+  }
+
 private:
   TypeArena m_type_arena;
   ExpressionArena m_expr_arena{};
