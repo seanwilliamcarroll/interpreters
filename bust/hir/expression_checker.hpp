@@ -43,12 +43,12 @@ struct ExpressionChecker {
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::ForExpr> &,
                         const core::SourceLocation &);
-  Expression operator()(const ast::LiteralI8 &, const core::SourceLocation &);
-  Expression operator()(const ast::LiteralI32 &, const core::SourceLocation &);
-  Expression operator()(const ast::LiteralI64 &, const core::SourceLocation &);
-  Expression operator()(const ast::LiteralBool &, const core::SourceLocation &);
-  Expression operator()(const ast::LiteralChar &, const core::SourceLocation &);
-  Expression operator()(const ast::LiteralUnit &, const core::SourceLocation &);
+  Expression operator()(const ast::I8 &, const core::SourceLocation &);
+  Expression operator()(const ast::I32 &, const core::SourceLocation &);
+  Expression operator()(const ast::I64 &, const core::SourceLocation &);
+  Expression operator()(const ast::Bool &, const core::SourceLocation &);
+  Expression operator()(const ast::Char &, const core::SourceLocation &);
+  Expression operator()(const ast::Unit &, const core::SourceLocation &);
 
   Context &m_ctx;
 };

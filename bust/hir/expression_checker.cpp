@@ -480,44 +480,38 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
   throw core::InternalCompilerError("Not yet implemented");
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralI8 &literal,
+Expression ExpressionChecker::operator()(const ast::I8 &literal,
                                          const core::SourceLocation &location) {
-  return {{location},
-          m_ctx.m_type_arena.m_i8,
-          LiteralI8{{location}, literal.m_value}};
+  return {{location}, m_ctx.m_type_arena.m_i8, I8{{location}, literal.m_value}};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralI32 &literal,
+Expression ExpressionChecker::operator()(const ast::I32 &literal,
                                          const core::SourceLocation &location) {
-  return {{location},
-          m_ctx.m_type_arena.m_i32,
-          LiteralI32{{location}, literal.m_value}};
+  return {
+      {location}, m_ctx.m_type_arena.m_i32, I32{{location}, literal.m_value}};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralI64 &literal,
+Expression ExpressionChecker::operator()(const ast::I64 &literal,
                                          const core::SourceLocation &location) {
-  return {{location},
-          m_ctx.m_type_arena.m_i64,
-          LiteralI64{{location}, literal.m_value}};
+  return {
+      {location}, m_ctx.m_type_arena.m_i64, I64{{location}, literal.m_value}};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralBool &literal,
+Expression ExpressionChecker::operator()(const ast::Bool &literal,
                                          const core::SourceLocation &location) {
-  return {{location},
-          m_ctx.m_type_arena.m_bool,
-          LiteralBool{{location}, literal.m_value}};
+  return {
+      {location}, m_ctx.m_type_arena.m_bool, Bool{{location}, literal.m_value}};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralChar &literal,
+Expression ExpressionChecker::operator()(const ast::Char &literal,
                                          const core::SourceLocation &location) {
-  return {{location},
-          m_ctx.m_type_arena.m_char,
-          LiteralChar{{location}, literal.m_value}};
+  return {
+      {location}, m_ctx.m_type_arena.m_char, Char{{location}, literal.m_value}};
 }
 
-Expression ExpressionChecker::operator()(const ast::LiteralUnit & /*unused*/,
+Expression ExpressionChecker::operator()(const ast::Unit & /*unused*/,
                                          const core::SourceLocation &location) {
-  return {{location}, m_ctx.m_type_arena.m_unit, LiteralUnit{{location}}};
+  return {{location}, m_ctx.m_type_arena.m_unit, Unit{{location}}};
 }
 
 //****************************************************************************

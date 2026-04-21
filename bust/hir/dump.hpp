@@ -160,11 +160,11 @@ private:
           using T = std::decay_t<decltype(v)>;
           if constexpr (std::is_same_v<T, Identifier>) {
             m_out << "Ident(" << v.m_name << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralI64>) {
+          } else if constexpr (std::is_same_v<T, I64>) {
             m_out << "Int(" << v.m_value << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralBool>) {
+          } else if constexpr (std::is_same_v<T, Bool>) {
             m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralUnit>) {
+          } else if constexpr (std::is_same_v<T, Unit>) {
             m_out << "Unit\n";
           } else if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpr>>) {
             m_out << "Binary(" << v->m_operator << ")\n";

@@ -37,12 +37,12 @@ template <typename LiteralType> struct AbstractLiteral {
   LiteralType m_value;
 };
 
-using LiteralI8 = AbstractLiteral<int8_t>;
-using LiteralI32 = AbstractLiteral<int32_t>;
-using LiteralI64 = AbstractLiteral<int64_t>;
-using LiteralBool = AbstractLiteral<bool>;
-using LiteralChar = AbstractLiteral<char>;
-struct LiteralUnit {};
+using I8 = AbstractLiteral<int8_t>;
+using I32 = AbstractLiteral<int32_t>;
+using I64 = AbstractLiteral<int64_t>;
+using Bool = AbstractLiteral<bool>;
+using Char = AbstractLiteral<char>;
+struct Unit {};
 
 // --- Core type aliases -----------------------------------------------------
 
@@ -62,8 +62,7 @@ using ExprKind =
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
-                 std::unique_ptr<ForExpr>, LiteralI8, LiteralI32, LiteralI64,
-                 LiteralBool, LiteralChar, LiteralUnit>;
+                 std::unique_ptr<ForExpr>, I8, I32, I64, Bool, Char, Unit>;
 
 using Statement = std::variant<LetBinding, Expression>;
 

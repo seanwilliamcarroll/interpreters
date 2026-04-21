@@ -74,27 +74,27 @@ ExprKind ExpressionLowerer::operator()(const hir::Identifier &identifier) {
   return lower(identifier);
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralUnit & /*unused*/) {
+ExprKind ExpressionLowerer::operator()(const hir::Unit & /*unused*/) {
   return Unit{};
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralI8 &literal) {
+ExprKind ExpressionLowerer::operator()(const hir::I8 &literal) {
   return I8{literal.m_value};
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralI32 &literal) {
+ExprKind ExpressionLowerer::operator()(const hir::I32 &literal) {
   return I32{literal.m_value};
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralI64 &literal) {
+ExprKind ExpressionLowerer::operator()(const hir::I64 &literal) {
   return I64{literal.m_value};
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralBool &literal) {
+ExprKind ExpressionLowerer::operator()(const hir::Bool &literal) {
   return Bool{literal.m_value};
 }
 
-ExprKind ExpressionLowerer::operator()(const hir::LiteralChar &literal) {
+ExprKind ExpressionLowerer::operator()(const hir::Char &literal) {
   return Char{literal.m_value};
 }
 

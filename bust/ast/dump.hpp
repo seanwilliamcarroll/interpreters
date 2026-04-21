@@ -172,16 +172,16 @@ private:
           if constexpr (std::is_same_v<T, Identifier>) {
             indent();
             m_out << "Ident(" << v.m_name << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralI64>) {
+          } else if constexpr (std::is_same_v<T, I64>) {
             indent();
             m_out << "Int(" << v.m_value << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralBool>) {
+          } else if constexpr (std::is_same_v<T, Bool>) {
             indent();
             m_out << "Bool(" << (v.m_value ? "true" : "false") << ")\n";
-          } else if constexpr (std::is_same_v<T, LiteralChar>) {
+          } else if constexpr (std::is_same_v<T, Char>) {
             indent();
             m_out << "Char('" << (v.m_value) << "')\n";
-          } else if constexpr (std::is_same_v<T, LiteralUnit>) {
+          } else if constexpr (std::is_same_v<T, Unit>) {
             line("Unit");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpr>>) {
             dump_binary(*v);
