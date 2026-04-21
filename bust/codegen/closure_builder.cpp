@@ -23,8 +23,11 @@ ClosureBuilder::ClosureBuilder(Context &ctx,
     auto binding = m_ctx.arena().get(capture.m_id);
 
     auto type_id = m_ctx.to_type(binding.m_type);
-    m_captured_bindings.emplace_back(Argument{
-        .m_name = m_ctx.symbols().lookup(binding.m_name), .m_type = type_id});
+    m_captured_bindings.emplace_back(CapturedBinding{
+        .m_source_name = binding.m_name,
+        .m_outer_handle = m_ctx.symbols().lookup(binding.m_name),
+        .m_type_id = type_id,
+    });
     struct_types.emplace_back(type_id);
   }
   m_type_id = m_ctx.type().intern_struct(
@@ -39,13 +42,14 @@ Handle ClosureBuilder::allocate_and_populate_env() {
        std::views::zip(std::views::iota(0ULL), m_captured_bindings)) {
     // If it is alloca, we need to load it before using
     auto stored_location =
-        std::holds_alternative<LocalHandle>(capture.m_name)
-            ? m_ctx.builder().create_load(capture.m_name, capture.m_type)
-            : capture.m_name;
+        std::holds_alternative<LocalHandle>(capture.m_outer_handle)
+            ? m_ctx.builder().create_load(capture.m_outer_handle,
+                                          capture.m_type_id)
+            : capture.m_outer_handle;
     m_ctx.builder().store_to_struct(m_type_id, env_handle, index,
                                     Argument{
                                         .m_name = stored_location,
-                                        .m_type = capture.m_type,
+                                        .m_type = capture.m_type_id,
                                     });
   }
 
@@ -55,12 +59,12 @@ Handle ClosureBuilder::allocate_and_populate_env() {
 void ClosureBuilder::emit_capture_load_prologue() {
   for (const auto &[index, capture] :
        std::views::zip(std::views::iota(0ULL), m_captured_bindings)) {
-    auto capture_temp_handle = m_ctx.builder().add_alloca(
-        get_raw_handle(capture.m_name), capture.m_type);
+    auto capture_temp_handle =
+        m_ctx.builder().add_alloca(capture.m_source_name, capture.m_type_id);
     auto value = m_ctx.builder().load_from_struct(
-        m_type_id, m_ctx.env_parameter().m_name, index, capture.m_type);
-    m_ctx.builder().create_store(capture_temp_handle,
-                                 {.m_name = value, .m_type = capture.m_type});
+        m_type_id, m_ctx.env_parameter().m_name, index, capture.m_type_id);
+    m_ctx.builder().create_store(
+        capture_temp_handle, {.m_name = value, .m_type = capture.m_type_id});
   }
 }
 

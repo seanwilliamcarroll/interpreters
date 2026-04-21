@@ -24,6 +24,12 @@
 namespace bust::codegen {
 //****************************************************************************
 
+struct CapturedBinding {
+  std::string m_source_name;
+  Handle m_outer_handle;
+  TypeId m_type_id;
+};
+
 struct ClosureBuilder {
   ClosureBuilder(Context &, const std::vector<zir::IdentifierExpr> &captures);
 
@@ -35,7 +41,7 @@ struct ClosureBuilder {
 
 private:
   Context &m_ctx;
-  std::vector<Argument> m_captured_bindings;
+  std::vector<CapturedBinding> m_captured_bindings;
   TypeId m_type_id;
 };
 
