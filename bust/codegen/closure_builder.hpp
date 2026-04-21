@@ -12,9 +12,32 @@
 #pragma once
 //****************************************************************************
 
+#include <cassert>
+#include <vector>
+
+#include "codegen/context.hpp"
+#include "codegen/handle.hpp"
+#include "codegen/types.hpp"
+#include "zir/nodes.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
+
+struct ClosureBuilder {
+  ClosureBuilder(Context &, const std::vector<zir::IdentifierExpr> &captures);
+
+  Handle allocate_and_populate_env();
+
+  void emit_capture_load_prologue();
+
+  Handle package_fat_pointer(GlobalHandle function, Handle env_handle);
+
+private:
+  Context &m_ctx;
+  std::vector<Argument> m_captured_bindings;
+  TypeId m_type_id;
+};
 
 //****************************************************************************
 } // namespace bust::codegen

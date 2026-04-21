@@ -49,8 +49,6 @@ struct ExpressionGenerator {
 
   FunctionDeclaration generate_lambda_signature(const zir::LambdaExpr &);
 
-  std::pair<TypeId, std::vector<Argument>>
-  analyze_captures(const zir::LambdaExpr &);
   Handle operator()(const zir::LambdaExpr &);
 
   Context &m_ctx;

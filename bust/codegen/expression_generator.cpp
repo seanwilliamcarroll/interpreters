@@ -39,6 +39,8 @@
 #include <variant>
 #include <vector>
 
+#include "codegen/closure_builder.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -461,29 +463,6 @@ FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
                              .m_parameters = std::move(parameters)};
 }
 
-std::pair<TypeId, std::vector<Argument>>
-ExpressionGenerator::analyze_captures(const zir::LambdaExpr &lambda_expr) {
-  if (lambda_expr.m_captures.empty()) {
-    return {m_ctx.m_void, {}};
-  }
-  std::vector<Argument> captured_bindings;
-  captured_bindings.reserve(lambda_expr.m_captures.size());
-  std::vector<TypeId> struct_types;
-  struct_types.reserve(lambda_expr.m_captures.size());
-  for (const auto &capture : lambda_expr.m_captures) {
-    auto binding = m_ctx.arena().get(capture.m_id);
-
-    auto type_id = m_ctx.to_type(binding.m_type);
-    captured_bindings.emplace_back(Argument{
-        .m_name = m_ctx.symbols().lookup(binding.m_name), .m_type = type_id});
-    struct_types.emplace_back(type_id);
-  }
-  auto closure_type_id = m_ctx.type().intern_struct(
-      std::string{conventions::env_struct_name},
-      StructType{.m_fields = std::move(struct_types)});
-  return {closure_type_id, captured_bindings};
-}
-
 Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   ScopeGuard scope_guard(m_ctx.symbols());
 
@@ -491,44 +470,20 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
   auto lambda_handle = signature.m_function_id;
 
-  auto [env_struct_type_id, captures] = analyze_captures(lambda_expr);
-
-  auto env_handle = captures.empty()
-                        ? LiteralHandle::null()
-                        : m_ctx.builder().malloc_struct(env_struct_type_id);
-
-  // Emit the code to store captures into env
-  for (const auto &[index, capture] :
-       std::views::zip(std::views::iota(0ULL), captures)) {
-    // If it is alloca, we need to load it before using
-    auto stored_location =
-        std::holds_alternative<LocalHandle>(capture.m_name)
-            ? m_ctx.builder().create_load(capture.m_name, capture.m_type)
-            : capture.m_name;
-    m_ctx.builder().store_to_struct(env_struct_type_id, env_handle, index,
-                                    Argument{
-                                        .m_name = stored_location,
-                                        .m_type = capture.m_type,
-                                    });
+  if (lambda_expr.m_captures.empty()) {
+    // Lift lambda to regular top level function
+    throw core::InternalCompilerError("UNIMPLEMENTED");
   }
+
+  auto closure_builder = ClosureBuilder(m_ctx, lambda_expr.m_captures);
+
+  auto env_handle = closure_builder.allocate_and_populate_env();
 
   // Emit code for new lambda function
   {
     auto function_guard = m_ctx.builder().push_new_function(signature);
 
-    for (const auto &[index, capture] :
-         std::views::zip(std::views::iota(0ULL), captures)) {
-
-      auto capture_temp_handle = m_ctx.builder().add_alloca(
-          get_raw_handle(capture.m_name), capture.m_type);
-
-      auto value = m_ctx.builder().load_from_struct(
-          env_struct_type_id, m_ctx.env_parameter().m_name, index,
-          capture.m_type);
-
-      m_ctx.builder().create_store(capture_temp_handle,
-                                   {.m_name = value, .m_type = capture.m_type});
-    }
+    closure_builder.emit_capture_load_prologue();
 
     auto return_value = generate(lambda_expr.m_body);
     if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
@@ -540,22 +495,8 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   }
 
   // Emit code to package lambda as a fat pointer
-  const auto &closure_type_id = m_ctx.m_fat_ptr;
-  auto closure_handle = m_ctx.builder().malloc_struct(closure_type_id);
-
-  m_ctx.builder().store_to_struct(closure_type_id, closure_handle, 0,
-                                  Argument{
-                                      .m_name = lambda_handle,
-                                      .m_type = m_ctx.m_ptr,
-                                  });
-
-  m_ctx.builder().store_to_struct(closure_type_id, closure_handle, 1,
-                                  Argument{
-                                      .m_name = env_handle,
-                                      .m_type = m_ctx.m_ptr,
-                                  });
-
-  return closure_handle;
+  return closure_builder.package_fat_pointer(
+      std::get<GlobalHandle>(lambda_handle), env_handle);
 }
 
 //****************************************************************************
