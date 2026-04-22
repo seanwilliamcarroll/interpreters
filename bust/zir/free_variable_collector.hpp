@@ -129,6 +129,11 @@ struct FreeVariableCollector {
     return std::visit(*this, m_ctx.arena().get(expr_id).m_expr_kind);
   }
 
+  FreeVariables operator()(const TupleExpr & // tuple_expr
+  ) {
+    return {};
+  }
+
   FreeVariables operator()(const IdentifierExpr &identifier) {
     // We've found a binding, check if in scope
     if (m_env.is_present(identifier.m_id)) {
@@ -206,6 +211,11 @@ struct FreeVariableCollector {
     collect_append(lambda_expr.m_body, free_variables);
 
     return free_variables;
+  }
+
+  FreeVariables operator()(const DotExpr & // dot_expr
+  ) {
+    return {};
   }
 
   Context &m_ctx;

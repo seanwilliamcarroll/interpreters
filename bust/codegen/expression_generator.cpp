@@ -70,6 +70,11 @@ Handle ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
                                      m_ctx.to_type(binding.m_type));
 }
 
+Handle ExpressionGenerator::operator()(const zir::TupleExpr & // tuple_expr
+) {
+  return {};
+}
+
 Handle ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
   return {};
 }
@@ -231,7 +236,8 @@ bool is_signed_type(const zir::Type &type) {
                              std::is_same_v<T, zir::BoolType> ||
                              std::is_same_v<T, zir::CharType> ||
                              std::is_same_v<T, zir::NeverType> ||
-                             std::is_same_v<T, zir::FunctionType>) {
+                             std::is_same_v<T, zir::FunctionType> ||
+                             std::is_same_v<T, zir::TupleType>) {
           throw core::InternalCompilerError(
               "Should never had checked signedness on non numeric type");
         }
@@ -521,6 +527,11 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
   // Emit code to package lambda as a fat pointer
   return closure_builder.package_fat_pointer(lambda_handle, env_handle);
+}
+
+Handle ExpressionGenerator::operator()(const zir::DotExpr & // dot_expr
+) {
+  return {};
 }
 
 //****************************************************************************

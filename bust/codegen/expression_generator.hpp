@@ -26,6 +26,7 @@ struct ExpressionGenerator {
   Handle generate(const zir::Expression &);
 
   Handle operator()(const zir::IdentifierExpr &);
+  Handle operator()(const zir::TupleExpr &);
   Handle operator()(const zir::Unit &);
   Handle operator()(const zir::I8 &);
   Handle operator()(const zir::I32 &);
@@ -50,6 +51,8 @@ struct ExpressionGenerator {
 
   GlobalHandle lift_free_lambda(const zir::LambdaExpr &);
   Handle operator()(const zir::LambdaExpr &);
+
+  Handle operator()(const zir::DotExpr &);
 
   Context &m_ctx;
 };

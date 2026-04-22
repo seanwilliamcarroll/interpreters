@@ -51,6 +51,11 @@ struct FunctionType {
   auto operator<=>(const FunctionType &) const = default;
 };
 
+struct TupleType {
+  std::vector<TypeId> m_fields;
+  auto operator<=>(const TupleType &) const = default;
+};
+
 template <typename ZirType> struct ToConcrete : std::false_type {
   using zir_type = ZirType;
 };
@@ -85,7 +90,7 @@ template <> struct ToConcrete<I64Type> {
 };
 
 using Type = std::variant<UnitType, BoolType, CharType, I8Type, I32Type,
-                          I64Type, NeverType, FunctionType>;
+                          I64Type, NeverType, FunctionType, TupleType>;
 
 //****************************************************************************
 } // namespace bust::zir
@@ -102,6 +107,16 @@ template <> struct hash<bust::zir::FunctionType> {
       core::hash_combine(seed, parameter);
     }
     core::hash_combine(seed, id.m_return_type);
+    return seed;
+  }
+};
+
+template <> struct hash<bust::zir::TupleType> {
+  size_t operator()(const bust::zir::TupleType &id) const noexcept {
+    size_t seed = 0;
+    for (const auto &field : id.m_fields) {
+      core::hash_combine(seed, field);
+    }
     return seed;
   }
 };

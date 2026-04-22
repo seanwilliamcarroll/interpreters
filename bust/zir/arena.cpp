@@ -54,6 +54,15 @@ std::string TypeArena::to_string(const Type &type) const {
           result += ") -> ";
           result += to_string(t.m_return_type);
           return result;
+        } else if constexpr (std::is_same_v<T, TupleType>) {
+          std::string out = "(";
+          for (size_t index = 0; index < t.m_fields.size() - 1; ++index) {
+            out += to_string(get(t.m_fields[index]));
+            out += ", ";
+          }
+          out += to_string(get(t.m_fields.back()));
+          out += ",)";
+          return out;
         }
       },
       type);
