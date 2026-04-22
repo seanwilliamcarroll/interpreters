@@ -10,6 +10,7 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
 #include <lexer.hpp>
@@ -392,6 +393,106 @@ TEST_SUITE("bust.monomorpher") {
       }
     }
     CHECK(found_add_one);
+  }
+
+  // --- Deferred tuple projection -------------------------------------------
+  //
+  // `|x| x.0` has an unresolved type variable at type-check time. The
+  // monomorpher substitutes `x`'s type at each call site; once concrete,
+  // it's responsible for (a) confirming the substituted type is a TupleType,
+  // (b) bounds-checking the index, and (c) resolving the projection's
+  // result type to the right element type.
+
+  TEST_CASE("polymorphic projection called with a tuple monomorphizes") {
+    MONO_STRING(program, "fn main() -> i64 {\n"
+                         "  let f = |x| { x.0 };\n"
+                         "  f((1, true));\n"
+                         "  0\n"
+                         "}");
+    auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
+    auto specializations = find_let_bindings_with_prefix(func.m_body, "f");
+    CHECK(specializations.size() == 1);
+  }
+
+  TEST_CASE("specialized projection body has concrete result type") {
+    // After substituting x -> (i64, bool), the DotExpr's type inside the
+    // specialization must resolve to i64 (not still a type variable).
+    MONO_STRING(program, "fn main() -> i64 {\n"
+                         "  let f = |x| { x.0 };\n"
+                         "  f((1, true));\n"
+                         "  0\n"
+                         "}");
+    auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
+    auto specializations = find_let_bindings_with_prefix(func.m_body, "f");
+    REQUIRE(specializations.size() == 1);
+    const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
+        specializations[0]->m_expression.m_expression);
+    REQUIRE(lambda->m_body.m_final_expression.has_value());
+    const auto &dot_expr = lambda->m_body.m_final_expression.value();
+    CHECK(is_concrete(program.m_type_arena, dot_expr.m_type));
+    auto &kind = program.m_type_arena.get(dot_expr.m_type);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    CHECK(std::get<hir::PrimitiveTypeValue>(kind).m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("polymorphic projection at two tuple types yields two "
+            "specializations") {
+    MONO_STRING(program, "fn main() -> i64 {\n"
+                         "  let f = |x| { x.0 };\n"
+                         "  f((1, true));\n"
+                         "  f(('a', 99));\n"
+                         "  0\n"
+                         "}");
+    auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
+    auto specializations = find_let_bindings_with_prefix(func.m_body, "f");
+    CHECK(specializations.size() == 2);
+  }
+
+  TEST_CASE("polymorphic projection never called still throws at mono") {
+    // Uncalled polymorphic let bindings carry unresolved type variables
+    // into monomorphization, which the rest of the pipeline (name mangler,
+    // among others) cannot handle. So even though our deferred projection
+    // check wouldn't fire without a call site, the program still fails to
+    // lower. This is a general property of polymorphic dead code in bust.
+    CHECK_THROWS_AS(mono_string_impl("fn main() -> i64 {\n"
+                                     "  let f = |x| { x.0 };\n"
+                                     "  0\n"
+                                     "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("polymorphic projection called with non-tuple throws at mono") {
+    // After substitution, x's type is i64 — not a tuple. The monomorpher
+    // must catch the projection on a non-tuple concrete type.
+    CHECK_THROWS_AS(mono_string_impl("fn main() -> i64 {\n"
+                                     "  let f = |x| { x.0 };\n"
+                                     "  f(42);\n"
+                                     "  0\n"
+                                     "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("polymorphic projection with out-of-bounds index throws at mono") {
+    // |x| x.1 substituted with x: (i64,) — arity 1, index 1 is out of range.
+    CHECK_THROWS_AS(mono_string_impl("fn main() -> i64 {\n"
+                                     "  let f = |x| { x.1 };\n"
+                                     "  f((42,));\n"
+                                     "  0\n"
+                                     "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE(
+      "polymorphic projection ok for one caller, bad for another, throws") {
+    // First call site is fine; second substitutes a non-tuple. Mono must
+    // still flag the bad specialization — specializations are independent.
+    CHECK_THROWS_AS(mono_string_impl("fn main() -> i64 {\n"
+                                     "  let f = |x| { x.0 };\n"
+                                     "  f((1, true));\n"
+                                     "  f(99);\n"
+                                     "  0\n"
+                                     "}"),
+                    core::CompilerException);
   }
 
 } // TEST_SUITE

@@ -2186,6 +2186,190 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Tuple construction --------------------------------------------------
+
+  TEST_CASE("tuple literal (1, 2) has type (i64, i64)") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = (1, 2);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &kind = hir.m_type_arena.get(let.m_expression.m_type);
+    REQUIRE(std::holds_alternative<hir::TupleType>(kind));
+    const auto &tup = std::get<hir::TupleType>(kind);
+    REQUIRE(tup.m_fields.size() == 2);
+    for (const auto &field_id : tup.m_fields) {
+      auto &f = hir.m_type_arena.get(field_id);
+      REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(f));
+      CHECK(std::get<hir::PrimitiveTypeValue>(f).m_type == PrimitiveType::I64);
+    }
+  }
+
+  TEST_CASE("heterogeneous tuple (1, true) has type (i64, bool)") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = (1, true);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &kind = hir.m_type_arena.get(let.m_expression.m_type);
+    REQUIRE(std::holds_alternative<hir::TupleType>(kind));
+    const auto &tup = std::get<hir::TupleType>(kind);
+    REQUIRE(tup.m_fields.size() == 2);
+    auto &f0 = hir.m_type_arena.get(tup.m_fields[0]);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(f0));
+    CHECK(std::get<hir::PrimitiveTypeValue>(f0).m_type == PrimitiveType::I64);
+    auto &f1 = hir.m_type_arena.get(tup.m_fields[1]);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(f1));
+    CHECK(std::get<hir::PrimitiveTypeValue>(f1).m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("one-tuple (42,) has type (i64,) with arity 1") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = (42,);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &kind = hir.m_type_arena.get(let.m_expression.m_type);
+    REQUIRE(std::holds_alternative<hir::TupleType>(kind));
+    const auto &tup = std::get<hir::TupleType>(kind);
+    REQUIRE(tup.m_fields.size() == 1);
+    auto &f0 = hir.m_type_arena.get(tup.m_fields[0]);
+    CHECK(std::get<hir::PrimitiveTypeValue>(f0).m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("nested tuple ((1, 2), true) has a TupleType as its first field") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = ((1, 2), true);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &outer_kind = hir.m_type_arena.get(let.m_expression.m_type);
+    REQUIRE(std::holds_alternative<hir::TupleType>(outer_kind));
+    const auto &outer = std::get<hir::TupleType>(outer_kind);
+    REQUIRE(outer.m_fields.size() == 2);
+    auto &inner_kind = hir.m_type_arena.get(outer.m_fields[0]);
+    REQUIRE(std::holds_alternative<hir::TupleType>(inner_kind));
+    const auto &inner = std::get<hir::TupleType>(inner_kind);
+    REQUIRE(inner.m_fields.size() == 2);
+    auto &outer_f1 = hir.m_type_arena.get(outer.m_fields[1]);
+    CHECK(std::get<hir::PrimitiveTypeValue>(outer_f1).m_type ==
+          PrimitiveType::BOOL);
+  }
+
+  // --- Tuple type annotations ----------------------------------------------
+
+  TEST_CASE("let with matching tuple annotation typechecks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t: (i64, bool) = (1, true);\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[0]);
+    auto &kind = hir.m_type_arena.get(let.m_variable.m_type);
+    REQUIRE(std::holds_alternative<hir::TupleType>(kind));
+    CHECK(std::get<hir::TupleType>(kind).m_fields.size() == 2);
+  }
+
+  TEST_CASE("let tuple annotation with wrong arity throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let t: (i64,) = (1, 2);\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("let tuple annotation with mismatched element type throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let t: (i64, bool) = (1, 2);\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Tuple projection (dot) ---------------------------------------------
+
+  TEST_CASE("projection t.0 on (i64, bool) has type i64") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = (1, true);\n"
+                          "  t.0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &expr = *func.m_body.m_final_expression;
+    auto &kind = hir.m_type_arena.get(expr.m_type);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    CHECK(std::get<hir::PrimitiveTypeValue>(kind).m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("projection t.1 on (i64, bool) has type bool") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = (1, true);\n"
+                          "  let b: bool = t.1;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &let = std::get<hir::LetBinding>(func.m_body.m_statements[1]);
+    auto &kind = hir.m_type_arena.get(let.m_expression.m_type);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    CHECK(std::get<hir::PrimitiveTypeValue>(kind).m_type ==
+          PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("projection of a nested tuple yields a TupleType") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let t = ((1, 2), true);\n"
+                          "  t.0.0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &expr = *func.m_body.m_final_expression;
+    auto &kind = hir.m_type_arena.get(expr.m_type);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    CHECK(std::get<hir::PrimitiveTypeValue>(kind).m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("projection with out-of-bounds index throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let t = (1, true);\n"
+                               "  let bad = t.2;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("projection on non-tuple target throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: i64 = 1;\n"
+                               "  let bad = x.0;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE(
+      "projection on unresolved type variable is accepted at type-check") {
+    // Lambda parameter `x` has no annotation — its type is a fresh type
+    // variable. The type checker accepts `x.0` and defers the "is it a
+    // tuple? is the index in range?" check to monomorphization, when `x`
+    // has been substituted with a concrete type.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let f = |x| { x.0 };\n"
+                             "  0\n"
+                             "}"));
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

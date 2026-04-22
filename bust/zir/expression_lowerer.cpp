@@ -70,8 +70,8 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
   return {.m_id = binding_id};
 }
 
-ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::TupleExpr> &) {
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::TupleExpr> & /*unused*/) {
   return {};
 }
 
