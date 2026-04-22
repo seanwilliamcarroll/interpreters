@@ -107,7 +107,7 @@ struct LambdaExpr {
 };
 
 struct DotExpr {
-  std::vector<ExprId> m_fields;
+  ExprId m_expression;
   size_t m_tuple_index;
   auto operator<=>(const DotExpr &) const = default;
 };
@@ -281,9 +281,7 @@ template <> struct hash<bust::zir::LambdaExpr> {
 template <> struct hash<bust::zir::DotExpr> {
   size_t operator()(const bust::zir::DotExpr &expr) const noexcept {
     size_t seed = 0;
-    for (const auto &field : expr.m_fields) {
-      core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(field));
-    }
+    core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(expr.m_expression));
     core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
     return seed;
   }
