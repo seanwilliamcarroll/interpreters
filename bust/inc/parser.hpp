@@ -45,6 +45,7 @@ private:
   ast::TypeIdentifier parse_type_identifier();
   ast::TypeIdentifier parse_function_return_type();
   ast::TypeIdentifier parse_type_annotation();
+  std::unique_ptr<ast::TupleTypeIdentifier> parse_tuple_type_identifier();
   std::unique_ptr<ast::FunctionTypeIdentifier> parse_function_type_identifier();
 
   ast::Identifier parse_non_annotated_identifier();
@@ -67,6 +68,7 @@ private:
   ast::Expression parse_unary_pre();
   ast::Expression parse_cast_expr();
   ast::Expression parse_postfix();
+  ast::Expression parse_paren_or_tuple();
   ast::Expression parse_primary();
 
   ast::Expression parse_if_expr();
