@@ -10,6 +10,7 @@
 
 #include <exceptions.hpp>
 #include <hir/type_arena.hpp>
+#include <hir/types.hpp>
 #include <hir/unifier_state.hpp>
 #include <zir/arena.hpp>
 #include <zir/environment.hpp>
@@ -17,6 +18,8 @@
 #include <zir/type_resolver.hpp>
 
 #include <unordered_map>
+
+#include "zir/types.hpp"
 
 //****************************************************************************
 namespace bust::zir {
@@ -59,9 +62,19 @@ struct Context {
                                 .m_return_type = return_type};
           } else if constexpr (std::is_same_v<T, hir::NeverType>) {
             return NeverType{};
-          } else {
-            // TypeVariable shouldn't be passed here?
-            std::unreachable();
+
+          } else if constexpr (std::is_same_v<T, hir::TypeVariable>) {
+            throw core::InternalCompilerError(
+                "Should never happen that ZIR lowerer sees a TypeVariable");
+          } else if constexpr (std::is_same_v<T, hir::TupleType>) {
+            std::vector<TypeId> fields;
+            fields.reserve(tk.m_fields.size());
+            for (const auto &field : tk.m_fields) {
+              fields.emplace_back(convert(field));
+            }
+            return TupleType{
+                .m_fields = std::move(fields),
+            };
           }
         },
         type_kind);
