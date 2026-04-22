@@ -505,6 +505,20 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
 
   auto expression = check_expression(dot_expr->m_expression);
 
+  if (m_ctx.m_type_arena.is_type_variable(expression.m_type)) {
+    // Defer check until monomorpher then
+    auto return_type = m_ctx.m_type_unifier.new_type_var();
+
+    return {
+        {location},
+        return_type,
+        std::make_unique<DotExpr>(DotExpr{
+            .m_expression = std::move(expression),
+            .m_tuple_index = dot_expr->m_tuple_index,
+        }),
+    };
+  }
+
   if (!m_ctx.m_type_arena.is_tuple(expression.m_type)) {
     throw core::CompilerException(
         "TypeChecker",
@@ -514,6 +528,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
         location);
   }
 
+  // We can check arity here
   const auto &tuple_type = m_ctx.m_type_arena.as_tuple(expression.m_type);
   const auto arity = tuple_type.m_fields.size();
 
