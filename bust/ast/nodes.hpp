@@ -92,7 +92,7 @@ struct TupleExpr {
 struct DotExpr {
   Expression m_expression;
   // For now, all that is representable
-  int64_t m_tuple_index;
+  size_t m_tuple_index;
 };
 
 // --- Control flow ----------------------------------------------------------

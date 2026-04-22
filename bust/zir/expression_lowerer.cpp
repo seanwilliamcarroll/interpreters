@@ -213,6 +213,11 @@ ExprKind ExpressionLowerer::operator()(
   };
 }
 
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::DotExpr> & /*unused*/) {
+  throw core::InternalCompilerError("Not yet implemented");
+}
+
 //****************************************************************************
 } // namespace bust::zir
 //****************************************************************************

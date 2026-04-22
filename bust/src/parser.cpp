@@ -500,11 +500,12 @@ ast::Expression Parser::parse_postfix() {
       }
       auto literal = parse_literal();
       auto int_literal = std::get<ast::I64>(literal.m_expression);
-      expression = ast::Expression{{original_location},
-                                   std::make_unique<ast::DotExpr>(ast::DotExpr{
-                                       .m_expression = std::move(expression),
-                                       .m_tuple_index = int_literal.m_value,
-                                   })};
+      expression = ast::Expression{
+          {original_location},
+          std::make_unique<ast::DotExpr>(ast::DotExpr{
+              .m_expression = std::move(expression),
+              .m_tuple_index = static_cast<size_t>(int_literal.m_value),
+          })};
       continue;
     }
 

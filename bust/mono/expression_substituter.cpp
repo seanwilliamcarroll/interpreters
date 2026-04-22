@@ -229,6 +229,12 @@ hir::ExprKind ExpressionSubstituter::operator()(
       std::move(new_parameters), std::move(new_body), new_return_type});
 }
 
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::DotExpr> & // dot_expr
+) {
+  throw core::InternalCompilerError("Not yet implemented");
+}
+
 //****************************************************************************
 } // namespace bust::mono
 //****************************************************************************

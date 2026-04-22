@@ -499,9 +499,47 @@ Expression ExpressionChecker::operator()(
 }
 
 Expression
-ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> & /*unused*/,
-                              const core::SourceLocation & /*unused*/) {
-  throw core::InternalCompilerError("Not yet implemented");
+ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
+                              const core::SourceLocation &location) {
+  // Need to check internal expression
+  // Assert that this expression is known to be a tuple
+  // Check that the index is valid given the arity of the tuple
+  // Final type is the type of the field at that index
+
+  auto expression = check_expression(dot_expr->m_expression);
+
+  if (!m_ctx.m_type_arena.is_tuple(expression.m_type)) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Tuple dot operator requires that the "
+        "expression be resolvable to a tuple type, not: " +
+            m_ctx.to_string(expression.m_type),
+        location);
+  }
+
+  const auto &tuple_type = m_ctx.m_type_arena.as_tuple(expression.m_type);
+  const auto arity = tuple_type.m_fields.size();
+
+  if (dot_expr->m_tuple_index >= arity) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Tuple dot operator requires that accessor be strictly less than tuple "
+        "arity, arity: " +
+            std::to_string(arity) +
+            " vs. accessor index: " + std::to_string(dot_expr->m_tuple_index),
+        location);
+  }
+
+  auto final_type = tuple_type.m_fields[dot_expr->m_tuple_index];
+
+  return {
+      {location},
+      final_type,
+      std::make_unique<DotExpr>(DotExpr{
+          .m_expression = std::move(expression),
+          .m_tuple_index = dot_expr->m_tuple_index,
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(

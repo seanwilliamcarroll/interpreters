@@ -30,6 +30,7 @@ struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Block;
+struct DotExpr;
 // TODO
 struct WhileExpr {};
 struct ForExpr {};
@@ -101,11 +102,16 @@ using ExprKind =
                  std::unique_ptr<CallExpr>, std::unique_ptr<BinaryExpr>,
                  std::unique_ptr<UnaryExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<LambdaExpr>,
-                 std::unique_ptr<TupleExpr>>;
+                 std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>>;
 
 struct Expression : public core::HasLocation {
   TypeId m_type;
   ExprKind m_expression;
+};
+
+struct DotExpr {
+  Expression m_expression;
+  size_t m_tuple_index;
 };
 
 using Statement = std::variant<Expression, LetBinding>;

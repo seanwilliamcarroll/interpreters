@@ -37,6 +37,10 @@ struct TypeArena : public AbstractInternArena<TypeId, TypeKind> {
     return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
   }
 
+  [[nodiscard]] const TupleType &as_tuple(TypeId type_id) const {
+    return as<TupleType>(type_id, __PRETTY_FUNCTION__);
+  }
+
   [[nodiscard]] const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
     return as<PrimitiveTypeValue>(type_id, __PRETTY_FUNCTION__);
   }
@@ -47,6 +51,10 @@ struct TypeArena : public AbstractInternArena<TypeId, TypeKind> {
 
   [[nodiscard]] bool is_function(TypeId type_id) const {
     return is<FunctionType>(type_id);
+  }
+
+  [[nodiscard]] bool is_tuple(TypeId type_id) const {
+    return is<TupleType>(type_id);
   }
 
   [[nodiscard]] bool is_primitive(TypeId type_id) const {
