@@ -588,11 +588,11 @@ ast::Expression Parser::parse_literal() {
   const auto original_location = peek().get_location();
   switch (peek().get_token_type()) {
   case TokenType::TRUE:
-    return {{advance()->get_location()}, ast::LiteralBool{true}};
+    return {{advance()->get_location()}, ast::Bool{true}};
   case TokenType::FALSE:
-    return {{advance()->get_location()}, ast::LiteralBool{false}};
+    return {{advance()->get_location()}, ast::Bool{false}};
   case TokenType::UNIT:
-    return {{advance()->get_location()}, ast::LiteralUnit{}};
+    return {{advance()->get_location()}, ast::Unit{}};
   case TokenType::INT_LITERAL: {
     const auto token = advance();
     const auto *int_token_ptr = dynamic_cast<const TokenNumber *>(token.get());
@@ -601,7 +601,7 @@ ast::Expression Parser::parse_literal() {
     }
     try {
       return {{original_location},
-              ast::LiteralI64{std::stoll(int_token_ptr->get_value())}};
+              ast::I64{std::stoll(int_token_ptr->get_value())}};
     } catch (std::out_of_range &error) {
       on_error(int_token_ptr->get_location(),
                "Could not cast TokenNumber with lexeme: \"",
@@ -624,15 +624,15 @@ ast::Expression Parser::parse_literal() {
       };
       auto iter = escaped_chars.find(lexeme[2]);
       if (iter != escaped_chars.end()) {
-        return {{original_location}, ast::LiteralChar{iter->second}};
+        return {{original_location}, ast::Char{iter->second}};
       }
       // Must be \x, want indices 3 and 4
       return {{original_location},
-              ast::LiteralChar{static_cast<char>(std::stoi(
+              ast::Char{static_cast<char>(std::stoi(
                   lexeme.substr(3, 2), nullptr, HEXADECIMAL_BASE_16))}};
     }
     // Must have been printable
-    return {{original_location}, ast::LiteralChar{lexeme[1]}};
+    return {{original_location}, ast::Char{lexeme[1]}};
   }
   default:
     on_error(peek().get_location(),

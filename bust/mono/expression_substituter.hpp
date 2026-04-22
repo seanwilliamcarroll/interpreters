@@ -24,12 +24,12 @@ struct ExpressionSubstituter {
 
   hir::Identifier substitute(const hir::Identifier &);
   hir::ExprKind operator()(const hir::Identifier &);
-  hir::ExprKind operator()(const hir::LiteralUnit &);
-  hir::ExprKind operator()(const hir::LiteralI8 &);
-  hir::ExprKind operator()(const hir::LiteralI32 &);
-  hir::ExprKind operator()(const hir::LiteralI64 &);
-  hir::ExprKind operator()(const hir::LiteralBool &);
-  hir::ExprKind operator()(const hir::LiteralChar &);
+  hir::ExprKind operator()(const hir::Unit &);
+  hir::ExprKind operator()(const hir::I8 &);
+  hir::ExprKind operator()(const hir::I32 &);
+  hir::ExprKind operator()(const hir::I64 &);
+  hir::ExprKind operator()(const hir::Bool &);
+  hir::ExprKind operator()(const hir::Char &);
   hir::Block substitute(const hir::Block &);
   hir::ExprKind operator()(const std::unique_ptr<hir::Block> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::IfExpr> &);

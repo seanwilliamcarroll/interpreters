@@ -25,12 +25,12 @@ struct ExpressionLowerer {
   IdentifierExpr lower(const hir::Identifier &);
   IdentifierExpr lower_definition(const hir::Identifier &);
   ExprKind operator()(const hir::Identifier &);
-  ExprKind operator()(const hir::LiteralUnit &);
-  ExprKind operator()(const hir::LiteralI8 &);
-  ExprKind operator()(const hir::LiteralI32 &);
-  ExprKind operator()(const hir::LiteralI64 &);
-  ExprKind operator()(const hir::LiteralBool &);
-  ExprKind operator()(const hir::LiteralChar &);
+  ExprKind operator()(const hir::Unit &);
+  ExprKind operator()(const hir::I8 &);
+  ExprKind operator()(const hir::I32 &);
+  ExprKind operator()(const hir::I64 &);
+  ExprKind operator()(const hir::Bool &);
+  ExprKind operator()(const hir::Char &);
   Block lower(const hir::Block &);
   ExprKind operator()(const std::unique_ptr<hir::Block> &);
   ExprKind operator()(const std::unique_ptr<hir::IfExpr> &);

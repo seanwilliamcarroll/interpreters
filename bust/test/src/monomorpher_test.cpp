@@ -131,7 +131,7 @@ TEST_SUITE("bust.monomorpher") {
     MONO_STRING(program, "fn main() -> i64 { 42 }");
     auto &func = std::get<hir::FunctionDef>(program.m_top_items[0]);
     REQUIRE(func.m_body.m_final_expression.has_value());
-    CHECK(std::holds_alternative<hir::LiteralI64>(
+    CHECK(std::holds_alternative<hir::I64>(
         func.m_body.m_final_expression.value().m_expression));
   }
 

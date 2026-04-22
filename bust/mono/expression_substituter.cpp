@@ -64,32 +64,27 @@ ExpressionSubstituter::operator()(const hir::Identifier &identifier) {
   return substitute(identifier);
 }
 
-hir::ExprKind
-ExpressionSubstituter::operator()(const hir::LiteralUnit &literal) {
+hir::ExprKind ExpressionSubstituter::operator()(const hir::Unit &literal) {
   return literal;
 }
 
-hir::ExprKind ExpressionSubstituter::operator()(const hir::LiteralI8 &literal) {
+hir::ExprKind ExpressionSubstituter::operator()(const hir::I8 &literal) {
   return literal;
 }
 
-hir::ExprKind
-ExpressionSubstituter::operator()(const hir::LiteralI32 &literal) {
+hir::ExprKind ExpressionSubstituter::operator()(const hir::I32 &literal) {
   return literal;
 }
 
-hir::ExprKind
-ExpressionSubstituter::operator()(const hir::LiteralI64 &literal) {
+hir::ExprKind ExpressionSubstituter::operator()(const hir::I64 &literal) {
   return literal;
 }
 
-hir::ExprKind
-ExpressionSubstituter::operator()(const hir::LiteralBool &literal) {
+hir::ExprKind ExpressionSubstituter::operator()(const hir::Bool &literal) {
   return literal;
 }
 
-hir::ExprKind
-ExpressionSubstituter::operator()(const hir::LiteralChar &literal) {
+hir::ExprKind ExpressionSubstituter::operator()(const hir::Char &literal) {
   return literal;
 }
 
