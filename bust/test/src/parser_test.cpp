@@ -1503,9 +1503,9 @@ TEST_SUITE("bust.parser") {
         *binding.m_variable.m_type));
     const auto &tt = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
         *binding.m_variable.m_type);
-    REQUIRE(tt.m_types.size() == 2);
-    check_primitive_type(tt.m_types[0], PrimitiveType::I64);
-    check_primitive_type(tt.m_types[1], PrimitiveType::BOOL);
+    REQUIRE(tt.m_field_types.size() == 2);
+    check_primitive_type(tt.m_field_types[0], PrimitiveType::I64);
+    check_primitive_type(tt.m_field_types[1], PrimitiveType::BOOL);
   }
 
   TEST_CASE("bust::parse_tuple_of_tuple_type_in_let") {
@@ -1523,14 +1523,14 @@ TEST_SUITE("bust.parser") {
         *binding.m_variable.m_type));
     const auto &tt = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
         *binding.m_variable.m_type);
-    REQUIRE(tt.m_types.size() == 2);
+    REQUIRE(tt.m_field_types.size() == 2);
     REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
-        tt.m_types[0]));
+        tt.m_field_types[0]));
     check_primitive_type(
-        std::get<std::unique_ptr<TupleTypeIdentifier>>(tt.m_types[0])
-            ->m_types[0],
+        std::get<std::unique_ptr<TupleTypeIdentifier>>(tt.m_field_types[0])
+            ->m_field_types[0],
         PrimitiveType::I64);
-    check_primitive_type(tt.m_types[1], PrimitiveType::BOOL);
+    check_primitive_type(tt.m_field_types[1], PrimitiveType::BOOL);
   }
 
   TEST_CASE("bust::parse_nested_tuple_type_in_let") {
@@ -1550,15 +1550,15 @@ TEST_SUITE("bust.parser") {
         *binding.m_variable.m_type));
     const auto &outer = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
         *binding.m_variable.m_type);
-    REQUIRE(outer.m_types.size() == 2);
+    REQUIRE(outer.m_field_types.size() == 2);
     REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
-        outer.m_types[0]));
+        outer.m_field_types[0]));
     const auto &inner =
-        *std::get<std::unique_ptr<TupleTypeIdentifier>>(outer.m_types[0]);
-    REQUIRE(inner.m_types.size() == 2);
-    check_primitive_type(inner.m_types[0], PrimitiveType::I64);
-    check_primitive_type(inner.m_types[1], PrimitiveType::I64);
-    check_primitive_type(outer.m_types[1], PrimitiveType::BOOL);
+        *std::get<std::unique_ptr<TupleTypeIdentifier>>(outer.m_field_types[0]);
+    REQUIRE(inner.m_field_types.size() == 2);
+    check_primitive_type(inner.m_field_types[0], PrimitiveType::I64);
+    check_primitive_type(inner.m_field_types[1], PrimitiveType::I64);
+    check_primitive_type(outer.m_field_types[1], PrimitiveType::BOOL);
   }
 
   TEST_CASE("bust::parse_deeply_nested_tuple_type") {
@@ -1575,17 +1575,17 @@ TEST_SUITE("bust.parser") {
     REQUIRE(binding.m_variable.m_type.has_value());
     const auto &lvl0 = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
         *binding.m_variable.m_type);
-    REQUIRE(lvl0.m_types.size() == 2);
-    check_primitive_type(lvl0.m_types[0], PrimitiveType::I64);
+    REQUIRE(lvl0.m_field_types.size() == 2);
+    check_primitive_type(lvl0.m_field_types[0], PrimitiveType::I64);
     const auto &lvl1 =
-        *std::get<std::unique_ptr<TupleTypeIdentifier>>(lvl0.m_types[1]);
-    REQUIRE(lvl1.m_types.size() == 2);
-    check_primitive_type(lvl1.m_types[0], PrimitiveType::BOOL);
+        *std::get<std::unique_ptr<TupleTypeIdentifier>>(lvl0.m_field_types[1]);
+    REQUIRE(lvl1.m_field_types.size() == 2);
+    check_primitive_type(lvl1.m_field_types[0], PrimitiveType::BOOL);
     const auto &lvl2 =
-        *std::get<std::unique_ptr<TupleTypeIdentifier>>(lvl1.m_types[1]);
-    REQUIRE(lvl2.m_types.size() == 2);
-    check_primitive_type(lvl2.m_types[0], PrimitiveType::CHAR);
-    check_primitive_type(lvl2.m_types[1], PrimitiveType::I32);
+        *std::get<std::unique_ptr<TupleTypeIdentifier>>(lvl1.m_field_types[1]);
+    REQUIRE(lvl2.m_field_types.size() == 2);
+    check_primitive_type(lvl2.m_field_types[0], PrimitiveType::CHAR);
+    check_primitive_type(lvl2.m_field_types[1], PrimitiveType::I32);
   }
 
   TEST_CASE("bust::parse_one_tuple_type") {
@@ -1603,8 +1603,8 @@ TEST_SUITE("bust.parser") {
         *binding.m_variable.m_type));
     const auto &tt = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
         *binding.m_variable.m_type);
-    REQUIRE(tt.m_types.size() == 1);
-    check_primitive_type(tt.m_types[0], PrimitiveType::I64);
+    REQUIRE(tt.m_field_types.size() == 1);
+    check_primitive_type(tt.m_field_types[0], PrimitiveType::I64);
   }
 
   // === Dot projection =======================================================

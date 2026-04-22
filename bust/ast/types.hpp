@@ -42,7 +42,7 @@ struct FunctionTypeIdentifier : public core::HasLocation {
 };
 
 struct TupleTypeIdentifier : public core::HasLocation {
-  std::vector<TypeIdentifier> m_types;
+  std::vector<TypeIdentifier> m_field_types;
 };
 
 inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
@@ -62,13 +62,13 @@ inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
                                      clone_type_identifier(v->m_return_type)});
         } else if constexpr (std::is_same_v<
                                  T, std::unique_ptr<TupleTypeIdentifier>>) {
-          std::vector<TypeIdentifier> types;
-          types.reserve(v->m_types.size());
-          for (const auto &type : v->m_types) {
-            types.emplace_back(clone_type_identifier(type));
+          std::vector<TypeIdentifier> field_types;
+          field_types.reserve(v->m_field_types.size());
+          for (const auto &type : v->m_field_types) {
+            field_types.emplace_back(clone_type_identifier(type));
           }
           return std::make_unique<TupleTypeIdentifier>(TupleTypeIdentifier{
-              .m_types = std::move(types),
+              .m_field_types = std::move(field_types),
           });
         } else {
           return v;
@@ -98,11 +98,11 @@ inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
         } else if constexpr (std::is_same_v<
                                  T, std::unique_ptr<TupleTypeIdentifier>>) {
           std::string result = "(";
-          for (size_t i = 0; i < v->m_types.size(); ++i) {
+          for (size_t i = 0; i < v->m_field_types.size(); ++i) {
             if (i > 0) {
               result += " ";
             }
-            result += type_identifier_to_string(v->m_types[i]);
+            result += type_identifier_to_string(v->m_field_types[i]);
             result += ",";
           }
           result += ")";

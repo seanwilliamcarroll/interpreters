@@ -41,6 +41,12 @@ struct FreeTypeVariableCollector {
     collect(type.m_return_type);
   }
 
+  void operator()(const TupleType &type) {
+    for (const auto &field : type.m_fields) {
+      collect(field);
+    }
+  }
+
   void operator()(const NeverType & /*unused*/) {}
 
   std::vector<TypeId> &free_type_variables() { return m_free_type_variables; }

@@ -64,6 +64,18 @@ struct TypeVariableSubstituter {
         .m_return_type = substitute(m_type_arena.get(type.m_return_type))});
   }
 
+  TypeId operator()(const TupleType &type) {
+    std::vector<TypeId> fields;
+    fields.reserve(type.m_fields.size());
+    for (const auto &field : type.m_fields) {
+      fields.emplace_back(substitute(m_type_arena.get(field)));
+    }
+
+    return m_type_arena.intern(TupleType{
+        .m_fields = std::move(fields),
+    });
+  }
+
   TypeId operator()(const NeverType & /*unused*/) {
     return m_type_arena.m_never;
   }
