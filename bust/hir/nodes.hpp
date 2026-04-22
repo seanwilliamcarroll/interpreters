@@ -91,12 +91,17 @@ using CastExpr = CastExprBase<Expression, TypeId>;
 using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr = LambdaExprBase<Identifier, Block, TypeId>;
 
+struct TupleExpr {
+  std::vector<Expression> m_fields;
+};
+
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
                  std::unique_ptr<Block>, std::unique_ptr<IfExpr>,
                  std::unique_ptr<CallExpr>, std::unique_ptr<BinaryExpr>,
                  std::unique_ptr<UnaryExpr>, std::unique_ptr<ReturnExpr>,
-                 std::unique_ptr<CastExpr>, std::unique_ptr<LambdaExpr>>;
+                 std::unique_ptr<CastExpr>, std::unique_ptr<LambdaExpr>,
+                 std::unique_ptr<TupleExpr>>;
 
 struct Expression : public core::HasLocation {
   TypeId m_type;

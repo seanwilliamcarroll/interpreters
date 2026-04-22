@@ -86,7 +86,7 @@ struct Expression : public core::HasLocation {
 };
 
 struct TupleExpr {
-  std::vector<Expression> m_expressions;
+  std::vector<Expression> m_fields;
 };
 
 struct DotExpr {

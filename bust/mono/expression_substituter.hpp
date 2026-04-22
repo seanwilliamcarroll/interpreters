@@ -23,7 +23,9 @@ struct ExpressionSubstituter {
   hir::Expression substitute(const hir::Expression &);
 
   hir::Identifier substitute(const hir::Identifier &);
+
   hir::ExprKind operator()(const hir::Identifier &);
+  hir::ExprKind operator()(const std::unique_ptr<hir::TupleExpr> &);
   hir::ExprKind operator()(const hir::Unit &);
   hir::ExprKind operator()(const hir::I8 &);
   hir::ExprKind operator()(const hir::I32 &);

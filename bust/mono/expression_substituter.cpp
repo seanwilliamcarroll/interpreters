@@ -49,7 +49,11 @@ ExpressionSubstituter::substitute(const hir::Identifier &identifier) {
 
   if (possible_specialization == nullptr) {
     return hir::Identifier{
-        {identifier.m_location}, identifier.m_name, identifier.m_id, new_type};
+        {identifier.m_location},
+        identifier.m_name,
+        identifier.m_id,
+        new_type,
+    };
   }
   const auto &specialization = *possible_specialization;
 
@@ -57,6 +61,17 @@ ExpressionSubstituter::substitute(const hir::Identifier &identifier) {
                          specialization.m_mangled_name,
                          specialization.m_new_id,
                          new_type};
+}
+
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::TupleExpr> & // tuple
+) {
+
+  // for (const auto &field : tuple->m_fields) {
+
+  // }
+
+  return {};
 }
 
 hir::ExprKind

@@ -557,7 +557,7 @@ ast::Expression Parser::parse_paren_or_tuple() {
   expression = ast::Expression{
       {original_location},
       std::make_unique<ast::TupleExpr>(ast::TupleExpr{
-          .m_expressions = std::move(fields),
+          .m_fields = std::move(fields),
       }),
   };
 

@@ -1371,11 +1371,11 @@ TEST_SUITE("bust.parser") {
     REQUIRE(
         std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
     const auto &tup = *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
-    REQUIRE(tup.m_expressions.size() == 2);
-    REQUIRE(std::holds_alternative<I64>(tup.m_expressions[0].m_expression));
-    CHECK(std::get<I64>(tup.m_expressions[0].m_expression).m_value == 1);
-    REQUIRE(std::holds_alternative<I64>(tup.m_expressions[1].m_expression));
-    CHECK(std::get<I64>(tup.m_expressions[1].m_expression).m_value == 2);
+    REQUIRE(tup.m_fields.size() == 2);
+    REQUIRE(std::holds_alternative<I64>(tup.m_fields[0].m_expression));
+    CHECK(std::get<I64>(tup.m_fields[0].m_expression).m_value == 1);
+    REQUIRE(std::holds_alternative<I64>(tup.m_fields[1].m_expression));
+    CHECK(std::get<I64>(tup.m_fields[1].m_expression).m_value == 2);
   }
 
   TEST_CASE("bust::parse_tuple_trailing_comma") {
@@ -1387,7 +1387,7 @@ TEST_SUITE("bust.parser") {
     REQUIRE(
         std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
     const auto &tup = *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
-    CHECK(tup.m_expressions.size() == 2);
+    CHECK(tup.m_fields.size() == 2);
   }
 
   TEST_CASE("bust::parse_one_tuple") {
@@ -1399,11 +1399,9 @@ TEST_SUITE("bust.parser") {
     REQUIRE(
         std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
     const auto &tup = *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
-    REQUIRE(tup.m_expressions.size() == 1);
-    REQUIRE(
-        std::holds_alternative<Identifier>(tup.m_expressions[0].m_expression));
-    CHECK(std::get<Identifier>(tup.m_expressions[0].m_expression).m_name ==
-          "x");
+    REQUIRE(tup.m_fields.size() == 1);
+    REQUIRE(std::holds_alternative<Identifier>(tup.m_fields[0].m_expression));
+    CHECK(std::get<Identifier>(tup.m_fields[0].m_expression).m_name == "x");
   }
 
   TEST_CASE("bust::parse_nested_tuple_inner_first") {
@@ -1416,18 +1414,18 @@ TEST_SUITE("bust.parser") {
         std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
     const auto &outer =
         *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
-    REQUIRE(outer.m_expressions.size() == 2);
+    REQUIRE(outer.m_fields.size() == 2);
     REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[0].m_expression));
-    const auto &inner = *std::get<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[0].m_expression);
-    REQUIRE(inner.m_expressions.size() == 2);
-    REQUIRE(std::holds_alternative<I64>(inner.m_expressions[0].m_expression));
-    CHECK(std::get<I64>(inner.m_expressions[0].m_expression).m_value == 1);
-    REQUIRE(std::holds_alternative<I64>(inner.m_expressions[1].m_expression));
-    CHECK(std::get<I64>(inner.m_expressions[1].m_expression).m_value == 2);
-    REQUIRE(std::holds_alternative<I64>(outer.m_expressions[1].m_expression));
-    CHECK(std::get<I64>(outer.m_expressions[1].m_expression).m_value == 3);
+        outer.m_fields[0].m_expression));
+    const auto &inner =
+        *std::get<std::unique_ptr<TupleExpr>>(outer.m_fields[0].m_expression);
+    REQUIRE(inner.m_fields.size() == 2);
+    REQUIRE(std::holds_alternative<I64>(inner.m_fields[0].m_expression));
+    CHECK(std::get<I64>(inner.m_fields[0].m_expression).m_value == 1);
+    REQUIRE(std::holds_alternative<I64>(inner.m_fields[1].m_expression));
+    CHECK(std::get<I64>(inner.m_fields[1].m_expression).m_value == 2);
+    REQUIRE(std::holds_alternative<I64>(outer.m_fields[1].m_expression));
+    CHECK(std::get<I64>(outer.m_fields[1].m_expression).m_value == 3);
   }
 
   TEST_CASE("bust::parse_tuple_of_tuples") {
@@ -1440,17 +1438,17 @@ TEST_SUITE("bust.parser") {
         std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
     const auto &outer =
         *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
-    REQUIRE(outer.m_expressions.size() == 2);
+    REQUIRE(outer.m_fields.size() == 2);
     REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[0].m_expression));
+        outer.m_fields[0].m_expression));
     REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[1].m_expression));
-    const auto &left = *std::get<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[0].m_expression);
-    const auto &right = *std::get<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[1].m_expression);
-    CHECK(left.m_expressions.size() == 2);
-    CHECK(right.m_expressions.size() == 2);
+        outer.m_fields[1].m_expression));
+    const auto &left =
+        *std::get<std::unique_ptr<TupleExpr>>(outer.m_fields[0].m_expression);
+    const auto &right =
+        *std::get<std::unique_ptr<TupleExpr>>(outer.m_fields[1].m_expression);
+    CHECK(left.m_fields.size() == 2);
+    CHECK(right.m_fields.size() == 2);
   }
 
   TEST_CASE("bust::parse_nested_one_tuple") {
@@ -1464,16 +1462,14 @@ TEST_SUITE("bust.parser") {
         std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
     const auto &outer =
         *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
-    REQUIRE(outer.m_expressions.size() == 1);
+    REQUIRE(outer.m_fields.size() == 1);
     REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[0].m_expression));
-    const auto &inner = *std::get<std::unique_ptr<TupleExpr>>(
-        outer.m_expressions[0].m_expression);
-    REQUIRE(inner.m_expressions.size() == 1);
-    REQUIRE(std::holds_alternative<Identifier>(
-        inner.m_expressions[0].m_expression));
-    CHECK(std::get<Identifier>(inner.m_expressions[0].m_expression).m_name ==
-          "x");
+        outer.m_fields[0].m_expression));
+    const auto &inner =
+        *std::get<std::unique_ptr<TupleExpr>>(outer.m_fields[0].m_expression);
+    REQUIRE(inner.m_fields.size() == 1);
+    REQUIRE(std::holds_alternative<Identifier>(inner.m_fields[0].m_expression));
+    CHECK(std::get<Identifier>(inner.m_fields[0].m_expression).m_name == "x");
   }
 
   TEST_CASE("bust::parse_parenthesized_identifier_is_not_tuple") {

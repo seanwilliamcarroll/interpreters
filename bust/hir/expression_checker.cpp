@@ -23,6 +23,7 @@
 #include <source_location.hpp>
 #include <types.hpp>
 
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -111,10 +112,32 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
           Identifier{{location}, identifier.m_name, binding_id, final_type}};
 }
 
-Expression ExpressionChecker::operator()(
-    const std::unique_ptr<ast::TupleExpr> & /*unused*/,
-    const core::SourceLocation & /*unused*/) {
-  return {};
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::TupleExpr> &tuple_expr,
+                              const core::SourceLocation &location) {
+
+  std::vector<Expression> fields;
+  fields.reserve(tuple_expr->m_fields.size());
+  std::vector<TypeId> field_types;
+  field_types.reserve(tuple_expr->m_fields.size());
+  std::transform(tuple_expr->m_fields.cbegin(), tuple_expr->m_fields.cend(),
+                 fields.end(), [&](const auto &field) -> Expression {
+                   auto expression = check_expression(field);
+                   field_types.emplace_back(expression.m_type);
+                   return expression;
+                 });
+
+  auto tuple_type = m_ctx.m_type_arena.intern(TupleType{
+      .m_fields = std::move(field_types),
+  });
+
+  return {
+      {location},
+      tuple_type,
+      std::make_unique<TupleExpr>(TupleExpr{
+          .m_fields = std::move(fields),
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(
