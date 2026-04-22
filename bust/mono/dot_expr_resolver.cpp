@@ -6,6 +6,7 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
 #include <hir/nodes.hpp>
 #include <mono/dot_expr_resolver.hpp>
 
@@ -162,7 +163,7 @@ void DotExprResolver::operator()(
 //
 void DotExprResolver::operator()(
     const std::unique_ptr<hir::DotExpr> & /*unused*/) {
-  std::unreachable();
+  throw core::InternalCompilerError("Unreachable!!");
 }
 
 //****************************************************************************

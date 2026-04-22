@@ -11,11 +11,10 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
+#include <hir/types.hpp>
 #include <mono/context.hpp>
 
 #include <memory>
-
-#include "hir/types.hpp"
 
 //****************************************************************************
 namespace bust::mono {

@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include <ast/nodes.hpp>
+#include <exceptions.hpp>
 
 #include <sstream>
 #include <string>
@@ -219,7 +220,7 @@ private:
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ForExpr>>) {
             line("For(TODO)");
           } else {
-            std::unreachable();
+            throw core::InternalCompilerError("Unreachable!!");
           }
         },
         e.m_expression);

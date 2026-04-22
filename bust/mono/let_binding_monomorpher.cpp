@@ -11,6 +11,7 @@
 #include <hir/type_variable_substituter.hpp>
 #include <hir/types.hpp>
 #include <mono/context.hpp>
+#include <mono/dot_expr_resolver.hpp>
 #include <mono/let_binding_monomorpher.hpp>
 #include <mono/let_binding_substituter.hpp>
 #include <mono/name_mangler.hpp>
@@ -19,8 +20,6 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
-
-#include "mono/dot_expr_resolver.hpp"
 
 //****************************************************************************
 namespace bust::mono {

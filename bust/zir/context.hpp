@@ -16,10 +16,9 @@
 #include <zir/environment.hpp>
 #include <zir/nodes.hpp>
 #include <zir/type_resolver.hpp>
+#include <zir/types.hpp>
 
 #include <unordered_map>
-
-#include "zir/types.hpp"
 
 //****************************************************************************
 namespace bust::zir {
