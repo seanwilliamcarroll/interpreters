@@ -232,6 +232,16 @@ private:
             m_out << ")\n";
             IndentGuard g(*this);
             dump_block(v->m_body);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<TupleExpr>>) {
+            m_out << "Tuple\n";
+            IndentGuard g(*this);
+            for (const auto &field : v->m_fields) {
+              dump_expression(field);
+            }
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<DotExpr>>) {
+            m_out << "Dot(" << v->m_tuple_index << ")\n";
+            IndentGuard g(*this);
+            dump_expression(v->m_expression);
           }
         },
         e.m_expression);
