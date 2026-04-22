@@ -120,13 +120,10 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::TupleExpr> &tuple_expr,
   fields.reserve(tuple_expr->m_fields.size());
   std::vector<TypeId> field_types;
   field_types.reserve(tuple_expr->m_fields.size());
-  std::transform(tuple_expr->m_fields.cbegin(), tuple_expr->m_fields.cend(),
-                 fields.end(), [&](const auto &field) -> Expression {
-                   auto expression = check_expression(field);
-                   field_types.emplace_back(expression.m_type);
-                   return expression;
-                 });
-
+  for (const auto &field : tuple_expr->m_fields) {
+    fields.emplace_back(check_expression(field));
+    field_types.emplace_back(fields.back().m_type);
+  }
   auto tuple_type = m_ctx.m_type_arena.intern(TupleType{
       .m_fields = std::move(field_types),
   });
