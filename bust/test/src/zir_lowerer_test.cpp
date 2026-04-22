@@ -510,6 +510,170 @@ TEST_SUITE("bust.zir_lowerer") {
         type_of(zir, lambda.m_return_type)));
   }
 
+  // --- Tuple expressions -----------------------------------------------------
+
+  TEST_CASE("tuple literal is lowered to TupleExpr") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, 2);\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &kind = expr_kind(zir, let.m_expression);
+    REQUIRE(std::holds_alternative<zir::TupleExpr>(kind));
+    CHECK(std::get<zir::TupleExpr>(kind).m_fields.size() == 2);
+  }
+
+  TEST_CASE("tuple expression has TupleType with correct arity") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, 2);\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto tid = expr_type(zir, let.m_expression);
+    auto &t = type_of(zir, tid);
+    REQUIRE(std::holds_alternative<zir::TupleType>(t));
+    CHECK(std::get<zir::TupleType>(t).m_fields.size() == 2);
+  }
+
+  TEST_CASE("homogeneous tuple field types are i64") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, 2);\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &tuple = std::get<zir::TupleExpr>(expr_kind(zir, let.m_expression));
+    for (const auto &field_id : tuple.m_fields) {
+      CHECK(std::holds_alternative<zir::I64Type>(
+          type_of(zir, expr_type(zir, field_id))));
+    }
+  }
+
+  TEST_CASE("heterogeneous tuple field types preserved") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, true);\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &tuple = std::get<zir::TupleExpr>(expr_kind(zir, let.m_expression));
+    REQUIRE(tuple.m_fields.size() == 2);
+    CHECK(std::holds_alternative<zir::I64Type>(
+        type_of(zir, expr_type(zir, tuple.m_fields[0]))));
+    CHECK(std::holds_alternative<zir::BoolType>(
+        type_of(zir, expr_type(zir, tuple.m_fields[1]))));
+  }
+
+  TEST_CASE("nested tuple lowers to nested TupleExpr") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = ((1, 2), true);\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &outer = std::get<zir::TupleExpr>(expr_kind(zir, let.m_expression));
+    REQUIRE(outer.m_fields.size() == 2);
+    auto &inner_kind = expr_kind(zir, outer.m_fields[0]);
+    REQUIRE(std::holds_alternative<zir::TupleExpr>(inner_kind));
+    CHECK(std::get<zir::TupleExpr>(inner_kind).m_fields.size() == 2);
+  }
+
+  TEST_CASE("one-tuple lowers with single field") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (42,);\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &tuple = std::get<zir::TupleExpr>(expr_kind(zir, let.m_expression));
+    REQUIRE(tuple.m_fields.size() == 1);
+    auto &inner = expr_kind(zir, tuple.m_fields[0]);
+    REQUIRE(std::holds_alternative<zir::I64>(inner));
+    CHECK(std::get<zir::I64>(inner).m_value == 42);
+  }
+
+  // --- Dot expressions -------------------------------------------------------
+
+  TEST_CASE("dot projection is lowered to DotExpr") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, true);\n"
+                            "  t.0\n"
+                            "}");
+    auto &func = first_function(zir);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &kind = expr_kind(zir, func.m_body.m_final_expression.value());
+    REQUIRE(std::holds_alternative<zir::DotExpr>(kind));
+    CHECK(std::get<zir::DotExpr>(kind).m_tuple_index == 0);
+  }
+
+  TEST_CASE("dot projection at index 1 preserves the index") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, true);\n"
+                            "  let b: bool = t.1;\n"
+                            "  0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[1]);
+    auto &kind = expr_kind(zir, let.m_expression);
+    REQUIRE(std::holds_alternative<zir::DotExpr>(kind));
+    CHECK(std::get<zir::DotExpr>(kind).m_tuple_index == 1);
+  }
+
+  TEST_CASE("dot projection result type is the projected field type") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, true);\n"
+                            "  t.0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto final_id = func.m_body.m_final_expression.value();
+    CHECK(std::holds_alternative<zir::I64Type>(
+        type_of(zir, expr_type(zir, final_id))));
+  }
+
+  TEST_CASE("dot projection target references the tuple binding") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = (1, true);\n"
+                            "  t.0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &kind = expr_kind(zir, func.m_body.m_final_expression.value());
+    auto &dot = std::get<zir::DotExpr>(kind);
+    auto &target_kind = expr_kind(zir, dot.m_expression);
+    REQUIRE(std::holds_alternative<zir::IdentifierExpr>(target_kind));
+    CHECK(
+        binding(zir, std::get<zir::IdentifierExpr>(target_kind).m_id).m_name ==
+        "t");
+  }
+
+  TEST_CASE("nested dot projection lowers to nested DotExpr") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let t = ((1, 2), true);\n"
+                            "  t.0.0\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &outer_kind = expr_kind(zir, func.m_body.m_final_expression.value());
+    REQUIRE(std::holds_alternative<zir::DotExpr>(outer_kind));
+    auto &outer_dot = std::get<zir::DotExpr>(outer_kind);
+    CHECK(outer_dot.m_tuple_index == 0);
+    auto &inner_kind = expr_kind(zir, outer_dot.m_expression);
+    REQUIRE(std::holds_alternative<zir::DotExpr>(inner_kind));
+    CHECK(std::get<zir::DotExpr>(inner_kind).m_tuple_index == 0);
+  }
+
+  TEST_CASE("polymorphic projection monomorphizes with concrete field type") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let first = |x| { x.0 };\n"
+                            "  first((42, true))\n"
+                            "}");
+    auto &func = first_function(zir);
+    // Final call should have i64 result type after monomorphization
+    auto final_id = func.m_body.m_final_expression.value();
+    CHECK(std::holds_alternative<zir::I64Type>(
+        type_of(zir, expr_type(zir, final_id))));
+  }
+
   // --- Arena consistency -----------------------------------------------------
 
   TEST_CASE("expression IDs are retrievable from arena") {
