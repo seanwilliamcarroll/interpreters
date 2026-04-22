@@ -37,6 +37,7 @@ enum class TokenType : uint8_t {
   PIPE,
   AND,
   AS,
+  DOT,
 
   // Arithmetic operators
   PLUS,

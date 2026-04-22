@@ -56,6 +56,8 @@ std::string token_type_to_string(TokenType type) {
     return "GREATER '>'";
   case TokenType::BANG:
     return "BANG '!'";
+  case TokenType::DOT:
+    return "DOT '.'";
   // Multi-char structural/operators
   case TokenType::ARROW:
     return "ARROW \"->\"";

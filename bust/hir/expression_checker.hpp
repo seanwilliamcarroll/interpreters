@@ -23,6 +23,8 @@ struct ExpressionChecker {
   Expression check_expression(const ast::Expression &);
 
   Expression operator()(const ast::Identifier &, const core::SourceLocation &);
+  Expression operator()(const std::unique_ptr<ast::TupleExpr> &,
+                        const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::CallExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::BinaryExpr> &,
@@ -38,6 +40,8 @@ struct ExpressionChecker {
   Expression operator()(const std::unique_ptr<ast::ReturnExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::LambdaExpr> &,
+                        const core::SourceLocation &);
+  Expression operator()(const std::unique_ptr<ast::DotExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::WhileExpr> &,
                         const core::SourceLocation &);

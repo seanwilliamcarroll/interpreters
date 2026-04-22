@@ -112,6 +112,12 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
 }
 
 Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::TupleExpr> & /*unused*/,
+    const core::SourceLocation & /*unused*/) {
+  return {};
+}
+
+Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::CallExpr> &call_expression,
     const core::SourceLocation &location) {
   auto callee = check_expression(call_expression->m_callee);
@@ -467,6 +473,12 @@ Expression ExpressionChecker::operator()(
           function_type_id,
           std::make_unique<LambdaExpr>(LambdaExpr{
               std::move(parameters), std::move(body), return_type_id})};
+}
+
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> & /*unused*/,
+                              const core::SourceLocation & /*unused*/) {
+  throw core::InternalCompilerError("Not yet implemented");
 }
 
 Expression ExpressionChecker::operator()(

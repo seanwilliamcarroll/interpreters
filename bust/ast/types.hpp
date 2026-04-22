@@ -30,12 +30,19 @@ struct DefinedType : public core::HasLocation {
 
 struct FunctionTypeIdentifier;
 
+struct TupleTypeIdentifier;
+
 using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType,
+                                    std::unique_ptr<TupleTypeIdentifier>,
                                     std::unique_ptr<FunctionTypeIdentifier>>;
 
 struct FunctionTypeIdentifier : public core::HasLocation {
   std::vector<TypeIdentifier> m_parameter_types;
   TypeIdentifier m_return_type;
+};
+
+struct TupleTypeIdentifier : public core::HasLocation {
+  std::vector<TypeIdentifier> m_types;
 };
 
 inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
@@ -53,6 +60,16 @@ inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
               FunctionTypeIdentifier{{v->m_location},
                                      std::move(params),
                                      clone_type_identifier(v->m_return_type)});
+        } else if constexpr (std::is_same_v<
+                                 T, std::unique_ptr<TupleTypeIdentifier>>) {
+          std::vector<TypeIdentifier> types;
+          types.reserve(v->m_types.size());
+          for (const auto &type : v->m_types) {
+            types.emplace_back(clone_type_identifier(type));
+          }
+          return std::make_unique<TupleTypeIdentifier>(TupleTypeIdentifier{
+              .m_types = std::move(types),
+          });
         } else {
           return v;
         }
@@ -77,6 +94,18 @@ inline std::string type_identifier_to_string(const TypeIdentifier &tid) {
           }
           result += ") -> ";
           result += type_identifier_to_string(v->m_return_type);
+          return result;
+        } else if constexpr (std::is_same_v<
+                                 T, std::unique_ptr<TupleTypeIdentifier>>) {
+          std::string result = "(";
+          for (size_t i = 0; i < v->m_types.size(); ++i) {
+            if (i > 0) {
+              result += " ";
+            }
+            result += type_identifier_to_string(v->m_types[i]);
+            result += ",";
+          }
+          result += ")";
           return result;
         } else {
           return v.m_type;

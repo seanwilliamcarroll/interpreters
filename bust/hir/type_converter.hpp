@@ -37,6 +37,11 @@ struct TypeConverter {
     return m_ctx.m_type_arena.intern(PrimitiveTypeValue{type.m_type});
   }
 
+  TypeId
+  operator()(const std::unique_ptr<ast::TupleTypeIdentifier> & /*unused*/) {
+    throw core::InternalCompilerError("tuple types not yet implemented");
+  }
+
   TypeId operator()(const std::unique_ptr<ast::FunctionTypeIdentifier> &type) {
     std::vector<TypeId> param_types;
     param_types.reserve(type->m_parameter_types.size());
