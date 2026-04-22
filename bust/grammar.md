@@ -34,6 +34,7 @@ ARROW       = `->`
 COLON       = `:`
 SEMICOLON   = `;`
 COMMA       = `,`
+DOT         = `.`
 EQUALS      = `=`
 PIPE        = `|`
 
@@ -102,8 +103,16 @@ type                = I8
                     | CHAR
                     | UNIT
                     | function_type
+                    | tuple_type
+                    | LPAREN type RPAREN
 
 function_type       = FN LPAREN (type (COMMA type)*)? RPAREN ARROW type
+
+// A tuple type requires at least one COMMA to disambiguate from a
+// parenthesized type. `(i64)` is just `i64`; `(i64,)` is a 1-tuple.
+// The 0-tuple `()` is spelled UNIT (lexed as a single token).
+tuple_type          = LPAREN type COMMA RPAREN
+                    | LPAREN type (COMMA type)+ COMMA? RPAREN
 
 block               = LBRACE expression_or_binding* expression? RBRACE
 
@@ -143,17 +152,31 @@ unary_pre           = (MINUS | BANG) cast_expr
 
 cast_expr           = postfix (AS type)*
 
-postfix             = primary (LPAREN (expression (COMMA expression)*)? RPAREN)*
+postfix             = primary (call_suffix | dot_suffix)*
+
+call_suffix         = LPAREN (expression (COMMA expression)*)? RPAREN
+
+// Tuple projection. When structs land, extend to `DOT (INT_LITERAL | IDENTIFIER)`.
+dot_suffix          = DOT tuple_index
+
+tuple_index         = INT_LITERAL
 
 primary             = literal
                     | IDENTIFIER
-                    | LPAREN expression RPAREN
+                    | paren_or_tuple_expr
                     | block
                     | if_expr
                     | while_expr
                     | for_expr
                     | lambda_expr
                     | return_expr
+
+// `(expr)` is a parenthesized expression; `(expr,)` is a 1-tuple;
+// `(expr, expr, ...)` (with optional trailing comma) is an N-tuple.
+// The 0-tuple `()` is the UNIT literal (lexed as a single token).
+paren_or_tuple_expr = LPAREN expression RPAREN
+                    | LPAREN expression COMMA RPAREN
+                    | LPAREN expression (COMMA expression)+ COMMA? RPAREN
 
 // Compound expressions
 
