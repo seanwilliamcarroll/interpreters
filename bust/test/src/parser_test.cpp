@@ -1406,6 +1406,76 @@ TEST_SUITE("bust.parser") {
           "x");
   }
 
+  TEST_CASE("bust::parse_nested_tuple_inner_first") {
+    // ((1, 2), 3) — first element is itself a 2-tuple.
+    auto program = parse_string("fn main() -> i64 { ((1, 2), 3) }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
+    const auto &outer =
+        *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
+    REQUIRE(outer.m_expressions.size() == 2);
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[0].m_expression));
+    const auto &inner = *std::get<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[0].m_expression);
+    REQUIRE(inner.m_expressions.size() == 2);
+    REQUIRE(std::holds_alternative<I64>(inner.m_expressions[0].m_expression));
+    CHECK(std::get<I64>(inner.m_expressions[0].m_expression).m_value == 1);
+    REQUIRE(std::holds_alternative<I64>(inner.m_expressions[1].m_expression));
+    CHECK(std::get<I64>(inner.m_expressions[1].m_expression).m_value == 2);
+    REQUIRE(std::holds_alternative<I64>(outer.m_expressions[1].m_expression));
+    CHECK(std::get<I64>(outer.m_expressions[1].m_expression).m_value == 3);
+  }
+
+  TEST_CASE("bust::parse_tuple_of_tuples") {
+    // ((1, 2), (3, 4)) — both elements are tuples.
+    auto program = parse_string("fn main() -> i64 { ((1, 2), (3, 4)) }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
+    const auto &outer =
+        *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
+    REQUIRE(outer.m_expressions.size() == 2);
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[0].m_expression));
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[1].m_expression));
+    const auto &left = *std::get<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[0].m_expression);
+    const auto &right = *std::get<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[1].m_expression);
+    CHECK(left.m_expressions.size() == 2);
+    CHECK(right.m_expressions.size() == 2);
+  }
+
+  TEST_CASE("bust::parse_nested_one_tuple") {
+    // ((x,),) — 1-tuple containing a 1-tuple; stress-tests trailing commas
+    // at multiple depths.
+    auto program = parse_string("fn main() -> i64 { ((x,),) }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<TupleExpr>>(expr.m_expression));
+    const auto &outer =
+        *std::get<std::unique_ptr<TupleExpr>>(expr.m_expression);
+    REQUIRE(outer.m_expressions.size() == 1);
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[0].m_expression));
+    const auto &inner = *std::get<std::unique_ptr<TupleExpr>>(
+        outer.m_expressions[0].m_expression);
+    REQUIRE(inner.m_expressions.size() == 1);
+    REQUIRE(std::holds_alternative<Identifier>(
+        inner.m_expressions[0].m_expression));
+    CHECK(std::get<Identifier>(inner.m_expressions[0].m_expression).m_name ==
+          "x");
+  }
+
   TEST_CASE("bust::parse_parenthesized_identifier_is_not_tuple") {
     // (x) is just x — no trailing comma means no tuple.
     auto program = parse_string("fn main() -> i64 { (x) }");
@@ -1436,6 +1506,105 @@ TEST_SUITE("bust.parser") {
     REQUIRE(tt.m_types.size() == 2);
     check_primitive_type(tt.m_types[0], PrimitiveType::I64);
     check_primitive_type(tt.m_types[1], PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("bust::parse_tuple_of_tuple_type_in_let") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let t: ((i64,), bool) = ((1,), true);\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type));
+    const auto &tt = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type);
+    REQUIRE(tt.m_types.size() == 2);
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
+        tt.m_types[0]));
+    check_primitive_type(
+        std::get<std::unique_ptr<TupleTypeIdentifier>>(tt.m_types[0])
+            ->m_types[0],
+        PrimitiveType::I64);
+    check_primitive_type(tt.m_types[1], PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("bust::parse_nested_tuple_type_in_let") {
+    // ((i64, i64), bool) — nested tuple in the first position.
+    auto program =
+        parse_string("fn main() -> i64 {\n"
+                     "  let t: ((i64, i64), bool) = ((1, 2), true);\n"
+                     "  0\n"
+                     "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type));
+    const auto &outer = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type);
+    REQUIRE(outer.m_types.size() == 2);
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
+        outer.m_types[0]));
+    const auto &inner =
+        *std::get<std::unique_ptr<TupleTypeIdentifier>>(outer.m_types[0]);
+    REQUIRE(inner.m_types.size() == 2);
+    check_primitive_type(inner.m_types[0], PrimitiveType::I64);
+    check_primitive_type(inner.m_types[1], PrimitiveType::I64);
+    check_primitive_type(outer.m_types[1], PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("bust::parse_deeply_nested_tuple_type") {
+    // (i64, (bool, (char, i32))) — three levels of nesting, right-heavy.
+    auto program = parse_string(
+        "fn main() -> i64 {\n"
+        "  let t: (i64, (bool, (char, i32))) = (1, (true, ('a', 2)));\n"
+        "  0\n"
+        "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    const auto &lvl0 = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type);
+    REQUIRE(lvl0.m_types.size() == 2);
+    check_primitive_type(lvl0.m_types[0], PrimitiveType::I64);
+    const auto &lvl1 =
+        *std::get<std::unique_ptr<TupleTypeIdentifier>>(lvl0.m_types[1]);
+    REQUIRE(lvl1.m_types.size() == 2);
+    check_primitive_type(lvl1.m_types[0], PrimitiveType::BOOL);
+    const auto &lvl2 =
+        *std::get<std::unique_ptr<TupleTypeIdentifier>>(lvl1.m_types[1]);
+    REQUIRE(lvl2.m_types.size() == 2);
+    check_primitive_type(lvl2.m_types[0], PrimitiveType::CHAR);
+    check_primitive_type(lvl2.m_types[1], PrimitiveType::I32);
+  }
+
+  TEST_CASE("bust::parse_one_tuple_type") {
+    // (i64,) — 1-tuple type requires trailing comma.
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let t: (i64,) = (1,);\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type));
+    const auto &tt = *std::get<std::unique_ptr<TupleTypeIdentifier>>(
+        *binding.m_variable.m_type);
+    REQUIRE(tt.m_types.size() == 1);
+    check_primitive_type(tt.m_types[0], PrimitiveType::I64);
   }
 
   // === Dot projection =======================================================
