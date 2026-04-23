@@ -41,8 +41,19 @@ struct TypeArena : public AbstractInternArena<TypeId, LLVMType> {
             return "ptr";
           } else if constexpr (std::is_same_v<T, StructType>) {
             // Do all structs have names?
-            auto struct_name = expect_get_struct_name(intern(t));
-            return "%" + struct_name;
+            auto struct_name = get_struct_name(intern(t));
+            if (struct_name.has_value()) {
+              return "%" + struct_name.value();
+            }
+            // Anonymous struct
+            std::string out = "{ ";
+            for (size_t index = 0; index < t.m_fields.size() - 1; ++index) {
+              out += to_string(t.m_fields[index]);
+              out += ", ";
+            }
+            out += to_string(t.m_fields.back());
+            out += " }";
+            return out;
           }
         },
         type);

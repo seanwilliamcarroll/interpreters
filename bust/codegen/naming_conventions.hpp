@@ -77,6 +77,8 @@ inline std::string make_alloca_name(const std::string &input) {
   return input + "." + std::string{parameter_alloca_suffix};
 }
 
+constexpr std::string_view anonymous_tuple = "tuple";
+
 //****************************************************************************
 } // namespace bust::codegen::conventions
 //****************************************************************************

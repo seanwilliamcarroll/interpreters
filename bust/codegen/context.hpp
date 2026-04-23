@@ -60,7 +60,42 @@ struct Context {
   }
 
   [[nodiscard]] TypeId to_type(zir::TypeId type_id) const {
-    return m_type_arena.intern(to_llvm_type(arena().get(type_id)));
+    return m_type_arena.intern(to_type(arena().get(type_id)));
+  }
+
+  [[nodiscard]] LLVMType to_type(const zir::Type &type) const {
+    return std::visit(
+        [&](const auto &t) -> LLVMType {
+          using T = std::decay_t<decltype(t)>;
+          if constexpr (std::is_same_v<T, zir::UnitType>) {
+            return VoidType{};
+          } else if constexpr (std::is_same_v<T, zir::BoolType>) {
+            return I1Type{};
+          } else if constexpr (std::is_same_v<T, zir::I8Type> ||
+                               std::is_same_v<T, zir::CharType>) {
+            return I8Type{};
+          } else if constexpr (std::is_same_v<T, zir::I32Type>) {
+            return I32Type{};
+          } else if constexpr (std::is_same_v<T, zir::I64Type>) {
+            return I64Type{};
+          } else if constexpr (std::is_same_v<T, zir::FunctionType>) {
+            return PtrType{};
+          } else if constexpr (std::is_same_v<T, zir::TupleType>) {
+            std::vector<TypeId> fields;
+            fields.reserve(t.m_fields.size());
+            std::transform(t.m_fields.cbegin(), t.m_fields.cend(),
+                           std::back_inserter(fields),
+                           [&](const auto &field) { return to_type(field); });
+            return StructType{
+                .m_fields = std::move(fields),
+            };
+          } else {
+            assert(false && "codegen only handles primitive types and function "
+                            "types for now");
+            return VoidType{};
+          }
+        },
+        type);
   }
 
   TypeArena &type() { return m_type_arena; }

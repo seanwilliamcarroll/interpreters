@@ -83,6 +83,11 @@ struct Arena {
 
   TypeId intern(const Type &input_type) { return type().intern(input_type); }
 
+  template <typename VariantType>
+  const VariantType &as(TypeId id, const char *function) const {
+    return type().as<VariantType>(id, function);
+  }
+
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
     return type().as_function(type_id);
   }
