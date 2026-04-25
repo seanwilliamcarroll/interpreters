@@ -12,10 +12,10 @@
 #include <codegen/context.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
+#include <codegen/value.hpp>
 
 #include <cstddef>
 #include <iosfwd>
@@ -48,11 +48,14 @@ struct Formatter {
 
   void format(const auto &);
 
+  std::string str(const LLVMType &);
+  std::string str(TypeId);
+  std::string str(const Index &);
   std::string str(const Handle &);
+  std::string str(const Value &);
 
-  void define_struct_type(TypeId);
+  void define_struct_type(const StructType &);
   void operator()(const Module &);
-  void operator()(const ConstantClosure &);
 
   void operator()(const Parameter &);
   void declare(const FunctionDeclaration &);

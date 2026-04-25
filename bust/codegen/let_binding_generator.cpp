@@ -22,17 +22,12 @@ namespace bust::codegen {
 //****************************************************************************
 
 void LetBindingGenerator::generate(const zir::LetBinding &let_binding) {
-  auto value_handle =
-      ExpressionGenerator{m_ctx}.generate(let_binding.m_expression);
+  auto value = ExpressionGenerator{m_ctx}.generate(let_binding.m_expression);
 
-  auto binding = m_ctx.arena().get(let_binding.m_identifier);
+  auto zir_binding = m_ctx.arena().get(let_binding.m_identifier);
 
-  auto identifier_handle =
-      m_ctx.builder().add_alloca(binding.m_name, m_ctx.to_type(binding.m_type));
-
-  m_ctx.builder().create_store(
-      identifier_handle,
-      {.m_name = value_handle, .m_type = m_ctx.to_type(binding.m_type)});
+  m_ctx.define_local(zir_binding.m_name, m_ctx.to_type(zir_binding.m_type),
+                     value);
 }
 
 //****************************************************************************

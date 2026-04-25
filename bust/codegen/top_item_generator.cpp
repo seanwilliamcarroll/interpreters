@@ -11,7 +11,6 @@
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/let_binding_generator.hpp>
 #include <codegen/module.hpp>
@@ -19,6 +18,7 @@
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/top_item_generator.hpp>
+#include <codegen/value.hpp>
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
@@ -41,16 +41,51 @@ void TopItemDeclarationCollector::collect(const zir::TopItem &top_item) {
 void TopItemDeclarationCollector::operator()(
     const zir::FunctionDef &function_def) {
   const auto &binding = m_ctx.arena().get(function_def.m_id);
-  m_ctx.symbols().define_custom_global(
-      binding.m_name, conventions::make_closure_name(binding.m_name));
+  auto callee = Value{
+      .m_handle =
+          GlobalHandle{
+              .m_handle = binding.m_name,
+          },
+      .m_type_id = m_ctx.m_ptr,
+  };
+
+  auto function_type = m_ctx.arena().as_function(binding.m_type);
+
+  auto return_type_id = m_ctx.to_type(function_type.m_return_type);
+
+  std::vector<TypeId> parameter_types;
+  parameter_types.reserve(function_type.m_parameters.size());
+  for (const auto &parameter_type : function_type.m_parameters) {
+    parameter_types.emplace_back(m_ctx.to_type(parameter_type));
+  }
+
+  m_ctx.define_function(binding.m_name, std::move(callee), return_type_id,
+                        std::move(parameter_types));
 }
 
 void TopItemDeclarationCollector::operator()(
     const zir::ExternFunctionDeclaration &extern_func) {
   const auto &binding = m_ctx.arena().get(extern_func.m_id);
-  m_ctx.symbols().define_custom_global(
-      binding.m_name,
-      conventions::make_closure_name(conventions::make_thunk(binding.m_name)));
+  auto callee = Value{
+      .m_handle =
+          GlobalHandle{
+              .m_handle = binding.m_name,
+          },
+      .m_type_id = m_ctx.m_ptr,
+  };
+
+  auto function_type = m_ctx.arena().as_function(binding.m_type);
+
+  auto return_type_id = m_ctx.to_type(function_type.m_return_type);
+
+  std::vector<TypeId> parameter_types;
+  parameter_types.reserve(function_type.m_parameters.size());
+  for (const auto &parameter_type : function_type.m_parameters) {
+    parameter_types.emplace_back(m_ctx.to_type(parameter_type));
+  }
+
+  m_ctx.define_function(binding.m_name, std::move(callee), return_type_id,
+                        std::move(parameter_types));
 }
 
 void TopItemDeclarationCollector::operator()(
@@ -62,13 +97,11 @@ void TopItemGenerator::generate(const zir::TopItem &top_item) {
 
 FunctionDeclaration
 TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
-  const auto &binding = m_ctx.arena().get(function_def.m_id);
-  const auto &type = m_ctx.arena().as_function(binding.m_type);
+  const auto &zir_binding = m_ctx.arena().get(function_def.m_id);
+  auto binding = m_ctx.symbols().lookup(zir_binding.m_name);
+  const auto &function_binding = std::get<FunctionBinding>(binding);
 
   std::vector<Parameter> parameters;
-  if (!conventions::is_main(binding.m_name)) {
-    parameters.emplace_back(m_ctx.env_parameter());
-  }
   std::ranges::transform(
       function_def.m_parameters, std::back_inserter(parameters),
       [&](const auto &id) -> Parameter {
@@ -76,41 +109,41 @@ TopItemGenerator::generate_signature(const zir::FunctionDef &function_def) {
         return Parameter{.m_name = parameter_binding.m_name,
                          .m_type = m_ctx.to_type(parameter_binding.m_type)};
       });
-  return {.m_function_id = GlobalHandle{binding.m_name},
-          .m_return_type = m_ctx.to_type(type.m_return_type),
+  return {.m_function_id = function_binding.m_callee,
+          .m_return_type = function_binding.m_return_type,
           .m_parameters = std::move(parameters)};
 }
 
 FunctionDeclaration TopItemGenerator::generate_signature(
     const zir::ExternFunctionDeclaration &extern_function_declaration) const {
-  const auto &binding = m_ctx.arena().get(extern_function_declaration.m_id);
-  const auto &type = m_ctx.arena().as_function(binding.m_type);
+  const auto &zir_binding = m_ctx.arena().get(extern_function_declaration.m_id);
+  auto binding = m_ctx.symbols().lookup(zir_binding.m_name);
+  const auto &function_binding = std::get<FunctionBinding>(binding);
 
   std::vector<Parameter> parameters;
-  for (auto [index, type_id] :
-       std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
+  for (auto [index, type_id] : std::views::zip(
+           std::views::iota(0ULL), function_binding.m_parameter_types)) {
     // Don't actually need names on externs, but doesn't hurt
-    parameters.emplace_back(
-        Parameter{.m_name = conventions::make_param_name(index),
-                  .m_type = m_ctx.to_type(type_id)});
+    parameters.emplace_back(Parameter{
+        .m_name = conventions::make_param_name(index), .m_type = type_id});
   }
-  return {.m_function_id = GlobalHandle{binding.m_name},
-          .m_return_type = m_ctx.to_type(type.m_return_type),
+  return {.m_function_id = function_binding.m_callee,
+          .m_return_type = function_binding.m_return_type,
           .m_parameters = std::move(parameters)};
 }
 
 void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   ScopeGuard guard(m_ctx.symbols());
 
+  const auto &binding = m_ctx.arena().get(function_def.m_id);
+
   auto signature = generate_signature(function_def);
   auto function = m_ctx.builder().make_function(signature);
   m_ctx.builder().enter_function(function);
 
-  m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
+  m_ctx.emit_parameter_prologue(signature.m_parameters);
 
   auto return_value = ExpressionGenerator{m_ctx}.generate(function_def.m_body);
-
-  const auto &binding = m_ctx.arena().get(function_def.m_id);
 
   const auto &return_type_id =
       m_ctx.arena().as_function(binding.m_type).m_return_type;
@@ -119,73 +152,16 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
     m_ctx.builder().create_return_void();
   } else {
     // Wherever we are, we need to add this terminal to the final
-    m_ctx.builder().create_return(return_value, m_ctx.to_type(return_type_id));
+    m_ctx.builder().create_return(return_value);
   }
-
-  m_ctx.module().add_constant_closure({
-      .m_name = {conventions::make_closure_name(function.name().m_handle)},
-      .m_function = function.name(),
-      .m_type_id = m_ctx.m_fat_ptr,
-  });
 }
 
 void TopItemGenerator::operator()(
     const zir::ExternFunctionDeclaration &extern_func) {
-  {
-    ScopeGuard guard(m_ctx.symbols());
-
-    m_ctx.module().add_extern_function_declaration(
-        std::make_unique<FunctionDeclaration>(generate_signature(extern_func)));
-  }
   ScopeGuard guard(m_ctx.symbols());
 
-  const auto &binding = m_ctx.arena().get(extern_func.m_id);
-  const auto &type = m_ctx.arena().as_function(binding.m_type);
-
-  std::vector<Parameter> parameters;
-  parameters.emplace_back(m_ctx.env_parameter());
-  std::vector<Argument> arguments;
-  for (auto [index, type_id] :
-       std::views::zip(std::views::iota(0ULL), type.m_parameters)) {
-    // Don't actually need names on externs, but doesn't hurt
-    parameters.emplace_back(
-        Parameter{.m_name = conventions::make_param_name(index),
-                  .m_type = m_ctx.to_type(type_id)});
-    // ??
-    arguments.emplace_back(
-        Argument{.m_name = NamedHandle{conventions::make_param_name(index)},
-                 .m_type = m_ctx.to_type(type_id)});
-  }
-  auto thunked_signature = FunctionDeclaration{
-      .m_function_id = GlobalHandle{conventions::make_thunk(binding.m_name)},
-      .m_return_type = m_ctx.to_type(type.m_return_type),
-      .m_parameters = std::move(parameters)};
-
-  auto function = m_ctx.builder().make_function(thunked_signature);
-  m_ctx.builder().enter_function(function);
-
-  const auto &return_type_id =
-      m_ctx.arena().as_function(binding.m_type).m_return_type;
-
-  if (return_type_id == m_ctx.arena().m_unit) {
-    m_ctx.builder().create_call_void(GlobalHandle{binding.m_name},
-                                     std::move(arguments));
-    m_ctx.builder().create_return_void();
-  } else {
-    auto callee_return = m_ctx.builder().create_call(
-        GlobalHandle{.m_handle = binding.m_name}, std::move(arguments),
-        m_ctx.to_type(return_type_id));
-
-    // Wherever we are, we need to add this terminal to the final
-    m_ctx.builder().create_return(callee_return, m_ctx.to_type(return_type_id));
-  }
-
-  m_ctx.module().add_constant_closure({
-      .m_name = {conventions::make_closure_name(
-          thunked_signature.m_function_id.m_handle)},
-      .m_function = thunked_signature.m_function_id,
-      .m_type_id = m_ctx.m_fat_ptr,
-  });
+  m_ctx.module().add_extern_function_declaration(
+      std::make_unique<FunctionDeclaration>(generate_signature(extern_func)));
 }
 
 void TopItemGenerator::operator()(const zir::LetBinding &let_binding) {

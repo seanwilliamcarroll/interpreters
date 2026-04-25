@@ -13,8 +13,9 @@
 //****************************************************************************
 
 #include <codegen/context.hpp>
-#include <codegen/handle.hpp>
+#include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <zir/nodes.hpp>
 
 #include <cassert>
@@ -26,23 +27,24 @@ namespace bust::codegen {
 
 struct CapturedBinding {
   std::string m_source_name;
-  Handle m_outer_handle;
-  TypeId m_type_id;
+  Value m_outer_value;
+  TypeId m_internal_type_id;
 };
 
 struct ClosureBuilder {
   ClosureBuilder(Context &, const std::vector<zir::IdentifierExpr> &captures);
 
-  Handle allocate_and_populate_env();
+  Value allocate_and_populate_env();
 
   void emit_capture_load_prologue();
 
-  Handle package_fat_pointer(GlobalHandle function, Handle env_handle);
+  Value package_fat_pointer(Value function, Value env_handle);
 
 private:
   Context &m_ctx;
   std::vector<CapturedBinding> m_captured_bindings;
   TypeId m_type_id;
+  Value m_env;
 };
 
 //****************************************************************************

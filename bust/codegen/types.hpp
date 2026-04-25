@@ -15,6 +15,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <ostream>
 #include <type_traits>
 #include <utility>
@@ -53,6 +54,7 @@ struct PtrType {
 struct StructType {
   auto operator<=>(const StructType &) const = default;
   std::vector<TypeId> m_fields;
+  std::optional<std::string> m_name;
 };
 // TODO
 // struct ArrayType {  auto operator<=>(const ArrayType &) const = default;
@@ -179,6 +181,9 @@ template <> struct hash<bust::codegen::StructType> {
     size_t seed = 0;
     for (const auto &field : id.m_fields) {
       core::hash_combine(seed, field);
+    }
+    if (id.m_name.has_value()) {
+      core::hash_combine(seed, id.m_name.value());
     }
     return seed;
   }

@@ -10,8 +10,8 @@
 
 #include <codegen/arena.hpp>
 #include <codegen/function.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <zir/arena.hpp>
 
 #include <cstddef>
@@ -21,12 +21,6 @@
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
-
-struct ConstantClosure {
-  GlobalHandle m_name;
-  GlobalHandle m_function;
-  TypeId m_type_id;
-};
 
 struct Module {
 
@@ -52,16 +46,7 @@ struct Module {
     return m_extern_functions;
   }
 
-  void add_constant_closure(ConstantClosure constant_closure) {
-    m_constant_closures.emplace_back(std::move(constant_closure));
-  }
-
-  [[nodiscard]] const std::vector<ConstantClosure> &constant_closures() const {
-    return m_constant_closures;
-  }
-
 private:
-  std::vector<ConstantClosure> m_constant_closures;
   std::vector<std::unique_ptr<Function>> m_functions;
   std::vector<std::unique_ptr<FunctionDeclaration>> m_extern_functions;
 };

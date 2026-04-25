@@ -8,11 +8,9 @@
 #pragma once
 //****************************************************************************
 #include <arena.hpp>
-#include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
-#include <exceptions.hpp>
 
-#include <optional>
+#include <variant>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -40,10 +38,8 @@ struct TypeArena : public AbstractInternArena<TypeId, LLVMType> {
           } else if constexpr (std::is_same_v<T, PtrType>) {
             return "ptr";
           } else if constexpr (std::is_same_v<T, StructType>) {
-            // Do all structs have names?
-            auto struct_name = get_struct_name(intern(t));
-            if (struct_name.has_value()) {
-              return "%" + struct_name.value();
+            if (t.m_name.has_value()) {
+              return "%" + t.m_name.value();
             }
             // Anonymous struct
             std::string out = "{ ";
@@ -59,53 +55,25 @@ struct TypeArena : public AbstractInternArena<TypeId, LLVMType> {
         type);
   }
 
-  TypeId intern_global_struct(const std::string &name, StructType struct_type) {
-    // Don't uniquify the name, trust it is correct
-    auto type_id = intern(std::move(struct_type));
-    if (!m_struct_names.emplace(type_id, name).second) {
-      throw core::InternalCompilerError("Already interned global struct: " +
-                                        name);
+  [[nodiscard]] const StructType &as_struct(TypeId type_id) const {
+    return as<StructType>(type_id);
+  }
+
+  [[nodiscard]] std::vector<StructType> named_struct_types() const {
+    std::vector<StructType> struct_types;
+
+    for (const auto &type : actual_types()) {
+      if (!std::holds_alternative<StructType>(type)) {
+        continue;
+      }
+      const auto &struct_type = std::get<StructType>(type);
+      if (struct_type.m_name.has_value()) {
+        struct_types.emplace_back(struct_type);
+      }
     }
-    return type_id;
-  }
 
-  TypeId intern_struct(const std::string &name, StructType struct_type) {
-    auto type_id = intern(std::move(struct_type));
-    auto iter = m_struct_names.find(type_id);
-    if (iter == m_struct_names.end()) {
-      // Deduplicate
-      m_struct_names.emplace(type_id, m_name_tracker.uniquify(name));
-    }
-    return type_id;
+    return struct_types;
   }
-
-  [[nodiscard]] std::optional<std::string>
-  get_struct_name(TypeId type_id) const {
-    auto iter = m_struct_names.find(type_id);
-    if (iter == m_struct_names.end()) {
-      return {};
-    }
-    return std::make_optional(iter->second);
-  }
-
-  [[nodiscard]] std::string expect_get_struct_name(TypeId type_id) const {
-    auto struct_name = get_struct_name(type_id);
-    if (!struct_name.has_value()) {
-      throw core::InternalCompilerError(
-          "Expected to find name for struct with type id " +
-          std::to_string(type_id.m_id));
-    }
-    return struct_name.value();
-  }
-
-  [[nodiscard]]
-  const std::unordered_map<TypeId, std::string> &struct_names() const {
-    return m_struct_names;
-  }
-
-private:
-  std::unordered_map<TypeId, std::string> m_struct_names;
-  UniqueNameTracker m_name_tracker;
 };
 
 //****************************************************************************

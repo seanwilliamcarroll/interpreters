@@ -12,7 +12,6 @@
 #include <codegen/expression_generator.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/ir_literals.hpp>
 #include <codegen/module.hpp>
@@ -21,6 +20,7 @@
 #include <codegen/statement_generator.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <exceptions.hpp>
 #include <operators.hpp>
 #include <zir/arena.hpp>
@@ -44,63 +44,87 @@
 namespace bust::codegen {
 //****************************************************************************
 
-Handle ExpressionGenerator::generate(const zir::ExprId &expr_id) {
+Value ExpressionGenerator::generate(const zir::ExprId &expr_id) {
   return generate(m_ctx.arena().get(expr_id));
 }
 
-Handle ExpressionGenerator::generate(const zir::ExprKind &expr_kind) {
+Value ExpressionGenerator::generate(const zir::ExprKind &expr_kind) {
   return std::visit(*this, expr_kind);
 }
 
-Handle ExpressionGenerator::generate(const zir::Expression &expression) {
+Value ExpressionGenerator::generate(const zir::Expression &expression) {
   return generate(expression.m_expr_kind);
 }
 
-Handle ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
-  auto binding = m_ctx.arena().get(identifier.m_id);
-  auto identifier_handle = m_ctx.symbols().lookup(binding.m_name);
+Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
+  auto zir_binding = m_ctx.arena().get(identifier.m_id);
 
-  // GlobalHandles (functions) are used directly.
-  // Everything else is alloca'd and needs a load.
-  if (std::holds_alternative<GlobalHandle>(identifier_handle)) {
-    return identifier_handle;
+  auto binding = m_ctx.symbols().lookup(zir_binding.m_name);
+
+  if (std::holds_alternative<FunctionBinding>(binding)) {
+    return std::get<FunctionBinding>(binding).m_callee;
+  }
+  if (!std::holds_alternative<AllocaBinding>(binding)) {
+    throw core::InternalCompilerError(
+        "Expected FunctionBinding or AllocaBinding!");
   }
 
-  return m_ctx.builder().create_load(identifier_handle,
-                                     m_ctx.to_type(binding.m_type));
+  const auto &alloca_binding = std::get<AllocaBinding>(binding);
+
+  return m_ctx.builder().create_load(alloca_binding.m_ptr,
+                                     alloca_binding.m_internal_type_id);
 }
 
-Handle ExpressionGenerator::operator()(const zir::TupleExpr & // tuple_expr
+Value ExpressionGenerator::operator()(const zir::TupleExpr & // tuple_expr
 ) {
   return {};
 }
 
-Handle ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
   return {};
 }
 
-Handle ExpressionGenerator::operator()(const zir::I8 &literal) {
-  return LiteralHandle{std::to_string(literal.m_value)};
+Value ExpressionGenerator::operator()(const zir::I8 &literal) {
+  return {
+      .m_handle = LiteralHandle{std::to_string(literal.m_value)},
+      .m_type_id = m_ctx.m_i8,
+  };
 }
 
-Handle ExpressionGenerator::operator()(const zir::I32 &literal) {
-  return LiteralHandle{std::to_string(literal.m_value)};
+Value ExpressionGenerator::operator()(const zir::I32 &literal) {
+  return {
+      .m_handle = LiteralHandle{std::to_string(literal.m_value)},
+      .m_type_id = m_ctx.m_i32,
+  };
 }
 
-Handle ExpressionGenerator::operator()(const zir::I64 &literal) {
-  return LiteralHandle{std::to_string(literal.m_value)};
+Value ExpressionGenerator::operator()(const zir::I64 &literal) {
+  return {
+      .m_handle = LiteralHandle{std::to_string(literal.m_value)},
+      .m_type_id = m_ctx.m_i64,
+  };
 }
 
-Handle ExpressionGenerator::operator()(const zir::Bool &literal) {
-  return LiteralHandle{
-      std::string{literal.m_value ? ir_literals::true_ : ir_literals::false_}};
+Value ExpressionGenerator::operator()(const zir::Bool &literal) {
+  return {
+      .m_handle =
+          LiteralHandle{
+              .m_handle = std::string{literal.m_value ? ir_literals::true_
+                                                      : ir_literals::false_},
+          },
+      .m_type_id = m_ctx.m_i1,
+  };
 }
 
-Handle ExpressionGenerator::operator()(const zir::Char &literal) {
-  return LiteralHandle{std::to_string(static_cast<int8_t>(literal.m_value))};
+Value ExpressionGenerator::operator()(const zir::Char &literal) {
+  return {
+      .m_handle =
+          LiteralHandle{std::to_string(static_cast<int8_t>(literal.m_value))},
+      .m_type_id = m_ctx.m_i8,
+  };
 }
 
-Handle ExpressionGenerator::operator()(const zir::Block &block) {
+Value ExpressionGenerator::operator()(const zir::Block &block) {
   for (const auto &statement : block.m_statements) {
     StatementGenerator{m_ctx}.generate(statement);
   }
@@ -112,7 +136,7 @@ Handle ExpressionGenerator::operator()(const zir::Block &block) {
   return {};
 }
 
-Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
+Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   const auto &if_return_type_id =
       m_ctx.arena().get_block_type(if_expression.m_then_block);
   const auto &llvm_return_type_id = m_ctx.to_type(if_return_type_id);
@@ -123,11 +147,12 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
 
   // Emit code for conditional
   auto condition_target = generate(if_expression.m_condition);
-  auto result_storage =
+  auto result_alloca_slot =
       yields_value
-          ? m_ctx.builder().add_alloca(
-                std::string{conventions::if_result_local}, llvm_return_type_id)
-          : Handle{};
+          ? m_ctx.builder().emit_alloca(
+                llvm_return_type_id,
+                m_ctx.uniqify_name(std::string{conventions::if_result_local}))
+          : Value{};
 
   auto then_label =
       m_ctx.builder().make_block(std::string{conventions::then_block_label});
@@ -144,9 +169,7 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   m_ctx.builder().enter_block(then_label);
   auto then_target = generate(if_expression.m_then_block);
   if (yields_value) {
-    m_ctx.builder().create_store(
-        result_storage,
-        Argument{.m_name = then_target, .m_type = llvm_return_type_id});
+    m_ctx.builder().create_store(result_alloca_slot, then_target);
   }
   m_ctx.builder().add_jump(merge_label);
 
@@ -155,39 +178,38 @@ Handle ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
     m_ctx.builder().enter_block(else_label);
     auto else_target = generate(if_expression.m_else_block.value());
     if (yields_value) {
-      m_ctx.builder().create_store(
-          result_storage,
-          Argument{.m_name = else_target, .m_type = llvm_return_type_id});
+      m_ctx.builder().create_store(result_alloca_slot, else_target);
     }
     m_ctx.builder().add_jump(merge_label);
   }
 
   // Finish with final load of merged value if it exists
   m_ctx.builder().enter_block(merge_label);
-  return yields_value
-             ? m_ctx.builder().create_load(result_storage, llvm_return_type_id)
-             : Handle{};
+  return yields_value ? m_ctx.builder().create_load(result_alloca_slot,
+                                                    llvm_return_type_id)
+                      : Value{};
 }
 
-Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
+Value ExpressionGenerator::call_lambda_expression(
+    const zir::CallExpr &call_expression) {
   const auto &closture_type_id = m_ctx.m_fat_ptr;
 
-  auto closure_handle = generate(call_expression.m_callee);
-  auto callee_handle = m_ctx.builder().load_from_struct(
-      closture_type_id, closure_handle, 0, m_ctx.m_ptr);
-  auto env_handle = m_ctx.builder().load_from_struct(
-      closture_type_id, closure_handle, 1, m_ctx.m_ptr);
+  auto closure = generate(call_expression.m_callee);
 
-  std::vector<Argument> arguments;
-  arguments.emplace_back(Argument{.m_name = env_handle, .m_type = m_ctx.m_ptr});
+  if (closure.m_type_id != m_ctx.m_ptr) {
+    throw core::InternalCompilerError("Expected closure to have type ptr!");
+  }
+
+  // We assume the closure has been loaded to an actual value here, not a
+  // pointer?
+  auto callee = m_ctx.builder().load_from_struct(closure, closture_type_id, 0);
+  auto env = m_ctx.builder().load_from_struct(closure, closture_type_id, 1);
+
+  std::vector<Value> arguments;
+  arguments.emplace_back(env);
   std::ranges::transform(
       call_expression.m_arguments, std::back_inserter(arguments),
-      [this](const auto &argument_expr_id) -> Argument {
-        auto expression = m_ctx.arena().get(argument_expr_id);
-        auto handle = generate(expression);
-        return {.m_name = handle,
-                .m_type = m_ctx.to_type(expression.m_type_id)};
-      });
+      [this](const auto &argument) -> Value { return generate(argument); });
 
   auto callee_expr = m_ctx.arena().get(call_expression.m_callee);
 
@@ -195,14 +217,51 @@ Handle ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
       m_ctx.arena().as_function(callee_expr.m_type_id).m_return_type;
 
   if (function_return_type_id == m_ctx.arena().m_unit) {
-    m_ctx.builder().create_call_void(std::move(callee_handle),
-                                     std::move(arguments));
+    m_ctx.builder().create_call_void(std::move(callee), std::move(arguments));
     return {};
   }
 
-  return m_ctx.builder().create_call(std::move(callee_handle),
-                                     std::move(arguments),
+  return m_ctx.builder().create_call(std::move(callee), std::move(arguments),
                                      m_ctx.to_type(function_return_type_id));
+}
+
+Value ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
+  // Need to check if we are calling a pointer or a closure
+
+  const auto &callee_expression = m_ctx.arena().get(call_expression.m_callee);
+  if (std::holds_alternative<zir::IdentifierExpr>(
+          callee_expression.m_expr_kind)) {
+    // Could be a top level function or a pointer to a fat ptr
+    const auto &identifier =
+        std::get<zir::IdentifierExpr>(callee_expression.m_expr_kind);
+    auto zir_binding = m_ctx.arena().get(identifier.m_id);
+    auto binding = m_ctx.symbols().lookup(zir_binding.m_name);
+
+    if (std::holds_alternative<AllocaBinding>(binding)) {
+      // We just got a fat pointer loaded at this value, need to load it and go
+      // from there
+      return call_lambda_expression(call_expression);
+    }
+  }
+
+  // Easy, regular function call
+  auto callee = generate(call_expression.m_callee);
+  const auto &function_type =
+      m_ctx.arena().as_function(callee_expression.m_type_id);
+
+  std::vector<Value> arguments;
+  std::ranges::transform(
+      call_expression.m_arguments, std::back_inserter(arguments),
+      [this](const auto &argument) -> Value { return generate(argument); });
+
+  if (function_type.m_return_type == m_ctx.arena().m_unit) {
+    m_ctx.builder().create_call_void(std::move(callee), std::move(arguments));
+    return {};
+  }
+  auto return_type_id = m_ctx.to_type(function_type.m_return_type);
+
+  return m_ctx.builder().create_call(std::move(callee), std::move(arguments),
+                                     return_type_id);
 }
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
@@ -308,7 +367,7 @@ bool is_logical_op(BinaryOperator op) {
   }
 }
 
-Handle ExpressionGenerator::generate_integer_compare_instruction(
+Value ExpressionGenerator::generate_integer_compare_instruction(
     const zir::BinaryExpr &binary_expression) {
 
   auto lhs = m_ctx.arena().get(binary_expression.m_lhs);
@@ -321,11 +380,10 @@ Handle ExpressionGenerator::generate_integer_compare_instruction(
   auto rhs_handle = generate(binary_expression.m_rhs);
 
   return m_ctx.builder().create_icmp(std::move(lhs_handle),
-                                     std::move(rhs_handle), compare_condition,
-                                     m_ctx.to_type(lhs.m_type_id));
+                                     std::move(rhs_handle), compare_condition);
 }
 
-Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
+Value ExpressionGenerator::generate_arithmetic_binary_instruction(
     const zir::BinaryExpr &binary_expression) {
 
   auto lhs = m_ctx.arena().get(binary_expression.m_lhs);
@@ -336,10 +394,10 @@ Handle ExpressionGenerator::generate_arithmetic_binary_instruction(
 
   return m_ctx.builder().create_binary(
       std::move(lhs_handle), std::move(rhs_handle),
-      to_llvm_op(binary_expression.m_operator), m_ctx.to_type(lhs.m_type_id));
+      to_llvm_op(binary_expression.m_operator));
 }
 
-Handle ExpressionGenerator::generate_logical_binary_instruction(
+Value ExpressionGenerator::generate_logical_binary_instruction(
     const zir::BinaryExpr &binary_expression) {
   // Supporting short circuiting is similar to if expressions
   // lhs executes no matter what
@@ -347,8 +405,9 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // For OR, branch to merge on positive, else to rhs
   // rhs jumps to merge
   // at merge, we still need to do a compare on the result
-  auto result_storage = m_ctx.builder().add_alloca(
-      std::string{conventions::short_circuit_result_local}, m_ctx.m_i1);
+  auto result_alloca_slot = m_ctx.builder().emit_alloca(
+      m_ctx.m_i1,
+      m_ctx.uniqify_name(std::string{conventions::short_circuit_result_local}));
 
   auto rhs_label =
       m_ctx.builder().make_block(std::string{conventions::rhs_block_label});
@@ -358,8 +417,7 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // Emit code for lhs
   auto lhs_handle = generate(binary_expression.m_lhs);
   // Store lhs in result handle
-  m_ctx.builder().create_store(result_storage,
-                               {.m_name = lhs_handle, .m_type = m_ctx.m_i1});
+  m_ctx.builder().create_store(result_alloca_slot, lhs_handle);
   const auto is_and_op =
       binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
   m_ctx.builder().add_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
@@ -368,18 +426,17 @@ Handle ExpressionGenerator::generate_logical_binary_instruction(
   // Emit code for rhs
   m_ctx.builder().enter_block(rhs_label);
   auto rhs_handle = generate(binary_expression.m_rhs);
-  m_ctx.builder().create_store(result_storage,
-                               {.m_name = rhs_handle, .m_type = m_ctx.m_i1});
+  m_ctx.builder().create_store(result_alloca_slot, rhs_handle);
   m_ctx.builder().add_jump(merge_label);
 
   // Emit code for merge
   m_ctx.builder().enter_block(merge_label);
 
-  return m_ctx.builder().create_load(result_storage, m_ctx.m_i1);
+  return m_ctx.builder().create_load(result_alloca_slot, m_ctx.m_i1);
 }
 
-Handle
-ExpressionGenerator::operator()(const zir::BinaryExpr &binary_expression) {
+Value ExpressionGenerator::operator()(
+    const zir::BinaryExpr &binary_expression) {
   if (is_binary_compare(binary_expression.m_operator)) {
     return generate_integer_compare_instruction(binary_expression);
   }
@@ -391,21 +448,20 @@ ExpressionGenerator::operator()(const zir::BinaryExpr &binary_expression) {
   return generate_arithmetic_binary_instruction(binary_expression);
 }
 
-Handle ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
+Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
   auto expression = m_ctx.arena().get(unary_expression.m_expression);
 
   auto input_handle = generate(unary_expression.m_expression);
 
   return m_ctx.builder().create_unary(std::move(input_handle),
-                                      unary_expression.m_operator,
-                                      m_ctx.to_type(expression.m_type_id));
+                                      unary_expression.m_operator);
 }
 
-Handle ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
   return {};
 }
 
-Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
+Value ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
 
   auto expression = m_ctx.arena().get(cast_expression.m_expression);
 
@@ -433,66 +489,94 @@ Handle ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
     cast_op = LLVMCastOperator::SEXT;
   }
 
-  return m_ctx.builder().create_cast(std::move(input_handle), cast_op, from,
-                                     to);
+  return m_ctx.builder().create_cast(std::move(input_handle), cast_op, to);
 }
 
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
-    const zir::LambdaExpr &lambda_expr) {
+    const zir::LambdaExpr &lambda_expr, bool has_env) {
   std::vector<Parameter> parameters;
-  parameters.emplace_back(m_ctx.env_parameter());
-  std::ranges::transform(
-      lambda_expr.m_parameters, std::back_inserter(parameters),
-      [this](const zir::IdentifierExpr &parameter) -> Parameter {
-        auto binding = m_ctx.arena().get(parameter.m_id);
+  std::vector<TypeId> parameter_types;
+  if (has_env) {
+    parameters.reserve(lambda_expr.m_parameters.size() + 1);
+    parameter_types.reserve(lambda_expr.m_parameters.size() + 1);
+    parameters.emplace_back(Parameter{
+        .m_name = std::string{conventions::env_parameter_name},
+        .m_type = m_ctx.m_ptr,
+    });
+    parameter_types.emplace_back(m_ctx.m_ptr);
+  } else {
+    parameters.reserve(lambda_expr.m_parameters.size());
+    parameter_types.reserve(lambda_expr.m_parameters.size());
+  }
 
-        return Parameter{.m_name = binding.m_name,
-                         .m_type = m_ctx.to_type(binding.m_type)};
-      });
+  for (const auto &parameter : lambda_expr.m_parameters) {
+    auto binding = m_ctx.arena().get(parameter.m_id);
+    auto parameter_type_id = m_ctx.to_type(binding.m_type);
+    parameters.emplace_back(Parameter{
+        .m_name = binding.m_name,
+        .m_type = parameter_type_id,
+    });
+    parameter_types.emplace_back(parameter_type_id);
+  }
 
-  auto lambda_handle = m_ctx.symbols().define_uniqued_global(
-      std::string{conventions::lambda_global});
+  auto unique_lambda_symbol =
+      m_ctx.uniqify_name(std::string{conventions::lambda_global});
 
-  return FunctionDeclaration{.m_function_id = lambda_handle,
-                             .m_return_type =
-                                 m_ctx.to_type(lambda_expr.m_return_type),
-                             .m_parameters = std::move(parameters)};
+  auto lambda = Value{
+      .m_handle =
+          GlobalHandle{
+              .m_handle = unique_lambda_symbol,
+          },
+      .m_type_id = m_ctx.m_ptr,
+  };
+
+  auto return_type_id = m_ctx.to_type(lambda_expr.m_return_type);
+
+  auto function_binding = FunctionBinding{
+      .m_callee = lambda,
+      .m_return_type = return_type_id,
+      .m_parameter_types = std::move(parameter_types),
+  };
+
+  m_ctx.symbols().bind_global(unique_lambda_symbol,
+                              std::move(function_binding));
+
+  return FunctionDeclaration{
+      .m_function_id = std::move(lambda),
+      .m_return_type = return_type_id,
+      .m_parameters = std::move(parameters),
+  };
 }
 
-GlobalHandle
-ExpressionGenerator::lift_free_lambda(const zir::LambdaExpr &lambda_expr) {
+Value ExpressionGenerator::lift_free_lambda(
+    const zir::LambdaExpr &lambda_expr) {
+  auto signature = generate_lambda_signature(lambda_expr, false);
 
-  auto signature = generate_lambda_signature(lambda_expr);
-
-  auto lambda_handle = signature.m_function_id;
+  auto lambda = signature.m_function_id;
 
   // Emit code for new lambda function
   {
     auto function_guard = m_ctx.builder().push_new_function(signature);
 
-    m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
+    m_ctx.emit_parameter_prologue(signature.m_parameters);
 
     auto return_value = generate(lambda_expr.m_body);
     if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().create_return_void();
     } else {
-      m_ctx.builder().create_return(return_value,
-                                    m_ctx.to_type(lambda_expr.m_return_type));
+      m_ctx.builder().create_return(return_value);
     }
   }
 
-  auto closure_name =
-      GlobalHandle{conventions::make_closure_name(lambda_handle.m_handle)};
-  m_ctx.module().add_constant_closure({
-      .m_name = closure_name,
-      .m_function = lambda_handle,
-      .m_type_id = m_ctx.m_fat_ptr,
-  });
+  auto function_ptr = Value{
+      .m_handle = lambda.m_handle,
+      .m_type_id = m_ctx.m_ptr,
+  };
 
-  return closure_name;
+  return function_ptr;
 }
 
-Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
+Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   ScopeGuard scope_guard(m_ctx.symbols());
 
   if (lambda_expr.m_captures.empty()) {
@@ -500,19 +584,19 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
     return lift_free_lambda(lambda_expr);
   }
 
-  auto signature = generate_lambda_signature(lambda_expr);
-
-  auto lambda_handle = signature.m_function_id;
-
   auto closure_builder = ClosureBuilder(m_ctx, lambda_expr.m_captures);
 
-  auto env_handle = closure_builder.allocate_and_populate_env();
+  auto env = closure_builder.allocate_and_populate_env();
+
+  auto signature = generate_lambda_signature(lambda_expr, true);
+
+  auto lambda = signature.m_function_id;
 
   // Emit code for new lambda function
   {
     auto function_guard = m_ctx.builder().push_new_function(signature);
 
-    m_ctx.builder().emit_parameter_prologue(signature.m_parameters);
+    m_ctx.emit_parameter_prologue(signature.m_parameters);
 
     closure_builder.emit_capture_load_prologue();
 
@@ -520,16 +604,15 @@ Handle ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
     if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().create_return_void();
     } else {
-      m_ctx.builder().create_return(return_value,
-                                    m_ctx.to_type(lambda_expr.m_return_type));
+      m_ctx.builder().create_return(return_value);
     }
   }
 
   // Emit code to package lambda as a fat pointer
-  return closure_builder.package_fat_pointer(lambda_handle, env_handle);
+  return closure_builder.package_fat_pointer(lambda, env);
 }
 
-Handle ExpressionGenerator::operator()(const zir::DotExpr & // dot_expr
+Value ExpressionGenerator::operator()(const zir::DotExpr & // dot_expr
 ) {
   return {};
 }

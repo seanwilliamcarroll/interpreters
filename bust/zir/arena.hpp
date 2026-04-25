@@ -25,7 +25,7 @@ struct TypeArena : public AbstractInternArena<TypeId, Type> {
   explicit TypeArena() = default;
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
-    return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
+    return as<FunctionType>(type_id);
   }
 
   [[nodiscard]] std::string to_string(TypeId type_id) const override;
@@ -83,9 +83,8 @@ struct Arena {
 
   TypeId intern(const Type &input_type) { return type().intern(input_type); }
 
-  template <typename VariantType>
-  const VariantType &as(TypeId id, const char *function) const {
-    return type().as<VariantType>(id, function);
+  template <typename VariantType> const VariantType &as(TypeId id) const {
+    return type().as<VariantType>(id);
   }
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {

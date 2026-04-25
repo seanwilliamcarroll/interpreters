@@ -8,19 +8,34 @@
 #pragma once
 //****************************************************************************
 
-#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
+#include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <exceptions.hpp>
 #include <scope_guard.hpp>
 
 #include <ranges>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
+
+struct AllocaBinding {
+  Value m_ptr;
+  TypeId m_internal_type_id;
+};
+
+struct FunctionBinding {
+  Value m_callee;
+  TypeId m_return_type;
+  std::vector<TypeId> m_parameter_types;
+};
+
+using Binding = std::variant<AllocaBinding, FunctionBinding>;
 
 struct UniqueNameTracker {
   std::string uniquify(const std::string &name) {
@@ -32,14 +47,14 @@ struct UniqueNameTracker {
 };
 
 struct Scope {
-  void define(const std::string &name, const Handle &handle) {
-    m_symbol_to_handle[name] = handle;
+  void define(const std::string &name, Binding binding) {
+    m_symbol_to_value[name] = std::move(binding);
   }
 
-  [[nodiscard]] std::optional<Handle> lookup(const std::string &name) const {
-    auto iter = m_symbol_to_handle.find(name);
+  [[nodiscard]] std::optional<Binding> lookup(const std::string &name) const {
+    auto iter = m_symbol_to_value.find(name);
 
-    if (iter == m_symbol_to_handle.end()) {
+    if (iter == m_symbol_to_value.end()) {
       return {};
     }
 
@@ -47,7 +62,7 @@ struct Scope {
   }
 
 private:
-  std::unordered_map<std::string, Handle> m_symbol_to_handle;
+  std::unordered_map<std::string, Binding> m_symbol_to_value;
 };
 
 struct SymbolTable {
@@ -61,30 +76,17 @@ struct SymbolTable {
     m_scopes.pop_back();
   }
 
-  NamedHandle define_named(const std::string &name) {
-    NamedHandle new_handle{m_name_tracker.uniquify(name)};
-    m_scopes.back().define(name, new_handle);
-    return new_handle;
+  void bind_local(const std::string &name, Binding binding) {
+    // This binding is associated with this name at the local scope
+    m_scopes.back().define(name, std::move(binding));
   }
 
-  GlobalHandle define_global(const std::string &name) {
-    GlobalHandle new_handle{name};
-    m_scopes.front().define(name, new_handle);
-    return new_handle;
+  void bind_global(const std::string &name, Binding binding) {
+    // This binding is associated with this name at the global scope
+    m_scopes.front().define(name, std::move(binding));
   }
 
-  GlobalHandle define_custom_global(const std::string &lookup_name,
-                                    const std::string &actual_name) {
-    GlobalHandle new_handle{actual_name};
-    m_scopes.front().define(lookup_name, new_handle);
-    return new_handle;
-  }
-
-  GlobalHandle define_uniqued_global(const std::string &name) {
-    return define_global(m_name_tracker.uniquify(name));
-  }
-
-  [[nodiscard]] Handle lookup(const std::string &name) const {
+  [[nodiscard]] Binding lookup(const std::string &name) const {
     for (const auto &scope : m_scopes | std::views::reverse) {
       auto maybe_handle = scope.lookup(name);
       if (maybe_handle.has_value()) {
@@ -95,12 +97,8 @@ struct SymbolTable {
                                       "'");
   }
 
-  Handle next_ssa_temporary() { return TemporaryHandle{m_ssa_count++}; }
-
 private:
   std::vector<Scope> m_scopes;
-  UniqueNameTracker m_name_tracker{};
-  size_t m_ssa_count = 1;
 };
 
 using ScopeGuard = core::ScopeGuard<SymbolTable>;

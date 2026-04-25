@@ -8,8 +8,8 @@
 #pragma once
 //****************************************************************************
 
-#include <codegen/handle.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -17,6 +17,11 @@ namespace bust::codegen {
 
 struct Parameter {
   std::string m_name;
+  TypeId m_type;
+};
+
+struct Index {
+  size_t m_index;
   TypeId m_type;
 };
 

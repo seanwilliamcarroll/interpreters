@@ -8,13 +8,14 @@
 
 #include <codegen/context.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/ir_builder.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 
 #include <cassert>
+#include <string_view>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -23,92 +24,115 @@ namespace bust::codegen {
 BasicBlock &IRBuilder::block() const { return *current_block_label().m_block; }
 
 BlockLabel IRBuilder::entry_block_of(FunctionHandle function) {
-  return BlockLabel{&function.m_function->entry_basic_block()};
+  return BlockLabel{
+      &function.m_function->entry_basic_block(),
+  };
 }
 
-NamedHandle IRBuilder::add_alloca(const std::string &name,
-                                  TypeId type_id) const {
-  auto output_handle = m_ctx.symbols().define_named(name);
-
-  current_function_handle().m_function->add_alloca_instruction(
-      {.m_handle = output_handle, .m_type = type_id});
-
-  return output_handle;
+Value IRBuilder::emit_alloca(TypeId type_id) {
+  auto output = next_ssa_temporary(m_ctx.m_ptr);
+  current_function_handle().m_function->add_alloca_instruction({
+      .m_value_ptr = output,
+      .m_type_id = type_id,
+  });
+  return output;
 }
 
-void IRBuilder::create_store(Handle destination, Argument value) const {
-  auto [source, type] = std::move(value);
-  block().add_instruction(
-      StoreInstruction{.m_destination = std::move(destination),
-                       .m_source = source,
-                       .m_type = type});
+Value IRBuilder::emit_alloca(TypeId type_id, std::string_view hint) {
+  auto output = Value{
+      .m_handle =
+          NamedHandle{
+              .m_handle = std::string{hint},
+          },
+      .m_type_id = m_ctx.m_ptr,
+  };
+  current_function_handle().m_function->add_alloca_instruction({
+      .m_value_ptr = output,
+      .m_type_id = type_id,
+  });
+  return output;
 }
 
-Handle IRBuilder::create_load(Handle source, TypeId type) const {
-  auto temp_ssa = m_ctx.symbols().next_ssa_temporary();
+void IRBuilder::create_store(Value destination, Value source) {
+  block().add_instruction(StoreInstruction{
+      .m_destination = std::move(destination),
+      .m_source = std::move(source),
+  });
+}
+
+Value IRBuilder::create_load(Value source, TypeId loaded_type_id) {
+  auto temp_ssa = next_ssa_temporary(loaded_type_id);
   block().add_instruction(LoadInstruction{
       .m_destination = temp_ssa,
       .m_source = std::move(source),
-      .m_type = type,
   });
   return temp_ssa;
 }
 
-Handle IRBuilder::create_gep(TypeId struct_type_id, Handle struct_handle,
-                             Argument initial_index,
-                             std::vector<Argument> indices) const {
-  auto ptr_to_struct_field = m_ctx.symbols().next_ssa_temporary();
-  block().add_instruction(
-      GetElementPtrInstruction{.m_destination = ptr_to_struct_field,
-                               .m_struct_type = struct_type_id,
-                               .m_struct_handle = std::move(struct_handle),
-                               .m_initial_index = std::move(initial_index),
-                               .m_additional_indices = std::move(indices)});
+Value IRBuilder::create_gep(Value ptr, TypeId aggregate_type_id,
+                            Index initial_index, std::vector<Index> indices) {
+  // This instruction is giving us a pointer to a specific field in a struct
+  // We need to tell it where the struct is (with the ptr) and what its type is
+  // Then we index into it based on GEP's syntax
+  // initial being an array index, and indices being nested indices from there
+  // Common case is array index of 0 with one element in indices with index to
+  // struct field position
+  auto ptr_to_struct_field = next_ssa_temporary(m_ctx.m_ptr);
+  block().add_instruction(GetElementPtrInstruction{
+      .m_destination = ptr_to_struct_field,
+      .m_aggregate_type_id = aggregate_type_id,
+      .m_ptr = std::move(ptr),
+      .m_initial_index = initial_index,
+      .m_additional_indices = std::move(indices),
+  });
   return ptr_to_struct_field;
 }
 
-Handle IRBuilder::create_gep_field(TypeId struct_type_id, Handle struct_handle,
-                                   size_t field_index) const {
-  return create_gep(
-      struct_type_id, std::move(struct_handle),
-      Argument{.m_name = LiteralHandle::zero(), .m_type = m_ctx.m_i32},
-      {Argument{.m_name = LiteralHandle{std::to_string(field_index)},
-                .m_type = m_ctx.m_i32}});
+Value IRBuilder::create_gep_field(Value ptr, TypeId aggregate_type_id,
+                                  size_t field_index) {
+  // Shortcut for common case usage of GEP
+  return create_gep(std::move(ptr), aggregate_type_id,
+                    Index{
+                        .m_index = 0,
+                        .m_type = m_ctx.m_i32,
+                    },
+                    {
+                        Index{
+                            .m_index = field_index,
+                            .m_type = m_ctx.m_i32,
+                        },
+                    });
 }
 
-Handle IRBuilder::create_ptr_to_int(Handle source,
-                                    TypeId destination_type) const {
-  auto destination = m_ctx.symbols().next_ssa_temporary();
-  block().add_instruction(
-      PtrToIntInstruction{.m_destination = destination,
-                          .m_source = std::move(source),
-                          .m_destination_type = destination_type});
+Value IRBuilder::create_ptr_to_int(Value source, TypeId destination_type) {
+  auto destination = next_ssa_temporary(destination_type);
+  block().add_instruction(PtrToIntInstruction{
+      .m_destination = destination,
+      .m_source = std::move(source),
+  });
   return destination;
 }
 
-Handle IRBuilder::create_call(Handle callee, std::vector<Argument> arguments,
-                              TypeId return_type_id) const {
-  auto target_handle = m_ctx.symbols().next_ssa_temporary();
-  // Allocate the env
+Value IRBuilder::create_call(Value callee, std::vector<Value> arguments,
+                             TypeId return_type_id) {
+  auto destination = next_ssa_temporary(return_type_id);
   block().add_instruction(CallInstruction{
-      .m_target = target_handle,
+      .m_destination = destination,
       .m_callee = std::move(callee),
       .m_arguments = std::move(arguments),
-      .m_return_type = return_type_id,
   });
-  return target_handle;
+  return destination;
 }
 
-void IRBuilder::create_call_void(Handle callee,
-                                 std::vector<Argument> arguments) const {
+void IRBuilder::create_call_void(Value callee, std::vector<Value> arguments) {
   block().add_instruction(CallVoidInstruction{
       .m_callee = std::move(callee),
       .m_arguments = std::move(arguments),
   });
 }
 
-void IRBuilder::add_branch(Handle condition, BlockLabel if_true,
-                           BlockLabel if_false) const {
+void IRBuilder::add_branch(Value condition, BlockLabel if_true,
+                           BlockLabel if_false) {
   block().add_terminal(BranchInstruction{
       .m_condition = std::move(condition),
       .m_iftrue = if_true,
@@ -116,100 +140,91 @@ void IRBuilder::add_branch(Handle condition, BlockLabel if_true,
   });
 }
 
-void IRBuilder::add_jump(BlockLabel block_label) const {
-  block().add_terminal(JumpInstruction{.m_target = block_label});
-}
-
-Handle IRBuilder::create_icmp(Handle lhs, Handle rhs,
-                              LLVMIntegerCompareCondition cond,
-                              TypeId type) const {
-  auto temp = m_ctx.symbols().next_ssa_temporary();
-  block().add_instruction(IntegerCompareInstruction{.m_result = temp,
-                                                    .m_lhs = std::move(lhs),
-                                                    .m_rhs = std::move(rhs),
-                                                    .m_condition = cond,
-                                                    .m_type = type});
-  return temp;
-}
-
-Handle IRBuilder::create_binary(Handle lhs, Handle rhs, LLVMBinaryOperator op,
-                                TypeId type) const {
-  auto temp = m_ctx.symbols().next_ssa_temporary();
-  block().add_instruction(BinaryInstruction{.m_result = temp,
-                                            .m_lhs = std::move(lhs),
-                                            .m_rhs = std::move(rhs),
-                                            .m_operator = op,
-                                            .m_type = type});
-  return temp;
-}
-
-Handle IRBuilder::create_unary(Handle input, UnaryOperator op,
-                               TypeId type) const {
-  auto temp = m_ctx.symbols().next_ssa_temporary();
-  block().add_instruction(UnaryInstruction{
-      .m_result = temp,
-      .m_input = std::move(input),
-      .m_operator = op,
-      .m_type = type,
+void IRBuilder::add_jump(BlockLabel block_label) {
+  block().add_terminal(JumpInstruction{
+      .m_target = block_label,
   });
-  return temp;
 }
 
-Handle IRBuilder::create_cast(Handle input, LLVMCastOperator op, TypeId from,
-                              TypeId to) const {
-  auto temp = m_ctx.symbols().next_ssa_temporary();
+Value IRBuilder::create_icmp(Value lhs, Value rhs,
+                             LLVMIntegerCompareCondition cond) {
+  auto destination = next_ssa_temporary(m_ctx.m_i1);
+  block().add_instruction(IntegerCompareInstruction{
+      .m_destination = destination,
+      .m_lhs = std::move(lhs),
+      .m_rhs = std::move(rhs),
+      .m_condition = cond,
+  });
+  return destination;
+}
+
+Value IRBuilder::create_binary(Value lhs, Value rhs, LLVMBinaryOperator op) {
+  auto destination = next_ssa_temporary(lhs.m_type_id);
+  block().add_instruction(BinaryInstruction{
+      .m_destination = destination,
+      .m_lhs = std::move(lhs),
+      .m_rhs = std::move(rhs),
+      .m_operator = op,
+  });
+  return destination;
+}
+
+Value IRBuilder::create_unary(Value source, UnaryOperator op) {
+  auto destination = next_ssa_temporary(source.m_type_id);
+  block().add_instruction(UnaryInstruction{
+      .m_destination = destination,
+      .m_source = std::move(source),
+      .m_operator = op,
+  });
+  return destination;
+}
+
+Value IRBuilder::create_cast(Value input, LLVMCastOperator op, TypeId to) {
+  auto destination = next_ssa_temporary(to);
   block().add_instruction(CastInstruction{
-      .m_destination = temp,
+      .m_destination = destination,
       .m_source = std::move(input),
       .m_operator = op,
-      .m_from = from,
-      .m_to = to,
   });
-  return temp;
+  return destination;
 }
 
-void IRBuilder::create_return(Handle value, TypeId type) const {
-  block().add_terminal(
-      ReturnInstruction{.m_value = std::move(value), .m_type = type});
+void IRBuilder::create_return(Value value) {
+  block().add_terminal(ReturnInstruction{
+      .m_value = std::move(value),
+  });
 }
 
-void IRBuilder::create_return_void() const {
+void IRBuilder::create_return_void() {
   block().add_terminal(ReturnVoidInstruction{});
 }
 
-void IRBuilder::emit_parameter_prologue(
-    const std::vector<Parameter> &parameters) {
-  // Make allocas for all parameters
-  for (const auto &parameter : parameters) {
-    auto alloca_handle =
-        m_ctx.builder().add_alloca(parameter.m_name, parameter.m_type);
-
-    m_ctx.builder().create_store(
-        alloca_handle,
-        {.m_name = NamedHandle{parameter.m_name}, .m_type = parameter.m_type});
-  }
-}
-
-Handle IRBuilder::malloc_struct(TypeId struct_type) const {
+Value IRBuilder::malloc_struct(TypeId struct_type) {
   auto size_ptr = create_gep(
-      struct_type, LiteralHandle::null(),
-      Argument{.m_name = LiteralHandle::one(), .m_type = m_ctx.m_i32}, {});
+      Value{
+          .m_handle = LiteralHandle::null(),
+          .m_type_id = m_ctx.m_ptr,
+      },
+      struct_type,
+      Index{
+          .m_index = 1,
+          .m_type = m_ctx.m_i32,
+      },
+      {});
   auto size_i64 = create_ptr_to_int(size_ptr, m_ctx.m_i64);
   // TODO: Move this out and generalize allocator
-  return create_call(m_ctx.allocator_symbol(),
-                     {Argument{.m_name = size_i64, .m_type = m_ctx.m_i64}},
-                     m_ctx.m_ptr);
+  return create_call(m_ctx.allocator_symbol(), {size_i64}, m_ctx.m_ptr);
 }
 
-void IRBuilder::store_to_struct(TypeId struct_type, Handle base, size_t index,
-                                Argument value) const {
-  auto field_ptr = create_gep_field(struct_type, std::move(base), index);
+void IRBuilder::store_to_struct(Value ptr, TypeId struct_type, size_t index,
+                                Value value) {
+  auto field_ptr = create_gep_field(std::move(ptr), struct_type, index);
   create_store(field_ptr, std::move(value));
 }
 
-Handle IRBuilder::load_from_struct(TypeId struct_type, Handle base,
-                                   size_t index, TypeId value_type) const {
-  auto field_ptr = create_gep_field(struct_type, std::move(base), index);
+Value IRBuilder::load_from_struct(Value ptr, TypeId struct_type, size_t index) {
+  auto field_ptr = create_gep_field(std::move(ptr), struct_type, index);
+  auto value_type = m_ctx.type().as_struct(struct_type).m_fields[index];
   return create_load(field_ptr, value_type);
 }
 
@@ -239,7 +254,9 @@ BlockLabel IRBuilder::make_block(const std::string &name) {
   assert(m_current_function_handle.m_function != nullptr &&
          "Must enter a function before making a block!");
   auto &new_block = m_current_function_handle.m_function->new_basic_block(name);
-  return BlockLabel{&new_block};
+  return BlockLabel{
+      &new_block,
+  };
 }
 
 void IRBuilder::enter_block(BlockLabel block_label) {
@@ -247,17 +264,25 @@ void IRBuilder::enter_block(BlockLabel block_label) {
 }
 
 IRBuilder::InsertionGuard IRBuilder::push_block(BlockLabel block_label) {
-  return {*this, block_label};
+  return {
+      *this,
+      block_label,
+  };
 }
 
 IRBuilder::InsertionGuard IRBuilder::push_new_block(const std::string &name) {
   auto new_block_label = make_block(name);
-  return {*this, new_block_label};
+  return {
+      *this,
+      new_block_label,
+  };
 }
 
 FunctionHandle IRBuilder::make_function(FunctionDeclaration signature) {
   auto &new_function = m_ctx.module().new_function(std::move(signature));
-  return FunctionHandle{&new_function};
+  return FunctionHandle{
+      &new_function,
+  };
 }
 
 void IRBuilder::enter_function(FunctionHandle function_handle) {
@@ -267,13 +292,19 @@ void IRBuilder::enter_function(FunctionHandle function_handle) {
 
 IRBuilder::FunctionGuard
 IRBuilder::push_function(FunctionHandle function_handle) {
-  return {*this, function_handle};
+  return {
+      *this,
+      function_handle,
+  };
 }
 
 IRBuilder::FunctionGuard
 IRBuilder::push_new_function(FunctionDeclaration signature) {
   auto new_function_handle = make_function(std::move(signature));
-  return {*this, new_function_handle};
+  return {
+      *this,
+      new_function_handle,
+  };
 }
 
 FunctionHandle IRBuilder::current_function_handle() const {

@@ -12,12 +12,13 @@
 #include <codegen/block_label.hpp>
 #include <codegen/function_declaration.hpp>
 #include <codegen/function_handle.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <operators.hpp>
 
 #include <cassert>
+#include <string_view>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -59,43 +60,35 @@ struct IRBuilder {
       : m_ctx(ctx), m_current_function_handle(nullptr),
         m_current_block_label(nullptr) {}
 
-  [[nodiscard]] NamedHandle add_alloca(const std::string &name, TypeId) const;
-  void add_branch(Handle condition, BlockLabel if_true,
-                  BlockLabel if_false) const;
-  void add_jump(BlockLabel) const;
-  [[nodiscard]] Handle create_gep(TypeId struct_type_id, Handle struct_handle,
-                                  Argument initial_index,
-                                  std::vector<Argument> indices) const;
-  [[nodiscard]] Handle create_gep_field(TypeId struct_type_id,
-                                        Handle struct_handle,
-                                        size_t field_index) const;
-  [[nodiscard]] Handle create_ptr_to_int(Handle source,
-                                         TypeId destination_type) const;
-  [[nodiscard]] Handle create_call(Handle callee,
-                                   std::vector<Argument> arguments,
-                                   TypeId return_type_id) const;
-  void create_call_void(Handle callee, std::vector<Argument> arguments) const;
-  void create_store(Handle destination, Argument value) const;
-  [[nodiscard]] Handle create_load(Handle source, TypeId type) const;
-  [[nodiscard]] Handle create_icmp(Handle lhs, Handle rhs,
-                                   LLVMIntegerCompareCondition cond,
-                                   TypeId type) const;
-  [[nodiscard]] Handle create_binary(Handle lhs, Handle rhs,
-                                     LLVMBinaryOperator op, TypeId type) const;
-  [[nodiscard]] Handle create_unary(Handle input, UnaryOperator op,
-                                    TypeId type) const;
-  [[nodiscard]] Handle create_cast(Handle input, LLVMCastOperator op,
-                                   TypeId from, TypeId to) const;
-  void create_return(Handle value, TypeId type) const;
-  void create_return_void() const;
+  [[nodiscard]] Value emit_alloca(TypeId);
+  [[nodiscard]] Value emit_alloca(TypeId, std::string_view hint);
+  void create_store(Value destination, Value source);
+  [[nodiscard]] Value create_load(Value source, TypeId loaded_type_id);
+  [[nodiscard]] Value create_gep(Value ptr, TypeId aggregate_type_id,
+                                 Index initial_index,
+                                 std::vector<Index> indices);
+  [[nodiscard]] Value create_gep_field(Value ptr, TypeId aggregate_type_id,
+                                       size_t field_index);
+  [[nodiscard]] Value create_ptr_to_int(Value source, TypeId destination_type);
+  [[nodiscard]] Value create_call(Value callee, std::vector<Value> arguments,
+                                  TypeId return_type_id);
+  void create_call_void(Value callee, std::vector<Value> arguments);
+  void add_branch(Value condition, BlockLabel if_true, BlockLabel if_false);
+  void add_jump(BlockLabel);
+  [[nodiscard]] Value create_icmp(Value lhs, Value rhs,
+                                  LLVMIntegerCompareCondition cond);
+  [[nodiscard]] Value create_binary(Value lhs, Value rhs,
+                                    LLVMBinaryOperator op);
+  [[nodiscard]] Value create_unary(Value source, UnaryOperator op);
+  [[nodiscard]] Value create_cast(Value input, LLVMCastOperator op, TypeId to);
+  void create_return(Value value);
+  void create_return_void();
 
-  void emit_parameter_prologue(const std::vector<Parameter> &);
-
-  [[nodiscard]] Handle malloc_struct(TypeId struct_type) const;
-  void store_to_struct(TypeId struct_type, Handle base, size_t index,
-                       Argument value) const;
-  [[nodiscard]] Handle load_from_struct(TypeId struct_type, Handle base,
-                                        size_t index, TypeId value_type) const;
+  [[nodiscard]] Value malloc_struct(TypeId struct_type);
+  void store_to_struct(Value ptr, TypeId struct_type, size_t index,
+                       Value value);
+  [[nodiscard]] Value load_from_struct(Value ptr, TypeId struct_type,
+                                       size_t index);
 
   // Outside of IRBuilder, no one needs to know about functions/blocks directly
   // Just pass around these labels and handles
@@ -112,6 +105,13 @@ struct IRBuilder {
   [[nodiscard]] FunctionHandle current_function_handle() const;
   [[nodiscard]] BlockLabel current_block_label() const;
 
+  Value next_ssa_temporary(TypeId type_id) {
+    return {
+        .m_handle = TemporaryHandle{m_ssa_count++},
+        .m_type_id = type_id,
+    };
+  }
+
 private:
   [[nodiscard]] BasicBlock &block() const;
   [[nodiscard]] static BlockLabel entry_block_of(FunctionHandle);
@@ -119,6 +119,7 @@ private:
   Context &m_ctx;
   FunctionHandle m_current_function_handle;
   BlockLabel m_current_block_label;
+  size_t m_ssa_count = 1;
 };
 
 //****************************************************************************

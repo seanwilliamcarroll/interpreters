@@ -11,18 +11,19 @@
 #include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
 #include <codegen/function.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <zir/arena.hpp>
 #include <zir/types.hpp>
 
 #include <cassert>
 #include <string>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {
@@ -31,16 +32,24 @@ namespace bust::codegen {
 struct Context {
   Context(const zir::Arena &arena)
       : m_arena(arena), m_builder(*this),
-        m_allocator_symbol({std::string{conventions::allocator_function}}),
         m_void(m_type_arena.intern(VoidType{})),
         m_i1(m_type_arena.intern(I1Type{})),
         m_i8(m_type_arena.intern(I8Type{})),
         m_i32(m_type_arena.intern(I32Type{})),
         m_i64(m_type_arena.intern(I64Type{})),
         m_ptr(m_type_arena.intern(PtrType{})),
-        m_fat_ptr(m_type_arena.intern_global_struct(
-            std::string{conventions::closure_type},
-            StructType{.m_fields = {m_ptr, m_ptr}})) {}
+        m_fat_ptr(m_type_arena.intern(StructType{
+            .m_fields = {m_ptr, m_ptr},
+            .m_name =
+                std::make_optional(std::string{conventions::closure_type}),
+        })),
+        m_allocator_symbol({
+            .m_handle =
+                GlobalHandle{
+                    .m_handle = std::string{conventions::allocator_function},
+                },
+            .m_type_id = m_ptr,
+        }) {}
 
   Module &module() { return m_module; }
   SymbolTable &symbols() { return m_symbol_table; }
@@ -88,6 +97,7 @@ struct Context {
                            [&](const auto &field) { return to_type(field); });
             return StructType{
                 .m_fields = std::move(fields),
+                .m_name{},
             };
           } else {
             assert(false && "codegen only handles primitive types and function "
@@ -106,17 +116,61 @@ struct Context {
   }
 
   [[nodiscard]]
-  Parameter env_parameter() const {
+  Value env() const {
     return {
-        .m_name = {std::string{conventions::env_parameter_name}},
-        .m_type = m_ptr,
+        .m_handle = NamedHandle{std::string{conventions::env_parameter_name}},
+        .m_type_id = m_ptr,
     };
   }
 
   IRBuilder &builder() { return m_builder; }
 
-  [[nodiscard]] const GlobalHandle &allocator_symbol() const {
+  [[nodiscard]] const Value &allocator_symbol() const {
     return m_allocator_symbol;
+  }
+
+  AllocaBinding define_local(const std::string &name, TypeId inner_type_id,
+                             Value initial_value) {
+    auto alloca_slot = builder().emit_alloca(
+        inner_type_id, uniqify_name(conventions::make_alloca_name(name)));
+    builder().create_store(alloca_slot, std::move(initial_value));
+    auto binding = AllocaBinding{
+        .m_ptr = alloca_slot,
+        .m_internal_type_id = inner_type_id,
+    };
+    symbols().bind_local(name, binding);
+    return binding;
+  }
+
+  FunctionBinding define_function(const std::string &name, Value callee,
+                                  TypeId return_type_id,
+                                  std::vector<TypeId> parameter_types) {
+    // Probably should emit a define or something?
+    auto binding = FunctionBinding{
+        .m_callee = std::move(callee),
+        .m_return_type = return_type_id,
+        .m_parameter_types = std::move(parameter_types),
+    };
+    symbols().bind_global(name, binding);
+    return binding;
+  }
+
+  void emit_parameter_prologue(const std::vector<Parameter> &parameters) {
+    // Make allocas for all parameters
+    for (const auto &parameter : parameters) {
+      define_local(parameter.m_name, parameter.m_type,
+                   {
+                       .m_handle =
+                           NamedHandle{
+                               parameter.m_name,
+                           },
+                       .m_type_id = parameter.m_type,
+                   });
+    }
+  }
+
+  std::string uniqify_name(const std::string &name) {
+    return m_name_tracker.uniquify(name);
   }
 
 private:
@@ -125,7 +179,6 @@ private:
   const zir::Arena &m_arena;
   TypeArena m_type_arena;
   IRBuilder m_builder;
-  GlobalHandle m_allocator_symbol;
 
 public:
   TypeId m_void;
@@ -135,6 +188,10 @@ public:
   TypeId m_i64;
   TypeId m_ptr;
   TypeId m_fat_ptr;
+
+private:
+  Value m_allocator_symbol;
+  UniqueNameTracker m_name_tracker{};
 };
 
 //****************************************************************************
