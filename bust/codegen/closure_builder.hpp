@@ -44,7 +44,6 @@ private:
   Context &m_ctx;
   std::vector<CapturedBinding> m_captured_bindings;
   TypeId m_type_id;
-  Value m_env;
 };
 
 //****************************************************************************

@@ -49,7 +49,7 @@ ClosureBuilder::ClosureBuilder(Context &ctx,
 }
 
 Value ClosureBuilder::allocate_and_populate_env() {
-  m_env = m_ctx.builder().malloc_struct(m_type_id);
+  auto env = m_ctx.builder().malloc_struct(m_type_id);
   // Emit the code to store captures into env
   for (const auto &[index, capture] :
        std::views::zip(std::views::iota(0ULL), m_captured_bindings)) {
@@ -57,16 +57,17 @@ Value ClosureBuilder::allocate_and_populate_env() {
     auto stored_value = m_ctx.builder().create_load(capture.m_outer_value,
                                                     capture.m_internal_type_id);
 
-    m_ctx.builder().store_to_struct(m_env, m_type_id, index, stored_value);
+    m_ctx.builder().store_to_struct(env, m_type_id, index, stored_value);
   }
 
-  return m_env;
+  return env;
 }
 
 void ClosureBuilder::emit_capture_load_prologue() {
   for (const auto &[index, capture] :
        std::views::zip(std::views::iota(0ULL), m_captured_bindings)) {
-    auto value = m_ctx.builder().load_from_struct(m_env, m_type_id, index);
+    auto value =
+        m_ctx.builder().load_from_struct(m_ctx.env(), m_type_id, index);
 
     m_ctx.define_local(capture.m_source_name, capture.m_internal_type_id,
                        value);

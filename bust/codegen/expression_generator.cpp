@@ -64,6 +64,10 @@ Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
   if (std::holds_alternative<FunctionBinding>(binding)) {
     return std::get<FunctionBinding>(binding).m_callee;
   }
+  if (std::holds_alternative<ClosureBinding>(binding)) {
+    return m_ctx.builder().create_load(std::get<ClosureBinding>(binding).m_ptr,
+                                       m_ctx.m_ptr);
+  }
   if (!std::holds_alternative<AllocaBinding>(binding)) {
     throw core::InternalCompilerError(
         "Expected FunctionBinding or AllocaBinding!");
@@ -75,8 +79,7 @@ Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
                                      alloca_binding.m_internal_type_id);
 }
 
-Value ExpressionGenerator::operator()(const zir::TupleExpr & // tuple_expr
-) {
+Value ExpressionGenerator::operator()(const zir::TupleExpr & /*unused*/) {
   return {};
 }
 
@@ -206,10 +209,10 @@ Value ExpressionGenerator::call_lambda_expression(
   auto env = m_ctx.builder().load_from_struct(closure, closture_type_id, 1);
 
   std::vector<Value> arguments;
-  arguments.emplace_back(env);
-  std::ranges::transform(
-      call_expression.m_arguments, std::back_inserter(arguments),
-      [this](const auto &argument) -> Value { return generate(argument); });
+  arguments.emplace_back(std::move(env));
+  for (const auto &argument : call_expression.m_arguments) {
+    arguments.emplace_back(generate(argument));
+  }
 
   auto callee_expr = m_ctx.arena().get(call_expression.m_callee);
 
@@ -237,7 +240,7 @@ Value ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
     auto zir_binding = m_ctx.arena().get(identifier.m_id);
     auto binding = m_ctx.symbols().lookup(zir_binding.m_name);
 
-    if (std::holds_alternative<AllocaBinding>(binding)) {
+    if (std::holds_alternative<ClosureBinding>(binding)) {
       // We just got a fat pointer loaded at this value, need to load it and go
       // from there
       return call_lambda_expression(call_expression);
@@ -612,8 +615,7 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   return closure_builder.package_fat_pointer(lambda, env);
 }
 
-Value ExpressionGenerator::operator()(const zir::DotExpr & // dot_expr
-) {
+Value ExpressionGenerator::operator()(const zir::DotExpr & /*unused*/) {
   return {};
 }
 

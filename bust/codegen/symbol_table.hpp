@@ -29,13 +29,17 @@ struct AllocaBinding {
   TypeId m_internal_type_id;
 };
 
+struct ClosureBinding {
+  Value m_ptr;
+};
+
 struct FunctionBinding {
   Value m_callee;
   TypeId m_return_type;
   std::vector<TypeId> m_parameter_types;
 };
 
-using Binding = std::variant<AllocaBinding, FunctionBinding>;
+using Binding = std::variant<AllocaBinding, ClosureBinding, FunctionBinding>;
 
 struct UniqueNameTracker {
   std::string uniquify(const std::string &name) {

@@ -92,9 +92,9 @@ struct Context {
           } else if constexpr (std::is_same_v<T, zir::TupleType>) {
             std::vector<TypeId> fields;
             fields.reserve(t.m_fields.size());
-            std::transform(t.m_fields.cbegin(), t.m_fields.cend(),
-                           std::back_inserter(fields),
-                           [&](const auto &field) { return to_type(field); });
+            for (const auto &field : t.m_fields) {
+              fields.emplace_back(this->to_type(field));
+            }
             return StructType{
                 .m_fields = std::move(fields),
                 .m_name{},
@@ -137,6 +137,18 @@ struct Context {
     auto binding = AllocaBinding{
         .m_ptr = alloca_slot,
         .m_internal_type_id = inner_type_id,
+    };
+    symbols().bind_local(name, binding);
+    return binding;
+  }
+
+  ClosureBinding define_local_closure(const std::string &name,
+                                      Value initial_value) {
+    auto alloca_slot = builder().emit_alloca(
+        m_ptr, uniqify_name(conventions::make_alloca_name(name)));
+    builder().create_store(alloca_slot, std::move(initial_value));
+    auto binding = ClosureBinding{
+        .m_ptr = alloca_slot,
     };
     symbols().bind_local(name, binding);
     return binding;

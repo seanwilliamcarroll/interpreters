@@ -129,10 +129,7 @@ struct FreeVariableCollector {
     return std::visit(*this, m_ctx.arena().get(expr_id).m_expr_kind);
   }
 
-  FreeVariables operator()(const TupleExpr & // tuple_expr
-  ) {
-    return {};
-  }
+  FreeVariables operator()(const TupleExpr & /*unused*/) { return {}; }
 
   FreeVariables operator()(const IdentifierExpr &identifier) {
     // We've found a binding, check if in scope
@@ -213,10 +210,7 @@ struct FreeVariableCollector {
     return free_variables;
   }
 
-  FreeVariables operator()(const DotExpr & // dot_expr
-  ) {
-    return {};
-  }
+  FreeVariables operator()(const DotExpr & /*unused*/) { return {}; }
 
   Context &m_ctx;
   BoundVariableEnvironment m_env;
