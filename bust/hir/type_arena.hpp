@@ -34,19 +34,27 @@ struct TypeArena : public AbstractInternArena<TypeId, TypeKind> {
   [[nodiscard]] std::string to_string(TypeId type_id) const override;
 
   [[nodiscard]] const FunctionType &as_function(TypeId type_id) const {
-    return as<FunctionType>(type_id, __PRETTY_FUNCTION__);
+    return as<FunctionType>(type_id);
+  }
+
+  [[nodiscard]] const TupleType &as_tuple(TypeId type_id) const {
+    return as<TupleType>(type_id);
   }
 
   [[nodiscard]] const PrimitiveTypeValue &as_primitive(TypeId type_id) const {
-    return as<PrimitiveTypeValue>(type_id, __PRETTY_FUNCTION__);
+    return as<PrimitiveTypeValue>(type_id);
   }
 
   [[nodiscard]] const TypeVariable &as_type_variable(TypeId type_id) const {
-    return as<TypeVariable>(type_id, __PRETTY_FUNCTION__);
+    return as<TypeVariable>(type_id);
   }
 
   [[nodiscard]] bool is_function(TypeId type_id) const {
     return is<FunctionType>(type_id);
+  }
+
+  [[nodiscard]] bool is_tuple(TypeId type_id) const {
+    return is<TupleType>(type_id);
   }
 
   [[nodiscard]] bool is_primitive(TypeId type_id) const {

@@ -114,6 +114,18 @@ struct TypeUnifier {
     unify(type_a.m_return_type, type_b.m_return_type);
   }
 
+  void unify(const TupleType &type_a, const TupleType &type_b) {
+    if (type_a.m_fields.size() != type_b.m_fields.size()) {
+      throw std::runtime_error(std::string("Tried to unify concrete types: ") +
+                               to_string(type_a) + " and " + to_string(type_b));
+    }
+
+    for (const auto &[field_type_a, field_type_b] :
+         std::views::zip(type_a.m_fields, type_b.m_fields)) {
+      unify(field_type_a, field_type_b);
+    }
+  }
+
   void unify(const TypeId &type_id_a, const TypeVariable &type_b) {
     // Define it once in the other method
     unify(type_b, type_id_a);

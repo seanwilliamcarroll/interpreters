@@ -57,6 +57,15 @@ struct Mangler {
 
             m_out << "_p_ret_";
             mangle(type.m_return_type);
+          } else if constexpr (std::is_same_v<T, hir::TupleType>) {
+            m_out << "tup_p_";
+            for (size_t index = 0; index < type.m_fields.size() - 1; ++index) {
+              const auto &field = type.m_fields[index];
+              mangle(field);
+              m_out << "_";
+            }
+            mangle(type.m_fields.back());
+            m_out << "_p";
           } else {
             throw core::InternalCompilerError(
                 "Cannot mangle names with NeverType or TypeVariables");

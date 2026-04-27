@@ -25,6 +25,7 @@ struct ExpressionLowerer {
   IdentifierExpr lower(const hir::Identifier &);
   IdentifierExpr lower_definition(const hir::Identifier &);
   ExprKind operator()(const hir::Identifier &);
+  ExprKind operator()(const std::unique_ptr<hir::TupleExpr> &);
   ExprKind operator()(const hir::Unit &);
   ExprKind operator()(const hir::I8 &);
   ExprKind operator()(const hir::I32 &);
@@ -40,6 +41,7 @@ struct ExpressionLowerer {
   ExprKind operator()(const std::unique_ptr<hir::ReturnExpr> &);
   ExprKind operator()(const std::unique_ptr<hir::CastExpr> &);
   ExprKind operator()(const std::unique_ptr<hir::LambdaExpr> &);
+  ExprKind operator()(const std::unique_ptr<hir::DotExpr> &);
 
   Context &m_ctx;
 };

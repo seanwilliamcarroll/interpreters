@@ -70,12 +70,11 @@ struct AbstractInternArena {
   [[nodiscard]] virtual std::string to_string(IdType) const = 0;
   [[nodiscard]] virtual std::string to_string(const ActualType &) const = 0;
 
-  template <typename VariantType>
-  const VariantType &as(IdType id, const char *function) const {
+  template <typename VariantType> const VariantType &as(IdType id) const {
     const auto &actual = get(id);
     if (!std::holds_alternative<VariantType>(actual)) {
-      throw core::InternalCompilerError(
-          std::string(function) + " Bad access to arena with " + to_string(id));
+      throw core::InternalCompilerError("Bad access to arena with " +
+                                        to_string(id));
     }
     return std::get<VariantType>(actual);
   }
@@ -84,6 +83,11 @@ struct AbstractInternArena {
   [[nodiscard]] [[nodiscard]] bool is(IdType id) const {
     const auto &actual = get(id);
     return std::holds_alternative<VariantType>(actual);
+  }
+
+  [[nodiscard]]
+  const std::vector<ActualType> &actual_types() const {
+    return m_id_to_actual;
   }
 
 private:

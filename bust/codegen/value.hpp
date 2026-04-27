@@ -1,7 +1,7 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Handle types for codegen SSA values and named storage.
+//*  Purpose : Value types for codegen SSA values and named storage.
 //*
 //*
 //****************************************************************************
@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include <codegen/ir_literals.hpp>
+#include <codegen/types.hpp>
 
 #include <string>
 #include <variant>
@@ -40,6 +41,11 @@ struct GlobalHandle {
 
 using Handle =
     std::variant<LiteralHandle, TemporaryHandle, NamedHandle, GlobalHandle>;
+
+struct Value {
+  Handle m_handle;
+  TypeId m_type_id;
+};
 
 inline std::string get_raw_handle(const Handle &handle) {
   return std::visit(

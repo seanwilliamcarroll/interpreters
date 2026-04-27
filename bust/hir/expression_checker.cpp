@@ -23,6 +23,7 @@
 #include <source_location.hpp>
 #include <types.hpp>
 
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -109,6 +110,31 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
   return {{location},
           final_type,
           Identifier{{location}, identifier.m_name, binding_id, final_type}};
+}
+
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::TupleExpr> &tuple_expr,
+                              const core::SourceLocation &location) {
+
+  std::vector<Expression> fields;
+  fields.reserve(tuple_expr->m_fields.size());
+  std::vector<TypeId> field_types;
+  field_types.reserve(tuple_expr->m_fields.size());
+  for (const auto &field : tuple_expr->m_fields) {
+    fields.emplace_back(check_expression(field));
+    field_types.emplace_back(fields.back().m_type);
+  }
+  auto tuple_type = m_ctx.m_type_arena.intern(TupleType{
+      .m_fields = std::move(field_types),
+  });
+
+  return {
+      {location},
+      tuple_type,
+      std::make_unique<TupleExpr>(TupleExpr{
+          .m_fields = std::move(fields),
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(
@@ -467,6 +493,65 @@ Expression ExpressionChecker::operator()(
           function_type_id,
           std::make_unique<LambdaExpr>(LambdaExpr{
               std::move(parameters), std::move(body), return_type_id})};
+}
+
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
+                              const core::SourceLocation &location) {
+  // Need to check internal expression
+  // Assert that this expression is known to be a tuple
+  // Check that the index is valid given the arity of the tuple
+  // Final type is the type of the field at that index
+
+  auto expression = check_expression(dot_expr->m_expression);
+
+  if (m_ctx.m_type_arena.is_type_variable(expression.m_type)) {
+    // Defer check until monomorpher then
+    auto return_type = m_ctx.m_type_unifier.new_type_var();
+
+    return {
+        {location},
+        return_type,
+        std::make_unique<DotExpr>(DotExpr{
+            .m_expression = std::move(expression),
+            .m_tuple_index = dot_expr->m_tuple_index,
+        }),
+    };
+  }
+
+  if (!m_ctx.m_type_arena.is_tuple(expression.m_type)) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Tuple dot operator requires that the "
+        "expression be resolvable to a tuple type, not: " +
+            m_ctx.to_string(expression.m_type),
+        location);
+  }
+
+  // We can check arity here
+  const auto &tuple_type = m_ctx.m_type_arena.as_tuple(expression.m_type);
+  const auto arity = tuple_type.m_fields.size();
+
+  if (dot_expr->m_tuple_index >= arity) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Tuple dot operator requires that accessor be strictly less than tuple "
+        "arity, arity: " +
+            std::to_string(arity) +
+            " vs. accessor index: " + std::to_string(dot_expr->m_tuple_index),
+        location);
+  }
+
+  auto final_type = tuple_type.m_fields[dot_expr->m_tuple_index];
+
+  return {
+      {location},
+      final_type,
+      std::make_unique<DotExpr>(DotExpr{
+          .m_expression = std::move(expression),
+          .m_tuple_index = dot_expr->m_tuple_index,
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(

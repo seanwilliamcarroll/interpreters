@@ -276,6 +276,20 @@ private:
     IndentGuard g(*this);
     dump_block(v);
   }
+
+  void dump_expr_kind(const TupleExpr &v) {
+    m_out << "Tuple\n";
+    IndentGuard g(*this);
+    for (const auto &field : v.m_fields) {
+      dump_expr(field);
+    }
+  }
+
+  void dump_expr_kind(const DotExpr &v) {
+    m_out << "Dot(" << v.m_tuple_index << ")\n";
+    IndentGuard g(*this);
+    dump_expr(v.m_expression);
+  }
 };
 
 //****************************************************************************

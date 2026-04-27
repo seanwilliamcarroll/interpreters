@@ -137,7 +137,7 @@ TEST_SUITE("bust.lexer") {
         {"}", TokenType::RBRACE},    {":", TokenType::COLON},
         {";", TokenType::SEMICOLON}, {",", TokenType::COMMA},
         {"+", TokenType::PLUS},      {"*", TokenType::STAR},
-        {"%", TokenType::PERCENT},
+        {"%", TokenType::PERCENT},   {".", TokenType::DOT},
     };
 
     for (const auto &c : cases) {
@@ -655,6 +655,21 @@ TEST_SUITE("bust.lexer") {
   TEST_CASE("bust::lexer_cast_expression") {
     check_token_types("'A' as i32", {TokenType::CHAR_LITERAL, TokenType::AS,
                                      TokenType::I32, TokenType::EOF_TOKEN});
+  }
+
+  // --- Dot projection in context ---------------------------------------------
+
+  TEST_CASE("bust::lexer_dot_projection") {
+    check_token_types("x.0", {TokenType::IDENTIFIER, TokenType::DOT,
+                              TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_chained_dot_projection") {
+    // Must tokenize as five tokens; the .0.1 sequence must NOT be conflated
+    // into anything that looks like a float literal.
+    check_token_types("x.0.1", {TokenType::IDENTIFIER, TokenType::DOT,
+                                TokenType::INT_LITERAL, TokenType::DOT,
+                                TokenType::INT_LITERAL, TokenType::EOF_TOKEN});
   }
 
   // --- Identifier value preservation -----------------------------------------

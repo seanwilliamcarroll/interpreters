@@ -108,7 +108,7 @@ struct Lexer : LexerInterface {
             {'}', TokenType::RBRACE},    {':', TokenType::COLON},
             {';', TokenType::SEMICOLON}, {',', TokenType::COMMA},
             {'+', TokenType::PLUS},      {'*', TokenType::STAR},
-            {'%', TokenType::PERCENT},
+            {'%', TokenType::PERCENT},   {'.', TokenType::DOT},
         };
 
     auto iter = exclusively_single_char_mapping.find(character);

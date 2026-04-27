@@ -56,6 +56,7 @@ add_library(bust-lib STATIC
   mono/expression_substituter.cpp
   mono/let_binding_monomorpher.cpp
   mono/top_item_monomorpher.cpp
+  mono/dot_expr_resolver.cpp
   src/zir_lowerer.cpp
   zir/arena.cpp
   zir/expression_lowerer.cpp

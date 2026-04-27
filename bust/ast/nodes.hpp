@@ -28,6 +28,8 @@ struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Identifier;
 struct Block;
+struct DotExpr;
+struct TupleExpr;
 struct WhileExpr;
 struct ForExpr;
 
@@ -62,7 +64,8 @@ using ExprKind =
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
-                 std::unique_ptr<ForExpr>, I8, I32, I64, Bool, Char, Unit>;
+                 std::unique_ptr<ForExpr>, std::unique_ptr<TupleExpr>,
+                 std::unique_ptr<DotExpr>, I8, I32, I64, Bool, Char, Unit>;
 
 using Statement = std::variant<LetBinding, Expression>;
 
@@ -80,6 +83,16 @@ struct Identifier : public core::HasLocation {
 
 struct Expression : public core::HasLocation {
   ExprKind m_expression;
+};
+
+struct TupleExpr {
+  std::vector<Expression> m_fields;
+};
+
+struct DotExpr {
+  Expression m_expression;
+  // For now, all that is representable
+  size_t m_tuple_index;
 };
 
 // --- Control flow ----------------------------------------------------------

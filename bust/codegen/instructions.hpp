@@ -9,9 +9,9 @@
 //****************************************************************************
 
 #include <codegen/block_label.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 #include <operators.hpp>
 
 #include <variant>
@@ -20,31 +20,47 @@
 namespace bust::codegen {
 //****************************************************************************
 
-struct BinaryInstruction {
-  Handle m_result;
-  Handle m_lhs;
-  Handle m_rhs;
-  LLVMBinaryOperator m_operator;
-  TypeId m_type;
+struct AllocaInstruction {
+  Value m_value_ptr;
+  TypeId m_type_id;
 };
 
-struct UnaryInstruction {
-  Handle m_result;
-  Handle m_input;
-  UnaryOperator m_operator;
-  TypeId m_type;
+struct StoreInstruction {
+  Value m_destination;
+  Value m_source;
 };
 
-struct IntegerCompareInstruction {
-  Handle m_result;
-  Handle m_lhs;
-  Handle m_rhs;
-  LLVMIntegerCompareCondition m_condition;
-  TypeId m_type;
+struct LoadInstruction {
+  Value m_destination;
+  Value m_source;
+};
+
+struct GetElementPtrInstruction {
+  Value m_destination;
+  TypeId m_aggregate_type_id;
+  Value m_ptr;
+  Index m_initial_index;
+  std::vector<Index> m_additional_indices;
+};
+
+struct PtrToIntInstruction {
+  Value m_destination;
+  Value m_source;
+};
+
+struct CallInstruction {
+  Value m_destination;
+  Value m_callee;
+  std::vector<Value> m_arguments;
+};
+
+struct CallVoidInstruction {
+  Value m_callee;
+  std::vector<Value> m_arguments;
 };
 
 struct BranchInstruction {
-  Handle m_condition;
+  Value m_condition;
   BlockLabel m_iftrue;
   BlockLabel m_iffalse;
 };
@@ -53,60 +69,34 @@ struct JumpInstruction {
   BlockLabel m_target;
 };
 
-struct LoadInstruction {
-  Handle m_destination;
-  Handle m_source;
-  TypeId m_type;
+struct IntegerCompareInstruction {
+  Value m_destination;
+  Value m_lhs;
+  Value m_rhs;
+  LLVMIntegerCompareCondition m_condition;
 };
 
-struct StoreInstruction {
-  Handle m_destination;
-  Handle m_source;
-  TypeId m_type;
+struct BinaryInstruction {
+  Value m_destination;
+  Value m_lhs;
+  Value m_rhs;
+  LLVMBinaryOperator m_operator;
+};
+
+struct UnaryInstruction {
+  Value m_destination;
+  Value m_source;
+  UnaryOperator m_operator;
 };
 
 struct CastInstruction {
-  Handle m_destination;
-  Handle m_source;
+  Value m_destination;
+  Value m_source;
   LLVMCastOperator m_operator;
-  TypeId m_from;
-  TypeId m_to;
-};
-
-struct GetElementPtrInstruction {
-  Handle m_destination;
-  TypeId m_struct_type;
-  Handle m_struct_handle;
-  Argument m_initial_index;
-  std::vector<Argument> m_additional_indices;
-};
-
-struct PtrToIntInstruction {
-  Handle m_destination;
-  Handle m_source;
-  TypeId m_destination_type;
-};
-
-struct CallVoidInstruction {
-  Handle m_callee;
-  std::vector<Argument> m_arguments;
-};
-
-struct CallInstruction {
-  Handle m_target;
-  Handle m_callee;
-  std::vector<Argument> m_arguments;
-  TypeId m_return_type;
-};
-
-struct AllocaInstruction {
-  Handle m_handle;
-  TypeId m_type;
 };
 
 struct ReturnInstruction {
-  Handle m_value;
-  TypeId m_type;
+  Value m_value;
 };
 
 struct ReturnVoidInstruction {};

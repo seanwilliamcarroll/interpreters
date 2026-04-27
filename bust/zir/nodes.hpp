@@ -67,6 +67,11 @@ struct IdentifierExpr {
   auto operator<=>(const IdentifierExpr &) const = default;
 };
 
+struct TupleExpr {
+  std::vector<ExprId> m_fields;
+  auto operator<=>(const TupleExpr &) const = default;
+};
+
 struct ExpressionStatement {
   ExprId m_expression;
   auto operator<=>(const ExpressionStatement &) const = default;
@@ -101,9 +106,16 @@ struct LambdaExpr {
   auto operator<=>(const LambdaExpr &) const = default;
 };
 
-using ExprKind = std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr,
-                              CallExpr, BinaryExpr, UnaryExpr, ReturnExpr,
-                              CastExpr, IfExpr, LambdaExpr, Block>;
+struct DotExpr {
+  ExprId m_expression;
+  size_t m_tuple_index;
+  auto operator<=>(const DotExpr &) const = default;
+};
+
+using ExprKind =
+    std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr, TupleExpr,
+                 CallExpr, BinaryExpr, UnaryExpr, ReturnExpr, CastExpr, IfExpr,
+                 LambdaExpr, DotExpr, Block>;
 
 struct Expression {
   TypeId m_type_id;
@@ -156,6 +168,16 @@ template <> struct hash<bust::zir::Binding> {
 template <> struct hash<bust::zir::IdentifierExpr> {
   size_t operator()(const bust::zir::IdentifierExpr &id) const noexcept {
     return hash<bust::zir::BindingId>{}(id.m_id);
+  }
+};
+
+template <> struct hash<bust::zir::TupleExpr> {
+  size_t operator()(const bust::zir::TupleExpr &id) const noexcept {
+    size_t seed = 0;
+    for (const auto &field : id.m_fields) {
+      core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(field));
+    }
+    return seed;
   }
 };
 
@@ -252,6 +274,15 @@ template <> struct hash<bust::zir::LambdaExpr> {
     for (const auto &capture : expr.m_captures) {
       core::hash_combine(seed, std::hash<bust::zir::IdentifierExpr>{}(capture));
     }
+    return seed;
+  }
+};
+
+template <> struct hash<bust::zir::DotExpr> {
+  size_t operator()(const bust::zir::DotExpr &expr) const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(expr.m_expression));
+    core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
     return seed;
   }
 };

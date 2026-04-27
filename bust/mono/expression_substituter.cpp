@@ -37,7 +37,21 @@ ExpressionSubstituter::substitute(const hir::Expression &expression) {
 
   auto substituted_expr_kind = std::visit(*this, expression.m_expression);
 
-  return {{expression.m_location}, new_type, std::move(substituted_expr_kind)};
+  // Need to handle the special dot expr case where we pull the type out of the
+  // tuple
+  if (auto *dot_expr =
+          std::get_if<std::unique_ptr<hir::DotExpr>>(&substituted_expr_kind)) {
+    const auto &tuple_type =
+        m_ctx.m_parent.m_type_arena.as_tuple((*dot_expr)->m_expression.m_type);
+    new_type =
+        m_ctx.rewrite_type(tuple_type.m_fields[(*dot_expr)->m_tuple_index]);
+  }
+
+  return {
+      {expression.m_location},
+      new_type,
+      std::move(substituted_expr_kind),
+  };
 }
 
 hir::Identifier
@@ -49,7 +63,11 @@ ExpressionSubstituter::substitute(const hir::Identifier &identifier) {
 
   if (possible_specialization == nullptr) {
     return hir::Identifier{
-        {identifier.m_location}, identifier.m_name, identifier.m_id, new_type};
+        {identifier.m_location},
+        identifier.m_name,
+        identifier.m_id,
+        new_type,
+    };
   }
   const auto &specialization = *possible_specialization;
 
@@ -57,6 +75,20 @@ ExpressionSubstituter::substitute(const hir::Identifier &identifier) {
                          specialization.m_mangled_name,
                          specialization.m_new_id,
                          new_type};
+}
+
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::TupleExpr> &tuple_expr) {
+
+  std::vector<hir::Expression> fields;
+  fields.reserve(tuple_expr->m_fields.size());
+  for (const auto &field : tuple_expr->m_fields) {
+    fields.emplace_back(substitute(field));
+  }
+
+  return std::make_unique<hir::TupleExpr>(hir::TupleExpr{
+      .m_fields = std::move(fields),
+  });
 }
 
 hir::ExprKind
@@ -212,6 +244,40 @@ hir::ExprKind ExpressionSubstituter::operator()(
 
   return std::make_unique<hir::LambdaExpr>(hir::LambdaExpr{
       std::move(new_parameters), std::move(new_body), new_return_type});
+}
+
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::DotExpr> &dot_expr) {
+
+  auto expression = substitute(dot_expr->m_expression);
+
+  if (!m_ctx.m_parent.m_type_arena.is_tuple(expression.m_type)) {
+    throw core::CompilerException(
+        "Monomorpher",
+        "Tuple dot operator requires that the "
+        "expression be resolvable to a concrete tuple type, not: " +
+            m_ctx.m_parent.m_type_arena.to_string(expression.m_type),
+        expression.m_location);
+  }
+
+  const auto &tuple_type =
+      m_ctx.m_parent.m_type_arena.as_tuple(expression.m_type);
+  const auto arity = tuple_type.m_fields.size();
+
+  if (dot_expr->m_tuple_index >= arity) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Tuple dot operator requires that accessor be strictly less than tuple "
+        "arity, arity: " +
+            std::to_string(arity) +
+            " vs. accessor index: " + std::to_string(dot_expr->m_tuple_index),
+        expression.m_location);
+  }
+
+  return std::make_unique<hir::DotExpr>(hir::DotExpr{
+      .m_expression = std::move(expression),
+      .m_tuple_index = dot_expr->m_tuple_index,
+  });
 }
 
 //****************************************************************************

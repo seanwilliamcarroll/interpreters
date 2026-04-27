@@ -10,10 +10,10 @@
 
 #include <codegen/basic_block.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/handle.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/symbol_table.hpp>
+#include <codegen/value.hpp>
 
 #include <cstddef>
 #include <memory>

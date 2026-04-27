@@ -38,12 +38,17 @@ struct FunctionType {
   bool operator==(const FunctionType &) const = default;
 };
 
+struct TupleType {
+  std::vector<TypeId> m_fields;
+  bool operator==(const TupleType &) const = default;
+};
+
 struct NeverType {
   bool operator==(const NeverType &) const = default;
 };
 
-using TypeKind =
-    std::variant<PrimitiveTypeValue, TypeVariable, FunctionType, NeverType>;
+using TypeKind = std::variant<PrimitiveTypeValue, TypeVariable, FunctionType,
+                              TupleType, NeverType>;
 
 inline bool is_type_in_type_class(PrimitiveTypeClass type_class,
                                   const TypeKind &type) {
@@ -85,6 +90,16 @@ template <> struct hash<bust::hir::FunctionType> {
       core::hash_combine(seed, parameter);
     }
     core::hash_combine(seed, id.m_return_type);
+    return seed;
+  }
+};
+
+template <> struct hash<bust::hir::TupleType> {
+  size_t operator()(const bust::hir::TupleType &id) const noexcept {
+    size_t seed = 0;
+    for (const auto &field : id.m_fields) {
+      core::hash_combine(seed, field);
+    }
     return seed;
   }
 };

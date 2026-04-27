@@ -11,6 +11,7 @@
 #include <hir/type_variable_substituter.hpp>
 #include <hir/types.hpp>
 #include <mono/context.hpp>
+#include <mono/dot_expr_resolver.hpp>
 #include <mono/let_binding_monomorpher.hpp>
 #include <mono/let_binding_substituter.hpp>
 #include <mono/name_mangler.hpp>
@@ -59,6 +60,12 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
       combined[original_type_id] = substituter.substitute(substituted_type_id);
     }
 
+    auto context = SubstitutionContext{.m_parent = m_ctx,
+                                       .m_substitution_mapping = combined};
+
+    DotExprResolver{context}.resolve(let_binding.m_expression);
+    combined = context.m_substitution_mapping;
+
     auto new_type =
         hir::TypeVariableSubstituter{.m_type_arena = m_ctx.type_arena(),
                                      .m_type_unifier = m_ctx.m_type_unifier,
@@ -73,9 +80,6 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
     m_ctx.m_env.define(
         let_binding.m_variable.m_id, new_type,
         Specialization{.m_mangled_name = new_name, .m_new_id = new_id});
-
-    auto context = SubstitutionContext{.m_parent = m_ctx,
-                                       .m_substitution_mapping = combined};
 
     new_let_bindings.push_back(
         LetBindingSubstituter{context}.substitute(let_binding));

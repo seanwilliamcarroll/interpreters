@@ -70,6 +70,20 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
   return {.m_id = binding_id};
 }
 
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::TupleExpr> &tuple_expr) {
+
+  std::vector<ExprId> fields;
+  fields.reserve(tuple_expr->m_fields.size());
+  std::transform(tuple_expr->m_fields.cbegin(), tuple_expr->m_fields.cend(),
+                 std::back_inserter(fields),
+                 [&](const auto &field) -> ExprId { return lower(field); });
+
+  return TupleExpr{
+      .m_fields = std::move(fields),
+  };
+}
+
 ExprKind ExpressionLowerer::operator()(const hir::Identifier &identifier) {
   return lower(identifier);
 }
@@ -205,6 +219,16 @@ ExprKind ExpressionLowerer::operator()(
       .m_body = body,
       .m_return_type = m_ctx.convert(lambda_expr->m_return_type),
       .m_captures = captures,
+  };
+}
+
+ExprKind
+ExpressionLowerer::operator()(const std::unique_ptr<hir::DotExpr> &dot_expr) {
+  auto expression = lower(dot_expr->m_expression);
+
+  return DotExpr{
+      .m_expression = expression,
+      .m_tuple_index = dot_expr->m_tuple_index,
   };
 }
 

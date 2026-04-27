@@ -8,9 +8,9 @@
 #pragma once
 //****************************************************************************
 
-#include <codegen/handle.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
+#include <codegen/value.hpp>
 
 #include <vector>
 
@@ -19,7 +19,7 @@ namespace bust::codegen {
 //****************************************************************************
 
 struct FunctionDeclaration {
-  GlobalHandle m_function_id;
+  Value m_function_id;
   TypeId m_return_type;
   std::vector<Parameter> m_parameters;
 };

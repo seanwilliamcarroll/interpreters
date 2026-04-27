@@ -14,6 +14,8 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <iterator>
+#include <optional>
 #include <ostream>
 #include <type_traits>
 #include <utility>
@@ -52,6 +54,7 @@ struct PtrType {
 struct StructType {
   auto operator<=>(const StructType &) const = default;
   std::vector<TypeId> m_fields;
+  std::optional<std::string> m_name;
 };
 // TODO
 // struct ArrayType {  auto operator<=>(const ArrayType &) const = default;
@@ -73,32 +76,6 @@ inline size_t width_bits(LLVMType type) {
           return std::remove_reference_t<decltype(t)>::width_bits;
         } else {
           throw core::InternalCompilerError("Bad type to call width_bytes on");
-        }
-      },
-      type);
-}
-
-inline LLVMType to_llvm_type(const zir::Type &type) {
-  return std::visit(
-      [](const auto &t) -> LLVMType {
-        using T = std::decay_t<decltype(t)>;
-        if constexpr (std::is_same_v<T, zir::UnitType>) {
-          return VoidType{};
-        } else if constexpr (std::is_same_v<T, zir::BoolType>) {
-          return I1Type{};
-        } else if constexpr (std::is_same_v<T, zir::I8Type> ||
-                             std::is_same_v<T, zir::CharType>) {
-          return I8Type{};
-        } else if constexpr (std::is_same_v<T, zir::I32Type>) {
-          return I32Type{};
-        } else if constexpr (std::is_same_v<T, zir::I64Type>) {
-          return I64Type{};
-        } else if constexpr (std::is_same_v<T, zir::FunctionType>) {
-          return PtrType{};
-        } else {
-          assert(false && "codegen only handles primitive types and function "
-                          "types for now");
-          return VoidType{};
         }
       },
       type);
@@ -204,6 +181,9 @@ template <> struct hash<bust::codegen::StructType> {
     size_t seed = 0;
     for (const auto &field : id.m_fields) {
       core::hash_combine(seed, field);
+    }
+    if (id.m_name.has_value()) {
+      core::hash_combine(seed, id.m_name.value());
     }
     return seed;
   }

@@ -43,6 +43,15 @@ std::string TypeArena::to_string(const TypeKind &type_kind) const {
           out += to_string(get(tk.m_return_type));
           out += ")";
           return out;
+        } else if constexpr (std::is_same_v<T, TupleType>) {
+          std::string out = "(";
+          for (size_t index = 0; index < tk.m_fields.size() - 1; ++index) {
+            out += to_string(get(tk.m_fields[index]));
+            out += ", ";
+          }
+          out += to_string(get(tk.m_fields.back()));
+          out += ",)";
+          return out;
         } else if constexpr (std::is_same_v<T, NeverType>) {
           return "!";
         }

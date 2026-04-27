@@ -44,6 +44,19 @@ struct TypeVariableCollapser {
     return m_ctx.m_type_arena.intern(function_type);
   }
 
+  TypeId operator()(const TupleType &type) {
+    std::vector<TypeId> fields;
+    fields.reserve(type.m_fields.size());
+    for (const auto &field : type.m_fields) {
+      fields.push_back(collapse(field));
+    }
+
+    auto tuple_type = TupleType{
+        .m_fields = std::move(fields),
+    };
+    return m_ctx.m_type_arena.intern(tuple_type);
+  }
+
   TypeId operator()(const NeverType & /*unused*/) {
     return m_ctx.m_type_arena.m_never;
   }

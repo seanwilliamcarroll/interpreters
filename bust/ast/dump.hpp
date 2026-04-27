@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include <ast/nodes.hpp>
+#include <exceptions.hpp>
 
 #include <sstream>
 #include <string>
@@ -87,6 +88,17 @@ private:
             }
             m_out << ") -> ";
             dump_type_id(v->m_return_type);
+          } else if constexpr (std::is_same_v<
+                                   T, std::unique_ptr<TupleTypeIdentifier>>) {
+            m_out << "(";
+            for (size_t i = 0; i < v->m_field_types.size(); ++i) {
+              if (i > 0) {
+                m_out << " ";
+              }
+              dump_type_id(v->m_field_types[i]);
+              m_out << ",";
+            }
+            m_out << ")";
           } else if constexpr (std::is_same_v<T, DefinedType>) {
             m_out << v.m_type;
           }
@@ -199,12 +211,16 @@ private:
             dump_return(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<LambdaExpr>>) {
             dump_lambda(*v);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<TupleExpr>>) {
+            dump_tuple(*v);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<DotExpr>>) {
+            dump_dot(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<WhileExpr>>) {
             line("While(TODO)");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ForExpr>>) {
             line("For(TODO)");
           } else {
-            std::unreachable();
+            throw core::InternalCompilerError("Unreachable!!");
           }
         },
         e.m_expression);
@@ -314,6 +330,21 @@ private:
     line("Return");
     IndentGuard g(*this);
     dump_expression(r.m_expression);
+  }
+
+  void dump_tuple(const TupleExpr &t) {
+    line("Tuple");
+    IndentGuard g(*this);
+    for (const auto &field : t.m_fields) {
+      dump_expression(field);
+    }
+  }
+
+  void dump_dot(const DotExpr &d) {
+    indent();
+    m_out << "Dot(" << d.m_tuple_index << ")\n";
+    IndentGuard g(*this);
+    dump_expression(d.m_expression);
   }
 
   void dump_lambda(const LambdaExpr &l) {

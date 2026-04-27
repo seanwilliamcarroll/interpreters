@@ -118,6 +118,33 @@ Parser::parse_function_type_identifier() {
                                   std::move(return_type)});
 }
 
+std::unique_ptr<ast::TupleTypeIdentifier>
+Parser::parse_tuple_type_identifier() {
+  auto original_location = peek().get_location();
+  expect(TokenType::LPAREN, __FUNCTION__);
+
+  std::vector<ast::TypeIdentifier> types;
+
+  types.emplace_back(parse_type_identifier());
+
+  while (peek().get_token_type() != TokenType::RPAREN) {
+    expect(TokenType::COMMA, __FUNCTION__);
+
+    if (peek().get_token_type() == TokenType::RPAREN) {
+      break;
+    }
+
+    types.emplace_back(parse_type_identifier());
+  }
+
+  expect(TokenType::RPAREN, __FUNCTION__);
+
+  return std::make_unique<ast::TupleTypeIdentifier>(ast::TupleTypeIdentifier{
+      {original_location},
+      std::move(types),
+  });
+}
+
 ast::TypeIdentifier Parser::parse_type_identifier() {
   switch (peek().get_token_type()) {
   case TokenType::UNIT:
@@ -140,6 +167,8 @@ ast::TypeIdentifier Parser::parse_type_identifier() {
                                         PrimitiveType::I64};
   case TokenType::FN:
     return parse_function_type_identifier();
+  case TokenType::LPAREN:
+    return parse_tuple_type_identifier();
   default:
     const auto [location, identifier_name] =
         parse_location_name_from_identifier("Malformed type annotation");
@@ -450,13 +479,33 @@ ast::Expression Parser::parse_postfix() {
   auto expression = parse_primary();
 
   while (peek().get_token_type() == TokenType::LPAREN ||
-         peek().get_token_type() == TokenType::UNIT) {
+         peek().get_token_type() == TokenType::UNIT ||
+         peek().get_token_type() == TokenType::DOT) {
     if (peek().get_token_type() == TokenType::UNIT) {
-      advance();
+      expect(TokenType::UNIT, __FUNCTION__);
       expression =
           ast::Expression{{original_location},
                           std::make_unique<ast::CallExpr>(
                               ast::CallExpr{std::move(expression), {}})};
+      continue;
+    }
+    if (peek().get_token_type() == TokenType::DOT) {
+      expect(TokenType::DOT, __FUNCTION__);
+
+      // Expect INT_LITERAL next for the time being
+
+      if (peek().get_token_type() != TokenType::INT_LITERAL) {
+        on_error(peek().get_location(), "Expected INT_LITERAL after DOT, not: ",
+                 peek().get_token_type());
+      }
+      auto literal = parse_literal();
+      auto int_literal = std::get<ast::I64>(literal.m_expression);
+      expression = ast::Expression{
+          {original_location},
+          std::make_unique<ast::DotExpr>(ast::DotExpr{
+              .m_expression = std::move(expression),
+              .m_tuple_index = static_cast<size_t>(int_literal.m_value),
+          })};
       continue;
     }
 
@@ -481,6 +530,42 @@ ast::Expression Parser::parse_postfix() {
   return expression;
 }
 
+ast::Expression Parser::parse_paren_or_tuple() {
+  auto original_location = peek().get_location();
+  expect(TokenType::LPAREN, __FUNCTION__);
+  auto expression = parse_expression();
+
+  if (peek().get_token_type() == TokenType::RPAREN) {
+    // Just a parentesized expression
+    expect(TokenType::RPAREN, __FUNCTION__);
+    return expression;
+  }
+
+  // Must be this first comma
+  expect(TokenType::COMMA, __FUNCTION__);
+
+  // We're in a tuple
+  std::vector<ast::Expression> fields;
+  fields.emplace_back(std::move(expression));
+  while (peek().get_token_type() != TokenType::RPAREN) {
+    fields.emplace_back(parse_expression());
+    if (peek().get_token_type() == TokenType::RPAREN) {
+      break;
+    }
+    expect(TokenType::COMMA, __FUNCTION__);
+  }
+
+  expression = ast::Expression{
+      {original_location},
+      std::make_unique<ast::TupleExpr>(ast::TupleExpr{
+          .m_fields = std::move(fields),
+      }),
+  };
+
+  expect(TokenType::RPAREN, __FUNCTION__);
+  return expression;
+}
+
 ast::Expression Parser::parse_primary() {
   switch (peek().get_token_type()) {
   case TokenType::INT_LITERAL:
@@ -493,12 +578,8 @@ ast::Expression Parser::parse_primary() {
     auto identifier = parse_non_annotated_identifier();
     return {{identifier.m_location}, std::move(identifier)};
   }
-  case TokenType::LPAREN: {
-    expect(TokenType::LPAREN, __FUNCTION__);
-    auto expression = parse_expression();
-    expect(TokenType::RPAREN, __FUNCTION__);
-    return expression;
-  }
+  case TokenType::LPAREN:
+    return parse_paren_or_tuple();
   case TokenType::LBRACE: {
     auto block = std::make_unique<ast::Block>(parse_block());
     return {{block->m_location}, std::move(block)};
