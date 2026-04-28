@@ -27,7 +27,6 @@ Three structural investments that unblock future features:
 ## Aggregate Types
 
 - [ ] Arrays (fixed-size)
-- [ ] Tuples
 - [ ] Strings (likely built on arrays or a dedicated type)
 
 ## User-Defined Types
