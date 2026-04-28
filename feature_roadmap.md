@@ -39,8 +39,7 @@ lies — not to commit to an order yet.
 ## Per-feature notes
 
 ### Tuples in codegen
-- **Status:** grammar, parser, AST, HIR, zir, type checker, monomorphizer all landed in PR #44. Codegen `TupleExpr` / `DotExpr` operators are still stubs at `expression_generator.cpp:82`.
-- **Blocks on:** nothing — just finish codegen
+- **Status:** done. Construction, projection, function arguments, and tuple-returning functions all work end-to-end; covered by `bust.codegen.tuples`.
 - **Enables:** pattern matching test bed; ranges as `(start, end)`; multi-return ergonomics
 - **Size:** S
 
@@ -120,19 +119,18 @@ lies — not to commit to an order yet.
 
 A "Rust-shaped" path that minimizes blocked work:
 
-1. **Tuples in codegen** [S] — quick win, unblocks PM
-2. **Mutability + assignment** [M] — foundational, unblocks loops + references
-3. **Loops cleanup** [S] — beneficiary of (2)
-4. **Pattern matching v0** (literals + tuples + bindings) [M] — engine ready before structs/ADTs need it
-5. **Structs** [M] — user-defined types
-6. **Methods (inherent impls)** [M] — natural step before traits
-7. **References without checker** [M] — needed for idiomatic `&self`
-8. **ADTs** [L] — extends PM, gives `Option`/`Result`
-9. **Traits Stage 1** [M] — replaces `PrimitiveTypeClass`
-10. **Traits Stage 2 / constrained generics** [L] — real polymorphism
-11. **Closure refactor** — slot in anywhere; especially clean after S2
-12. **Global lets (`static`)** — slot in anywhere
-13. **Borrow checker** [XL] — capstone
+1. **Mutability + assignment** [M] — foundational, unblocks loops + references
+2. **Loops cleanup** [S] — beneficiary of (1)
+3. **Pattern matching v0** (literals + tuples + bindings) [M] — engine ready before structs/ADTs need it
+4. **Structs** [M] — user-defined types
+5. **Methods (inherent impls)** [M] — natural step before traits
+6. **References without checker** [M] — needed for idiomatic `&self`
+7. **ADTs** [L] — extends PM, gives `Option`/`Result`
+8. **Traits Stage 1** [M] — replaces `PrimitiveTypeClass`
+9. **Traits Stage 2 / constrained generics** [L] — real polymorphism
+10. **Closure refactor** — slot in anywhere; especially clean after S2
+11. **Global lets (`static`)** — slot in anywhere
+12. **Borrow checker** [XL] — capstone
 
 Alternative: do **structs + methods + traits-S1** earlier (slot 2–4) if you want
 the trait machinery in mind sooner; cost is delaying the loops/PM payoff.
@@ -150,40 +148,37 @@ Ordered, with rough sequencing rationale. Each item should be substantially
 complete before moving on; small overlaps and opportunistic out-of-order work
 are fine.
 
-1. **Finish tuples in codegen** — already landed everywhere except codegen;
-   tiny finish, highest leverage-to-cost. Becomes the test bed for pattern
-   matching and is needed for any aggregate-shaped feature later.
-2. **Mutability + assignment operator** — foundational. Cheap because of
+1. **Mutability + assignment operator** — foundational. Cheap because of
    alloca-everything. Unblocks `while`, `&mut`, and forces the place-vs-value
    model the rest of the language needs.
-3. **`while` loops** — direct beneficiary of (2). `for` is *deferred* to
+2. **`while` loops** — direct beneficiary of (1). `for` is *deferred* to
    after traits-S2 so it lands as iterator-trait sugar from day one — no
    C-style stopgap to retrofit.
-4. **Pattern matching v0** (literals, identifiers, tuples, irrefutable in
+3. **Pattern matching v0** (literals, identifiers, tuples, irrefutable in
    `let`) — build the engine while requirements are simple; extend per
    pattern kind as new shapes land.
-5. **Structs** — first user-defined type. Codegen already has `StructType`.
-6. **Methods (inherent impls)** — `Self`, method resolution. Needs (7) for
+4. **Structs** — first user-defined type. Codegen already has `StructType`.
+5. **Methods (inherent impls)** — `Self`, method resolution. Needs (6) for
    `&self`, but the dispatch machinery can stage before references.
-7. **References without borrow checker** — `&T` / `&mut T` with C-pointer
+6. **References without borrow checker** — `&T` / `&mut T` with C-pointer
    semantics; place-vs-value model; auto-ref/auto-deref. Unblocks idiomatic
-   `&self` for (6).
-8. **ADTs (enums)** — extends pattern matching; gives `Option` / `Result`.
+   `&self` for (5).
+7. **ADTs (enums)** — extends pattern matching; gives `Option` / `Result`.
    Tag-only enums first, payloads next.
-9. **Traits Stage 1** (monomorphic only) — replaces `PrimitiveTypeClass`
+8. **Traits Stage 1** (monomorphic only) — replaces `PrimitiveTypeClass`
    with real user-declarable traits.
-10. **Traits Stage 2** (constrained generics + qualified types) — real
-    polymorphism. Re-enables `make_adder` cleanly via `Fn` as a trait, and
-    retires the closure bandaid.
-11. **`for` loops via `Iterator` trait** — direct payoff from (10).
+9. **Traits Stage 2** (constrained generics + qualified types) — real
+   polymorphism. Re-enables `make_adder` cleanly via `Fn` as a trait, and
+   retires the closure bandaid.
+10. **`for` loops via `Iterator` trait** — direct payoff from (9).
     Desugars to `IntoIterator::into_iter` + `Iterator::next` calls.
-12. **Borrow checker** — capstone; multi-month subproject of its own.
+11. **Borrow checker** — capstone; multi-month subproject of its own.
 
 Slot in opportunistically:
 
-- **Global lets (`static`)** — anytime after (2); useful but not blocking
+- **Global lets (`static`)** — anytime after (1); useful but not blocking
   anything else.
-- **Generic structs / functions (unconstrained)** — could land with (5),
-  but cleaner to wait until (10) so constraints are in scope from the start.
-- **Closure narrow fix** — only if (10) gets pushed out; otherwise let
+- **Generic structs / functions (unconstrained)** — could land with (4),
+  but cleaner to wait until (9) so constraints are in scope from the start.
+- **Closure narrow fix** — only if (9) gets pushed out; otherwise let
   traits-S2 absorb it.
