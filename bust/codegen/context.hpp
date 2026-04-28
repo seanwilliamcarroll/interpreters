@@ -133,7 +133,7 @@ struct Context {
                              Value initial_value) {
     auto alloca_slot = builder().emit_alloca(
         inner_type_id, uniqify_name(conventions::make_alloca_name(name)));
-    builder().create_store(alloca_slot, std::move(initial_value));
+    builder().emit_store(alloca_slot, std::move(initial_value));
     auto binding = AllocaBinding{
         .m_ptr = alloca_slot,
         .m_internal_type_id = inner_type_id,
@@ -146,7 +146,7 @@ struct Context {
                                       Value initial_value) {
     auto alloca_slot = builder().emit_alloca(
         m_ptr, uniqify_name(conventions::make_alloca_name(name)));
-    builder().create_store(alloca_slot, std::move(initial_value));
+    builder().emit_store(alloca_slot, std::move(initial_value));
     auto binding = ClosureBinding{
         .m_ptr = alloca_slot,
     };

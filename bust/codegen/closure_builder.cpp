@@ -54,8 +54,8 @@ Value ClosureBuilder::allocate_and_populate_env() {
   for (const auto &[index, capture] :
        std::views::zip(std::views::iota(0ULL), m_captured_bindings)) {
     // If it is alloca, we need to load it before using
-    auto stored_value = m_ctx.builder().create_load(capture.m_outer_value,
-                                                    capture.m_internal_type_id);
+    auto stored_value = m_ctx.builder().emit_load(capture.m_outer_value,
+                                                  capture.m_internal_type_id);
 
     m_ctx.builder().store_to_struct(env, m_type_id, index, stored_value);
   }
