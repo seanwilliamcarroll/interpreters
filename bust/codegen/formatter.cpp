@@ -234,6 +234,18 @@ void Formatter::operator()(const GetElementPtrInstruction &instruction) {
   newline();
 }
 
+void Formatter::operator()(const ExtractValueInstruction &instruction) {
+  indent();
+
+  m_out << str(instruction.m_destination.m_handle) << " = "
+        << ir_syntax::extractvalue << " "
+        << str(instruction.m_aggregate_type_id) << " "
+        << str(instruction.m_source.m_handle) << ", "
+        << std::to_string(instruction.m_index);
+
+  newline();
+}
+
 void Formatter::operator()(const PtrToIntInstruction &instruction) {
   indent();
 

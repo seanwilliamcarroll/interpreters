@@ -103,6 +103,18 @@ Value IRBuilder::emit_gep_field(Value ptr, TypeId aggregate_type_id,
                       },
                   });
 }
+Value IRBuilder::emit_extractvalue(Value source, TypeId aggregate_type_id,
+                                   size_t index) {
+  const auto &struct_type = m_ctx.type().as_struct(aggregate_type_id);
+  auto destination = next_ssa_temporary(struct_type.m_fields[index]);
+  block().add_instruction(ExtractValueInstruction{
+      .m_destination = destination,
+      .m_source = std::move(source),
+      .m_aggregate_type_id = aggregate_type_id,
+      .m_index = index,
+  });
+  return destination;
+}
 
 Value IRBuilder::emit_ptr_to_int(Value source, TypeId destination_type) {
   auto destination = next_ssa_temporary(destination_type);
@@ -214,6 +226,9 @@ Value IRBuilder::malloc_struct(TypeId struct_type) {
   auto size_i64 = emit_ptr_to_int(size_ptr, m_ctx.m_i64);
   // TODO: Move this out and generalize allocator
   return emit_call(m_ctx.allocator_symbol(), {size_i64}, m_ctx.m_ptr);
+}
+Value IRBuilder::alloca_struct(TypeId struct_type) {
+  return emit_alloca(struct_type);
 }
 
 void IRBuilder::store_to_struct(Value ptr, TypeId struct_type, size_t index,

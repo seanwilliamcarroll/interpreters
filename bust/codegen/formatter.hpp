@@ -71,6 +71,7 @@ struct Formatter {
   void operator()(const StoreInstruction &);
   void operator()(const CastInstruction &);
   void operator()(const GetElementPtrInstruction &);
+  void operator()(const ExtractValueInstruction &);
   void operator()(const PtrToIntInstruction &);
 
   void operator()(const Argument &);

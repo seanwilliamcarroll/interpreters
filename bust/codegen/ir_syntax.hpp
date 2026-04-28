@@ -25,6 +25,7 @@ constexpr std::string_view load = "load";
 constexpr std::string_view store = "store";
 constexpr std::string_view alloca_op = "alloca";
 constexpr std::string_view getelementptr = "getelementptr";
+constexpr std::string_view extractvalue = "extractvalue";
 constexpr std::string_view ptrtoint = "ptrtoint";
 constexpr std::string_view icmp = "icmp";
 constexpr std::string_view call = "call";

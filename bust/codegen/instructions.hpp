@@ -43,6 +43,14 @@ struct GetElementPtrInstruction {
   std::vector<Index> m_additional_indices;
 };
 
+struct ExtractValueInstruction {
+  Value m_destination;
+  Value m_source;
+  TypeId m_aggregate_type_id;
+  // Assume flat struct for now
+  size_t m_index;
+};
+
 struct PtrToIntInstruction {
   Value m_destination;
   Value m_source;
@@ -104,8 +112,9 @@ struct ReturnVoidInstruction {};
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
                  LoadInstruction, StoreInstruction, CastInstruction,
-                 GetElementPtrInstruction, PtrToIntInstruction,
-                 CallVoidInstruction, CallInstruction, AllocaInstruction>;
+                 GetElementPtrInstruction, ExtractValueInstruction,
+                 PtrToIntInstruction, CallVoidInstruction, CallInstruction,
+                 AllocaInstruction>;
 
 using Terminator = std::variant<BranchInstruction, JumpInstruction,
                                 ReturnInstruction, ReturnVoidInstruction>;

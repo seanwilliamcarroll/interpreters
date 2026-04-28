@@ -79,8 +79,34 @@ Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
                                    alloca_binding.m_internal_type_id);
 }
 
-Value ExpressionGenerator::operator()(const zir::TupleExpr & /*unused*/) {
-  return {};
+Value ExpressionGenerator::operator()(const zir::TupleExpr &tuple_expr) {
+
+  // Need to alloca the tuple, and do stores to the different fields, then
+  // return the ssa to a load from this alloca
+
+  std::vector<TypeId> field_types;
+  field_types.reserve(tuple_expr.m_fields.size());
+  std::vector<Value> fields;
+  fields.reserve(tuple_expr.m_fields.size());
+  for (const auto &field : tuple_expr.m_fields) {
+    auto field_value = generate(field);
+    field_types.emplace_back(field_value.m_type_id);
+    fields.emplace_back(std::move(field_value));
+  }
+
+  auto struct_type_id = m_ctx.type().intern(StructType{
+      .m_fields = std::move(field_types),
+      .m_name = {},
+  });
+  auto allocad_struct = m_ctx.builder().alloca_struct(struct_type_id);
+
+  for (const auto &[index, field_value] :
+       std::views::zip(std::views::iota(0ULL), fields)) {
+    m_ctx.builder().store_to_struct(allocad_struct, struct_type_id, index,
+                                    field_value);
+  }
+
+  return m_ctx.builder().emit_load(allocad_struct, struct_type_id);
 }
 
 Value ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
@@ -615,8 +641,20 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   return closure_builder.package_fat_pointer(lambda, env);
 }
 
-Value ExpressionGenerator::operator()(const zir::DotExpr & /*unused*/) {
-  return {};
+Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
+
+  // For now, assume that the expression is a tuple
+  auto tuple_value = generate(dot_expr.m_expression);
+
+  auto tuple_type_id = tuple_value.m_type_id;
+
+  if (m_ctx.type().is<StructType>(tuple_type_id)) {
+    return m_ctx.builder().emit_extractvalue(tuple_value, tuple_type_id,
+                                             dot_expr.m_tuple_index);
+  }
+
+  return m_ctx.builder().load_from_struct(tuple_value, tuple_type_id,
+                                          dot_expr.m_tuple_index);
 }
 
 //****************************************************************************

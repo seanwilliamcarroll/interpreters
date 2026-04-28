@@ -68,11 +68,11 @@ struct Context {
     return m_type_arena.to_string(type);
   }
 
-  [[nodiscard]] TypeId to_type(zir::TypeId type_id) const {
+  [[nodiscard]] TypeId to_type(zir::TypeId type_id) {
     return m_type_arena.intern(to_type(arena().get(type_id)));
   }
 
-  [[nodiscard]] LLVMType to_type(const zir::Type &type) const {
+  [[nodiscard]] LLVMType to_type(const zir::Type &type) {
     return std::visit(
         [&](const auto &t) -> LLVMType {
           using T = std::decay_t<decltype(t)>;

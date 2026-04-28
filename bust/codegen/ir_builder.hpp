@@ -68,6 +68,8 @@ struct IRBuilder {
                                Index initial_index, std::vector<Index> indices);
   [[nodiscard]] Value emit_gep_field(Value ptr, TypeId aggregate_type_id,
                                      size_t field_index);
+  [[nodiscard]] Value emit_extractvalue(Value source, TypeId aggregate_type_id,
+                                        size_t index);
   [[nodiscard]] Value emit_ptr_to_int(Value source, TypeId destination_type);
   [[nodiscard]] Value emit_call(Value callee, std::vector<Value> arguments,
                                 TypeId return_type_id);
@@ -83,6 +85,7 @@ struct IRBuilder {
   void emit_return_void();
 
   [[nodiscard]] Value malloc_struct(TypeId struct_type);
+  [[nodiscard]] Value alloca_struct(TypeId struct_type);
   void store_to_struct(Value ptr, TypeId struct_type, size_t index,
                        Value value);
   [[nodiscard]] Value load_from_struct(Value ptr, TypeId struct_type,
