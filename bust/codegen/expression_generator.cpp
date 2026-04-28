@@ -65,8 +65,8 @@ Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
     return std::get<FunctionBinding>(binding).m_callee;
   }
   if (std::holds_alternative<ClosureBinding>(binding)) {
-    return m_ctx.builder().create_load(std::get<ClosureBinding>(binding).m_ptr,
-                                       m_ctx.m_ptr);
+    return m_ctx.builder().emit_load(std::get<ClosureBinding>(binding).m_ptr,
+                                     m_ctx.m_ptr);
   }
   if (!std::holds_alternative<AllocaBinding>(binding)) {
     throw core::InternalCompilerError(
@@ -75,12 +75,38 @@ Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
 
   const auto &alloca_binding = std::get<AllocaBinding>(binding);
 
-  return m_ctx.builder().create_load(alloca_binding.m_ptr,
-                                     alloca_binding.m_internal_type_id);
+  return m_ctx.builder().emit_load(alloca_binding.m_ptr,
+                                   alloca_binding.m_internal_type_id);
 }
 
-Value ExpressionGenerator::operator()(const zir::TupleExpr & /*unused*/) {
-  return {};
+Value ExpressionGenerator::operator()(const zir::TupleExpr &tuple_expr) {
+
+  // Need to alloca the tuple, and do stores to the different fields, then
+  // return the ssa to a load from this alloca
+
+  std::vector<TypeId> field_types;
+  field_types.reserve(tuple_expr.m_fields.size());
+  std::vector<Value> fields;
+  fields.reserve(tuple_expr.m_fields.size());
+  for (const auto &field : tuple_expr.m_fields) {
+    auto field_value = generate(field);
+    field_types.emplace_back(field_value.m_type_id);
+    fields.emplace_back(std::move(field_value));
+  }
+
+  auto struct_type_id = m_ctx.type().intern(StructType{
+      .m_fields = std::move(field_types),
+      .m_name = {},
+  });
+  auto allocad_struct = m_ctx.builder().alloca_struct(struct_type_id);
+
+  for (const auto &[index, field_value] :
+       std::views::zip(std::views::iota(0ULL), fields)) {
+    m_ctx.builder().store_to_struct(allocad_struct, struct_type_id, index,
+                                    field_value);
+  }
+
+  return m_ctx.builder().emit_load(allocad_struct, struct_type_id);
 }
 
 Value ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
@@ -165,31 +191,31 @@ Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   auto merge_label =
       m_ctx.builder().make_block(std::string{conventions::merge_block_label});
 
-  m_ctx.builder().add_branch(condition_target, then_label,
-                             has_else_branch ? else_label : merge_label);
+  m_ctx.builder().emit_branch(condition_target, then_label,
+                              has_else_branch ? else_label : merge_label);
 
   // Emit code for then
   m_ctx.builder().enter_block(then_label);
   auto then_target = generate(if_expression.m_then_block);
   if (yields_value) {
-    m_ctx.builder().create_store(result_alloca_slot, then_target);
+    m_ctx.builder().emit_store(result_alloca_slot, then_target);
   }
-  m_ctx.builder().add_jump(merge_label);
+  m_ctx.builder().emit_jump(merge_label);
 
   if (has_else_branch) {
     // Emit code for else
     m_ctx.builder().enter_block(else_label);
     auto else_target = generate(if_expression.m_else_block.value());
     if (yields_value) {
-      m_ctx.builder().create_store(result_alloca_slot, else_target);
+      m_ctx.builder().emit_store(result_alloca_slot, else_target);
     }
-    m_ctx.builder().add_jump(merge_label);
+    m_ctx.builder().emit_jump(merge_label);
   }
 
   // Finish with final load of merged value if it exists
   m_ctx.builder().enter_block(merge_label);
-  return yields_value ? m_ctx.builder().create_load(result_alloca_slot,
-                                                    llvm_return_type_id)
+  return yields_value ? m_ctx.builder().emit_load(result_alloca_slot,
+                                                  llvm_return_type_id)
                       : Value{};
 }
 
@@ -220,12 +246,12 @@ Value ExpressionGenerator::call_lambda_expression(
       m_ctx.arena().as_function(callee_expr.m_type_id).m_return_type;
 
   if (function_return_type_id == m_ctx.arena().m_unit) {
-    m_ctx.builder().create_call_void(std::move(callee), std::move(arguments));
+    m_ctx.builder().emit_call_void(std::move(callee), std::move(arguments));
     return {};
   }
 
-  return m_ctx.builder().create_call(std::move(callee), std::move(arguments),
-                                     m_ctx.to_type(function_return_type_id));
+  return m_ctx.builder().emit_call(std::move(callee), std::move(arguments),
+                                   m_ctx.to_type(function_return_type_id));
 }
 
 Value ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
@@ -258,13 +284,13 @@ Value ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
       [this](const auto &argument) -> Value { return generate(argument); });
 
   if (function_type.m_return_type == m_ctx.arena().m_unit) {
-    m_ctx.builder().create_call_void(std::move(callee), std::move(arguments));
+    m_ctx.builder().emit_call_void(std::move(callee), std::move(arguments));
     return {};
   }
   auto return_type_id = m_ctx.to_type(function_type.m_return_type);
 
-  return m_ctx.builder().create_call(std::move(callee), std::move(arguments),
-                                     return_type_id);
+  return m_ctx.builder().emit_call(std::move(callee), std::move(arguments),
+                                   return_type_id);
 }
 
 LLVMBinaryOperator to_llvm_op(BinaryOperator op) {
@@ -382,8 +408,8 @@ Value ExpressionGenerator::generate_integer_compare_instruction(
 
   auto rhs_handle = generate(binary_expression.m_rhs);
 
-  return m_ctx.builder().create_icmp(std::move(lhs_handle),
-                                     std::move(rhs_handle), compare_condition);
+  return m_ctx.builder().emit_icmp(std::move(lhs_handle), std::move(rhs_handle),
+                                   compare_condition);
 }
 
 Value ExpressionGenerator::generate_arithmetic_binary_instruction(
@@ -395,9 +421,9 @@ Value ExpressionGenerator::generate_arithmetic_binary_instruction(
 
   auto rhs_handle = generate(binary_expression.m_rhs);
 
-  return m_ctx.builder().create_binary(
-      std::move(lhs_handle), std::move(rhs_handle),
-      to_llvm_op(binary_expression.m_operator));
+  return m_ctx.builder().emit_binary(std::move(lhs_handle),
+                                     std::move(rhs_handle),
+                                     to_llvm_op(binary_expression.m_operator));
 }
 
 Value ExpressionGenerator::generate_logical_binary_instruction(
@@ -420,22 +446,22 @@ Value ExpressionGenerator::generate_logical_binary_instruction(
   // Emit code for lhs
   auto lhs_handle = generate(binary_expression.m_lhs);
   // Store lhs in result handle
-  m_ctx.builder().create_store(result_alloca_slot, lhs_handle);
+  m_ctx.builder().emit_store(result_alloca_slot, lhs_handle);
   const auto is_and_op =
       binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
-  m_ctx.builder().add_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
-                             is_and_op ? merge_label : rhs_label);
+  m_ctx.builder().emit_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
+                              is_and_op ? merge_label : rhs_label);
 
   // Emit code for rhs
   m_ctx.builder().enter_block(rhs_label);
   auto rhs_handle = generate(binary_expression.m_rhs);
-  m_ctx.builder().create_store(result_alloca_slot, rhs_handle);
-  m_ctx.builder().add_jump(merge_label);
+  m_ctx.builder().emit_store(result_alloca_slot, rhs_handle);
+  m_ctx.builder().emit_jump(merge_label);
 
   // Emit code for merge
   m_ctx.builder().enter_block(merge_label);
 
-  return m_ctx.builder().create_load(result_alloca_slot, m_ctx.m_i1);
+  return m_ctx.builder().emit_load(result_alloca_slot, m_ctx.m_i1);
 }
 
 Value ExpressionGenerator::operator()(
@@ -456,8 +482,8 @@ Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
 
   auto input_handle = generate(unary_expression.m_expression);
 
-  return m_ctx.builder().create_unary(std::move(input_handle),
-                                      unary_expression.m_operator);
+  return m_ctx.builder().emit_unary(std::move(input_handle),
+                                    unary_expression.m_operator);
 }
 
 Value ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
@@ -492,7 +518,7 @@ Value ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
     cast_op = LLVMCastOperator::SEXT;
   }
 
-  return m_ctx.builder().create_cast(std::move(input_handle), cast_op, to);
+  return m_ctx.builder().emit_cast(std::move(input_handle), cast_op, to);
 }
 
 FunctionDeclaration ExpressionGenerator::generate_lambda_signature(
@@ -565,9 +591,9 @@ Value ExpressionGenerator::lift_free_lambda(
 
     auto return_value = generate(lambda_expr.m_body);
     if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
-      m_ctx.builder().create_return_void();
+      m_ctx.builder().emit_return_void();
     } else {
-      m_ctx.builder().create_return(return_value);
+      m_ctx.builder().emit_return(return_value);
     }
   }
 
@@ -605,9 +631,9 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
     auto return_value = generate(lambda_expr.m_body);
     if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
-      m_ctx.builder().create_return_void();
+      m_ctx.builder().emit_return_void();
     } else {
-      m_ctx.builder().create_return(return_value);
+      m_ctx.builder().emit_return(return_value);
     }
   }
 
@@ -615,8 +641,20 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   return closure_builder.package_fat_pointer(lambda, env);
 }
 
-Value ExpressionGenerator::operator()(const zir::DotExpr & /*unused*/) {
-  return {};
+Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
+
+  // For now, assume that the expression is a tuple
+  auto tuple_value = generate(dot_expr.m_expression);
+
+  auto tuple_type_id = tuple_value.m_type_id;
+
+  if (m_ctx.type().is<StructType>(tuple_type_id)) {
+    return m_ctx.builder().emit_extractvalue(tuple_value, tuple_type_id,
+                                             dot_expr.m_tuple_index);
+  }
+
+  return m_ctx.builder().load_from_struct(tuple_value, tuple_type_id,
+                                          dot_expr.m_tuple_index);
 }
 
 //****************************************************************************

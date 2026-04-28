@@ -149,10 +149,10 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
   if (return_type_id == m_ctx.arena().m_unit) {
-    m_ctx.builder().create_return_void();
+    m_ctx.builder().emit_return_void();
   } else {
     // Wherever we are, we need to add this terminal to the final
-    m_ctx.builder().create_return(return_value);
+    m_ctx.builder().emit_return(return_value);
   }
 }
 

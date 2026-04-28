@@ -62,29 +62,30 @@ struct IRBuilder {
 
   [[nodiscard]] Value emit_alloca(TypeId);
   [[nodiscard]] Value emit_alloca(TypeId, std::string_view hint);
-  void create_store(Value destination, Value source);
-  [[nodiscard]] Value create_load(Value source, TypeId loaded_type_id);
-  [[nodiscard]] Value create_gep(Value ptr, TypeId aggregate_type_id,
-                                 Index initial_index,
-                                 std::vector<Index> indices);
-  [[nodiscard]] Value create_gep_field(Value ptr, TypeId aggregate_type_id,
-                                       size_t field_index);
-  [[nodiscard]] Value create_ptr_to_int(Value source, TypeId destination_type);
-  [[nodiscard]] Value create_call(Value callee, std::vector<Value> arguments,
-                                  TypeId return_type_id);
-  void create_call_void(Value callee, std::vector<Value> arguments);
-  void add_branch(Value condition, BlockLabel if_true, BlockLabel if_false);
-  void add_jump(BlockLabel);
-  [[nodiscard]] Value create_icmp(Value lhs, Value rhs,
-                                  LLVMIntegerCompareCondition cond);
-  [[nodiscard]] Value create_binary(Value lhs, Value rhs,
-                                    LLVMBinaryOperator op);
-  [[nodiscard]] Value create_unary(Value source, UnaryOperator op);
-  [[nodiscard]] Value create_cast(Value input, LLVMCastOperator op, TypeId to);
-  void create_return(Value value);
-  void create_return_void();
+  void emit_store(Value destination, Value source);
+  [[nodiscard]] Value emit_load(Value source, TypeId loaded_type_id);
+  [[nodiscard]] Value emit_gep(Value ptr, TypeId aggregate_type_id,
+                               Index initial_index, std::vector<Index> indices);
+  [[nodiscard]] Value emit_gep_field(Value ptr, TypeId aggregate_type_id,
+                                     size_t field_index);
+  [[nodiscard]] Value emit_extractvalue(Value source, TypeId aggregate_type_id,
+                                        size_t index);
+  [[nodiscard]] Value emit_ptr_to_int(Value source, TypeId destination_type);
+  [[nodiscard]] Value emit_call(Value callee, std::vector<Value> arguments,
+                                TypeId return_type_id);
+  void emit_call_void(Value callee, std::vector<Value> arguments);
+  void emit_branch(Value condition, BlockLabel if_true, BlockLabel if_false);
+  void emit_jump(BlockLabel);
+  [[nodiscard]] Value emit_icmp(Value lhs, Value rhs,
+                                LLVMIntegerCompareCondition cond);
+  [[nodiscard]] Value emit_binary(Value lhs, Value rhs, LLVMBinaryOperator op);
+  [[nodiscard]] Value emit_unary(Value source, UnaryOperator op);
+  [[nodiscard]] Value emit_cast(Value input, LLVMCastOperator op, TypeId to);
+  void emit_return(Value value);
+  void emit_return_void();
 
   [[nodiscard]] Value malloc_struct(TypeId struct_type);
+  [[nodiscard]] Value alloca_struct(TypeId struct_type);
   void store_to_struct(Value ptr, TypeId struct_type, size_t index,
                        Value value);
   [[nodiscard]] Value load_from_struct(Value ptr, TypeId struct_type,

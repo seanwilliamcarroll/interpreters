@@ -68,11 +68,11 @@ struct Context {
     return m_type_arena.to_string(type);
   }
 
-  [[nodiscard]] TypeId to_type(zir::TypeId type_id) const {
+  [[nodiscard]] TypeId to_type(zir::TypeId type_id) {
     return m_type_arena.intern(to_type(arena().get(type_id)));
   }
 
-  [[nodiscard]] LLVMType to_type(const zir::Type &type) const {
+  [[nodiscard]] LLVMType to_type(const zir::Type &type) {
     return std::visit(
         [&](const auto &t) -> LLVMType {
           using T = std::decay_t<decltype(t)>;
@@ -133,7 +133,7 @@ struct Context {
                              Value initial_value) {
     auto alloca_slot = builder().emit_alloca(
         inner_type_id, uniqify_name(conventions::make_alloca_name(name)));
-    builder().create_store(alloca_slot, std::move(initial_value));
+    builder().emit_store(alloca_slot, std::move(initial_value));
     auto binding = AllocaBinding{
         .m_ptr = alloca_slot,
         .m_internal_type_id = inner_type_id,
@@ -146,7 +146,7 @@ struct Context {
                                       Value initial_value) {
     auto alloca_slot = builder().emit_alloca(
         m_ptr, uniqify_name(conventions::make_alloca_name(name)));
-    builder().create_store(alloca_slot, std::move(initial_value));
+    builder().emit_store(alloca_slot, std::move(initial_value));
     auto binding = ClosureBinding{
         .m_ptr = alloca_slot,
     };
