@@ -117,8 +117,7 @@ struct TupleExpr {
 
 using Statement = std::variant<Expression, LetBinding>;
 
-using TopItem =
-    std::variant<FunctionDef, ExternFunctionDeclaration, LetBinding>;
+using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Control flow ----------------------------------------------------------
 

@@ -22,7 +22,6 @@ struct TopItemChecker {
   hir::FunctionDeclaration check_declaration(const ast::FunctionDeclaration &);
   TopItem operator()(const ast::FunctionDef &);
   TopItem operator()(const ast::ExternFunctionDeclaration &);
-  TopItem operator()(const ast::LetBinding &);
 
   Context &m_ctx;
 };

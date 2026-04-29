@@ -33,7 +33,6 @@ add_library(bust-lib STATIC
   src/tokens.cpp
   hir/block_checker.cpp
   hir/expression_checker.cpp
-  hir/let_binding_checker.cpp
   src/lexer.cpp
   src/parser.cpp
   hir/statement_checker.cpp

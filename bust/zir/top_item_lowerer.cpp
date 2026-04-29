@@ -12,7 +12,6 @@
 #include <zir/context.hpp>
 #include <zir/environment.hpp>
 #include <zir/expression_lowerer.hpp>
-#include <zir/let_binding_lowerer.hpp>
 #include <zir/nodes.hpp>
 #include <zir/top_item_lowerer.hpp>
 #include <zir/types.hpp>
@@ -60,15 +59,6 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
   // All we need is the binding id, since we don't even need the parameter
   // names, just their types for a call site later on
   return ExternFunctionDeclaration{.m_id = binding_id};
-}
-
-TopItem TopItemLowerer::operator()(const hir::LetBinding &let_binding) {
-  // Potentially shadowing, so do a definition lowering
-  auto binding_id = m_ctx.get_global_binding(let_binding.m_variable.m_name);
-
-  auto expr_id = ExpressionLowerer{m_ctx}.lower(let_binding.m_expression);
-
-  return LetBinding{.m_identifier = binding_id, .m_expression = expr_id};
 }
 
 //****************************************************************************

@@ -12,7 +12,6 @@
 #include <hir/context.hpp>
 #include <hir/environment.hpp>
 #include <hir/instantiation_record.hpp>
-#include <hir/let_binding_checker.hpp>
 #include <hir/nodes.hpp>
 #include <hir/top_item_checker.hpp>
 #include <hir/type_arena.hpp>
@@ -113,10 +112,6 @@ TopItemChecker::operator()(const ast::ExternFunctionDeclaration &extern_func) {
 
   return ExternFunctionDeclaration{{extern_func.m_location},
                                    std::move(signature)};
-}
-
-TopItem TopItemChecker::operator()(const ast::LetBinding &let_binding) {
-  return LetBindingChecker{m_ctx}(let_binding);
 }
 
 //****************************************************************************
