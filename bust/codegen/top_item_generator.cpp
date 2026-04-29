@@ -12,7 +12,6 @@
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
 #include <codegen/instructions.hpp>
-#include <codegen/let_binding_generator.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
@@ -88,9 +87,6 @@ void TopItemDeclarationCollector::operator()(
                         std::move(parameter_types));
 }
 
-void TopItemDeclarationCollector::operator()(
-    const zir::LetBinding & /*unused*/) {}
-
 void TopItemGenerator::generate(const zir::TopItem &top_item) {
   std::visit(*this, top_item);
 }
@@ -162,11 +158,6 @@ void TopItemGenerator::operator()(
 
   m_ctx.module().add_extern_function_declaration(
       std::make_unique<FunctionDeclaration>(generate_signature(extern_func)));
-}
-
-void TopItemGenerator::operator()(const zir::LetBinding &let_binding) {
-  // TODO: assumes local for the moment
-  LetBindingGenerator{m_ctx}.generate(let_binding);
 }
 
 //****************************************************************************

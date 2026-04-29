@@ -46,7 +46,6 @@ add_library(bust-lib STATIC
   codegen/formatter.cpp
   codegen/function_handle.cpp
   codegen/ir_builder.cpp
-  codegen/let_binding_generator.cpp
   codegen/statement_generator.cpp
   codegen/top_item_generator.cpp
   src/type_checker.cpp
