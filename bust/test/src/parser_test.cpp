@@ -193,6 +193,109 @@ TEST_SUITE("bust.parser") {
     CHECK(std::get<Identifier>(expr.m_expression).m_name == "x");
   }
 
+  TEST_CASE("bust::parse_let_immutable_sets_is_mutable_false") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x = 42;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    CHECK(binding.m_is_mutable == false);
+  }
+
+  // === Mutable let bindings ================================================
+
+  TEST_CASE("bust::parse_let_mut_without_type") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x = 42;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    CHECK(binding.m_variable.m_name == "x");
+    CHECK(binding.m_is_mutable == true);
+    CHECK_FALSE(binding.m_variable.m_type.has_value());
+  }
+
+  TEST_CASE("bust::parse_let_mut_with_type") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x: i64 = 10;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    CHECK(binding.m_variable.m_name == "x");
+    CHECK(binding.m_is_mutable == true);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
+  }
+
+  // === Assignment statements ===============================================
+
+  TEST_CASE("bust::parse_assignment_simple") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x = 1;\n"
+                                "  x = 2;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 2);
+    REQUIRE(std::holds_alternative<Assignment>(func.m_body.m_statements[1]));
+    const auto &assign = std::get<Assignment>(func.m_body.m_statements[1]);
+    REQUIRE(std::holds_alternative<Identifier>(assign.m_lhs.m_expression));
+    CHECK(std::get<Identifier>(assign.m_lhs.m_expression).m_name == "x");
+    REQUIRE(std::holds_alternative<I64>(assign.m_rhs.m_expression));
+    CHECK(std::get<I64>(assign.m_rhs.m_expression).m_value == 2);
+  }
+
+  TEST_CASE("bust::parse_assignment_with_expression_rhs") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x = 1;\n"
+                                "  x = x + 1;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 2);
+    REQUIRE(std::holds_alternative<Assignment>(func.m_body.m_statements[1]));
+    const auto &assign = std::get<Assignment>(func.m_body.m_statements[1]);
+    REQUIRE(std::holds_alternative<Identifier>(assign.m_lhs.m_expression));
+    CHECK(std::get<Identifier>(assign.m_lhs.m_expression).m_name == "x");
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        assign.m_rhs.m_expression));
+    const auto &bin =
+        *std::get<std::unique_ptr<BinaryExpr>>(assign.m_rhs.m_expression);
+    CHECK(bin.m_operator == BinaryOperator::PLUS);
+  }
+
+  // Approach A: the parser is permissive about LHS shape — it parses the
+  // LHS as a full Expression and a later phase rejects non-place forms.
+  // This test documents that contract: a literal LHS produces a valid
+  // Assignment node at parse time, even though it will be rejected later.
+  TEST_CASE("bust::parse_assignment_with_literal_lhs_is_permitted") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  5 = 6;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Assignment>(func.m_body.m_statements[0]));
+    const auto &assign = std::get<Assignment>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<I64>(assign.m_lhs.m_expression));
+    CHECK(std::get<I64>(assign.m_lhs.m_expression).m_value == 5);
+  }
+
   // === Arithmetic ==========================================================
 
   TEST_CASE("bust::parse_binary_add") {
@@ -884,6 +987,32 @@ TEST_SUITE("bust.parser") {
 
   TEST_CASE("bust::parse_unexpected_token") {
     CHECK_THROWS_AS(parse_string("fn main() -> i64 { ; }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_assignment_missing_semicolon") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let mut x = 1;\n"
+                                 "  x = 2\n"
+                                 "  x\n"
+                                 "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_assignment_missing_rhs") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let mut x = 1;\n"
+                                 "  x = ;\n"
+                                 "  x\n"
+                                 "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_let_mut_without_identifier") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let mut = 1;\n"
+                                 "  0\n"
+                                 "}"),
                     core::CompilerException);
   }
 
