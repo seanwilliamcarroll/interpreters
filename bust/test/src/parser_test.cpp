@@ -162,25 +162,16 @@ TEST_SUITE("bust.parser") {
 
   // === Let bindings ========================================================
 
-  TEST_CASE("bust::parse_top_level_let") {
-    auto program = parse_string("let x: i64 = 42;\n"
-                                "fn main() -> i64 { x }");
-    DUMP_AST(program);
-    REQUIRE(program.m_items.size() == 2);
-    REQUIRE(std::holds_alternative<LetBinding>(program.m_items[0]));
-    const auto &binding = std::get<LetBinding>(program.m_items[0]);
-    CHECK(binding.m_variable.m_name == "x");
-    REQUIRE(binding.m_variable.m_type.has_value());
-    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
-    REQUIRE(std::holds_alternative<I64>(binding.m_expression.m_expression));
-  }
-
   TEST_CASE("bust::parse_let_without_type") {
-    auto program = parse_string("let x = 42;\n"
-                                "fn main() -> i64 { x }");
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x = 42;\n"
+                                "  x\n"
+                                "}");
     DUMP_AST(program);
-    REQUIRE(program.m_items.size() == 2);
-    const auto &binding = std::get<LetBinding>(program.m_items[0]);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
     CHECK(binding.m_variable.m_name == "x");
     CHECK_FALSE(binding.m_variable.m_type.has_value());
   }
@@ -1005,19 +996,6 @@ TEST_SUITE("bust.parser") {
     REQUIRE(outer_block.m_final_expression.has_value());
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(
         outer_block.m_final_expression->m_expression));
-  }
-
-  // === Multiple top-level let bindings =======================================
-
-  TEST_CASE("bust::parse_multiple_top_level_lets_and_functions") {
-    auto program = parse_string("let x: i64 = 1;\n"
-                                "let y: i64 = 2;\n"
-                                "fn main() -> i64 { x + y }");
-    DUMP_AST(program);
-    REQUIRE(program.m_items.size() == 3);
-    CHECK(std::holds_alternative<LetBinding>(program.m_items[0]));
-    CHECK(std::holds_alternative<LetBinding>(program.m_items[1]));
-    CHECK(std::holds_alternative<FunctionDef>(program.m_items[2]));
   }
 
   // === Unary on expression (not just literal) ================================

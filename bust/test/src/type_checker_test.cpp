@@ -1192,25 +1192,6 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
-  // --- Top-level let bindings ------------------------------------------------
-
-  TEST_CASE("top-level let binding typechecks") {
-    auto hir = type_check("let x: i64 = 42;\n"
-                          "fn main() -> i64 { x }");
-    DUMP_HIR(hir);
-    REQUIRE(hir.m_top_items.size() == 2);
-    auto &let = std::get<hir::LetBinding>(hir.m_top_items[0]);
-    auto &var_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_arena.get(let.m_variable.m_type));
-    CHECK(var_type.m_type == PrimitiveType::I64);
-  }
-
-  TEST_CASE("top-level let binding with mismatched annotation throws") {
-    CHECK_THROWS_AS(type_check("let x: bool = 42;\n"
-                               "fn main() -> i64 { 0 }"),
-                    core::CompilerException);
-  }
-
   // --- Block expression types ------------------------------------------------
 
   TEST_CASE("block expression has type of its final expression") {
