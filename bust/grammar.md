@@ -7,6 +7,7 @@
 EXTERN      = `extern`
 FN          = `fn`
 LET         = `let`
+MUT         = `mut`
 RETURN      = `return`
 IF          = `if`
 ELSE        = `else`
@@ -84,7 +85,6 @@ program             = top_item+
 
 top_item            = func_def
                     | extern_func_declaration
-                    | let_binding
 
 func_def            = FN IDENTIFIER parameter_list (ARROW type)? block
 
@@ -120,6 +120,7 @@ expression_or_binding
                     = expression_no_semicolon
                     | expression SEMICOLON
                     | let_binding
+                    | assignment
 
 // These expressions end with a block, so they don't need a trailing semicolon
 // to be used as statements. A semicolon is still allowed but not required.
@@ -129,7 +130,15 @@ expression_no_semicolon
                     | while_expr
                     | for_expr
 
-let_binding         = LET IDENTIFIER (COLON type)? EQUALS expression SEMICOLON
+let_binding         = LET MUT? IDENTIFIER (COLON type)? EQUALS expression SEMICOLON
+
+// Assignment is a statement, not an expression. The LHS is a `place` —
+// currently just an IDENTIFIER, but the nonterminal exists so that future
+// place forms (tuple projection, struct field, deref) can extend it without
+// changing the assignment rule.
+assignment          = place EQUALS expression SEMICOLON
+
+place               = IDENTIFIER
 
 // Expression precedence chain (loosest to tightest)
 
@@ -207,9 +216,17 @@ literal             = INT_LITERAL
 
 ## Design Notes
 
-- All variables are immutable. Shadowing via `let` is allowed.
-- No assignment expression or statement (follows from immutability).
-- Consider outlawing non-const global variables.
+- Local bindings are immutable by default; `let mut` opts in to mutation.
+  Shadowing via `let` is still allowed regardless of `mut`.
+- Assignment (`x = expr;`) is a statement, not an expression — no
+  `if (x = 5)`-style usage. Type of an assignment statement is `()`.
+- `let` bindings only appear inside blocks. Top-level globals are a separate
+  feature (deferred), and will be spelled `const` / `static` (à la Rust)
+  rather than reusing `let`. This is a change from earlier — top-level
+  `let` was previously accepted; that path is being removed.
+- The LHS of an assignment is a *place expression*. v0 restricts places to
+  bare identifiers; tuple projection, struct fields, and deref will extend
+  the `place` nonterminal later.
 - `if`/`else` is an expression (returns a value).
 - `return expr` is an expression — typechecks `expr` against the enclosing
   function's return type, then the `return_expr` itself is compatible with any
@@ -221,4 +238,3 @@ literal             = INT_LITERAL
 
 - Hindley-Milner type inference
 - Rich type system (starting with i64, bool, ())
-- Mutability via `let mut` (if/when needed)
