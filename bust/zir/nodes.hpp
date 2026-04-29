@@ -25,7 +25,6 @@ namespace bust::zir {
 struct Binding;
 
 struct Expression;
-struct LetBinding;
 
 using InnerExprIdType = size_t;
 
@@ -77,13 +76,13 @@ struct ExpressionStatement {
   auto operator<=>(const ExpressionStatement &) const = default;
 };
 
-using Statement = std::variant<ExpressionStatement, LetBinding>;
-
 struct LetBinding {
   BindingId m_identifier;
   ExprId m_expression;
   auto operator<=>(const LetBinding &) const = default;
 };
+
+using Statement = std::variant<ExpressionStatement, LetBinding>;
 
 struct Block {
   std::vector<Statement> m_statements;
@@ -133,8 +132,7 @@ struct ExternFunctionDeclaration {
   BindingId m_id;
 };
 
-using TopItem =
-    std::variant<LetBinding, FunctionDef, ExternFunctionDeclaration>;
+using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 //****************************************************************************
 } // namespace bust::zir

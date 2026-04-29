@@ -59,7 +59,6 @@ add_library(bust-lib STATIC
   src/zir_lowerer.cpp
   zir/arena.cpp
   zir/expression_lowerer.cpp
-  zir/let_binding_lowerer.cpp
   zir/statement_lowerer.cpp
   zir/top_item_lowerer.cpp)
 
