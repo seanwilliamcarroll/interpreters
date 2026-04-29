@@ -10,8 +10,7 @@
 #include <arena.hpp>
 #include <codegen/types.hpp>
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <type_traits>

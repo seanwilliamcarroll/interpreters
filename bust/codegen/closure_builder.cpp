@@ -18,8 +18,7 @@
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 
-#include <assert.h>
-
+#include <cassert>
 #include <optional>
 #include <ranges>
 #include <string_view>

@@ -17,8 +17,7 @@
 #include <codegen/value.hpp>
 #include <operators.hpp>
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
