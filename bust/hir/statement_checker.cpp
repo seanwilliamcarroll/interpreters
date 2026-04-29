@@ -80,6 +80,10 @@ Statement StatementChecker::operator()(const ast::Expression &expression) {
   return ExpressionChecker{m_ctx}.check_expression(expression);
 }
 
+Statement StatementChecker::operator()(const ast::Assignment &) {
+  throw core::InternalCompilerError("UNIMPLEMENTED");
+}
+
 //****************************************************************************
 } // namespace bust::hir
 //****************************************************************************

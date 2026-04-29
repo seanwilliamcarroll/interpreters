@@ -21,6 +21,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -269,6 +270,12 @@ ast::LetBinding Parser::parse_let_binding() {
   auto original_location = peek().get_location();
   expect(TokenType::LET, __FUNCTION__);
 
+  bool is_mutable = false;
+  if (peek().get_token_type() == TokenType::MUT) {
+    expect(TokenType::MUT, __FUNCTION__);
+    is_mutable = true;
+  }
+
   auto identifier = parse_possibly_annotated_identifier();
 
   expect(TokenType::EQUALS, __FUNCTION__);
@@ -277,7 +284,12 @@ ast::LetBinding Parser::parse_let_binding() {
 
   expect(TokenType::SEMICOLON, __FUNCTION__);
 
-  return {{original_location}, std::move(identifier), std::move(body)};
+  return {
+      {original_location},
+      std::move(identifier),
+      std::move(body),
+      is_mutable,
+  };
 }
 
 std::vector<ast::Identifier> Parser::parse_param_list() {
@@ -333,6 +345,20 @@ ast::Block Parser::parse_block() {
     if (peek().get_token_type() == TokenType::SEMICOLON) {
       expect(TokenType::SEMICOLON, __FUNCTION__);
       statements.emplace_back(std::move(next_expression));
+      continue;
+    }
+    if (peek().get_token_type() == TokenType::EQUALS) {
+      expect(TokenType::EQUALS, __FUNCTION__);
+      // Need to parse the next expression and create an Assignment
+      // First confirm that next_expression is a Place
+      auto lhs = std::move(next_expression);
+      auto rhs = parse_expression();
+      expect(TokenType::SEMICOLON, __FUNCTION__);
+      statements.emplace_back(ast::Assignment{
+          {original_location},
+          std::move(lhs),
+          std::move(rhs),
+      });
       continue;
     }
     if (is_expression_no_semicolon(next_expression) &&

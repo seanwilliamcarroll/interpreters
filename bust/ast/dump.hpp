@@ -143,10 +143,22 @@ private:
   void dump_let_binding(const LetBinding &lb) {
     indent();
     m_out << "Let ";
+    if (lb.m_is_mutable) {
+      m_out << "Mut ";
+    }
     dump_identifier(lb.m_variable);
     m_out << " =\n";
     IndentGuard g(*this);
     dump_expression(lb.m_expression);
+  }
+
+  void dump_assignment(const Assignment &assignment) {
+    indent();
+    m_out << "Assign ";
+    dump_expression(assignment.m_lhs);
+    m_out << " =\n";
+    IndentGuard g(*this);
+    dump_expression(assignment.m_rhs);
   }
 
   void dump_block(const Block &b) {
@@ -170,6 +182,8 @@ private:
             dump_let_binding(v);
           } else if constexpr (std::is_same_v<T, Expression>) {
             dump_expression(v);
+          } else if constexpr (std::is_same_v<T, Assignment>) {
+            dump_assignment(v);
           }
         },
         s);

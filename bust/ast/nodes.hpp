@@ -23,6 +23,7 @@ namespace bust::ast {
 // --- Forward declarations --------------------------------------------------
 
 struct Expression;
+struct Assignment;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct LetBinding;
@@ -67,7 +68,7 @@ using ExprKind =
                  std::unique_ptr<ForExpr>, std::unique_ptr<TupleExpr>,
                  std::unique_ptr<DotExpr>, I8, I32, I64, Bool, Char, Unit>;
 
-using Statement = std::variant<LetBinding, Expression>;
+using Statement = std::variant<LetBinding, Assignment, Expression>;
 
 using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
@@ -107,9 +108,15 @@ struct ForExpr : public core::HasLocation {};
 
 // --- Bindings & definitions ------------------------------------------------
 
+struct Assignment : public core::HasLocation {
+  Expression m_lhs;
+  Expression m_rhs;
+};
+
 struct LetBinding : public core::HasLocation {
   Identifier m_variable;
   Expression m_expression;
+  bool m_is_mutable = false;
 };
 
 struct FunctionDeclaration {

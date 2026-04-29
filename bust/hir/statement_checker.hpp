@@ -22,6 +22,8 @@ struct StatementChecker {
 
   Statement operator()(const ast::Expression &);
 
+  Statement operator()(const ast::Assignment &);
+
   Context &m_ctx;
 };
 
