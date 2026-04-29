@@ -64,8 +64,6 @@ private:
             dump_func_def(v);
           } else if constexpr (std::is_same_v<T, ExternFunctionDeclaration>) {
             dump_extern_func_declaration(v);
-          } else if constexpr (std::is_same_v<T, LetBinding>) {
-            dump_let_binding(v);
           }
         },
         item);

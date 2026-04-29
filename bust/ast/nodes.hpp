@@ -69,8 +69,7 @@ using ExprKind =
 
 using Statement = std::variant<LetBinding, Expression>;
 
-using TopItem =
-    std::variant<FunctionDef, ExternFunctionDeclaration, LetBinding>;
+using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Leaf nodes ------------------------------------------------------------
 

@@ -58,12 +58,9 @@ ast::TopItem Parser::parse_top_item() {
   if (peek().get_token_type() == TokenType::EXTERN) {
     return parse_extern_func_declaration();
   }
-  if (peek().get_token_type() == TokenType::LET) {
-    return parse_let_binding();
-  }
 
   on_error(peek().get_location(),
-           "parse_top_item error: Expected LET or FN, found TokenType: ",
+           "parse_top_item error: Expected FN or EXTERN, found TokenType: ",
            peek().get_token_type());
 }
 
