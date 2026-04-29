@@ -6,10 +6,25 @@
 //*
 //****************************************************************************
 
+#include <codegen/arena.hpp>
 #include <codegen/closure_builder.hpp>
+#include <codegen/context.hpp>
+#include <codegen/ir_builder.hpp>
+#include <codegen/naming_conventions.hpp>
+#include <codegen/symbol_table.hpp>
+#include <codegen/types.hpp>
 #include <codegen/value.hpp>
+#include <types.hpp>
+#include <zir/arena.hpp>
+#include <zir/nodes.hpp>
+
+#include <assert.h>
 
 #include <optional>
+#include <ranges>
+#include <string_view>
+#include <tuple>
+#include <utility>
 #include <variant>
 
 //****************************************************************************

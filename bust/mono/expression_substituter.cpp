@@ -6,8 +6,10 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
 #include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <mono/context.hpp>
 #include <mono/expression_substituter.hpp>

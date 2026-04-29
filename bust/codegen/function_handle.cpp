@@ -7,7 +7,11 @@
 //****************************************************************************
 
 #include <codegen/function.hpp>
+#include <codegen/function_declaration.hpp>
 #include <codegen/function_handle.hpp>
+#include <codegen/value.hpp>
+
+#include <variant>
 
 //****************************************************************************
 namespace bust::codegen {

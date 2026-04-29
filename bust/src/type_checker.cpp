@@ -16,7 +16,6 @@
 #include <source_location.hpp>
 #include <type_checker.hpp>
 
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>

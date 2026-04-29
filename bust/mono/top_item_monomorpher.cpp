@@ -8,13 +8,12 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
-#include <hir/types.hpp>
 #include <mono/context.hpp>
 #include <mono/expression_substituter.hpp>
 #include <mono/top_item_monomorpher.hpp>
 #include <source_location.hpp>
+#include <types.hpp>
 
-#include <iterator>
 #include <utility>
 #include <variant>
 

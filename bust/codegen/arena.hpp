@@ -10,7 +10,13 @@
 #include <arena.hpp>
 #include <codegen/types.hpp>
 
+#include <stddef.h>
+
+#include <optional>
+#include <string>
+#include <type_traits>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

@@ -7,6 +7,8 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
+#include <zir/context.hpp>
+#include <zir/environment.hpp>
 #include <zir/expression_lowerer.hpp>
 #include <zir/nodes.hpp>
 #include <zir/statement_lowerer.hpp>

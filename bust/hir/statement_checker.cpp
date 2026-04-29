@@ -18,7 +18,6 @@
 #include <hir/type_converter.hpp>
 #include <hir/type_unifier.hpp>
 #include <hir/type_variable_collapser.hpp>
-#include <hir/types.hpp>
 #include <source_location.hpp>
 
 #include <stdexcept>

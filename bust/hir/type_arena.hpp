@@ -9,7 +9,6 @@
 //****************************************************************************
 
 #include <arena.hpp>
-#include <exceptions.hpp>
 #include <hir/types.hpp>
 #include <types.hpp>
 

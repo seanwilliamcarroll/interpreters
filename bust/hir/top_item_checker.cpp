@@ -19,6 +19,7 @@
 #include <hir/type_unifier.hpp>
 #include <hir/types.hpp>
 #include <source_location.hpp>
+#include <types.hpp>
 
 #include <optional>
 #include <stdexcept>

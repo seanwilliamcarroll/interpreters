@@ -6,16 +6,25 @@
 //*
 //****************************************************************************
 
+#include <codegen/arena.hpp>
+#include <codegen/basic_block.hpp>
+#include <codegen/block_label.hpp>
 #include <codegen/context.hpp>
+#include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
+#include <codegen/function_handle.hpp>
 #include <codegen/instructions.hpp>
 #include <codegen/ir_builder.hpp>
+#include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/types.hpp>
 #include <codegen/value.hpp>
+#include <operators.hpp>
+#include <types.hpp>
 
 #include <cassert>
 #include <string_view>
+#include <utility>
 
 //****************************************************************************
 namespace bust::codegen {

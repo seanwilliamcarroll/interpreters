@@ -6,17 +6,17 @@
 //*
 //****************************************************************************
 
-#include <codegen/basic_block.hpp>
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
-#include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/instructions.hpp>
+#include <codegen/function_handle.hpp>
+#include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/top_item_generator.hpp>
+#include <codegen/types.hpp>
 #include <codegen/value.hpp>
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
@@ -26,6 +26,8 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
+#include <string>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>

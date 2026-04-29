@@ -10,11 +10,8 @@
 
 #include <codegen/context.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/parameter.hpp>
-#include <codegen/types.hpp>
 #include <codegen/value.hpp>
 #include <zir/nodes.hpp>
-#include <zir/types.hpp>
 
 //****************************************************************************
 namespace bust::codegen {

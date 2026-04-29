@@ -6,12 +6,15 @@
 //*
 //****************************************************************************
 
+#include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
 #include <codegen/statement_generator.hpp>
 #include <codegen/value.hpp>
+#include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

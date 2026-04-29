@@ -15,6 +15,7 @@
 #include <codegen/instructions.hpp>
 #include <codegen/module.hpp>
 #include <codegen/parameter.hpp>
+#include <codegen/types.hpp>
 #include <codegen/value.hpp>
 
 #include <cstddef>
@@ -22,7 +23,6 @@
 #include <ostream>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

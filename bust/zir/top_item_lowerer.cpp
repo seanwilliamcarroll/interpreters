@@ -7,14 +7,11 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
-#include <hir/types.hpp>
-#include <zir/arena.hpp>
 #include <zir/context.hpp>
 #include <zir/environment.hpp>
 #include <zir/expression_lowerer.hpp>
 #include <zir/nodes.hpp>
 #include <zir/top_item_lowerer.hpp>
-#include <zir/types.hpp>
 
 #include <utility>
 #include <variant>

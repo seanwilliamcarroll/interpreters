@@ -17,8 +17,11 @@
 #include <codegen/value.hpp>
 #include <operators.hpp>
 
-#include <cassert>
+#include <stddef.h>
+
+#include <string>
 #include <string_view>
+#include <vector>
 
 //****************************************************************************
 namespace bust::codegen {

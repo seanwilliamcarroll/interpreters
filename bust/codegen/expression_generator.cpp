@@ -6,15 +6,14 @@
 //*
 //****************************************************************************
 
-#include <codegen/basic_block.hpp>
+#include <codegen/arena.hpp>
+#include <codegen/block_label.hpp>
 #include <codegen/closure_builder.hpp>
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
-#include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/instructions.hpp>
+#include <codegen/ir_builder.hpp>
 #include <codegen/ir_literals.hpp>
-#include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/statement_generator.hpp>
@@ -23,18 +22,19 @@
 #include <codegen/value.hpp>
 #include <exceptions.hpp>
 #include <operators.hpp>
+#include <types.hpp>
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
 #include <algorithm>
 #include <cstdint>
-#include <cstdlib>
 #include <iterator>
 #include <optional>
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>

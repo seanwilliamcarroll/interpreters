@@ -8,7 +8,6 @@
 
 #include <exceptions.hpp>
 #include <hir/nodes.hpp>
-#include <hir/types.hpp>
 #include <nodes.hpp>
 #include <types.hpp>
 #include <zir/arena.hpp>
@@ -18,12 +17,12 @@
 #include <zir/free_variable_collector.hpp>
 #include <zir/nodes.hpp>
 #include <zir/statement_lowerer.hpp>
-#include <zir/types.hpp>
 
 #include <algorithm>
 #include <iterator>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>

@@ -13,12 +13,11 @@
 //****************************************************************************
 
 #include <codegen/context.hpp>
-#include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
 #include <codegen/value.hpp>
 #include <zir/nodes.hpp>
 
-#include <cassert>
+#include <string>
 #include <vector>
 
 //****************************************************************************

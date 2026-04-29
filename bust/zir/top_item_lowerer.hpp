@@ -10,9 +10,14 @@
 
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
+#include <zir/arena.hpp>
 #include <zir/context.hpp>
+#include <zir/environment.hpp>
 #include <zir/nodes.hpp>
 
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 //****************************************************************************
