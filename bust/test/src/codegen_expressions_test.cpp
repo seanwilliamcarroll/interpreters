@@ -33,6 +33,16 @@ TEST_SUITE("bust.codegen.expressions") {
     CHECK(ir.find("ret i64 0") != std::string::npos);
   }
 
+  TEST_CASE("assignment emits a store instruction") {
+    // Two stores expected: one for the initial `let mut x = 1;`, one for
+    // `x = 2;`. We check for at least 2 occurrences of `store i64`.
+    auto ir = codegen("fn main() -> i64 { let mut x = 1; x = 2; x }");
+    auto first = ir.find("store i64");
+    REQUIRE(first != std::string::npos);
+    auto second = ir.find("store i64", first + 1);
+    CHECK(second != std::string::npos);
+  }
+
 #ifdef BUST_LLI_PATH
 
   // --- Literals and let bindings -------------------------------------------
@@ -54,6 +64,66 @@ TEST_SUITE("bust.codegen.expressions") {
   TEST_CASE("multiple let bindings, last one returned") {
     CHECK_RUN("fn main() -> i64 { let x = 1; let y = 2; y }", 2);
     CHECK_RUN("fn main() -> i64 { let x = 1; let y = 2; x }", 1);
+  }
+
+  // --- Assignments ---------------------------------------------------------
+
+  TEST_CASE("simple assignment changes the bound value") {
+    CHECK_RUN("fn main() -> i64 { let mut x = 1; x = 42; x }", 42);
+    CHECK_RUN("fn main() -> i64 { let mut x = 7; x = 0; x }", 0);
+  }
+
+  TEST_CASE("multiple sequential assignments — last one wins") {
+    CHECK_RUN("fn main() -> i64 { let mut x = 0; x = 1; x = 2; x = 42; x }",
+              42);
+  }
+
+  TEST_CASE("assignment with non-trivial RHS expression") {
+    CHECK_RUN("fn main() -> i64 { let mut x = 0; x = 20 + 22; x }", 42);
+    CHECK_RUN("fn main() -> i64 { let mut x = 0; x = 6 * 7; x }", 42);
+  }
+
+  TEST_CASE("assignment RHS reads the same slot it writes to") {
+    // `x = x + 1` must load the current value of x, add 1, then store back.
+    CHECK_RUN("fn main() -> i64 { let mut x = 41; x = x + 1; x }", 42);
+    CHECK_RUN("fn main() -> i64 { let mut x = 1; x = x + x; x = x + x; x }", 4);
+  }
+
+  TEST_CASE("prior reads of an identifier are not affected by later writes") {
+    // y captures the value of x at the moment of the let; reassigning x
+    // afterwards must not change y.
+    CHECK_RUN("fn main() -> i64 { let mut x = 5; let y = x; x = 99; y }", 5);
+  }
+
+  TEST_CASE("reading after assignment sees the new value") {
+    CHECK_RUN("fn main() -> i64 { let mut x = 5; x = 42; let y = x; y }", 42);
+  }
+
+  TEST_CASE("shadowing immutable then assigning to the new mutable binding") {
+    // The inner `let mut x` introduces a new alloca slot. Assignment writes
+    // to the new slot; the outer (shadowed) slot is untouched.
+    CHECK_RUN("fn main() -> i64 { let x = 1; let mut x = x; x = 42; x }", 42);
+  }
+
+  TEST_CASE("assignment in nested block reaches outer mutable binding") {
+    // `x` is declared in the outer scope as mutable. The inner block
+    // assigns to that same outer slot.
+    CHECK_RUN("fn main() -> i64 { let mut x = 0; { x = 42; } x }", 42);
+  }
+
+  TEST_CASE("assignment inside taken if-branch") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut x = 0;\n"
+              "  if true { x = 42; } else { x = 99; }\n"
+              "  x\n"
+              "}",
+              42);
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut x = 0;\n"
+              "  if false { x = 99; } else { x = 42; }\n"
+              "  x\n"
+              "}",
+              42);
   }
 
   // --- Binary expressions --------------------------------------------------
