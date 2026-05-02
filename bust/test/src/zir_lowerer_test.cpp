@@ -268,6 +268,91 @@ TEST_SUITE("bust.zir_lowerer") {
     CHECK(binding(zir, let1.m_identifier).m_name == "y");
   }
 
+  // --- Assignments -----------------------------------------------------------
+
+  TEST_CASE("assignment produces Assignment statement") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let mut x = 1;\n"
+                            "  x = 2;\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    REQUIRE(func.m_body.m_statements.size() == 2);
+    auto *assign = std::get_if<zir::Assignment>(&func.m_body.m_statements[1]);
+    REQUIRE(assign != nullptr);
+  }
+
+  TEST_CASE("assignment place is an IdentifierExpr referencing the binding") {
+    // The crucial correctness property: the Place's BindingId must match the
+    // BindingId of the `let mut x` declaration, so codegen emits a store to
+    // the right slot.
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let mut x = 1;\n"
+                            "  x = 2;\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &assign = std::get<zir::Assignment>(func.m_body.m_statements[1]);
+    REQUIRE(std::holds_alternative<zir::IdentifierExpr>(assign.m_place));
+    auto &place_ident = std::get<zir::IdentifierExpr>(assign.m_place);
+    CHECK(place_ident.m_id == let.m_identifier);
+    CHECK(binding(zir, place_ident.m_id).m_name == "x");
+  }
+
+  TEST_CASE("assignment RHS expression is lowered") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let mut x = 1;\n"
+                            "  x = 42;\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &assign = std::get<zir::Assignment>(func.m_body.m_statements[1]);
+    auto &rhs = expr_kind(zir, assign.m_expression);
+    REQUIRE(std::holds_alternative<zir::I64>(rhs));
+    CHECK(std::get<zir::I64>(rhs).m_value == 42);
+  }
+
+  TEST_CASE("assignment RHS type matches binding type") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let mut x = 1;\n"
+                            "  x = 2;\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &assign = std::get<zir::Assignment>(func.m_body.m_statements[1]);
+    CHECK(std::holds_alternative<zir::I64Type>(
+        type_of(zir, expr_type(zir, assign.m_expression))));
+  }
+
+  TEST_CASE("multiple assignments preserve order") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let mut x = 0;\n"
+                            "  x = 1;\n"
+                            "  x = 2;\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    REQUIRE(func.m_body.m_statements.size() == 3);
+    auto &a0 = std::get<zir::Assignment>(func.m_body.m_statements[1]);
+    auto &a1 = std::get<zir::Assignment>(func.m_body.m_statements[2]);
+    CHECK(std::get<zir::I64>(expr_kind(zir, a0.m_expression)).m_value == 1);
+    CHECK(std::get<zir::I64>(expr_kind(zir, a1.m_expression)).m_value == 2);
+  }
+
+  TEST_CASE("assignment with non-trivial RHS is fully lowered") {
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let mut x = 0;\n"
+                            "  x = 1 + 2;\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &assign = std::get<zir::Assignment>(func.m_body.m_statements[1]);
+    auto &rhs = expr_kind(zir, assign.m_expression);
+    REQUIRE(std::holds_alternative<zir::BinaryExpr>(rhs));
+    CHECK(std::get<zir::BinaryExpr>(rhs).m_operator == BinaryOperator::PLUS);
+  }
+
   // --- Identifier expressions ------------------------------------------------
 
   TEST_CASE("identifier references a binding") {
