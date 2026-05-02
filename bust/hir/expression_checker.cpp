@@ -102,13 +102,21 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
         location);
   }
 
-  const auto &[binding_id, type_scheme] = maybe_type.value();
+  const auto &binding = maybe_type.value();
 
-  auto final_type = m_ctx.create_fresh_type_vars(binding_id, type_scheme);
+  auto final_type =
+      m_ctx.create_fresh_type_vars(binding.m_id, binding.m_type_scheme);
 
-  return {{location},
+  return {
+      {location},
+      final_type,
+      Identifier{
+          {location},
+          identifier.m_name,
+          binding.m_id,
           final_type,
-          Identifier{{location}, identifier.m_name, binding_id, final_type}};
+      },
+  };
 }
 
 Expression

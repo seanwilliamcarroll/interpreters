@@ -25,6 +25,8 @@ struct StatementLowerer {
 
   Statement operator()(const hir::LetBinding &);
 
+  Statement operator()(const hir::Assignment &);
+
   Context &m_ctx;
 };
 

@@ -28,7 +28,6 @@ namespace bust::hir {
 struct Expression;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
-struct LetBinding;
 struct Block;
 struct TupleExpr;
 struct DotExpr;
@@ -115,7 +114,20 @@ struct TupleExpr {
   std::vector<Expression> m_fields;
 };
 
-using Statement = std::variant<Expression, LetBinding>;
+struct LetBinding : public core::HasLocation {
+  Identifier m_variable;
+  Expression m_expression;
+  bool m_is_mutable = false;
+};
+
+using Place = std::variant<Identifier>;
+
+struct Assignment : public core::HasLocation {
+  Place m_place;
+  Expression m_expression;
+};
+
+using Statement = std::variant<Expression, LetBinding, Assignment>;
 
 using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
@@ -128,11 +140,6 @@ struct Block : public core::HasLocation {
 };
 
 // --- Bindings & definitions ------------------------------------------------
-
-struct LetBinding : public core::HasLocation {
-  Identifier m_variable;
-  Expression m_expression;
-};
 
 struct FunctionDeclaration {
   std::string m_function_id;

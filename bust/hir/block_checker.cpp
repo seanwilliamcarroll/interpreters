@@ -61,7 +61,9 @@ Block BlockChecker::check_block_with_parameters(
     const std::vector<Identifier> &parameters, const ast::Block &ast_block) {
   ScopeGuard guard(m_ctx.m_env);
   for (const auto &parameter : parameters) {
-    m_ctx.m_env.define(parameter.m_name, parameter.m_id, parameter.m_type);
+    // TODO: Decide on making parameters mutable or not
+    m_ctx.m_env.define(parameter.m_name, parameter.m_id, parameter.m_type,
+                       /*is_mutable=*/false);
   }
   return check_block(ast_block);
 }

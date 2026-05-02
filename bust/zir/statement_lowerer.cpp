@@ -15,6 +15,8 @@
 
 #include <variant>
 
+#include "exceptions.hpp"
+
 //****************************************************************************
 namespace bust::zir {
 //****************************************************************************
@@ -44,6 +46,10 @@ Statement StatementLowerer::operator()(const hir::LetBinding &let_binding) {
       .m_identifier = binding_id,
       .m_expression = expr_id,
   };
+}
+
+Statement StatementLowerer::operator()(const hir::Assignment &) {
+  throw core::InternalCompilerError("UNIMPLEMENTED");
 }
 
 //****************************************************************************

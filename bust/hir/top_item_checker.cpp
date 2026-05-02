@@ -60,7 +60,7 @@ void TopItemChecker::collect_function_signature(
                    .m_return_type = return_type_id});
 
   m_ctx.m_env.define(declaration.m_id.m_name, m_ctx.next_let_binding_id(),
-                     function_type_id);
+                     function_type_id, /*is_mutable=*/false);
 }
 
 hir::FunctionDeclaration TopItemChecker::check_declaration(
@@ -73,14 +73,14 @@ hir::FunctionDeclaration TopItemChecker::check_declaration(
         "function '" + function_declaration.m_id.m_name +
         "' not found after first pass signature collection");
   }
-  const auto &[function_id, function_type_scheme] = maybe_function_type.value();
-  auto function_type_id = function_type_scheme.m_type;
+  const auto &binding = maybe_function_type.value();
+  auto function_type_id = binding.m_type_scheme.m_type;
 
   auto [parameters, _] = TypeConverter{m_ctx}.convert_parameters(
       function_declaration.m_parameters);
 
   return FunctionDeclaration{.m_function_id = function_declaration.m_id.m_name,
-                             .m_id = function_id,
+                             .m_id = binding.m_id,
                              .m_type = function_type_id,
                              .m_parameters = std::move(parameters)};
 }
