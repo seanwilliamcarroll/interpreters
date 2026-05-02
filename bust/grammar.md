@@ -92,9 +92,9 @@ extern_func_declaration = EXTERN FN IDENTIFIER parameter_list (ARROW type)? SEMI
 
 parameter_list      = LPAREN (argument_annotated (COMMA argument_annotated)*)? RPAREN
 
-argument_annotated  = IDENTIFIER COLON type
+argument_annotated  = MUT? IDENTIFIER COLON type
 
-argument_inferred   = IDENTIFIER (COLON type)?
+argument_inferred   = MUT? IDENTIFIER (COLON type)?
 
 type                = I8
                     | I32
