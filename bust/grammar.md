@@ -90,11 +90,11 @@ func_def            = FN IDENTIFIER parameter_list (ARROW type)? block
 
 extern_func_declaration = EXTERN FN IDENTIFIER parameter_list (ARROW type)? SEMICOLON
 
-parameter_list      = LPAREN (argument_annotated (COMMA argument_annotated)*)? RPAREN
+parameter_list      = LPAREN (parameter_annotated (COMMA parameter_annotated)*)? RPAREN
 
-argument_annotated  = MUT? IDENTIFIER COLON type
+parameter_annotated  = MUT? IDENTIFIER COLON type
 
-argument_inferred   = MUT? IDENTIFIER (COLON type)?
+parameter_inferred   = MUT? IDENTIFIER (COLON type)?
 
 type                = I8
                     | I32
@@ -193,7 +193,7 @@ return_expr         = RETURN expression
 
 if_expr             = IF expression block (ELSE block)?
 
-lambda_expr         = PIPE (argument_inferred (COMMA argument_inferred)*)? PIPE (ARROW type)? block
+lambda_expr         = PIPE (parameter_inferred (COMMA parameter_inferred)*)? PIPE (ARROW type)? block
 
 while_expr          = TODO (deferred — recursion covers looping for now)
 for_expr            = TODO (deferred — needs ranges/collections)
