@@ -283,6 +283,54 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  TEST_CASE("shadowing mut with immutable let throws on assignment") {
+    // `let mut x` then `let x` — the second binding shadows the first and is
+    // immutable. Assigning to the shadow must fail.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let mut x = 1;\n"
+                               "  let x = x;\n"
+                               "  x = 2;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("inner immutable shadow does not affect outer mut binding") {
+    // Outer `let mut x` is mutable. Inner block shadows with immutable `x`.
+    // After the inner scope ends, the outer mutable binding is back in
+    // scope, so assigning to it must succeed.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let mut x = 1;\n"
+                             "  { let x = 2; };\n"
+                             "  x = 3;\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("same-scope shadowing mut with mut allows assignment") {
+    // Two `let mut x` in sequence — the second shadows the first. Assigning
+    // is legal because the active binding is mutable.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let mut x = 1;\n"
+                             "  let mut x = 2;\n"
+                             "  x = 3;\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("same-scope shadowing immutable with immutable still rejects "
+            "assignment") {
+    // Two `let x` in sequence — the second shadows the first. Both are
+    // immutable; assigning to the shadow must fail.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 1;\n"
+                               "  let x = 2;\n"
+                               "  x = 3;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
   // --- Function definitions ------------------------------------------------
 
   TEST_CASE("function def produces correct function type") {
