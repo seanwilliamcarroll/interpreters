@@ -159,6 +159,130 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Assignments ---------------------------------------------------------
+
+  TEST_CASE("assignment to mutable identifier produces hir::Assignment") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let mut x = 1;\n"
+                          "  x = 2;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_statements.size() >= 2);
+    REQUIRE(
+        std::holds_alternative<hir::Assignment>(func.m_body.m_statements[1]));
+    auto &assign = std::get<hir::Assignment>(func.m_body.m_statements[1]);
+    REQUIRE(std::holds_alternative<hir::Identifier>(assign.m_place));
+    CHECK(std::get<hir::Identifier>(assign.m_place).m_name == "x");
+  }
+
+  TEST_CASE("assignment RHS type matches LHS binding type") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let mut x: i64 = 1;\n"
+                          "  x = 5;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &assign = std::get<hir::Assignment>(func.m_body.m_statements[1]);
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(assign.m_expression.m_type));
+    CHECK(ptype.m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("assignment unifies binding type via inference") {
+    // `let mut x = true;` infers x: bool. Then `x = false;` must unify
+    // — i.e. the LHS lookup feeds back into RHS expectation.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let mut x = true;\n"
+                          "  x = false;\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &assign = std::get<hir::Assignment>(func.m_body.m_statements[1]);
+    auto &ptype = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(assign.m_expression.m_type));
+    CHECK(ptype.m_type == PrimitiveType::BOOL);
+  }
+
+  TEST_CASE("assignment with mismatched RHS type throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let mut x: i64 = 1;\n"
+                               "  x = true;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("assignment to undeclared variable throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  x = 5;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("assignment with literal LHS throws — not a place") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  5 = 6;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("assignment with binary-expression LHS throws — not a place") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let mut x = 1;\n"
+                               "  x + 1 = 5;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("assignment to non-mutable let binding throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 1;\n"
+                               "  x = 2;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("assignment to function parameter throws — parameters are "
+            "currently immutable") {
+    CHECK_THROWS_AS(type_check("fn foo(x: i64) -> i64 {\n"
+                               "  x = 2;\n"
+                               "  x\n"
+                               "}\n"
+                               "fn main() -> i64 { foo(1) }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("shadowing immutable with let mut allows assignment") {
+    // The inner `let mut x` introduces a NEW binding that shadows the outer
+    // immutable `x`. Assignment targets the new (mutable) binding.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let x = 1;\n"
+                             "  let mut x = x;\n"
+                             "  x = 2;\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("inner scope mut binding does not relax outer immutable binding") {
+    // Inside the block, `let mut x` shadows. After the block, the original
+    // (immutable) `x` is back in scope, so assigning to it must fail.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 1;\n"
+                               "  { let mut x = 2; x = 3; };\n"
+                               "  x = 4;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
   // --- Function definitions ------------------------------------------------
 
   TEST_CASE("function def produces correct function type") {
