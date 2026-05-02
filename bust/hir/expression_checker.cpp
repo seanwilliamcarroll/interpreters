@@ -108,10 +108,14 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
       m_ctx.create_fresh_type_vars(binding.m_id, binding.m_type_scheme);
 
   return {
-      {location},
+      {
+          location,
+      },
       final_type,
       Identifier{
-          {location},
+          {
+              location,
+          },
           identifier.m_name,
           binding.m_id,
           final_type,
@@ -136,7 +140,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::TupleExpr> &tuple_expr,
   });
 
   return {
-      {location},
+      {
+          location,
+      },
       tuple_type,
       std::make_unique<TupleExpr>(TupleExpr{
           .m_fields = std::move(fields),
@@ -191,10 +197,14 @@ Expression ExpressionChecker::operator()(
 
     auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
 
-    return {{location},
+    return {{
+                location,
+            },
             return_type,
-            std::make_unique<CallExpr>(
-                CallExpr{std::move(callee), std::move(arguments)})};
+            std::make_unique<CallExpr>(CallExpr{
+                std::move(callee),
+                std::move(arguments),
+            })};
   }
   if (m_ctx.is_type_variable(callee_type_id)) {
     // Need to make fresh type variables
@@ -222,10 +232,14 @@ Expression ExpressionChecker::operator()(
 
     auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
 
-    return {{location},
+    return {{
+                location,
+            },
             return_type,
-            std::make_unique<CallExpr>(
-                CallExpr{std::move(callee), std::move(arguments)})};
+            std::make_unique<CallExpr>(CallExpr{
+                std::move(callee),
+                std::move(arguments),
+            })};
   }
   throw core::CompilerException(
       "TypeChecker",
@@ -275,10 +289,15 @@ Expression ExpressionChecker::operator()(
                         ? m_ctx.m_type_arena.m_bool
                         : m_ctx.m_type_unifier.find(type_id);
 
-  return {{location},
+  return {{
+              location,
+          },
           final_type,
           std::make_unique<BinaryExpr>(BinaryExpr{
-              binary_expression->m_operator, std::move(lhs), std::move(rhs)})};
+              binary_expression->m_operator,
+              std::move(lhs),
+              std::move(rhs),
+          })};
 }
 
 Expression ExpressionChecker::operator()(
@@ -310,12 +329,21 @@ Expression ExpressionChecker::operator()(
   auto final_type = m_ctx.m_type_unifier.find(expression.m_type);
 
   auto final_expression = Expression{
-      {expression.m_location}, final_type, std::move(expression.m_expression)};
+      {
+          expression.m_location,
+      },
+      final_type,
+      std::move(expression.m_expression),
+  };
 
-  return {{location},
+  return {{
+              location,
+          },
           final_expression.m_type,
-          std::make_unique<UnaryExpr>(UnaryExpr{unary_expression->m_operator,
-                                                std::move(final_expression)})};
+          std::make_unique<UnaryExpr>(UnaryExpr{
+              unary_expression->m_operator,
+              std::move(final_expression),
+          })};
 }
 
 Expression
@@ -332,14 +360,20 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
         location);
   }
 
-  auto resolved_condition =
-      Expression{{condition.m_location},
-                 m_ctx.m_type_unifier.find(condition.m_type),
-                 std::move(condition.m_expression)};
+  auto resolved_condition = Expression{
+      {
+          condition.m_location,
+      },
+      m_ctx.m_type_unifier.find(condition.m_type),
+      std::move(condition.m_expression),
+  };
 
   // Directly call because Block is not a variant type, don't need to visit
   auto then_block =
-      BlockChecker{m_ctx}.check_block(if_expression->m_then_block);
+      BlockChecker{
+          m_ctx,
+      }
+          .check_block(if_expression->m_then_block);
 
   if (!if_expression->m_else_block.has_value()) {
     // Just then branch
@@ -352,14 +386,22 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
           std::string("Type unification error!: ") + error.what(), location);
     }
 
-    return {{location},
+    return {{
+                location,
+            },
             m_ctx.m_type_arena.m_unit,
             std::make_unique<IfExpr>(IfExpr{
-                std::move(resolved_condition), std::move(then_block), {}})};
+                std::move(resolved_condition),
+                std::move(then_block),
+                {},
+            })};
   }
   // Check else branch too
   auto else_block =
-      BlockChecker{m_ctx}.check_block(if_expression->m_else_block.value());
+      BlockChecker{
+          m_ctx,
+      }
+          .check_block(if_expression->m_else_block.value());
 
   try {
     m_ctx.m_type_unifier.unify(then_block.m_type, else_block.m_type);
@@ -373,20 +415,32 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
                   ? m_ctx.m_type_unifier.find(else_block.m_type)
                   : m_ctx.m_type_unifier.find(then_block.m_type);
 
-  return {{location},
+  return {{
+              location,
+          },
           type,
-          std::make_unique<IfExpr>(
-              IfExpr{std::move(resolved_condition), std::move(then_block),
-                     std::optional<Block>(std::move(else_block))})};
+          std::make_unique<IfExpr>(IfExpr{
+              std::move(resolved_condition),
+              std::move(then_block),
+              std::optional<Block>(std::move(else_block)),
+          })};
 }
 
 Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block,
                               const core::SourceLocation &location) {
-  auto hir_block = BlockChecker{m_ctx}.check_block(*block);
-  return {{location},
-          hir_block.m_type,
-          std::make_unique<Block>(std::move(hir_block))};
+  auto hir_block =
+      BlockChecker{
+          m_ctx,
+      }
+          .check_block(*block);
+  return {
+      {
+          location,
+      },
+      hir_block.m_type,
+      std::make_unique<Block>(std::move(hir_block)),
+  };
 }
 
 Expression ExpressionChecker::operator()(
@@ -397,8 +451,11 @@ Expression ExpressionChecker::operator()(
 
   auto original_type_id = m_ctx.m_type_unifier.find(hir_expression.m_type);
 
-  auto new_type_id =
-      std::visit(TypeConverter{m_ctx}, cast_expression->m_new_type);
+  auto new_type_id = std::visit(
+      TypeConverter{
+          m_ctx,
+      },
+      cast_expression->m_new_type);
 
   if (!m_ctx.is_primitive(original_type_id) ||
       !m_ctx.is_primitive(new_type_id)) {
@@ -421,10 +478,14 @@ Expression ExpressionChecker::operator()(
                                   location);
   }
 
-  return {{location},
+  return {{
+              location,
+          },
           new_type_id,
-          std::make_unique<CastExpr>(
-              CastExpr{std::move(hir_expression), new_type_id})};
+          std::make_unique<CastExpr>(CastExpr{
+              std::move(hir_expression),
+              new_type_id,
+          })};
 }
 
 Expression ExpressionChecker::operator()(
@@ -450,34 +511,44 @@ Expression ExpressionChecker::operator()(
 
   auto final_expression = (expression_type == expression.m_type)
                               ? std::move(expression)
-                              : Expression{{expression.m_location},
-                                           expression_type,
-                                           std::move(expression.m_expression)};
+                              : Expression{
+                                    {
+                                        expression.m_location,
+                                    },
+                                    expression_type,
+                                    std::move(expression.m_expression),
+                                };
 
-  return {
-      {location},
-      m_ctx.m_type_arena.m_never,
-      std::make_unique<ReturnExpr>(ReturnExpr{std::move(final_expression)})};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_never,
+          std::make_unique<ReturnExpr>(ReturnExpr{
+              std::move(final_expression),
+          })};
 }
 
 Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::LambdaExpr> &lambda_expression,
     const core::SourceLocation &location) {
   // Want to evaluate body and see what the type is
+  auto type_converter = TypeConverter{
+      m_ctx,
+  };
+
   auto [parameters, parameter_types] =
-      TypeConverter{m_ctx}.convert_parameters(lambda_expression->m_parameters);
+      type_converter.convert_parameters(lambda_expression->m_parameters);
 
   auto possible_return_type_id =
       lambda_expression->m_return_type.has_value()
-          ? TypeConverter{m_ctx}.get_type(
-                lambda_expression->m_return_type.value())
+          ? type_converter.get_type(lambda_expression->m_return_type.value())
           : m_ctx.m_type_unifier.new_type_var();
 
   auto body =
       lambda_expression->m_return_type.has_value()
-          ? BlockChecker{m_ctx}.check_callable_body(
+          ? BlockChecker{m_ctx,}.check_callable_body(
                 parameters, possible_return_type_id, lambda_expression->m_body)
-          : BlockChecker{m_ctx}.check_block_with_parameters(
+          : BlockChecker{m_ctx,}.check_block_with_parameters(
                 parameters, lambda_expression->m_body);
 
   auto return_type_id = lambda_expression->m_return_type.has_value()
@@ -492,14 +563,20 @@ Expression ExpressionChecker::operator()(
         location);
   }
 
-  auto function_type_id = m_ctx.m_type_arena.intern(
-      FunctionType{.m_parameters = std::move(parameter_types),
-                   .m_return_type = return_type_id});
+  auto function_type_id = m_ctx.m_type_arena.intern(FunctionType{
+      .m_parameters = std::move(parameter_types),
+      .m_return_type = return_type_id,
+  });
 
-  return {{location},
+  return {{
+              location,
+          },
           function_type_id,
           std::make_unique<LambdaExpr>(LambdaExpr{
-              std::move(parameters), std::move(body), return_type_id})};
+              std::move(parameters),
+              std::move(body),
+              return_type_id,
+          })};
 }
 
 Expression
@@ -517,7 +594,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
     auto return_type = m_ctx.m_type_unifier.new_type_var();
 
     return {
-        {location},
+        {
+            location,
+        },
         return_type,
         std::make_unique<DotExpr>(DotExpr{
             .m_expression = std::move(expression),
@@ -552,7 +631,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
   auto final_type = tuple_type.m_fields[dot_expr->m_tuple_index];
 
   return {
-      {location},
+      {
+          location,
+      },
       final_type,
       std::make_unique<DotExpr>(DotExpr{
           .m_expression = std::move(expression),
@@ -574,36 +655,83 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
 
 Expression ExpressionChecker::operator()(const ast::I8 &literal,
                                          const core::SourceLocation &location) {
-  return {{location}, m_ctx.m_type_arena.m_i8, I8{{location}, literal.m_value}};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_i8,
+          I8{
+              {
+                  location,
+              },
+              literal.m_value,
+          }};
 }
 
 Expression ExpressionChecker::operator()(const ast::I32 &literal,
                                          const core::SourceLocation &location) {
-  return {
-      {location}, m_ctx.m_type_arena.m_i32, I32{{location}, literal.m_value}};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_i32,
+          I32{
+              {
+                  location,
+              },
+              literal.m_value,
+          }};
 }
 
 Expression ExpressionChecker::operator()(const ast::I64 &literal,
                                          const core::SourceLocation &location) {
-  return {
-      {location}, m_ctx.m_type_arena.m_i64, I64{{location}, literal.m_value}};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_i64,
+          I64{
+              {
+                  location,
+              },
+              literal.m_value,
+          }};
 }
 
 Expression ExpressionChecker::operator()(const ast::Bool &literal,
                                          const core::SourceLocation &location) {
-  return {
-      {location}, m_ctx.m_type_arena.m_bool, Bool{{location}, literal.m_value}};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_bool,
+          Bool{
+              {
+                  location,
+              },
+              literal.m_value,
+          }};
 }
 
 Expression ExpressionChecker::operator()(const ast::Char &literal,
                                          const core::SourceLocation &location) {
-  return {
-      {location}, m_ctx.m_type_arena.m_char, Char{{location}, literal.m_value}};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_char,
+          Char{
+              {
+                  location,
+              },
+              literal.m_value,
+          }};
 }
 
 Expression ExpressionChecker::operator()(const ast::Unit & /*unused*/,
                                          const core::SourceLocation &location) {
-  return {{location}, m_ctx.m_type_arena.m_unit, Unit{{location}}};
+  return {{
+              location,
+          },
+          m_ctx.m_type_arena.m_unit,
+          Unit{{
+              location,
+          }}};
 }
 
 //****************************************************************************

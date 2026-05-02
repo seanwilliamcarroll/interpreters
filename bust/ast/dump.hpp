@@ -118,7 +118,10 @@ private:
       if (i > 0) {
         m_out << ", ";
       }
-      dump_identifier(function_declaration.m_parameters[i]);
+      if (function_declaration.m_parameters[i].m_is_mutable) {
+        m_out << "Mut ";
+      }
+      dump_identifier(function_declaration.m_parameters[i].m_id);
     }
     m_out << ") -> ";
     dump_type_id(function_declaration.m_return_type);
@@ -366,7 +369,10 @@ private:
       if (i > 0) {
         m_out << ", ";
       }
-      dump_identifier(l.m_parameters[i]);
+      if (l.m_parameters[i].m_is_mutable) {
+        m_out << "Mut ";
+      }
+      dump_identifier(l.m_parameters[i].m_id);
     }
     m_out << ")";
     if (l.m_return_type.has_value()) {

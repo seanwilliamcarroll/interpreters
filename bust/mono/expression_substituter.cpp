@@ -56,6 +56,15 @@ ExpressionSubstituter::substitute(const hir::Expression &expression) {
   };
 }
 
+hir::Parameter
+ExpressionSubstituter::substitute(const hir::Parameter &parameter) {
+  return {
+      {parameter.m_location},
+      substitute(parameter.m_id),
+      parameter.m_is_mutable,
+  };
+}
+
 hir::Identifier
 ExpressionSubstituter::substitute(const hir::Identifier &identifier) {
   auto new_type = m_ctx.rewrite_type(identifier.m_type);
@@ -234,7 +243,7 @@ hir::ExprKind ExpressionSubstituter::operator()(
   // global BindingId lookup. If we ever add a pass post-mono that does, mint
   // fresh ids here and remap use-sites in the body.
 
-  std::vector<hir::Identifier> new_parameters;
+  std::vector<hir::Parameter> new_parameters;
   new_parameters.reserve(lambda_expr->m_parameters.size());
   for (const auto &parameter : lambda_expr->m_parameters) {
     new_parameters.emplace_back(substitute(parameter));

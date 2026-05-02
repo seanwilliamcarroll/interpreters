@@ -24,6 +24,7 @@ namespace bust::ast {
 
 struct Expression;
 struct Assignment;
+struct Parameter;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct LetBinding;
@@ -56,7 +57,7 @@ using ReturnExpr = ReturnExprBase<Expression>;
 using CastExpr = CastExprBase<Expression, TypeIdentifier>;
 using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr =
-    LambdaExprBase<Identifier, Block, std::optional<TypeIdentifier>>;
+    LambdaExprBase<Parameter, Block, std::optional<TypeIdentifier>>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -77,6 +78,11 @@ using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 struct Identifier : public core::HasLocation {
   std::string m_name;
   std::optional<TypeIdentifier> m_type;
+};
+
+struct Parameter : public core::HasLocation {
+  Identifier m_id;
+  bool m_is_mutable = false;
 };
 
 // --- Expressions -----------------------------------------------------------
@@ -121,7 +127,7 @@ struct LetBinding : public core::HasLocation {
 
 struct FunctionDeclaration {
   Identifier m_id;
-  std::vector<Identifier> m_parameters;
+  std::vector<Parameter> m_parameters;
   TypeIdentifier m_return_type;
 };
 

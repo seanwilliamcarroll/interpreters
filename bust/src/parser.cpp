@@ -225,7 +225,7 @@ ast::FunctionDeclaration Parser::parse_function_declaration() {
 
   auto function_id = parse_non_annotated_identifier();
 
-  std::vector<ast::Identifier> parameters{};
+  std::vector<ast::Parameter> parameters{};
   if (peek().get_token_type() == TokenType::UNIT) {
     advance();
   } else {
@@ -292,10 +292,18 @@ ast::LetBinding Parser::parse_let_binding() {
   };
 }
 
-std::vector<ast::Identifier> Parser::parse_param_list() {
-  std::vector<ast::Identifier> parameters;
+std::vector<ast::Parameter> Parser::parse_param_list() {
+  std::vector<ast::Parameter> parameters;
   while (peek().get_token_type() != TokenType::RPAREN) {
-    parameters.push_back(parse_annotated_identifier());
+    bool is_mutable = false;
+    if (peek().get_token_type() == TokenType::MUT) {
+      expect(TokenType::MUT, __FUNCTION__);
+      is_mutable = true;
+    }
+    parameters.push_back({
+        .m_id = parse_annotated_identifier(),
+        .m_is_mutable = is_mutable,
+    });
     if (peek().get_token_type() != TokenType::RPAREN) {
       expect(TokenType::COMMA, __FUNCTION__);
     }
@@ -303,13 +311,21 @@ std::vector<ast::Identifier> Parser::parse_param_list() {
   return parameters;
 }
 
-std::vector<ast::Identifier> Parser::parse_lambda_param_list() {
-  std::vector<ast::Identifier> parameters;
+std::vector<ast::Parameter> Parser::parse_lambda_param_list() {
+  std::vector<ast::Parameter> parameters;
   while (peek().get_token_type() != TokenType::PIPE) {
     // Could force all or nothing, either they all have an annotation or none of
     // them
     // Flexible for now
-    parameters.push_back(parse_possibly_annotated_identifier());
+    bool is_mutable = false;
+    if (peek().get_token_type() == TokenType::MUT) {
+      expect(TokenType::MUT, __FUNCTION__);
+      is_mutable = true;
+    }
+    parameters.push_back({
+        .m_id = parse_possibly_annotated_identifier(),
+        .m_is_mutable = is_mutable,
+    });
     if (peek().get_token_type() != TokenType::PIPE) {
       expect(TokenType::COMMA, __FUNCTION__);
     }
@@ -659,7 +675,7 @@ ast::Expression Parser::parse_return_expr() {
 
 ast::Expression Parser::parse_lambda_expr() {
   auto original_location = peek().get_location();
-  std::vector<ast::Identifier> arguments;
+  std::vector<ast::Parameter> arguments;
   if (peek().get_token_type() == TokenType::PIPE) {
     // May have arguments
     expect(TokenType::PIPE, __FUNCTION__);

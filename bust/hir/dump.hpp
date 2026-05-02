@@ -96,7 +96,10 @@ private:
       if (i > 0) {
         m_out << ", ";
       }
-      dump_identifier(f.m_parameters[i]);
+      if (f.m_parameters[i].m_is_mutable) {
+        m_out << "Mut ";
+      }
+      dump_identifier(f.m_parameters[i].m_id);
     }
     m_out << ")";
   }
@@ -119,6 +122,9 @@ private:
   void dump_let_binding(const LetBinding &lb) {
     indent();
     m_out << "Let ";
+    if (lb.m_is_mutable) {
+      m_out << "Mut ";
+    }
     dump_identifier(lb.m_variable);
     m_out << " =\n";
     IndentGuard g(*this);
@@ -227,7 +233,10 @@ private:
               if (i > 0) {
                 m_out << ", ";
               }
-              dump_identifier(v->m_parameters[i]);
+              if (v->m_parameters[i].m_is_mutable) {
+                m_out << "Mut ";
+              }
+              dump_identifier(v->m_parameters[i].m_id);
             }
             m_out << ")\n";
             IndentGuard g(*this);

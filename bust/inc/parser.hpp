@@ -37,8 +37,8 @@ private:
   ast::FunctionDef parse_func_def();
   ast::ExternFunctionDeclaration parse_extern_func_declaration();
   ast::LetBinding parse_let_binding();
-  std::vector<ast::Identifier> parse_param_list();
-  std::vector<ast::Identifier> parse_lambda_param_list();
+  std::vector<ast::Parameter> parse_param_list();
+  std::vector<ast::Parameter> parse_lambda_param_list();
   std::pair<core::SourceLocation, std::string>
   parse_location_name_from_identifier(const char *error_message);
 

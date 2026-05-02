@@ -310,11 +310,11 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     CHECK(func.m_signature.m_function_id == "add");
     REQUIRE(func.m_signature.m_parameters.size() == 2);
-    CHECK(func.m_signature.m_parameters[0].m_name == "a");
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "a");
     auto &a_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_arena.get(func.m_signature.m_parameters[0].m_type));
+        hir.m_type_arena.get(func.m_signature.m_parameters[0].m_id.m_type));
     CHECK(a_type.m_type == PrimitiveType::I64);
-    CHECK(func.m_signature.m_parameters[1].m_name == "b");
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "b");
     REQUIRE(std::get<hir::FunctionType>(
                 hir.m_type_arena.get(func.m_signature.m_type))
                 .m_parameters.size() == 2);
@@ -1573,7 +1573,7 @@ TEST_SUITE("bust.type_checker") {
     auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
     auto &p_type = std::get<hir::PrimitiveTypeValue>(
-        hir.m_type_arena.get(func.m_signature.m_parameters[0].m_type));
+        hir.m_type_arena.get(func.m_signature.m_parameters[0].m_id.m_type));
     CHECK(p_type.m_type == PrimitiveType::I8);
   }
 
@@ -2228,7 +2228,7 @@ TEST_SUITE("bust.type_checker") {
     // union-find root resolves to a FunctionType.
     hir::TypeUnifier unifier{hir.m_type_arena};
     unifier.adopt_state(std::move(hir.m_unifier_state));
-    auto resolved = unifier.find(lambda->m_parameters[0].m_type);
+    auto resolved = unifier.find(lambda->m_parameters[0].m_id.m_type);
     const auto &kind = hir.m_type_arena.get(resolved);
     CHECK(std::holds_alternative<hir::FunctionType>(kind));
   }

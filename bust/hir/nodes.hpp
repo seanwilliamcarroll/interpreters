@@ -43,6 +43,11 @@ struct Identifier : public core::HasLocation {
   TypeId m_type;
 };
 
+struct Parameter : public core::HasLocation {
+  Identifier m_id;
+  bool m_is_mutable;
+};
+
 // --- Literals --------------------------------------------------------------
 
 template <PrimitiveType InternalType>
@@ -90,7 +95,7 @@ using UnaryExpr = UnaryExprBase<Expression>;
 using ReturnExpr = ReturnExprBase<Expression>;
 using CastExpr = CastExprBase<Expression, TypeId>;
 using IfExpr = IfExprBase<Expression, Block>;
-using LambdaExpr = LambdaExprBase<Identifier, Block, TypeId>;
+using LambdaExpr = LambdaExprBase<Parameter, Block, TypeId>;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -145,7 +150,7 @@ struct FunctionDeclaration {
   std::string m_function_id;
   BindingId m_id;
   TypeId m_type;
-  std::vector<Identifier> m_parameters;
+  std::vector<Parameter> m_parameters;
 };
 
 struct ExternFunctionDeclaration : public core::HasLocation {

@@ -58,18 +58,17 @@ Block BlockChecker::check_block(const ast::Block &block) {
 }
 
 Block BlockChecker::check_block_with_parameters(
-    const std::vector<Identifier> &parameters, const ast::Block &ast_block) {
+    const std::vector<Parameter> &parameters, const ast::Block &ast_block) {
   ScopeGuard guard(m_ctx.m_env);
   for (const auto &parameter : parameters) {
-    // TODO: Decide on making parameters mutable or not
-    m_ctx.m_env.define(parameter.m_name, parameter.m_id, parameter.m_type,
-                       /*is_mutable=*/false);
+    m_ctx.m_env.define(parameter.m_id.m_name, parameter.m_id.m_id,
+                       parameter.m_id.m_type, parameter.m_is_mutable);
   }
   return check_block(ast_block);
 }
 
 Block BlockChecker::check_callable_body(
-    const std::vector<Identifier> &parameters, const TypeId &return_type,
+    const std::vector<Parameter> &parameters, const TypeId &return_type,
     const ast::Block &ast_body) {
   m_ctx.m_return_type_stack.push_back(return_type);
   auto body = check_block_with_parameters(parameters, ast_body);

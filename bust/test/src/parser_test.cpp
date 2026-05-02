@@ -142,13 +142,13 @@ TEST_SUITE("bust.parser") {
     const auto &func = get_single_func(program);
     CHECK(func.m_signature.m_id.m_name == "add");
     REQUIRE(func.m_signature.m_parameters.size() == 2);
-    CHECK(func.m_signature.m_parameters[0].m_name == "a");
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
-    check_primitive_type(*func.m_signature.m_parameters[0].m_type,
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "a");
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
+    check_primitive_type(*func.m_signature.m_parameters[0].m_id.m_type,
                          PrimitiveType::I64);
-    CHECK(func.m_signature.m_parameters[1].m_name == "b");
-    REQUIRE(func.m_signature.m_parameters[1].m_type.has_value());
-    check_primitive_type(*func.m_signature.m_parameters[1].m_type,
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "b");
+    REQUIRE(func.m_signature.m_parameters[1].m_id.m_type.has_value());
+    check_primitive_type(*func.m_signature.m_parameters[1].m_id.m_type,
                          PrimitiveType::I64);
   }
 
@@ -157,7 +157,7 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
-    CHECK(func.m_signature.m_parameters[0].m_name == "x");
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
   }
 
   // === Let bindings ========================================================
@@ -827,8 +827,8 @@ TEST_SUITE("bust.parser") {
     const auto &lambda =
         *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     REQUIRE(lambda.m_parameters.size() == 2);
-    CHECK(lambda.m_parameters[0].m_name == "x");
-    CHECK(lambda.m_parameters[1].m_name == "y");
+    CHECK(lambda.m_parameters[0].m_id.m_name == "x");
+    CHECK(lambda.m_parameters[1].m_id.m_name == "y");
     REQUIRE(lambda.m_return_type.has_value());
     check_primitive_type(*lambda.m_return_type, PrimitiveType::I64);
   }
@@ -843,8 +843,8 @@ TEST_SUITE("bust.parser") {
     const auto &lambda =
         *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     REQUIRE(lambda.m_parameters.size() == 2);
-    CHECK_FALSE(lambda.m_parameters[0].m_type.has_value());
-    CHECK_FALSE(lambda.m_parameters[1].m_type.has_value());
+    CHECK_FALSE(lambda.m_parameters[0].m_id.m_type.has_value());
+    CHECK_FALSE(lambda.m_parameters[1].m_id.m_type.has_value());
   }
 
   // === Multiple top-level items ============================================
@@ -876,7 +876,7 @@ TEST_SUITE("bust.parser") {
     const auto &fib = std::get<FunctionDef>(program.m_items[0]);
     CHECK(fib.m_signature.m_id.m_name == "fib");
     REQUIRE(fib.m_signature.m_parameters.size() == 1);
-    CHECK(fib.m_signature.m_parameters[0].m_name == "n");
+    CHECK(fib.m_signature.m_parameters[0].m_id.m_name == "n");
 
     // Body is an if expression
     const auto &body_expr = get_final_expr(fib.m_body);
@@ -911,18 +911,18 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_signature.m_parameters.size() == 2);
 
     // First param should have a function type annotation
-    CHECK(func.m_signature.m_parameters[0].m_name == "f");
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "f");
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
     REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value()));
+        func.m_signature.m_parameters[0].m_id.m_type.value()));
     const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value());
+        func.m_signature.m_parameters[0].m_id.m_type.value());
     REQUIRE(fn_type.m_parameter_types.size() == 1);
     check_primitive_type(fn_type.m_parameter_types[0], PrimitiveType::I64);
     check_primitive_type(fn_type.m_return_type, PrimitiveType::I64);
 
     // Second param is normal
-    CHECK(func.m_signature.m_parameters[1].m_name == "x");
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "x");
   }
 
   TEST_CASE("bust::parse_function_type_no_params") {
@@ -933,11 +933,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
     REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value()));
+        func.m_signature.m_parameters[0].m_id.m_type.value()));
     const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value());
+        func.m_signature.m_parameters[0].m_id.m_type.value());
     CHECK(fn_type.m_parameter_types.empty());
     check_primitive_type(fn_type.m_return_type, PrimitiveType::BOOL);
   }
@@ -949,11 +949,11 @@ TEST_SUITE("bust.parser") {
                                 "}");
     DUMP_AST(program);
     const auto &func = get_single_func(program);
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
     REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value()));
+        func.m_signature.m_parameters[0].m_id.m_type.value()));
     const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value());
+        func.m_signature.m_parameters[0].m_id.m_type.value());
     REQUIRE(fn_type.m_parameter_types.size() == 2);
     check_primitive_type(fn_type.m_parameter_types[0], PrimitiveType::I64);
     check_primitive_type(fn_type.m_parameter_types[1], PrimitiveType::BOOL);
@@ -1279,8 +1279,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
-    check_primitive_type(*func.m_signature.m_parameters[0].m_type,
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
+    check_primitive_type(*func.m_signature.m_parameters[0].m_id.m_type,
                          PrimitiveType::I8);
     check_primitive_type(func.m_signature.m_return_type, PrimitiveType::I8);
   }
@@ -1421,9 +1421,9 @@ TEST_SUITE("bust.parser") {
     const auto &ext = get_single_extern(program);
     CHECK(ext.m_signature.m_id.m_name == "putchar");
     REQUIRE(ext.m_signature.m_parameters.size() == 1);
-    CHECK(ext.m_signature.m_parameters[0].m_name == "c");
-    REQUIRE(ext.m_signature.m_parameters[0].m_type.has_value());
-    check_primitive_type(*ext.m_signature.m_parameters[0].m_type,
+    CHECK(ext.m_signature.m_parameters[0].m_id.m_name == "c");
+    REQUIRE(ext.m_signature.m_parameters[0].m_id.m_type.has_value());
+    check_primitive_type(*ext.m_signature.m_parameters[0].m_id.m_type,
                          PrimitiveType::I32);
     check_primitive_type(ext.m_signature.m_return_type, PrimitiveType::I32);
   }

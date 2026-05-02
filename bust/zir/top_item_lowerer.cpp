@@ -36,8 +36,8 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
   std::vector<BindingId> parameters;
   parameters.reserve(function_def.m_signature.m_parameters.size());
   for (const auto &parameter : function_def.m_signature.m_parameters) {
-    auto new_identifier = ExpressionLowerer{m_ctx}.lower_definition(parameter);
-    m_ctx.env().define(parameter.m_name, new_identifier.m_id);
+    auto new_identifier = ExpressionLowerer{m_ctx}.lower(parameter);
+    m_ctx.env().define(parameter.m_id.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier.m_id);
   }
 

@@ -233,7 +233,7 @@ TEST_SUITE("bust.monomorpher") {
     const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
         specializations[0]->m_expression.m_expression);
     for (const auto &param : lambda->m_parameters) {
-      CHECK(is_concrete(program.m_type_arena, param.m_type));
+      CHECK(is_concrete(program.m_type_arena, param.m_id.m_type));
     }
   }
 
@@ -370,7 +370,7 @@ TEST_SUITE("bust.monomorpher") {
       const auto &lambda = std::get<std::unique_ptr<hir::LambdaExpr>>(
           spec->m_expression.m_expression);
       for (const auto &param : lambda->m_parameters) {
-        CHECK(is_concrete(program.m_type_arena, param.m_type));
+        CHECK(is_concrete(program.m_type_arena, param.m_id.m_type));
       }
       CHECK(is_concrete(program.m_type_arena, lambda->m_return_type));
     }

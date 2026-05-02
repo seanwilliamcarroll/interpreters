@@ -69,6 +69,10 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
   return {.m_id = binding_id};
 }
 
+IdentifierExpr ExpressionLowerer::lower(const hir::Parameter &parameter) {
+  return lower_definition(parameter.m_id);
+}
+
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::TupleExpr> &tuple_expr) {
 
@@ -195,8 +199,8 @@ ExprKind ExpressionLowerer::operator()(
   std::vector<IdentifierExpr> parameters;
   parameters.reserve(lambda_expr->m_parameters.size());
   for (const auto &parameter : lambda_expr->m_parameters) {
-    auto new_identifier = lower_definition(parameter);
-    m_ctx.env().define(parameter.m_name, new_identifier.m_id);
+    auto new_identifier = lower(parameter);
+    m_ctx.env().define(parameter.m_id.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier);
     known_bindings.emplace_back(new_identifier);
   }

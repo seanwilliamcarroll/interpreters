@@ -22,6 +22,8 @@ struct ExpressionSubstituter {
 
   hir::Expression substitute(const hir::Expression &);
 
+  hir::Parameter substitute(const hir::Parameter &);
+
   hir::Identifier substitute(const hir::Identifier &);
 
   hir::ExprKind operator()(const hir::Identifier &);
