@@ -131,6 +131,26 @@ hir::ExprKind ExpressionSubstituter::operator()(const hir::Char &literal) {
   return literal;
 }
 
+hir::Place ExpressionSubstituter::substitute(const hir::Place &place) {
+  return std::visit(
+      [&](const auto &s) {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, hir::Identifier>) {
+          return this->substitute(s);
+        }
+      },
+      place);
+}
+
+hir::Assignment
+ExpressionSubstituter::substitute(const hir::Assignment &assignment) {
+  return {
+      {assignment.m_location},
+      substitute(assignment.m_place),
+      substitute(assignment.m_expression),
+  };
+}
+
 hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
   ScopeGuard guard{m_ctx.m_parent.m_env};
 
@@ -142,7 +162,8 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
     std::visit(
         [&](const auto &s) {
           using T = std::decay_t<decltype(s)>;
-          if constexpr (std::is_same_v<T, hir::Expression>) {
+          if constexpr (std::is_same_v<T, hir::Expression> ||
+                        std::is_same_v<T, hir::Assignment>) {
             new_statements.emplace_back(substitute(s));
           } else if constexpr (std::is_same_v<T, hir::LetBinding>) {
             auto new_let_bindings =
@@ -153,6 +174,8 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
                 std::make_move_iterator(new_let_bindings.begin()),
                 std::make_move_iterator(new_let_bindings.end()));
             new_let_bindings.clear();
+          } else {
+            throw core::InternalCompilerError("Unknown statement type");
           }
         },
         statement);

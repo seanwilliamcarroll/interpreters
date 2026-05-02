@@ -51,6 +51,8 @@ Value StatementGenerator::operator()(const zir::LetBinding &let_binding) {
   return {};
 }
 
+Value StatementGenerator::operator()(const zir::Assignment &) { return {}; }
+
 //****************************************************************************
 } // namespace bust::codegen
 //****************************************************************************

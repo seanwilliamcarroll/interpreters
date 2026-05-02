@@ -121,6 +121,8 @@ struct FreeVariableCollector {
     return free_variables;
   }
 
+  FreeVariables operator()(const Assignment &) { return {}; }
+
   FreeVariables operator()(const ExpressionStatement &expression_statement) {
     return collect(expression_statement.m_expression);
   }

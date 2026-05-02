@@ -21,6 +21,7 @@ struct StatementGenerator {
 
   Value operator()(const zir::ExpressionStatement &);
   Value operator()(const zir::LetBinding &);
+  Value operator()(const zir::Assignment &);
 
   Context &m_ctx;
 };

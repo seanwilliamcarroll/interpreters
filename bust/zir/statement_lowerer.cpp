@@ -48,8 +48,22 @@ Statement StatementLowerer::operator()(const hir::LetBinding &let_binding) {
   };
 }
 
-Statement StatementLowerer::operator()(const hir::Assignment &) {
-  throw core::InternalCompilerError("UNIMPLEMENTED");
+Place StatementLowerer::lower(const hir::Place &place) {
+  return std::visit(
+      [&](const auto &s) {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, hir::Identifier>) {
+          return ExpressionLowerer{m_ctx}.lower(s);
+        }
+      },
+      place);
+}
+
+Statement StatementLowerer::operator()(const hir::Assignment &assignment) {
+  return Assignment{
+      .m_place = lower(assignment.m_place),
+      .m_expression = ExpressionLowerer{m_ctx}.lower(assignment.m_expression),
+  };
 }
 
 //****************************************************************************
