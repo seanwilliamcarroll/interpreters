@@ -1601,6 +1601,53 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Naked return (no operand) -------------------------------------------
+  //
+  // `return;` desugars to `return ();`. A naked return is well-typed iff
+  // the enclosing function's declared return type is Unit.
+
+  TEST_CASE("naked return in unit function type-checks") {
+    auto hir = type_check("fn helper() { return; }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+  }
+
+  TEST_CASE("naked return in non-unit function throws") {
+    // `return;` returns `()`, which doesn't unify with the declared `i64`.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 { return; }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("naked return after let in unit function type-checks") {
+    auto hir = type_check("fn helper() {\n"
+                          "  let x = 5;\n"
+                          "  return;\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+  }
+
+  TEST_CASE("naked return as final expression in unit function type-checks") {
+    // `return` (no semicolon) is the block's final expression. Its type is
+    // Never; block type Never; unifies with declared Unit.
+    auto hir = type_check("fn helper() { return }\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+  }
+
+  TEST_CASE("early naked return guarded by if type-checks") {
+    auto hir = type_check("fn helper(x: bool) {\n"
+                          "  if x { return; }\n"
+                          "  let y = 5;\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 2);
+  }
+
   // --- Nested lambda ---------------------------------------------------------
 
   TEST_CASE("nested lambda typechecks") {

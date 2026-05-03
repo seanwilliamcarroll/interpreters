@@ -279,6 +279,59 @@ TEST_SUITE("bust.codegen.expressions") {
               42);
   }
 
+  // --- Return statement ----------------------------------------------------
+  //
+  // Codegen for ReturnExpr emits an LLVM `ret` and terminates the basic
+  // block. Tests cover tail-position return, return after other statements,
+  // early return from an if, and return from a nested block.
+
+  TEST_CASE("function body of bare return-statement returns the value") {
+    CHECK_RUN("fn main() -> i64 { return 42; }", 42);
+  }
+
+  TEST_CASE("return-statement after let returns the let-bound value") {
+    CHECK_RUN("fn main() -> i64 { let x = 7; return x; }", 7);
+  }
+
+  TEST_CASE("early return from then-branch") {
+    CHECK_RUN("fn main() -> i64 { if true { return 42; } 0 }", 42);
+  }
+
+  TEST_CASE("if-not-taken falls through past return") {
+    CHECK_RUN("fn main() -> i64 { if false { return 99; } 7 }", 7);
+  }
+
+  TEST_CASE("return inside nested block") {
+    CHECK_RUN("fn main() -> i64 { { return 42; } }", 42);
+  }
+
+  // --- Naked return (no operand) -------------------------------------------
+  //
+  // `return;` in a unit-returning function emits a `ret` of unit (or just
+  // a bare `ret void`-style terminator depending on unit representation).
+  // Observed via stdout: putchar after the return must NOT fire when the
+  // return is taken.
+
+  TEST_CASE("naked return in unit function returns control") {
+    CHECK_RUN("fn helper() { return; }\n"
+              "fn main() -> i64 { helper(); 42 }",
+              42);
+  }
+
+  TEST_CASE("naked return short-circuits subsequent putchar") {
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn helper(skip: bool) {\n"
+                     "  if skip { return; }\n"
+                     "  putchar('!' as i32);\n"
+                     "}\n"
+                     "fn main() -> i64 {\n"
+                     "  helper(true);\n"
+                     "  helper(false);\n"
+                     "  0\n"
+                     "}",
+                     0, "!");
+  }
+
   // --- Comparison operators ------------------------------------------------
   //
   // These all produce i1 (bool). The most direct way to observe a bool from

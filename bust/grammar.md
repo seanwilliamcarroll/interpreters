@@ -189,7 +189,7 @@ paren_or_tuple_expr = LPAREN expression RPAREN
 
 // Compound expressions
 
-return_expr         = RETURN expression
+return_expr         = RETURN expression?
 
 if_expr             = IF expression block (ELSE block)?
 
@@ -228,10 +228,11 @@ literal             = INT_LITERAL
   bare identifiers; tuple projection, struct fields, and deref will extend
   the `place` nonterminal later.
 - `if`/`else` is an expression (returns a value).
-- `return expr` is an expression — typechecks `expr` against the enclosing
-  function's return type, then the `return_expr` itself is compatible with any
-  expected type (acts like a "never" / bottom type without needing to add `!`
-  to the type system).
+- `return expr` (or `return` for unit) is an expression — typechecks `expr`
+  against the enclosing function's return type. Naked `return` is sugar for
+  `return ()` and is desugared at parse time. The `return_expr` itself is
+  compatible with any expected type (acts like a "never" / bottom type
+  without needing to add `!` to the type system).
 - Implicit return: last expression in a block is its value.
 
 ## Desirable Features (Future)
