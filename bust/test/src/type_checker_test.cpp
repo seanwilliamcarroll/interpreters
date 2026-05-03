@@ -1523,6 +1523,84 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Block divergence (semicolon return) ---------------------------------
+  //
+  // A block whose final-expression slot is empty but whose statements contain
+  // a divergent expression (`return`, type Never) has block type Never, not
+  // Unit. Without this rule, `fn foo() -> i64 { return 42; }` is rejected
+  // because the block is Unit and the function expects i64. Never unifies
+  // with any T, so once the block type is Never the existing return-type
+  // check passes unchanged.
+
+  TEST_CASE("block with only return statement matches any return type") {
+    auto hir = type_check("fn main() -> i64 { return 42; }");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("block with let then trailing return statement type-checks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = 5;\n"
+                          "  return x;\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE(
+      "block with diverging let RHS and no final expression type-checks") {
+    // The let statement's contained expression (the RHS) has type Never.
+    // Divergence detection must look inside let bindings, not only into
+    // expression-statements.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let x = return 42;\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("block with diverging assignment RHS and no final expression "
+            "type-checks") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  let mut x = 0;\n"
+                          "  x = return 42;\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("nested block with only return statement has never type") {
+    // Inner `{ return 42; }` has no final expression but a divergent
+    // statement, so its type is Never. The outer block uses the inner as
+    // its final expression and inherits Never, which unifies with i64.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  { return 42; }\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("if-else with semicolon returns in both arms type-checks") {
+    // Both arm-blocks have only a divergent statement and no final
+    // expression — each is Never, the if-else unifies to Never, and the
+    // outer block (with the if-else as its final expression) is Never.
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  if true { return 1; } else { return 2; }\n"
+                          "}");
+    DUMP_HIR(hir);
+    REQUIRE(hir.m_top_items.size() == 1);
+  }
+
+  TEST_CASE("non-diverging block without final expression is still unit") {
+    // Sanity: the divergence rule doesn't make every block Never. A block
+    // whose only statement is a non-diverging let still has type Unit, so
+    // a function returning i64 should reject it.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 5;\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
   // --- Nested lambda ---------------------------------------------------------
 
   TEST_CASE("nested lambda typechecks") {
