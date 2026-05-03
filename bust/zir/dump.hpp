@@ -150,6 +150,25 @@ private:
   }
 
   // -- Statements ------------------------------------------------------------
+  void dump_place(const Place &place) {
+    std::visit(
+        [this](const auto &p) {
+          using T = std::decay_t<decltype(p)>;
+          if constexpr (std::is_same_v<T, IdentifierExpr>) {
+            dump_binding(p.m_id);
+          }
+        },
+        place);
+  }
+
+  void dump_assignment(const Assignment &assignment) {
+    indent();
+    m_out << "Assign ";
+    dump_place(assignment.m_place);
+    m_out << " =\n";
+    IndentGuard g(*this);
+    dump_expr(assignment.m_expression);
+  }
 
   void dump_statement(const Statement &s) {
     std::visit(
@@ -159,6 +178,8 @@ private:
             dump_let_binding(v);
           } else if constexpr (std::is_same_v<T, ExpressionStatement>) {
             dump_expr(v.m_expression);
+          } else if constexpr (std::is_same_v<T, Assignment>) {
+            dump_assignment(v);
           }
         },
         s);
