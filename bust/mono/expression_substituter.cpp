@@ -6,8 +6,10 @@
 //*
 //****************************************************************************
 
+#include <exceptions.hpp>
 #include <hir/instantiation_record.hpp>
 #include <hir/nodes.hpp>
+#include <hir/type_arena.hpp>
 #include <hir/types.hpp>
 #include <mono/context.hpp>
 #include <mono/expression_substituter.hpp>
@@ -51,6 +53,15 @@ ExpressionSubstituter::substitute(const hir::Expression &expression) {
       {expression.m_location},
       new_type,
       std::move(substituted_expr_kind),
+  };
+}
+
+hir::Parameter
+ExpressionSubstituter::substitute(const hir::Parameter &parameter) {
+  return {
+      {parameter.m_location},
+      substitute(parameter.m_id),
+      parameter.m_is_mutable,
   };
 }
 
@@ -120,6 +131,26 @@ hir::ExprKind ExpressionSubstituter::operator()(const hir::Char &literal) {
   return literal;
 }
 
+hir::Place ExpressionSubstituter::substitute(const hir::Place &place) {
+  return std::visit(
+      [&](const auto &s) {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, hir::Identifier>) {
+          return this->substitute(s);
+        }
+      },
+      place);
+}
+
+hir::Assignment
+ExpressionSubstituter::substitute(const hir::Assignment &assignment) {
+  return {
+      {assignment.m_location},
+      substitute(assignment.m_place),
+      substitute(assignment.m_expression),
+  };
+}
+
 hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
   ScopeGuard guard{m_ctx.m_parent.m_env};
 
@@ -131,7 +162,8 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
     std::visit(
         [&](const auto &s) {
           using T = std::decay_t<decltype(s)>;
-          if constexpr (std::is_same_v<T, hir::Expression>) {
+          if constexpr (std::is_same_v<T, hir::Expression> ||
+                        std::is_same_v<T, hir::Assignment>) {
             new_statements.emplace_back(substitute(s));
           } else if constexpr (std::is_same_v<T, hir::LetBinding>) {
             auto new_let_bindings =
@@ -142,6 +174,8 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
                 std::make_move_iterator(new_let_bindings.begin()),
                 std::make_move_iterator(new_let_bindings.end()));
             new_let_bindings.clear();
+          } else {
+            throw core::InternalCompilerError("Unknown statement type");
           }
         },
         statement);
@@ -232,7 +266,7 @@ hir::ExprKind ExpressionSubstituter::operator()(
   // global BindingId lookup. If we ever add a pass post-mono that does, mint
   // fresh ids here and remap use-sites in the body.
 
-  std::vector<hir::Identifier> new_parameters;
+  std::vector<hir::Parameter> new_parameters;
   new_parameters.reserve(lambda_expr->m_parameters.size());
   for (const auto &parameter : lambda_expr->m_parameters) {
     new_parameters.emplace_back(substitute(parameter));

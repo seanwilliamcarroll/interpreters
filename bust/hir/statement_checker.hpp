@@ -22,6 +22,10 @@ struct StatementChecker {
 
   Statement operator()(const ast::Expression &);
 
+  Statement operator()(const ast::Assignment &);
+
+  bool is_place_mutable(const Place &);
+
   Context &m_ctx;
 };
 

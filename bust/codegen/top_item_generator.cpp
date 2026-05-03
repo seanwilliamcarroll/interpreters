@@ -6,18 +6,17 @@
 //*
 //****************************************************************************
 
-#include <codegen/basic_block.hpp>
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
-#include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
-#include <codegen/instructions.hpp>
-#include <codegen/let_binding_generator.hpp>
+#include <codegen/function_handle.hpp>
+#include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
 #include <codegen/naming_conventions.hpp>
 #include <codegen/parameter.hpp>
 #include <codegen/symbol_table.hpp>
 #include <codegen/top_item_generator.hpp>
+#include <codegen/types.hpp>
 #include <codegen/value.hpp>
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
@@ -27,6 +26,8 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
+#include <string>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -87,9 +88,6 @@ void TopItemDeclarationCollector::operator()(
   m_ctx.define_function(binding.m_name, std::move(callee), return_type_id,
                         std::move(parameter_types));
 }
-
-void TopItemDeclarationCollector::operator()(
-    const zir::LetBinding & /*unused*/) {}
 
 void TopItemGenerator::generate(const zir::TopItem &top_item) {
   std::visit(*this, top_item);
@@ -162,11 +160,6 @@ void TopItemGenerator::operator()(
 
   m_ctx.module().add_extern_function_declaration(
       std::make_unique<FunctionDeclaration>(generate_signature(extern_func)));
-}
-
-void TopItemGenerator::operator()(const zir::LetBinding &let_binding) {
-  // TODO: assumes local for the moment
-  LetBindingGenerator{m_ctx}.generate(let_binding);
 }
 
 //****************************************************************************

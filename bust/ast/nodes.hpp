@@ -23,6 +23,8 @@ namespace bust::ast {
 // --- Forward declarations --------------------------------------------------
 
 struct Expression;
+struct Assignment;
+struct Parameter;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct LetBinding;
@@ -55,7 +57,7 @@ using ReturnExpr = ReturnExprBase<Expression>;
 using CastExpr = CastExprBase<Expression, TypeIdentifier>;
 using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr =
-    LambdaExprBase<Identifier, Block, std::optional<TypeIdentifier>>;
+    LambdaExprBase<Parameter, Block, std::optional<TypeIdentifier>>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -67,16 +69,20 @@ using ExprKind =
                  std::unique_ptr<ForExpr>, std::unique_ptr<TupleExpr>,
                  std::unique_ptr<DotExpr>, I8, I32, I64, Bool, Char, Unit>;
 
-using Statement = std::variant<LetBinding, Expression>;
+using Statement = std::variant<LetBinding, Assignment, Expression>;
 
-using TopItem =
-    std::variant<FunctionDef, ExternFunctionDeclaration, LetBinding>;
+using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Leaf nodes ------------------------------------------------------------
 
 struct Identifier : public core::HasLocation {
   std::string m_name;
   std::optional<TypeIdentifier> m_type;
+};
+
+struct Parameter : public core::HasLocation {
+  Identifier m_id;
+  bool m_is_mutable = false;
 };
 
 // --- Expressions -----------------------------------------------------------
@@ -108,14 +114,20 @@ struct ForExpr : public core::HasLocation {};
 
 // --- Bindings & definitions ------------------------------------------------
 
+struct Assignment : public core::HasLocation {
+  Expression m_lhs;
+  Expression m_rhs;
+};
+
 struct LetBinding : public core::HasLocation {
   Identifier m_variable;
   Expression m_expression;
+  bool m_is_mutable = false;
 };
 
 struct FunctionDeclaration {
   Identifier m_id;
-  std::vector<Identifier> m_parameters;
+  std::vector<Parameter> m_parameters;
   TypeIdentifier m_return_type;
 };
 

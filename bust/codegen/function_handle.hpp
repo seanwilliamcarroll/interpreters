@@ -9,13 +9,12 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/function.hpp>
 #include <codegen/value.hpp>
 
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
-
-struct Function;
 
 struct FunctionHandle {
   [[nodiscard]] const GlobalHandle &name() const;

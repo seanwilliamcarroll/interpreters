@@ -96,7 +96,10 @@ private:
       if (i > 0) {
         m_out << ", ";
       }
-      dump_identifier(f.m_parameters[i]);
+      if (f.m_parameters[i].m_is_mutable) {
+        m_out << "Mut ";
+      }
+      dump_identifier(f.m_parameters[i].m_id);
     }
     m_out << ")";
   }
@@ -119,10 +122,33 @@ private:
   void dump_let_binding(const LetBinding &lb) {
     indent();
     m_out << "Let ";
+    if (lb.m_is_mutable) {
+      m_out << "Mut ";
+    }
     dump_identifier(lb.m_variable);
     m_out << " =\n";
     IndentGuard g(*this);
     dump_expression(lb.m_expression);
+  }
+
+  void dump_place(const Place &place) {
+    std::visit(
+        [this](const auto &v) {
+          using T = std::decay_t<decltype(v)>;
+          if constexpr (std::is_same_v<T, Identifier>) {
+            dump_identifier(v);
+          }
+        },
+        place);
+  }
+
+  void dump_assignment(const Assignment &assignment) {
+    indent();
+    m_out << "Assign ";
+    dump_place(assignment.m_place);
+    m_out << " =\n";
+    IndentGuard g(*this);
+    dump_expression(assignment.m_expression);
   }
 
   void dump_block(const Block &b) {
@@ -146,6 +172,8 @@ private:
             dump_let_binding(v);
           } else if constexpr (std::is_same_v<T, Expression>) {
             dump_expression(v);
+          } else if constexpr (std::is_same_v<T, Assignment>) {
+            dump_assignment(v);
           }
         },
         s);
@@ -227,7 +255,10 @@ private:
               if (i > 0) {
                 m_out << ", ";
               }
-              dump_identifier(v->m_parameters[i]);
+              if (v->m_parameters[i].m_is_mutable) {
+                m_out << "Mut ";
+              }
+              dump_identifier(v->m_parameters[i].m_id);
             }
             m_out << ")\n";
             IndentGuard g(*this);

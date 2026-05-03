@@ -23,7 +23,6 @@ struct TopItemMonomorpher {
 
   std::vector<hir::TopItem> monomorph(const hir::TopItem &);
 
-  std::vector<hir::TopItem> operator()(const hir::LetBinding &);
   std::vector<hir::TopItem> operator()(const hir::FunctionDef &);
   std::vector<hir::TopItem> operator()(const hir::ExternFunctionDeclaration &);
 

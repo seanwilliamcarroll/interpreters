@@ -68,6 +68,7 @@ enum class TokenType : uint8_t {
   FN,
   EXTERN,
   LET,
+  MUT,
   RETURN,
   IF,
   ELSE,
@@ -96,11 +97,12 @@ using LexerInterface = core::LexerInterface<TokenType>;
 
 std::string token_type_to_string(TokenType type);
 
-inline constexpr std::array<std::pair<std::string_view, TokenType>, 16>
+inline constexpr std::array<std::pair<std::string_view, TokenType>, 17>
     keywords{{
         {"fn", TokenType::FN},
         {"extern", TokenType::EXTERN},
         {"let", TokenType::LET},
+        {"mut", TokenType::MUT},
         {"return", TokenType::RETURN},
         {"if", TokenType::IF},
         {"else", TokenType::ELSE},

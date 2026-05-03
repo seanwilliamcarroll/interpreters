@@ -25,6 +25,10 @@ struct StatementLowerer {
 
   Statement operator()(const hir::LetBinding &);
 
+  Statement operator()(const hir::Assignment &);
+
+  Place lower(const hir::Place &);
+
   Context &m_ctx;
 };
 

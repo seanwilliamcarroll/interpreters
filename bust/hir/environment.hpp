@@ -28,9 +28,10 @@ struct TypeScheme {
   std::vector<TypeId> m_free_type_variables;
 };
 
-struct BoundTypeScheme {
+struct Binding {
   BindingId m_id;
   TypeScheme m_type_scheme;
+  bool m_is_mutable = false;
 };
 
 struct Scope {
@@ -39,7 +40,7 @@ struct Scope {
   // desired, meaning this is not an error. We're not reassigning, we're
   // shadowing an immutable identifier
 
-  std::optional<BoundTypeScheme> lookup(const std::string &name) {
+  std::optional<Binding> lookup(const std::string &name) {
     auto iter = m_identifier_to_type.find(name);
     if (iter == m_identifier_to_type.end()) {
       return {};
@@ -47,21 +48,32 @@ struct Scope {
     return {iter->second};
   }
 
-  void define(const std::string &name, BindingId id, TypeId type_id) {
+  void define(const std::string &name, BindingId id, TypeId type_id,
+              bool is_mutable) {
     m_identifier_to_type.insert_or_assign(
-        name, BoundTypeScheme{.m_id = id,
-                              .m_type_scheme = {.m_type = type_id,
-                                                .m_free_type_variables = {}}});
+        name, Binding{
+                  .m_id = id,
+                  .m_type_scheme =
+                      {
+                          .m_type = type_id,
+                          .m_free_type_variables = {},
+                      },
+                  .m_is_mutable = is_mutable,
+              });
   }
 
-  void define(const std::string &name, BindingId id, TypeScheme type_scheme) {
+  void define(const std::string &name, BindingId id, TypeScheme type_scheme,
+              bool is_mutable) {
     m_identifier_to_type.insert_or_assign(
-        name,
-        BoundTypeScheme{.m_id = id, .m_type_scheme = std::move(type_scheme)});
+        name, Binding{
+                  .m_id = id,
+                  .m_type_scheme = std::move(type_scheme),
+                  .m_is_mutable = is_mutable,
+              });
   }
 
 private:
-  std::unordered_map<std::string, BoundTypeScheme> m_identifier_to_type;
+  std::unordered_map<std::string, Binding> m_identifier_to_type;
 };
 
 struct Environment {
@@ -80,7 +92,7 @@ struct Environment {
     m_scopes.pop_back();
   }
 
-  std::optional<BoundTypeScheme> lookup(const std::string &name) {
+  std::optional<Binding> lookup(const std::string &name) {
     for (auto &scope : m_scopes | std::views::reverse) {
       auto maybe_type = scope.lookup(name);
       if (maybe_type.has_value()) {
@@ -90,12 +102,14 @@ struct Environment {
     return {};
   }
 
-  void define(const std::string &name, BindingId id, TypeId type_id) {
-    m_scopes.back().define(name, id, type_id);
+  void define(const std::string &name, BindingId id, TypeId type_id,
+              bool is_mutable) {
+    m_scopes.back().define(name, id, type_id, is_mutable);
   }
 
-  void define(const std::string &name, BindingId id, TypeScheme type_scheme) {
-    m_scopes.back().define(name, id, std::move(type_scheme));
+  void define(const std::string &name, BindingId id, TypeScheme type_scheme,
+              bool is_mutable) {
+    m_scopes.back().define(name, id, std::move(type_scheme), is_mutable);
   }
 
 private:

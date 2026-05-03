@@ -22,6 +22,8 @@ struct ExpressionSubstituter {
 
   hir::Expression substitute(const hir::Expression &);
 
+  hir::Parameter substitute(const hir::Parameter &);
+
   hir::Identifier substitute(const hir::Identifier &);
 
   hir::ExprKind operator()(const hir::Identifier &);
@@ -32,6 +34,8 @@ struct ExpressionSubstituter {
   hir::ExprKind operator()(const hir::I64 &);
   hir::ExprKind operator()(const hir::Bool &);
   hir::ExprKind operator()(const hir::Char &);
+  hir::Place substitute(const hir::Place &);
+  hir::Assignment substitute(const hir::Assignment &);
   hir::Block substitute(const hir::Block &);
   hir::ExprKind operator()(const std::unique_ptr<hir::Block> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::IfExpr> &);

@@ -8,7 +8,6 @@
 
 #include <exceptions.hpp>
 #include <hir/nodes.hpp>
-#include <hir/types.hpp>
 #include <nodes.hpp>
 #include <types.hpp>
 #include <zir/arena.hpp>
@@ -18,12 +17,12 @@
 #include <zir/free_variable_collector.hpp>
 #include <zir/nodes.hpp>
 #include <zir/statement_lowerer.hpp>
-#include <zir/types.hpp>
 
 #include <algorithm>
 #include <iterator>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -68,6 +67,10 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
   m_ctx.env().define(identifier.m_name, binding_id);
 
   return {.m_id = binding_id};
+}
+
+IdentifierExpr ExpressionLowerer::lower(const hir::Parameter &parameter) {
+  return lower_definition(parameter.m_id);
 }
 
 ExprKind ExpressionLowerer::operator()(
@@ -196,8 +199,8 @@ ExprKind ExpressionLowerer::operator()(
   std::vector<IdentifierExpr> parameters;
   parameters.reserve(lambda_expr->m_parameters.size());
   for (const auto &parameter : lambda_expr->m_parameters) {
-    auto new_identifier = lower_definition(parameter);
-    m_ctx.env().define(parameter.m_name, new_identifier.m_id);
+    auto new_identifier = lower(parameter);
+    m_ctx.env().define(parameter.m_id.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier);
     known_bindings.emplace_back(new_identifier);
   }

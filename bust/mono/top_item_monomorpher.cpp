@@ -8,14 +8,12 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
-#include <hir/types.hpp>
 #include <mono/context.hpp>
 #include <mono/expression_substituter.hpp>
-#include <mono/let_binding_monomorpher.hpp>
 #include <mono/top_item_monomorpher.hpp>
 #include <source_location.hpp>
+#include <types.hpp>
 
-#include <iterator>
 #include <utility>
 #include <variant>
 
@@ -26,19 +24,6 @@ namespace bust::mono {
 std::vector<hir::TopItem>
 TopItemMonomorpher::monomorph(const hir::TopItem &top_item) {
   return std::visit(*this, top_item);
-}
-
-std::vector<hir::TopItem>
-TopItemMonomorpher::operator()(const hir::LetBinding &let_binding) {
-
-  auto let_bindings = LetBindingMonomorpher{m_ctx}.monomorph(let_binding, {});
-
-  std::vector<hir::TopItem> top_items;
-  top_items.insert(top_items.end(),
-                   std::make_move_iterator(let_bindings.begin()),
-                   std::make_move_iterator(let_bindings.end()));
-
-  return top_items;
 }
 
 std::vector<hir::TopItem>

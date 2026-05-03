@@ -34,6 +34,25 @@ Three structural investments that unblock future features:
 - [ ] Structs (declaration, field access, construction)
 - [ ] Enums / tagged unions
 
+## Mutability / References
+
+- [ ] Reject assignment to a captured binding inside a closure body
+  — Today, `let mut x = 1; let f = || { x = 99; }; f();` type-checks and
+  runs, but bust captures by value, so the closure mutates only its local
+  copy of `x` — the outer binding is untouched. Rust catches the analogous
+  program (closures that mutate captures are `FnMut` and require `let mut f`
+  to call). Conservative fix at HIR type-check: track current lambda depth
+  on the context, stamp each binding with the depth it was declared at,
+  and reject Assignment whose place's binding has a lower depth than
+  current. Stops users from writing programs that look like they should
+  mutate the outer but silently don't.
+- [ ] References (`&T`, `&mut T`) and Rust-style closure capture
+  — Borrow checker, lifetimes, capture-by-`&mut` by default for mutating
+  closures, `move` keyword to opt out. Removes the need for the rule
+  above — closure mutation just works and propagates to the outer
+  binding. Substantial feature on its own; the rule above is the bridge
+  in the meantime.
+
 ## Codegen (LLVM IR)
 
 - [ ] Direct calls for statically-known callees (skip fat pointer entirely)

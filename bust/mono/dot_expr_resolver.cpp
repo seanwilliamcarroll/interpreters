@@ -8,12 +8,20 @@
 
 #include <exceptions.hpp>
 #include <hir/nodes.hpp>
+#include <hir/type_arena.hpp>
+#include <hir/types.hpp>
+#include <mono/context.hpp>
 #include <mono/dot_expr_resolver.hpp>
+#include <nodes.hpp>
+#include <types.hpp>
 
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <type_traits>
-#include <utility>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::mono {

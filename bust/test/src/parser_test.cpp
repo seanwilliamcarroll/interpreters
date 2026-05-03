@@ -142,13 +142,13 @@ TEST_SUITE("bust.parser") {
     const auto &func = get_single_func(program);
     CHECK(func.m_signature.m_id.m_name == "add");
     REQUIRE(func.m_signature.m_parameters.size() == 2);
-    CHECK(func.m_signature.m_parameters[0].m_name == "a");
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
-    check_primitive_type(*func.m_signature.m_parameters[0].m_type,
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "a");
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
+    check_primitive_type(*func.m_signature.m_parameters[0].m_id.m_type,
                          PrimitiveType::I64);
-    CHECK(func.m_signature.m_parameters[1].m_name == "b");
-    REQUIRE(func.m_signature.m_parameters[1].m_type.has_value());
-    check_primitive_type(*func.m_signature.m_parameters[1].m_type,
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "b");
+    REQUIRE(func.m_signature.m_parameters[1].m_id.m_type.has_value());
+    check_primitive_type(*func.m_signature.m_parameters[1].m_id.m_type,
                          PrimitiveType::I64);
   }
 
@@ -157,30 +157,41 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
-    CHECK(func.m_signature.m_parameters[0].m_name == "x");
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
+  }
+
+  TEST_CASE("bust::parse_function_with_mut_param") {
+    auto program = parse_string("fn f(mut x: i64) -> i64 { x }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_signature.m_parameters.size() == 1);
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
+    CHECK(func.m_signature.m_parameters[0].m_is_mutable == true);
+  }
+
+  TEST_CASE("bust::parse_function_with_mixed_mut_params") {
+    auto program = parse_string("fn f(x: i64, mut y: i64) -> i64 { x }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_signature.m_parameters.size() == 2);
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
+    CHECK(func.m_signature.m_parameters[0].m_is_mutable == false);
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "y");
+    CHECK(func.m_signature.m_parameters[1].m_is_mutable == true);
   }
 
   // === Let bindings ========================================================
 
-  TEST_CASE("bust::parse_top_level_let") {
-    auto program = parse_string("let x: i64 = 42;\n"
-                                "fn main() -> i64 { x }");
-    DUMP_AST(program);
-    REQUIRE(program.m_items.size() == 2);
-    REQUIRE(std::holds_alternative<LetBinding>(program.m_items[0]));
-    const auto &binding = std::get<LetBinding>(program.m_items[0]);
-    CHECK(binding.m_variable.m_name == "x");
-    REQUIRE(binding.m_variable.m_type.has_value());
-    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
-    REQUIRE(std::holds_alternative<I64>(binding.m_expression.m_expression));
-  }
-
   TEST_CASE("bust::parse_let_without_type") {
-    auto program = parse_string("let x = 42;\n"
-                                "fn main() -> i64 { x }");
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x = 42;\n"
+                                "  x\n"
+                                "}");
     DUMP_AST(program);
-    REQUIRE(program.m_items.size() == 2);
-    const auto &binding = std::get<LetBinding>(program.m_items[0]);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
     CHECK(binding.m_variable.m_name == "x");
     CHECK_FALSE(binding.m_variable.m_type.has_value());
   }
@@ -200,6 +211,109 @@ TEST_SUITE("bust.parser") {
     const auto &expr = get_final_expr(func.m_body);
     REQUIRE(std::holds_alternative<Identifier>(expr.m_expression));
     CHECK(std::get<Identifier>(expr.m_expression).m_name == "x");
+  }
+
+  TEST_CASE("bust::parse_let_immutable_sets_is_mutable_false") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let x = 42;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    CHECK(binding.m_is_mutable == false);
+  }
+
+  // === Mutable let bindings ================================================
+
+  TEST_CASE("bust::parse_let_mut_without_type") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x = 42;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    CHECK(binding.m_variable.m_name == "x");
+    CHECK(binding.m_is_mutable == true);
+    CHECK_FALSE(binding.m_variable.m_type.has_value());
+  }
+
+  TEST_CASE("bust::parse_let_mut_with_type") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x: i64 = 10;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<LetBinding>(func.m_body.m_statements[0]));
+    const auto &binding = std::get<LetBinding>(func.m_body.m_statements[0]);
+    CHECK(binding.m_variable.m_name == "x");
+    CHECK(binding.m_is_mutable == true);
+    REQUIRE(binding.m_variable.m_type.has_value());
+    check_primitive_type(*binding.m_variable.m_type, PrimitiveType::I64);
+  }
+
+  // === Assignment statements ===============================================
+
+  TEST_CASE("bust::parse_assignment_simple") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x = 1;\n"
+                                "  x = 2;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 2);
+    REQUIRE(std::holds_alternative<Assignment>(func.m_body.m_statements[1]));
+    const auto &assign = std::get<Assignment>(func.m_body.m_statements[1]);
+    REQUIRE(std::holds_alternative<Identifier>(assign.m_lhs.m_expression));
+    CHECK(std::get<Identifier>(assign.m_lhs.m_expression).m_name == "x");
+    REQUIRE(std::holds_alternative<I64>(assign.m_rhs.m_expression));
+    CHECK(std::get<I64>(assign.m_rhs.m_expression).m_value == 2);
+  }
+
+  TEST_CASE("bust::parse_assignment_with_expression_rhs") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  let mut x = 1;\n"
+                                "  x = x + 1;\n"
+                                "  x\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 2);
+    REQUIRE(std::holds_alternative<Assignment>(func.m_body.m_statements[1]));
+    const auto &assign = std::get<Assignment>(func.m_body.m_statements[1]);
+    REQUIRE(std::holds_alternative<Identifier>(assign.m_lhs.m_expression));
+    CHECK(std::get<Identifier>(assign.m_lhs.m_expression).m_name == "x");
+    REQUIRE(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
+        assign.m_rhs.m_expression));
+    const auto &bin =
+        *std::get<std::unique_ptr<BinaryExpr>>(assign.m_rhs.m_expression);
+    CHECK(bin.m_operator == BinaryOperator::PLUS);
+  }
+
+  // Approach A: the parser is permissive about LHS shape — it parses the
+  // LHS as a full Expression and a later phase rejects non-place forms.
+  // This test documents that contract: a literal LHS produces a valid
+  // Assignment node at parse time, even though it will be rejected later.
+  TEST_CASE("bust::parse_assignment_with_literal_lhs_is_permitted") {
+    auto program = parse_string("fn main() -> i64 {\n"
+                                "  5 = 6;\n"
+                                "  0\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Assignment>(func.m_body.m_statements[0]));
+    const auto &assign = std::get<Assignment>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<I64>(assign.m_lhs.m_expression));
+    CHECK(std::get<I64>(assign.m_lhs.m_expression).m_value == 5);
   }
 
   // === Arithmetic ==========================================================
@@ -733,8 +847,8 @@ TEST_SUITE("bust.parser") {
     const auto &lambda =
         *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     REQUIRE(lambda.m_parameters.size() == 2);
-    CHECK(lambda.m_parameters[0].m_name == "x");
-    CHECK(lambda.m_parameters[1].m_name == "y");
+    CHECK(lambda.m_parameters[0].m_id.m_name == "x");
+    CHECK(lambda.m_parameters[1].m_id.m_name == "y");
     REQUIRE(lambda.m_return_type.has_value());
     check_primitive_type(*lambda.m_return_type, PrimitiveType::I64);
   }
@@ -749,8 +863,38 @@ TEST_SUITE("bust.parser") {
     const auto &lambda =
         *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
     REQUIRE(lambda.m_parameters.size() == 2);
-    CHECK_FALSE(lambda.m_parameters[0].m_type.has_value());
-    CHECK_FALSE(lambda.m_parameters[1].m_type.has_value());
+    CHECK_FALSE(lambda.m_parameters[0].m_id.m_type.has_value());
+    CHECK_FALSE(lambda.m_parameters[1].m_id.m_type.has_value());
+  }
+
+  TEST_CASE("bust::parse_lambda_with_mut_param") {
+    auto program =
+        parse_string("fn main() -> i64 { |mut x: i64| -> i64 { x } }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
+    REQUIRE(lambda.m_parameters.size() == 1);
+    CHECK(lambda.m_parameters[0].m_id.m_name == "x");
+    CHECK(lambda.m_parameters[0].m_is_mutable == true);
+  }
+
+  TEST_CASE("bust::parse_lambda_with_mut_param_inferred") {
+    auto program = parse_string("fn main() -> i64 { |mut x| { x } }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
+    REQUIRE(lambda.m_parameters.size() == 1);
+    CHECK(lambda.m_parameters[0].m_id.m_name == "x");
+    CHECK(lambda.m_parameters[0].m_is_mutable == true);
+    CHECK_FALSE(lambda.m_parameters[0].m_id.m_type.has_value());
   }
 
   // === Multiple top-level items ============================================
@@ -782,7 +926,7 @@ TEST_SUITE("bust.parser") {
     const auto &fib = std::get<FunctionDef>(program.m_items[0]);
     CHECK(fib.m_signature.m_id.m_name == "fib");
     REQUIRE(fib.m_signature.m_parameters.size() == 1);
-    CHECK(fib.m_signature.m_parameters[0].m_name == "n");
+    CHECK(fib.m_signature.m_parameters[0].m_id.m_name == "n");
 
     // Body is an if expression
     const auto &body_expr = get_final_expr(fib.m_body);
@@ -817,18 +961,18 @@ TEST_SUITE("bust.parser") {
     REQUIRE(func.m_signature.m_parameters.size() == 2);
 
     // First param should have a function type annotation
-    CHECK(func.m_signature.m_parameters[0].m_name == "f");
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "f");
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
     REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value()));
+        func.m_signature.m_parameters[0].m_id.m_type.value()));
     const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value());
+        func.m_signature.m_parameters[0].m_id.m_type.value());
     REQUIRE(fn_type.m_parameter_types.size() == 1);
     check_primitive_type(fn_type.m_parameter_types[0], PrimitiveType::I64);
     check_primitive_type(fn_type.m_return_type, PrimitiveType::I64);
 
     // Second param is normal
-    CHECK(func.m_signature.m_parameters[1].m_name == "x");
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "x");
   }
 
   TEST_CASE("bust::parse_function_type_no_params") {
@@ -839,11 +983,11 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
     REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value()));
+        func.m_signature.m_parameters[0].m_id.m_type.value()));
     const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value());
+        func.m_signature.m_parameters[0].m_id.m_type.value());
     CHECK(fn_type.m_parameter_types.empty());
     check_primitive_type(fn_type.m_return_type, PrimitiveType::BOOL);
   }
@@ -855,11 +999,11 @@ TEST_SUITE("bust.parser") {
                                 "}");
     DUMP_AST(program);
     const auto &func = get_single_func(program);
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
     REQUIRE(std::holds_alternative<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value()));
+        func.m_signature.m_parameters[0].m_id.m_type.value()));
     const auto &fn_type = *std::get<std::unique_ptr<FunctionTypeIdentifier>>(
-        func.m_signature.m_parameters[0].m_type.value());
+        func.m_signature.m_parameters[0].m_id.m_type.value());
     REQUIRE(fn_type.m_parameter_types.size() == 2);
     check_primitive_type(fn_type.m_parameter_types[0], PrimitiveType::I64);
     check_primitive_type(fn_type.m_parameter_types[1], PrimitiveType::BOOL);
@@ -893,6 +1037,32 @@ TEST_SUITE("bust.parser") {
 
   TEST_CASE("bust::parse_unexpected_token") {
     CHECK_THROWS_AS(parse_string("fn main() -> i64 { ; }"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_assignment_missing_semicolon") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let mut x = 1;\n"
+                                 "  x = 2\n"
+                                 "  x\n"
+                                 "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_assignment_missing_rhs") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let mut x = 1;\n"
+                                 "  x = ;\n"
+                                 "  x\n"
+                                 "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("bust::parse_let_mut_without_identifier") {
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let mut = 1;\n"
+                                 "  0\n"
+                                 "}"),
                     core::CompilerException);
   }
 
@@ -1005,19 +1175,6 @@ TEST_SUITE("bust.parser") {
     REQUIRE(outer_block.m_final_expression.has_value());
     CHECK(std::holds_alternative<std::unique_ptr<Block>>(
         outer_block.m_final_expression->m_expression));
-  }
-
-  // === Multiple top-level let bindings =======================================
-
-  TEST_CASE("bust::parse_multiple_top_level_lets_and_functions") {
-    auto program = parse_string("let x: i64 = 1;\n"
-                                "let y: i64 = 2;\n"
-                                "fn main() -> i64 { x + y }");
-    DUMP_AST(program);
-    REQUIRE(program.m_items.size() == 3);
-    CHECK(std::holds_alternative<LetBinding>(program.m_items[0]));
-    CHECK(std::holds_alternative<LetBinding>(program.m_items[1]));
-    CHECK(std::holds_alternative<FunctionDef>(program.m_items[2]));
   }
 
   // === Unary on expression (not just literal) ================================
@@ -1172,8 +1329,8 @@ TEST_SUITE("bust.parser") {
     DUMP_AST(program);
     const auto &func = get_single_func(program);
     REQUIRE(func.m_signature.m_parameters.size() == 1);
-    REQUIRE(func.m_signature.m_parameters[0].m_type.has_value());
-    check_primitive_type(*func.m_signature.m_parameters[0].m_type,
+    REQUIRE(func.m_signature.m_parameters[0].m_id.m_type.has_value());
+    check_primitive_type(*func.m_signature.m_parameters[0].m_id.m_type,
                          PrimitiveType::I8);
     check_primitive_type(func.m_signature.m_return_type, PrimitiveType::I8);
   }
@@ -1314,9 +1471,9 @@ TEST_SUITE("bust.parser") {
     const auto &ext = get_single_extern(program);
     CHECK(ext.m_signature.m_id.m_name == "putchar");
     REQUIRE(ext.m_signature.m_parameters.size() == 1);
-    CHECK(ext.m_signature.m_parameters[0].m_name == "c");
-    REQUIRE(ext.m_signature.m_parameters[0].m_type.has_value());
-    check_primitive_type(*ext.m_signature.m_parameters[0].m_type,
+    CHECK(ext.m_signature.m_parameters[0].m_id.m_name == "c");
+    REQUIRE(ext.m_signature.m_parameters[0].m_id.m_type.has_value());
+    check_primitive_type(*ext.m_signature.m_parameters[0].m_id.m_type,
                          PrimitiveType::I32);
     check_primitive_type(ext.m_signature.m_return_type, PrimitiveType::I32);
   }

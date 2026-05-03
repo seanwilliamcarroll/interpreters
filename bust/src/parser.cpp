@@ -21,6 +21,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -58,12 +59,9 @@ ast::TopItem Parser::parse_top_item() {
   if (peek().get_token_type() == TokenType::EXTERN) {
     return parse_extern_func_declaration();
   }
-  if (peek().get_token_type() == TokenType::LET) {
-    return parse_let_binding();
-  }
 
   on_error(peek().get_location(),
-           "parse_top_item error: Expected LET or FN, found TokenType: ",
+           "parse_top_item error: Expected FN or EXTERN, found TokenType: ",
            peek().get_token_type());
 }
 
@@ -227,7 +225,7 @@ ast::FunctionDeclaration Parser::parse_function_declaration() {
 
   auto function_id = parse_non_annotated_identifier();
 
-  std::vector<ast::Identifier> parameters{};
+  std::vector<ast::Parameter> parameters{};
   if (peek().get_token_type() == TokenType::UNIT) {
     advance();
   } else {
@@ -272,6 +270,12 @@ ast::LetBinding Parser::parse_let_binding() {
   auto original_location = peek().get_location();
   expect(TokenType::LET, __FUNCTION__);
 
+  bool is_mutable = false;
+  if (peek().get_token_type() == TokenType::MUT) {
+    expect(TokenType::MUT, __FUNCTION__);
+    is_mutable = true;
+  }
+
   auto identifier = parse_possibly_annotated_identifier();
 
   expect(TokenType::EQUALS, __FUNCTION__);
@@ -280,13 +284,26 @@ ast::LetBinding Parser::parse_let_binding() {
 
   expect(TokenType::SEMICOLON, __FUNCTION__);
 
-  return {{original_location}, std::move(identifier), std::move(body)};
+  return {
+      {original_location},
+      std::move(identifier),
+      std::move(body),
+      is_mutable,
+  };
 }
 
-std::vector<ast::Identifier> Parser::parse_param_list() {
-  std::vector<ast::Identifier> parameters;
+std::vector<ast::Parameter> Parser::parse_param_list() {
+  std::vector<ast::Parameter> parameters;
   while (peek().get_token_type() != TokenType::RPAREN) {
-    parameters.push_back(parse_annotated_identifier());
+    bool is_mutable = false;
+    if (peek().get_token_type() == TokenType::MUT) {
+      expect(TokenType::MUT, __FUNCTION__);
+      is_mutable = true;
+    }
+    parameters.push_back({
+        .m_id = parse_annotated_identifier(),
+        .m_is_mutable = is_mutable,
+    });
     if (peek().get_token_type() != TokenType::RPAREN) {
       expect(TokenType::COMMA, __FUNCTION__);
     }
@@ -294,13 +311,21 @@ std::vector<ast::Identifier> Parser::parse_param_list() {
   return parameters;
 }
 
-std::vector<ast::Identifier> Parser::parse_lambda_param_list() {
-  std::vector<ast::Identifier> parameters;
+std::vector<ast::Parameter> Parser::parse_lambda_param_list() {
+  std::vector<ast::Parameter> parameters;
   while (peek().get_token_type() != TokenType::PIPE) {
     // Could force all or nothing, either they all have an annotation or none of
     // them
     // Flexible for now
-    parameters.push_back(parse_possibly_annotated_identifier());
+    bool is_mutable = false;
+    if (peek().get_token_type() == TokenType::MUT) {
+      expect(TokenType::MUT, __FUNCTION__);
+      is_mutable = true;
+    }
+    parameters.push_back({
+        .m_id = parse_possibly_annotated_identifier(),
+        .m_is_mutable = is_mutable,
+    });
     if (peek().get_token_type() != TokenType::PIPE) {
       expect(TokenType::COMMA, __FUNCTION__);
     }
@@ -336,6 +361,20 @@ ast::Block Parser::parse_block() {
     if (peek().get_token_type() == TokenType::SEMICOLON) {
       expect(TokenType::SEMICOLON, __FUNCTION__);
       statements.emplace_back(std::move(next_expression));
+      continue;
+    }
+    if (peek().get_token_type() == TokenType::EQUALS) {
+      expect(TokenType::EQUALS, __FUNCTION__);
+      // Need to parse the next expression and create an Assignment
+      // First confirm that next_expression is a Place
+      auto lhs = std::move(next_expression);
+      auto rhs = parse_expression();
+      expect(TokenType::SEMICOLON, __FUNCTION__);
+      statements.emplace_back(ast::Assignment{
+          {original_location},
+          std::move(lhs),
+          std::move(rhs),
+      });
       continue;
     }
     if (is_expression_no_semicolon(next_expression) &&
@@ -636,7 +675,7 @@ ast::Expression Parser::parse_return_expr() {
 
 ast::Expression Parser::parse_lambda_expr() {
   auto original_location = peek().get_location();
-  std::vector<ast::Identifier> arguments;
+  std::vector<ast::Parameter> arguments;
   if (peek().get_token_type() == TokenType::PIPE) {
     // May have arguments
     expect(TokenType::PIPE, __FUNCTION__);

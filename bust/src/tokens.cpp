@@ -89,6 +89,8 @@ std::string token_type_to_string(TokenType type) {
     return "extern \"extern\"";
   case TokenType::LET:
     return "LET \"let\"";
+  case TokenType::MUT:
+    return "MUT \"mut\"";
   case TokenType::RETURN:
     return "RETURN \"return\"";
   case TokenType::IF:

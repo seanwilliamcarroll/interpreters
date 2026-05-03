@@ -6,15 +6,10 @@
 //*
 //****************************************************************************
 
-#include <exceptions.hpp>
-#include <hir/type_arena.hpp>
-#include <hir/types.hpp>
-#include <types.hpp>
 #include <zir/arena.hpp>
 #include <zir/types.hpp>
 
 #include <cstddef>
-#include <string_view>
 #include <type_traits>
 
 //****************************************************************************

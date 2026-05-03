@@ -9,13 +9,14 @@
 //****************************************************************************
 
 #include <arena.hpp>
-#include <exceptions.hpp>
 #include <types.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 //****************************************************************************
 namespace bust::zir {

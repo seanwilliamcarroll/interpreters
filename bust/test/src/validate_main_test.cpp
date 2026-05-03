@@ -97,7 +97,7 @@ TEST_SUITE("bust.semantic_analysis") {
   TEST_CASE("bust::validate_main_accepts_main_among_many") {
     const std::string program = "fn helper1() -> i64 { 1 }\n"
                                 "fn helper2(x: i64) -> bool { true }\n"
-                                "let y: i64 = 99;\n"
+                                "fn helper3() -> i64 { 99 }\n"
                                 "fn main() -> i64 { 0 }";
     CHECK_NOTHROW(parse_string(program));
   }

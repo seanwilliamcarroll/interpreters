@@ -21,7 +21,6 @@ struct TopItemDeclarationCollector {
 
   void operator()(const zir::FunctionDef &);
   void operator()(const zir::ExternFunctionDeclaration &);
-  void operator()(const zir::LetBinding &);
 
   Context &m_ctx;
 };
@@ -35,7 +34,6 @@ struct TopItemGenerator {
 
   void operator()(const zir::FunctionDef &);
   void operator()(const zir::ExternFunctionDeclaration &);
-  void operator()(const zir::LetBinding &);
 
   Context &m_ctx;
 };

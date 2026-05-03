@@ -6,14 +6,19 @@
 //*
 //****************************************************************************
 
+#include <ast/nodes.hpp>
 #include <frontend.hpp>
 #include <lexer.hpp>
 #include <parser.hpp>
 #include <prelude_source.hpp>
 
 #include <iterator>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 //****************************************************************************
 namespace bust {

@@ -7,15 +7,11 @@
 //****************************************************************************
 
 #include <hir/nodes.hpp>
-#include <hir/types.hpp>
-#include <zir/arena.hpp>
 #include <zir/context.hpp>
 #include <zir/environment.hpp>
 #include <zir/expression_lowerer.hpp>
-#include <zir/let_binding_lowerer.hpp>
 #include <zir/nodes.hpp>
 #include <zir/top_item_lowerer.hpp>
-#include <zir/types.hpp>
 
 #include <utility>
 #include <variant>
@@ -40,8 +36,8 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
   std::vector<BindingId> parameters;
   parameters.reserve(function_def.m_signature.m_parameters.size());
   for (const auto &parameter : function_def.m_signature.m_parameters) {
-    auto new_identifier = ExpressionLowerer{m_ctx}.lower_definition(parameter);
-    m_ctx.env().define(parameter.m_name, new_identifier.m_id);
+    auto new_identifier = ExpressionLowerer{m_ctx}.lower(parameter);
+    m_ctx.env().define(parameter.m_id.m_name, new_identifier.m_id);
     parameters.emplace_back(new_identifier.m_id);
   }
 
@@ -60,15 +56,6 @@ TopItem TopItemLowerer::TopItemLowerer::operator()(
   // All we need is the binding id, since we don't even need the parameter
   // names, just their types for a call site later on
   return ExternFunctionDeclaration{.m_id = binding_id};
-}
-
-TopItem TopItemLowerer::operator()(const hir::LetBinding &let_binding) {
-  // Potentially shadowing, so do a definition lowering
-  auto binding_id = m_ctx.get_global_binding(let_binding.m_variable.m_name);
-
-  auto expr_id = ExpressionLowerer{m_ctx}.lower(let_binding.m_expression);
-
-  return LetBinding{.m_identifier = binding_id, .m_expression = expr_id};
 }
 
 //****************************************************************************

@@ -33,7 +33,6 @@ add_library(bust-lib STATIC
   src/tokens.cpp
   hir/block_checker.cpp
   hir/expression_checker.cpp
-  hir/let_binding_checker.cpp
   src/lexer.cpp
   src/parser.cpp
   hir/statement_checker.cpp
@@ -47,7 +46,6 @@ add_library(bust-lib STATIC
   codegen/formatter.cpp
   codegen/function_handle.cpp
   codegen/ir_builder.cpp
-  codegen/let_binding_generator.cpp
   codegen/statement_generator.cpp
   codegen/top_item_generator.cpp
   src/type_checker.cpp
@@ -60,7 +58,6 @@ add_library(bust-lib STATIC
   src/zir_lowerer.cpp
   zir/arena.cpp
   zir/expression_lowerer.cpp
-  zir/let_binding_lowerer.cpp
   zir/statement_lowerer.cpp
   zir/top_item_lowerer.cpp)
 

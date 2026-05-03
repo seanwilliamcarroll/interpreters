@@ -28,7 +28,6 @@ namespace bust::hir {
 struct Expression;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
-struct LetBinding;
 struct Block;
 struct TupleExpr;
 struct DotExpr;
@@ -42,6 +41,11 @@ struct Identifier : public core::HasLocation {
   std::string m_name;
   BindingId m_id;
   TypeId m_type;
+};
+
+struct Parameter : public core::HasLocation {
+  Identifier m_id;
+  bool m_is_mutable;
 };
 
 // --- Literals --------------------------------------------------------------
@@ -91,7 +95,7 @@ using UnaryExpr = UnaryExprBase<Expression>;
 using ReturnExpr = ReturnExprBase<Expression>;
 using CastExpr = CastExprBase<Expression, TypeId>;
 using IfExpr = IfExprBase<Expression, Block>;
-using LambdaExpr = LambdaExprBase<Identifier, Block, TypeId>;
+using LambdaExpr = LambdaExprBase<Parameter, Block, TypeId>;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -115,10 +119,22 @@ struct TupleExpr {
   std::vector<Expression> m_fields;
 };
 
-using Statement = std::variant<Expression, LetBinding>;
+struct LetBinding : public core::HasLocation {
+  Identifier m_variable;
+  Expression m_expression;
+  bool m_is_mutable = false;
+};
 
-using TopItem =
-    std::variant<FunctionDef, ExternFunctionDeclaration, LetBinding>;
+using Place = std::variant<Identifier>;
+
+struct Assignment : public core::HasLocation {
+  Place m_place;
+  Expression m_expression;
+};
+
+using Statement = std::variant<Expression, LetBinding, Assignment>;
+
+using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Control flow ----------------------------------------------------------
 
@@ -130,16 +146,11 @@ struct Block : public core::HasLocation {
 
 // --- Bindings & definitions ------------------------------------------------
 
-struct LetBinding : public core::HasLocation {
-  Identifier m_variable;
-  Expression m_expression;
-};
-
 struct FunctionDeclaration {
   std::string m_function_id;
   BindingId m_id;
   TypeId m_type;
-  std::vector<Identifier> m_parameters;
+  std::vector<Parameter> m_parameters;
 };
 
 struct ExternFunctionDeclaration : public core::HasLocation {

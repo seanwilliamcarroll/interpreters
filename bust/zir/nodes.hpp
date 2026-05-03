@@ -25,7 +25,6 @@ namespace bust::zir {
 struct Binding;
 
 struct Expression;
-struct LetBinding;
 
 using InnerExprIdType = size_t;
 
@@ -67,6 +66,14 @@ struct IdentifierExpr {
   auto operator<=>(const IdentifierExpr &) const = default;
 };
 
+using Place = std::variant<IdentifierExpr>;
+
+struct Assignment {
+  Place m_place;
+  ExprId m_expression;
+  auto operator<=>(const Assignment &) const = default;
+};
+
 struct TupleExpr {
   std::vector<ExprId> m_fields;
   auto operator<=>(const TupleExpr &) const = default;
@@ -77,13 +84,13 @@ struct ExpressionStatement {
   auto operator<=>(const ExpressionStatement &) const = default;
 };
 
-using Statement = std::variant<ExpressionStatement, LetBinding>;
-
 struct LetBinding {
   BindingId m_identifier;
   ExprId m_expression;
   auto operator<=>(const LetBinding &) const = default;
 };
+
+using Statement = std::variant<ExpressionStatement, LetBinding, Assignment>;
 
 struct Block {
   std::vector<Statement> m_statements;
@@ -133,8 +140,7 @@ struct ExternFunctionDeclaration {
   BindingId m_id;
 };
 
-using TopItem =
-    std::variant<LetBinding, FunctionDef, ExternFunctionDeclaration>;
+using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 //****************************************************************************
 } // namespace bust::zir
@@ -168,6 +174,16 @@ template <> struct hash<bust::zir::Binding> {
 template <> struct hash<bust::zir::IdentifierExpr> {
   size_t operator()(const bust::zir::IdentifierExpr &id) const noexcept {
     return hash<bust::zir::BindingId>{}(id.m_id);
+  }
+};
+
+template <> struct hash<bust::zir::Assignment> {
+  size_t operator()(const bust::zir::Assignment &assignment) const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, hash<bust::zir::Place>{}(assignment.m_place));
+    core::hash_combine(seed,
+                       hash<bust::zir::ExprId>{}(assignment.m_expression));
+    return seed;
   }
 };
 

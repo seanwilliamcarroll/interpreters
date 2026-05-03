@@ -6,8 +6,10 @@
 //*
 //****************************************************************************
 
+#include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
 #include <codegen/block_label.hpp>
+#include <codegen/context.hpp>
 #include <codegen/formatter.hpp>
 #include <codegen/function.hpp>
 #include <codegen/function_declaration.hpp>
@@ -20,10 +22,10 @@
 #include <codegen/value.hpp>
 #include <operators.hpp>
 
-#include <cassert>
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <string_view>
 #include <variant>
 #include <vector>
 

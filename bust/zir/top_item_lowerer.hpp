@@ -10,9 +10,14 @@
 
 #include <hir/nodes.hpp>
 #include <hir/types.hpp>
+#include <zir/arena.hpp>
 #include <zir/context.hpp>
+#include <zir/environment.hpp>
 #include <zir/nodes.hpp>
 
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 //****************************************************************************
@@ -34,12 +39,8 @@ struct TopItemCollector {
     std::visit(
         [&](const auto &item) {
           using T = std::decay_t<decltype(item)>;
-          if constexpr (std::is_same_v<T, hir::LetBinding>) {
-            create_binding_and_define(item.m_variable.m_name,
-                                      item.m_expression.m_type);
-          } else if constexpr (std::is_same_v<T, hir::FunctionDef> ||
-                               std::is_same_v<T,
-                                              hir::ExternFunctionDeclaration>) {
+          if constexpr (std::is_same_v<T, hir::FunctionDef> ||
+                        std::is_same_v<T, hir::ExternFunctionDeclaration>) {
             create_binding_and_define(item.m_signature.m_function_id,
                                       item.m_signature.m_type);
           }
@@ -56,7 +57,6 @@ struct TopItemLowerer {
 
   TopItem operator()(const hir::FunctionDef &);
   TopItem operator()(const hir::ExternFunctionDeclaration &) const;
-  TopItem operator()(const hir::LetBinding &);
 
   Context &m_ctx;
 };

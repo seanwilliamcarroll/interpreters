@@ -1,8 +1,8 @@
 //**** Copyright © 2023-2026 Sean Carroll. All rights reserved.
 //*
 //*
-//*  Purpose : Top-level item checker — handles FunctionDef and top-level
-//*            LetBinding.
+//*  Purpose : Top-level item checker — handles FunctionDef and
+//*            ExternFunctionDeclaration
 //*
 //*
 //****************************************************************************
@@ -22,7 +22,6 @@ struct TopItemChecker {
   hir::FunctionDeclaration check_declaration(const ast::FunctionDeclaration &);
   TopItem operator()(const ast::FunctionDef &);
   TopItem operator()(const ast::ExternFunctionDeclaration &);
-  TopItem operator()(const ast::LetBinding &);
 
   Context &m_ctx;
 };
