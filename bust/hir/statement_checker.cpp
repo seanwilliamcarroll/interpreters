@@ -121,7 +121,6 @@ bool StatementChecker::is_place_mutable(const Place &place) {
 }
 
 Statement StatementChecker::operator()(const ast::Assignment &assignment) {
-
   // Need to check if we can lower the lhs Expression to a Place
   auto lhs = ExpressionChecker{m_ctx}.check_expression(assignment.m_lhs);
   auto maybe_place = try_lower_place(lhs);
