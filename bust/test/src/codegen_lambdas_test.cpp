@@ -159,6 +159,36 @@ TEST_SUITE("bust.codegen.lambdas") {
               42);
   }
 
+  // --- Closure capture and assignment (Rust `move`-style) -----------------
+  //
+  // bust captures by value: each capture is copied into the closure's env
+  // and bound to a fresh alloca slot inside the closure body. Mutating a
+  // captured `mut` variable inside the closure therefore writes to the
+  // closure's local slot — the outer binding is unaffected. This matches
+  // Rust's `move ||` semantics for Copy types.
+
+  TEST_CASE(
+      "mutating mut capture inside closure does not change outer binding") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut x = 1;\n"
+              "  let f = || { x = 99; };\n"
+              "  f();\n"
+              "  x\n"
+              "}",
+              1);
+  }
+
+  TEST_CASE("closure sees its own writes to a captured mut variable") {
+    // Inside the closure, the captured x has its own alloca. Writes and
+    // subsequent reads within one call must observe the new value.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut x = 1;\n"
+              "  let f = || -> i64 { x = 42; x };\n"
+              "  f()\n"
+              "}",
+              42);
+  }
+
   // --- Top-level functions as first-class values ---------------------------
   //
   // A named `fn` used as a value should behave the same as a non-capturing

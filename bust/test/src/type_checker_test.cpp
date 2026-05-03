@@ -331,6 +331,57 @@ TEST_SUITE("bust.type_checker") {
                     core::CompilerException);
   }
 
+  // --- Mutable parameters --------------------------------------------------
+
+  TEST_CASE("assignment to mut function parameter is allowed") {
+    CHECK_NOTHROW(type_check("fn foo(mut x: i64) -> i64 {\n"
+                             "  x = 2;\n"
+                             "  x\n"
+                             "}\n"
+                             "fn main() -> i64 { foo(1) }"));
+  }
+
+  TEST_CASE("assignment to mut lambda parameter is allowed") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let f = |mut x: i64| -> i64 { x = 2; x };\n"
+                             "  f(1)\n"
+                             "}"));
+  }
+
+  TEST_CASE("assignment to non-mut lambda parameter throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = |x: i64| -> i64 { x = 2; x };\n"
+                               "  f(1)\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  // --- Closure capture and assignment --------------------------------------
+  //
+  // Mirrors Rust's rule that mutating a captured variable inside a closure
+  // requires the captured binding to be `mut`. (bust captures by value, so
+  // the runtime semantics match Rust's `move` closures over Copy types —
+  // those are exercised in the codegen tests.)
+
+  TEST_CASE("closure assigning to immutable captured variable throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x = 1;\n"
+                               "  let f = || { x = 2; };\n"
+                               "  f();\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("closure assigning to mut captured variable type-checks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let mut x = 1;\n"
+                             "  let f = || { x = 2; };\n"
+                             "  f();\n"
+                             "  0\n"
+                             "}"));
+  }
+
   // --- Function definitions ------------------------------------------------
 
   TEST_CASE("function def produces correct function type") {

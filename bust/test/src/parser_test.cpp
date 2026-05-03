@@ -160,6 +160,26 @@ TEST_SUITE("bust.parser") {
     CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
   }
 
+  TEST_CASE("bust::parse_function_with_mut_param") {
+    auto program = parse_string("fn f(mut x: i64) -> i64 { x }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_signature.m_parameters.size() == 1);
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
+    CHECK(func.m_signature.m_parameters[0].m_is_mutable == true);
+  }
+
+  TEST_CASE("bust::parse_function_with_mixed_mut_params") {
+    auto program = parse_string("fn f(x: i64, mut y: i64) -> i64 { x }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_signature.m_parameters.size() == 2);
+    CHECK(func.m_signature.m_parameters[0].m_id.m_name == "x");
+    CHECK(func.m_signature.m_parameters[0].m_is_mutable == false);
+    CHECK(func.m_signature.m_parameters[1].m_id.m_name == "y");
+    CHECK(func.m_signature.m_parameters[1].m_is_mutable == true);
+  }
+
   // === Let bindings ========================================================
 
   TEST_CASE("bust::parse_let_without_type") {
@@ -845,6 +865,36 @@ TEST_SUITE("bust.parser") {
     REQUIRE(lambda.m_parameters.size() == 2);
     CHECK_FALSE(lambda.m_parameters[0].m_id.m_type.has_value());
     CHECK_FALSE(lambda.m_parameters[1].m_id.m_type.has_value());
+  }
+
+  TEST_CASE("bust::parse_lambda_with_mut_param") {
+    auto program =
+        parse_string("fn main() -> i64 { |mut x: i64| -> i64 { x } }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
+    REQUIRE(lambda.m_parameters.size() == 1);
+    CHECK(lambda.m_parameters[0].m_id.m_name == "x");
+    CHECK(lambda.m_parameters[0].m_is_mutable == true);
+  }
+
+  TEST_CASE("bust::parse_lambda_with_mut_param_inferred") {
+    auto program = parse_string("fn main() -> i64 { |mut x| { x } }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    const auto &expr = get_final_expr(func.m_body);
+    REQUIRE(
+        std::holds_alternative<std::unique_ptr<LambdaExpr>>(expr.m_expression));
+    const auto &lambda =
+        *std::get<std::unique_ptr<LambdaExpr>>(expr.m_expression);
+    REQUIRE(lambda.m_parameters.size() == 1);
+    CHECK(lambda.m_parameters[0].m_id.m_name == "x");
+    CHECK(lambda.m_parameters[0].m_is_mutable == true);
+    CHECK_FALSE(lambda.m_parameters[0].m_id.m_type.has_value());
   }
 
   // === Multiple top-level items ============================================
