@@ -121,8 +121,11 @@ struct FreeVariableCollector {
     return free_variables;
   }
 
+  FreeVariables collect(const Place &place) { return std::visit(*this, place); }
+
   FreeVariables operator()(const Assignment &assignment) {
     FreeVariables free_variables;
+    collect_append(assignment.m_place, free_variables);
     collect_append(assignment.m_expression, free_variables);
     return free_variables;
   }
