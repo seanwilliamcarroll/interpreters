@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 
+#include "exceptions.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -100,9 +102,7 @@ struct Context {
                 .m_name{},
             };
           } else {
-            assert(false && "codegen only handles primitive types and function "
-                            "types for now");
-            return VoidType{};
+            throw core::InternalCompilerError("Bad type conversion");
           }
         },
         type);

@@ -166,13 +166,15 @@ Value ExpressionGenerator::operator()(const zir::Block &block) {
 }
 
 Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
-  const auto &if_return_type_id =
+  const auto if_return_type_id =
       m_ctx.arena().get_block_type(if_expression.m_then_block);
-  const auto &llvm_return_type_id = m_ctx.to_type(if_return_type_id);
 
   const auto has_else_branch = if_expression.m_else_block.has_value();
   const auto yields_value =
       has_else_branch && if_return_type_id != m_ctx.arena().m_unit;
+
+  const auto llvm_return_type_id =
+      yields_value ? m_ctx.to_type(if_return_type_id) : m_ctx.m_void;
 
   // Emit code for conditional
   auto condition_target = generate(if_expression.m_condition);
@@ -486,7 +488,19 @@ Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
                                     unary_expression.m_operator);
 }
 
-Value ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr) {
+
+  auto return_value = generate(return_expr.m_expression);
+  if (return_value.m_type_id == m_ctx.m_void) {
+    m_ctx.builder().emit_return_void();
+  } else {
+    m_ctx.builder().emit_return(return_value);
+  }
+  auto new_block_label = m_ctx.builder().make_block(
+      std::string{conventions::post_return_block_label});
+  m_ctx.builder().enter_block(new_block_label);
+
+  // Return expressions do not return an actual value here
   return {};
 }
 

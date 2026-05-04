@@ -220,6 +220,8 @@ void IRBuilder::emit_return_void() {
   block().add_terminal(ReturnVoidInstruction{});
 }
 
+void IRBuilder::emit_unreachable() { block().add_terminal(Unreachable{}); }
+
 Value IRBuilder::malloc_struct(TypeId struct_type) {
   auto size_ptr = emit_gep(
       Value{

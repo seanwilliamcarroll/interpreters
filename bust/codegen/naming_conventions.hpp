@@ -57,6 +57,7 @@ constexpr std::string_view then_block_label = "then";
 constexpr std::string_view else_block_label = "else";
 constexpr std::string_view merge_block_label = "merge";
 constexpr std::string_view rhs_block_label = "rhs";
+constexpr std::string_view post_return_block_label = "post_return";
 
 // Synthetic local / global name roots ----------------------------------------
 

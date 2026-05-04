@@ -85,6 +85,7 @@ struct IRBuilder {
   [[nodiscard]] Value emit_cast(Value input, LLVMCastOperator op, TypeId to);
   void emit_return(Value value);
   void emit_return_void();
+  void emit_unreachable();
 
   [[nodiscard]] Value malloc_struct(TypeId struct_type);
   [[nodiscard]] Value alloca_struct(TypeId struct_type);
