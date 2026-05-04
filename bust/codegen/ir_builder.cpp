@@ -254,6 +254,10 @@ Value IRBuilder::load_from_struct(Value ptr, TypeId struct_type, size_t index) {
   return emit_load(field_ptr, value_type);
 }
 
+bool IRBuilder::current_block_terminated() const {
+  return m_current_block_label.m_block->is_terminated();
+}
+
 IRBuilder::InsertionGuard::InsertionGuard(IRBuilder &parent,
                                           BlockLabel block_label)
     : m_parent(parent), m_captured(m_parent.current_block_label()) {

@@ -9,6 +9,7 @@
 //****************************************************************************
 
 #include <codegen/instructions.hpp>
+#include <exceptions.hpp>
 
 #include <cassert>
 #include <optional>
@@ -29,11 +30,18 @@ struct BasicBlock {
   [[nodiscard]] const auto &terminal() const { return m_terminal_instruction; }
 
   void add_instruction(Instruction instruction) {
+    if (m_terminal_instruction.has_value()) {
+      // NOOP? Feels like it could lead to silent errors
+      return;
+    }
     m_instructions.push_back(std::move(instruction));
   }
 
   void add_terminal(Terminator terminator) {
-    assert(!m_terminal_instruction.has_value() && "Shouldn't set this twice!");
+    if (m_terminal_instruction.has_value()) {
+      throw core::InternalCompilerError(
+          "Cannot set terminal expression twice!");
+    }
     m_terminal_instruction = std::move(terminator);
   }
 
@@ -42,6 +50,10 @@ struct BasicBlock {
         m_instructions.begin() +
             static_cast<decltype(m_instructions)::difference_type>(position),
         std::move(instruction));
+  }
+
+  [[nodiscard]] bool is_terminated() const {
+    return m_terminal_instruction.has_value();
   }
 
 private:

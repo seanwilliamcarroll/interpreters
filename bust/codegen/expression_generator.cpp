@@ -166,10 +166,15 @@ Value ExpressionGenerator::operator()(const zir::Block &block) {
 }
 
 Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
-  const auto if_return_type_id =
+  const auto has_else_branch = if_expression.m_else_block.has_value();
+  auto if_return_type_id =
       m_ctx.arena().get_block_type(if_expression.m_then_block);
 
-  const auto has_else_branch = if_expression.m_else_block.has_value();
+  if (has_else_branch && (if_return_type_id == m_ctx.arena().m_never)) {
+    if_return_type_id =
+        m_ctx.arena().get_block_type(if_expression.m_else_block.value());
+  }
+
   const auto yields_value =
       has_else_branch && if_return_type_id != m_ctx.arena().m_unit;
 
@@ -193,25 +198,35 @@ Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   auto merge_label =
       m_ctx.builder().make_block(std::string{conventions::merge_block_label});
 
-  m_ctx.builder().emit_branch(condition_target, then_label,
-                              has_else_branch ? else_label : merge_label);
+  // Did we emit a return in block? If so, no need to emit a branch
+  if (!m_ctx.builder().current_block_terminated()) {
+    // We are free to add more instructions to this block
+    m_ctx.builder().emit_branch(condition_target, then_label,
+                                has_else_branch ? else_label : merge_label);
+  }
 
   // Emit code for then
   m_ctx.builder().enter_block(then_label);
   auto then_target = generate(if_expression.m_then_block);
-  if (yields_value) {
-    m_ctx.builder().emit_store(result_alloca_slot, then_target);
+  if (!m_ctx.builder().current_block_terminated()) {
+    // We are free to add more instructions to this block
+    if (yields_value) {
+      m_ctx.builder().emit_store(result_alloca_slot, then_target);
+    }
+    m_ctx.builder().emit_jump(merge_label);
   }
-  m_ctx.builder().emit_jump(merge_label);
 
   if (has_else_branch) {
     // Emit code for else
     m_ctx.builder().enter_block(else_label);
     auto else_target = generate(if_expression.m_else_block.value());
-    if (yields_value) {
-      m_ctx.builder().emit_store(result_alloca_slot, else_target);
+    if (!m_ctx.builder().current_block_terminated()) {
+      // We are free to add more instructions to this block
+      if (yields_value) {
+        m_ctx.builder().emit_store(result_alloca_slot, else_target);
+      }
+      m_ctx.builder().emit_jump(merge_label);
     }
-    m_ctx.builder().emit_jump(merge_label);
   }
 
   // Finish with final load of merged value if it exists
@@ -448,17 +463,23 @@ Value ExpressionGenerator::generate_logical_binary_instruction(
   // Emit code for lhs
   auto lhs_handle = generate(binary_expression.m_lhs);
   // Store lhs in result handle
-  m_ctx.builder().emit_store(result_alloca_slot, lhs_handle);
-  const auto is_and_op =
-      binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
-  m_ctx.builder().emit_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
-                              is_and_op ? merge_label : rhs_label);
+  if (!m_ctx.builder().current_block_terminated()) {
+    // We are free to add more instructions to this block
+    m_ctx.builder().emit_store(result_alloca_slot, lhs_handle);
+    const auto is_and_op =
+        binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
+    m_ctx.builder().emit_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
+                                is_and_op ? merge_label : rhs_label);
+  }
 
   // Emit code for rhs
   m_ctx.builder().enter_block(rhs_label);
   auto rhs_handle = generate(binary_expression.m_rhs);
-  m_ctx.builder().emit_store(result_alloca_slot, rhs_handle);
-  m_ctx.builder().emit_jump(merge_label);
+  if (!m_ctx.builder().current_block_terminated()) {
+    // We are free to add more instructions to this block
+    m_ctx.builder().emit_store(result_alloca_slot, rhs_handle);
+    m_ctx.builder().emit_jump(merge_label);
+  }
 
   // Emit code for merge
   m_ctx.builder().enter_block(merge_label);
@@ -495,9 +516,6 @@ Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr) {
   } else {
     m_ctx.builder().emit_return(return_value);
   }
-  auto new_block_label = m_ctx.builder().make_block(
-      std::string{conventions::post_return_block_label});
-  m_ctx.builder().enter_block(new_block_label);
 
   // Return expressions do not return an actual value here
   return {};
@@ -604,10 +622,8 @@ Value ExpressionGenerator::lift_free_lambda(
 
     auto return_value = generate(lambda_expr.m_body);
 
-    auto function_body_type = m_ctx.arena().get_block_type(lambda_expr.m_body);
-    if (function_body_type == m_ctx.arena().m_never) {
+    if (m_ctx.builder().current_block_terminated()) {
       // There must have been a return earlier, we couldn't reach this block
-      m_ctx.builder().emit_unreachable();
     } else if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().emit_return_void();
     } else {
@@ -649,11 +665,8 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 
     auto return_value = generate(lambda_expr.m_body);
 
-    auto function_body_type = m_ctx.arena().get_block_type(lambda_expr.m_body);
-
-    if (function_body_type == m_ctx.arena().m_never) {
+    if (m_ctx.builder().current_block_terminated()) {
       // There must have been a return earlier, we couldn't reach this block
-      m_ctx.builder().emit_unreachable();
     } else if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().emit_return_void();
     } else {

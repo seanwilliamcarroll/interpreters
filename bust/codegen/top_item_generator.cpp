@@ -146,11 +146,8 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   const auto &return_type_id =
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
-  auto function_body_type = m_ctx.arena().get_block_type(function_def.m_body);
-
-  if (function_body_type == m_ctx.arena().m_never) {
-    // There must have been a return earlier, we couldn't reach this block
-    m_ctx.builder().emit_unreachable();
+  if (m_ctx.builder().current_block_terminated()) {
+    // // There must have been a return earlier, we couldn't reach this block
   } else if (return_type_id == m_ctx.arena().m_unit) {
     m_ctx.builder().emit_return_void();
   } else {

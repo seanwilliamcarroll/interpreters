@@ -94,6 +94,8 @@ struct IRBuilder {
   [[nodiscard]] Value load_from_struct(Value ptr, TypeId struct_type,
                                        size_t index);
 
+  [[nodiscard]] bool current_block_terminated() const;
+
   // Outside of IRBuilder, no one needs to know about functions/blocks directly
   // Just pass around these labels and handles
   BlockLabel make_block(const std::string &name);

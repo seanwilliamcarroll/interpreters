@@ -370,10 +370,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
 
   // Directly call because Block is not a variant type, don't need to visit
   auto then_block =
-      BlockChecker{
-          m_ctx,
-      }
-          .check_block(if_expression->m_then_block);
+      BlockChecker{m_ctx}.check_block(if_expression->m_then_block);
 
   if (!if_expression->m_else_block.has_value()) {
     // Just then branch
@@ -398,10 +395,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   }
   // Check else branch too
   auto else_block =
-      BlockChecker{
-          m_ctx,
-      }
-          .check_block(if_expression->m_else_block.value());
+      BlockChecker{m_ctx}.check_block(if_expression->m_else_block.value());
 
   try {
     m_ctx.m_type_unifier.unify(then_block.m_type, else_block.m_type);
