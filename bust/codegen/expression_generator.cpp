@@ -489,7 +489,6 @@ Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
 }
 
 Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr) {
-
   auto return_value = generate(return_expr.m_expression);
   if (return_value.m_type_id == m_ctx.m_void) {
     m_ctx.builder().emit_return_void();
@@ -604,7 +603,12 @@ Value ExpressionGenerator::lift_free_lambda(
     m_ctx.emit_parameter_prologue(signature.m_parameters);
 
     auto return_value = generate(lambda_expr.m_body);
-    if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
+
+    auto function_body_type = m_ctx.arena().get_block_type(lambda_expr.m_body);
+    if (function_body_type == m_ctx.arena().m_never) {
+      // There must have been a return earlier, we couldn't reach this block
+      m_ctx.builder().emit_unreachable();
+    } else if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().emit_return_void();
     } else {
       m_ctx.builder().emit_return(return_value);
@@ -644,7 +648,13 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
     closure_builder.emit_capture_load_prologue();
 
     auto return_value = generate(lambda_expr.m_body);
-    if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
+
+    auto function_body_type = m_ctx.arena().get_block_type(lambda_expr.m_body);
+
+    if (function_body_type == m_ctx.arena().m_never) {
+      // There must have been a return earlier, we couldn't reach this block
+      m_ctx.builder().emit_unreachable();
+    } else if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().emit_return_void();
     } else {
       m_ctx.builder().emit_return(return_value);

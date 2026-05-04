@@ -544,24 +544,18 @@ Expression ExpressionChecker::operator()(
           ? type_converter.get_type(lambda_expression->m_return_type.value())
           : m_ctx.m_type_unifier.new_type_var();
 
-  auto body =
-      lambda_expression->m_return_type.has_value()
-          ? BlockChecker{m_ctx,}.check_callable_body(
-                parameters, possible_return_type_id, lambda_expression->m_body)
-          : BlockChecker{m_ctx,}.check_block_with_parameters(
-                parameters, lambda_expression->m_body);
-
-  auto return_type_id = lambda_expression->m_return_type.has_value()
-                            ? possible_return_type_id
-                            : body.m_type;
+  auto body = BlockChecker{m_ctx}.check_callable_body(
+      parameters, possible_return_type_id, lambda_expression->m_body);
 
   try {
-    m_ctx.m_type_unifier.unify(return_type_id, body.m_type);
+    m_ctx.m_type_unifier.unify(possible_return_type_id, body.m_type);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
         location);
   }
+
+  auto return_type_id = possible_return_type_id;
 
   auto function_type_id = m_ctx.m_type_arena.intern(FunctionType{
       .m_parameters = std::move(parameter_types),

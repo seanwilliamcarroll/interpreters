@@ -21,11 +21,11 @@ namespace bust::hir {
 //****************************************************************************
 
 struct TypeVariableSubstituter {
-
-  TypeId substitute(const TypeKind &type) { return std::visit(*this, type); }
-
-  TypeId substitute(const TypeId &type) {
-    return substitute(m_type_arena.get(type));
+  TypeId substitute(TypeId type_id) {
+    // Explicitly keep as copy rather than const ref so ref doesn't go stale as
+    // we intern types during traversal of recursive types
+    TypeKind type = m_type_arena.get(type_id);
+    return std::visit(*this, type);
   }
 
   TypeId operator()(const PrimitiveTypeValue &type) {
@@ -56,19 +56,20 @@ struct TypeVariableSubstituter {
     std::vector<TypeId> parameters;
     parameters.reserve(type.m_parameters.size());
     for (const auto &parameter : type.m_parameters) {
-      parameters.emplace_back(substitute(m_type_arena.get(parameter)));
+      parameters.emplace_back(substitute(parameter));
     }
 
     return m_type_arena.intern(FunctionType{
         .m_parameters = std::move(parameters),
-        .m_return_type = substitute(m_type_arena.get(type.m_return_type))});
+        .m_return_type = substitute(type.m_return_type),
+    });
   }
 
   TypeId operator()(const TupleType &type) {
     std::vector<TypeId> fields;
     fields.reserve(type.m_fields.size());
     for (const auto &field : type.m_fields) {
-      fields.emplace_back(substitute(m_type_arena.get(field)));
+      fields.emplace_back(substitute(field));
     }
 
     return m_type_arena.intern(TupleType{
