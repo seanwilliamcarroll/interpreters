@@ -19,6 +19,7 @@
 #include <source_location.hpp>
 
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

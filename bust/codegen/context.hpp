@@ -18,14 +18,13 @@
 #include <codegen/symbol_table.hpp>
 #include <codegen/types.hpp>
 #include <codegen/value.hpp>
+#include <exceptions.hpp>
 #include <zir/arena.hpp>
 #include <zir/types.hpp>
 
 #include <cassert>
 #include <string>
 #include <vector>
-
-#include "exceptions.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
