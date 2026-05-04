@@ -222,6 +222,89 @@ TEST_SUITE("bust.codegen.lambdas") {
   // shape flows through call/return/branch boundaries. Re-enable once that
   // distinction lands.
 
+  // --- Lambdas with explicit return ----------------------------------------
+  //
+  // `return` inside a lambda body emits a `ret` for the lambda's lifted
+  // function, not the enclosing function. The lambda's own implicit final
+  // ret (or `unreachable` epilogue, when the body diverges) is what closes
+  // the lifted function.
+
+  TEST_CASE("lambda with explicit value return") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = |x: i64| -> i64 { return x + 1; };\n"
+              "  f(41)\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("return inside lambda does not return from enclosing function") {
+    // If `return` in the lambda were lowered as a main-level ret, main
+    // would stop at f(10) and return 10. The trailing `+ 32` proves the
+    // return scoped to the lambda.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = |x: i64| -> i64 { return x; };\n"
+              "  f(10) + 32\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("naked return in unit lambda") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = || { return; };\n"
+              "  f();\n"
+              "  42\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("early return in lambda guarded by if") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let abs_or_zero = |x: i64| -> i64 {\n"
+              "    if x > 0 { return x; }\n"
+              "    0\n"
+              "  };\n"
+              "  abs_or_zero(42)\n"
+              "}",
+              42);
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let abs_or_zero = |x: i64| -> i64 {\n"
+              "    if x > 0 { return x; }\n"
+              "    0\n"
+              "  };\n"
+              "  abs_or_zero(0 - 5)\n"
+              "}",
+              0);
+  }
+
+  TEST_CASE("lambda with capture and early return") {
+    // Captured `threshold` is read both inside the early-return guard and
+    // in the fall-through path — exercises that the env-load lookups
+    // survive across a basic-block split caused by the early ret.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let threshold = 10;\n"
+              "  let clamp = |x: i64| -> i64 {\n"
+              "    if x > threshold { return x; }\n"
+              "    threshold\n"
+              "  };\n"
+              "  clamp(20)\n"
+              "}",
+              20);
+  }
+
+  TEST_CASE("lambda body with early return then trailing return") {
+    // Both branches of pick diverge, but via separate ret instructions:
+    // the if-then arm rets, fall-through rets. Lambda body type is Never;
+    // codegen emits `unreachable` at the lambda epilogue.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let pick = |x: bool| -> i64 {\n"
+              "    if x { return 1; }\n"
+              "    return 2;\n"
+              "  };\n"
+              "  pick(true) + pick(false)\n"
+              "}",
+              3);
+  }
+
   // TEST_CASE("make_adder returns a capturing closure") {
   //   CHECK_RUN("fn make_adder(n: i64) -> fn(i64) -> i64 {\n"
   //             "  |x: i64| -> i64 { x + n }\n"
