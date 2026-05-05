@@ -54,9 +54,6 @@ no-op-on-store / unreachable-on-load.
 
 ### Tier 1 — small, immediate, high-leverage
 
-- [x] Fix block-divergence rule in `hir/block_checker.cpp:73-80`: always Never if any statement diverged, regardless of final expression
-- [x] Add `TypeUnifier::join(τ_a, τ_b)` with rules: Never on either side → take other; otherwise unify and return one
-- [x] Replace ternary at `hir/expression_checker.cpp:408-410` with `join` call
 - [ ] Decide where unifier-substitution (collapse) is applied: either consolidate scattered per-binding `TypeVariableCollapser` calls into one explicit pre-mono pass, or fold `find()` into the monomorpher's walk. Either way, catch surviving tvars at one well-defined boundary
 - [ ] Convert "no TypeVariable" runtime errors in `mono/name_mangler.hpp` and `zir/context.hpp` to asserts once that boundary exists
 
@@ -66,18 +63,8 @@ no-op-on-store / unreachable-on-load.
 - [ ] Generalize the never-type fallback. A local version landed in `hir/statement_checker.cpp:56-61` for let-bindings; promote to a single end-of-TypeChecker pass over residual tvars that flowed from Never
 - [ ] Move reachability into HIR as explicit field on `Block` (`is_divergent: bool`); codegen reads instead of recomputing via `current_block_terminated`. Would also let codegen drop the per-arm sanity-check asserts in `IfExpr`
 - [ ] Decide canonical mangle name for Never (`bot`); update mangler to accept it
-- [x] Codegen rule for Never values: after any expression/statement generation, check `current_block_terminated()` and propagate divergence (return sentinel, skip alloca/store, skip implicit return). Landed in `ffbe6d3` across block, let, assignment, if, lambda body
 
 ### Tier 3 — larger, deferred
 
-- [x] Decide ZIR's relationship to HIR types: per-primitive variants, with a "no TypeVariable" invariant established at the HIR→ZIR boundary (`zir/context.hpp:65-67`). Hardening that runtime check into an assert is the corresponding Tier 1 item
 - [ ] Split `TypeUnifier` and `TypeClassResolver` (constraint side) into separate composable pieces
 - [ ] Introduce subtyping/coercion as a first-class concept; add `is_subtype(τ_from, τ_to)`; let Never participate as real bottom; usable by literal coercion (i64-literal to i32 in context), auto-deref, etc.
-
-### Test coverage to add alongside
-
-- [x] `let x = if true { return 1; } else { return 3; };` (both arms diverge)
-- [x] `let x = return 5; <unreachable use of x>` (RHS-diverges before binding)
-- [x] `if cond { return 1 } else { return 3 }` in trailing position (block diverges)
-- [x] Nested diverging let inside lambda body
-- [x] Diverging arm in higher-order function call argument (regular call also covered)
