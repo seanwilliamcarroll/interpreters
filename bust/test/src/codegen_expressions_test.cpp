@@ -364,6 +364,80 @@ TEST_SUITE("bust.codegen.expressions") {
               3);
   }
 
+  TEST_CASE("let binding whose RHS is a bare return") {
+    // The RHS itself diverges before the binding can take effect. `x` is
+    // never assigned a value at runtime — control unwinds through `return`
+    // first. Trailing `0` is dead code; the block's type is Never and
+    // main's i64 return short-circuits against it. The test pins down that
+    // codegen skips the alloca/store for `x` rather than trying to write a
+    // non-existent value into it.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = return 5;\n"
+              "  0\n"
+              "}",
+              5);
+  }
+
+  TEST_CASE("if-with-both-arms-diverging as block's trailing expression") {
+    // No surrounding let — the diverging if is itself the function body's
+    // tail expression. Block type comes from the final-expression branch
+    // (which here is Never), not the diverging-statement branch. Confirms
+    // that path also threads through codegen without a phi.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  if true { return 1 } else { return 3 }\n"
+              "}",
+              1);
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  if false { return 1 } else { return 3 }\n"
+              "}",
+              3);
+  }
+
+  TEST_CASE("diverging let inside lambda body") {
+    // The lambda's `return` rets the lambda, not main. Verifies that the
+    // m_return_type_stack push/pop around lambda bodies still works when
+    // the lambda's own block is Never-typed, and that the dead trailing
+    // expression doesn't break codegen for the closure.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = || -> i64 {\n"
+              "    let x = return 7;\n"
+              "    0\n"
+              "  };\n"
+              "  f()\n"
+              "}",
+              7);
+  }
+
+  TEST_CASE("diverging arm inside a function call argument") {
+    // The if-expression in the argument position has one diverging arm.
+    // When the live arm is taken, the call proceeds normally with i64.
+    // When the diverging arm is taken, main returns directly and the
+    // call never happens. Stresses argument-position codegen against the
+    // BB-already-terminated invariant.
+    CHECK_RUN("fn double(x: i64) -> i64 { x * 2 }\n"
+              "fn main() -> i64 {\n"
+              "  double(if true { 21 } else { return 99 })\n"
+              "}",
+              42);
+    CHECK_RUN("fn double(x: i64) -> i64 { x * 2 }\n"
+              "fn main() -> i64 {\n"
+              "  double(if false { 21 } else { return 99 })\n"
+              "}",
+              99);
+  }
+
+  TEST_CASE("diverging arm inside a higher-order function call argument") {
+    // Same shape as above, but the call site is to a HOF that takes a
+    // function pointer. Exercises the same divergence path through the
+    // mono'd call to apply.
+    CHECK_RUN("fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }\n"
+              "fn main() -> i64 {\n"
+              "  let inc = |x: i64| -> i64 { x + 1 };\n"
+              "  apply(inc, if true { 41 } else { return 99 })\n"
+              "}",
+              42);
+  }
+
   // --- Naked return (no operand) -------------------------------------------
   //
   // `return;` in a unit-returning function emits a `ret` of unit (or just
