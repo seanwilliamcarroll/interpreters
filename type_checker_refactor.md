@@ -50,11 +50,11 @@ no-op-on-store / unreachable-on-load.
 
 ### Tier 1 — small, immediate, high-leverage
 
-- [ ] Fix block-divergence rule in `hir/block_checker.cpp:73-80`: always Never if any statement diverged, regardless of final expression
-- [ ] Add `TypeUnifier::join(τ_a, τ_b)` with rules: Never on either side → take other; otherwise unify and return one
-- [ ] Replace ternary at `hir/expression_checker.cpp:408-410` with `join` call
-- [ ] Add explicit collapse-to-concrete pass between TypeChecker and Monomorpher: walk program, replace every TypeVariable with `unifier.find(α)`, throw if any tvar survives
-- [ ] Convert "no TypeVariable" runtime errors in `mono/name_mangler.hpp` and `zir/context.hpp` to asserts after collapse pass lands
+- [x] Fix block-divergence rule in `hir/block_checker.cpp:73-80`: always Never if any statement diverged, regardless of final expression
+- [x] Add `TypeUnifier::join(τ_a, τ_b)` with rules: Never on either side → take other; otherwise unify and return one
+- [x] Replace ternary at `hir/expression_checker.cpp:408-410` with `join` call
+- [ ] Decide where unifier-substitution (collapse) is applied: either consolidate scattered per-binding `TypeVariableCollapser` calls into one explicit pre-mono pass, or fold `find()` into the monomorpher's walk. Either way, catch surviving tvars at one well-defined boundary
+- [ ] Convert "no TypeVariable" runtime errors in `mono/name_mangler.hpp` and `zir/context.hpp` to asserts once that boundary exists
 
 ### Tier 2 — medium, good payoff
 
@@ -72,7 +72,7 @@ no-op-on-store / unreachable-on-load.
 
 ### Test coverage to add alongside
 
-- [ ] `let x = if true { return 1; } else { return 3; };` (both arms diverge)
+- [x] `let x = if true { return 1; } else { return 3; };` (both arms diverge)
 - [ ] `let x = return 5; <unreachable use of x>` (RHS-diverges before binding)
 - [ ] `if cond { return 1 } else { return 3 }` in trailing position (block diverges)
 - [ ] Nested diverging let inside lambda body
