@@ -244,49 +244,27 @@ Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
   m_ctx.builder().emit_branch(condition_target, then_label,
                               has_else_branch ? else_label : merge_label);
 
+  auto complete_branch_block = [&](Value output_value) {
+    if (m_ctx.builder().current_block_terminated()) {
+      return;
+    }
+    if (yields_value) {
+      m_ctx.builder().emit_store(result_alloca_slot, output_value);
+    }
+    m_ctx.builder().emit_jump(merge_label);
+  };
+
   // Then branch
   m_ctx.builder().enter_block(then_label);
   auto then_target = generate(if_expression.m_then_block);
-  if (then_branch_diverges != m_ctx.builder().current_block_terminated()) {
-    // Sanity check
-    throw core::InternalCompilerError(
-        "Mismatch in expectations! then_branch_diverges: " +
-        std::to_string(static_cast<int>(then_branch_diverges)) +
-        " current_block_terminated: " +
-        std::to_string(
-            static_cast<int>(m_ctx.builder().current_block_terminated())));
-  }
-
-  if (!then_branch_diverges) {
-    // We are free to add more instructions to this block
-    if (yields_value) {
-      m_ctx.builder().emit_store(result_alloca_slot, then_target);
-    }
-    m_ctx.builder().emit_jump(merge_label);
-  }
+  complete_branch_block(std::move(then_target));
 
   // Else branch
   if (has_else_branch) {
     // Emit code for else
     m_ctx.builder().enter_block(else_label);
     auto else_target = generate(if_expression.m_else_block.value());
-    if (else_branch_diverges != m_ctx.builder().current_block_terminated()) {
-      // Sanity check
-      throw core::InternalCompilerError(
-          "Mismatch in expectations! else_branch_diverges: " +
-          std::to_string(static_cast<int>(else_branch_diverges)) +
-          " current_block_terminated: " +
-          std::to_string(
-              static_cast<int>(m_ctx.builder().current_block_terminated())));
-    }
-
-    if (!else_branch_diverges) {
-      // We are free to add more instructions to this block
-      if (yields_value) {
-        m_ctx.builder().emit_store(result_alloca_slot, else_target);
-      }
-      m_ctx.builder().emit_jump(merge_label);
-    }
+    complete_branch_block(std::move(else_target));
   }
 
   if (!needs_merge_block) {
