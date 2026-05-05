@@ -19,11 +19,15 @@ each layer. Worth a structured pass before more diverging constructs
 |------|----------|
 | `hir/type_unifier.hpp:71-74` | `unify(τ, Never)` short-circuits |
 | `hir/type_unifier.hpp:141-143` | `unify(α, Never)` short-circuits |
-| `hir/expression_checker.cpp:408-410` | Hand-rolled `join(then, else)` via ternary |
-| `hir/block_checker.cpp:73-80` | Block-Never rule fires only when no final-expression |
-| `mono/name_mangler.hpp:76` | Throws on Never |
-| `codegen/expression_generator.cpp:173` | Re-derives "if then is Never, use else's type" |
-| `codegen/expression_generator.cpp:343` | `is_signed_type` lumps Never with non-numeric, throws |
+| `hir/type_unifier.hpp:372-383` | `join(τ_a, τ_b)`: Never on either side → take other; otherwise unify+find |
+| `hir/block_checker.cpp:75-80` | Block-Never rule: any diverging statement → block is Never |
+| `hir/statement_checker.cpp:56-61` | Local never-fallback: unannotated `let` whose body is Never → annotate as Unit |
+| `mono/name_mangler.hpp:75-77` | Throws on Never (and TypeVariable) |
+| `codegen/expression_generator.cpp:156-175` | Block: bail with empty Value if a statement or final expression terminated the block |
+| `codegen/expression_generator.cpp:177-301` | If-expr: per-arm divergence flags drive whether to emit store/jump/merge |
+| `codegen/expression_generator.cpp:396-415` | `is_signed_type` lumps Never with non-numeric, throws |
+| `codegen/statement_generator.cpp:38-41,78-81` | Let/Assignment: skip alloca/store if RHS terminated |
+| `codegen/expression_generator.cpp:689-695,732-738` | Lambda body: skip implicit return if body terminated |
 | `hir/type_variable_substituter.hpp:80-82` | Pass-through |
 | `hir/type_variable_collapser.hpp:60-62` | Pass-through |
 | `hir/free_type_variable_collector.hpp:50` | Pass-through |
@@ -59,21 +63,21 @@ no-op-on-store / unreachable-on-load.
 ### Tier 2 — medium, good payoff
 
 - [ ] Unify `TypeVariableSubstituter` / `TypeVariableCollapser` / `FreeTypeVariableCollector` under a single `TypeFolder<F>` abstraction
-- [ ] Introduce never-type fallback at end of TypeChecker: residual tvars that flowed from Never default to Unit
-- [ ] Move reachability into HIR as explicit field on `Block` (`is_divergent: bool`); codegen reads instead of recomputing via `current_block_terminated`
+- [ ] Generalize the never-type fallback. A local version landed in `hir/statement_checker.cpp:56-61` for let-bindings; promote to a single end-of-TypeChecker pass over residual tvars that flowed from Never
+- [ ] Move reachability into HIR as explicit field on `Block` (`is_divergent: bool`); codegen reads instead of recomputing via `current_block_terminated`. Would also let codegen drop the per-arm sanity-check asserts in `IfExpr`
 - [ ] Decide canonical mangle name for Never (`bot`); update mangler to accept it
-- [ ] Decide codegen rule for Never values: skip emission at let-binding boundary when RHS type is Never
+- [x] Codegen rule for Never values: after any expression/statement generation, check `current_block_terminated()` and propagate divergence (return sentinel, skip alloca/store, skip implicit return). Landed in `ffbe6d3` across block, let, assignment, if, lambda body
 
 ### Tier 3 — larger, deferred
 
-- [ ] Decide ZIR's relationship to HIR types: commit to per-primitive variants and document why, or merge back to a single `TypeKind` with a "no TypeVariable" invariant
+- [x] Decide ZIR's relationship to HIR types: per-primitive variants, with a "no TypeVariable" invariant established at the HIR→ZIR boundary (`zir/context.hpp:65-67`). Hardening that runtime check into an assert is the corresponding Tier 1 item
 - [ ] Split `TypeUnifier` and `TypeClassResolver` (constraint side) into separate composable pieces
 - [ ] Introduce subtyping/coercion as a first-class concept; add `is_subtype(τ_from, τ_to)`; let Never participate as real bottom; usable by literal coercion (i64-literal to i32 in context), auto-deref, etc.
 
 ### Test coverage to add alongside
 
 - [x] `let x = if true { return 1; } else { return 3; };` (both arms diverge)
-- [ ] `let x = return 5; <unreachable use of x>` (RHS-diverges before binding)
-- [ ] `if cond { return 1 } else { return 3 }` in trailing position (block diverges)
-- [ ] Nested diverging let inside lambda body
-- [ ] Diverging arm in higher-order function call argument
+- [x] `let x = return 5; <unreachable use of x>` (RHS-diverges before binding)
+- [x] `if cond { return 1 } else { return 3 }` in trailing position (block diverges)
+- [x] Nested diverging let inside lambda body
+- [x] Diverging arm in higher-order function call argument (regular call also covered)
