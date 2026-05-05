@@ -156,59 +156,108 @@ Value ExpressionGenerator::operator()(const zir::Char &literal) {
 Value ExpressionGenerator::operator()(const zir::Block &block) {
   for (const auto &statement : block.m_statements) {
     StatementGenerator{m_ctx}.generate(statement);
+    if (m_ctx.builder().current_block_terminated()) {
+      // The expression diverged, do not even create an alloca, we won't use it
+      return {};
+    }
   }
 
   if (block.m_final_expression.has_value()) {
-    return generate(block.m_final_expression.value());
+    auto final_value = generate(block.m_final_expression.value());
+    if (m_ctx.builder().current_block_terminated()) {
+      // The expression diverged, do not even create an alloca, we won't use it
+      return {};
+    }
+    return final_value;
   }
 
   return {};
 }
 
 Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
-  const auto has_else_branch = if_expression.m_else_block.has_value();
-  auto if_return_type_id =
-      m_ctx.arena().get_block_type(if_expression.m_then_block);
+  // We want to emit the condition first
+  // If it diverged, we end and return up until a function boundary
+  // Else we try to emit then
+  // check if it diverged, note for later, emit store otherwise
+  // if else branch, generate and check divergence
+  // If both diverged, stop here and return back up
+  // If one or neither, continue with stores where appropriate
 
-  if (has_else_branch && (if_return_type_id == m_ctx.arena().m_never)) {
-    if_return_type_id =
-        m_ctx.arena().get_block_type(if_expression.m_else_block.value());
+  auto condition_target = generate(if_expression.m_condition);
+  if (m_ctx.builder().current_block_terminated()) {
+    return {};
   }
 
-  const auto yields_value =
-      has_else_branch && if_return_type_id != m_ctx.arena().m_unit;
+  // What are the types of the two branches
+  const auto then_branch_type_id =
+      m_ctx.arena().get_block_type(if_expression.m_then_block);
+  const auto has_else_branch = if_expression.m_else_block.has_value();
+  const auto else_branch_type_id =
+      has_else_branch
+          ? (m_ctx.arena().get_block_type(if_expression.m_else_block.value()))
+          : m_ctx.arena().m_never;
 
-  const auto llvm_return_type_id =
-      yields_value ? m_ctx.to_type(if_return_type_id) : m_ctx.m_void;
+  auto then_branch_diverges = (then_branch_type_id == m_ctx.arena().m_never);
+  auto else_branch_diverges = (else_branch_type_id == m_ctx.arena().m_never);
 
-  // Emit code for conditional
-  auto condition_target = generate(if_expression.m_condition);
+  bool yields_value;
+  TypeId emitted_type_id;
+  if (then_branch_diverges && else_branch_diverges) {
+    // Nothing to return from this expression, just generate their blocks
+    yields_value = false;
+  } else if (then_branch_diverges) {
+    yields_value = (else_branch_type_id != m_ctx.arena().m_unit);
+    if (yields_value) {
+      emitted_type_id = m_ctx.to_type(else_branch_type_id);
+    }
+  } else {
+    // Either they both return a value or just if, just check if now
+    yields_value = (then_branch_type_id != m_ctx.arena().m_unit);
+    if (yields_value) {
+      emitted_type_id = m_ctx.to_type(then_branch_type_id);
+    }
+  }
+
   auto result_alloca_slot =
       yields_value
           ? m_ctx.builder().emit_alloca(
-                llvm_return_type_id,
+                emitted_type_id,
                 m_ctx.uniqify_name(std::string{conventions::if_result_local}))
           : Value{};
 
+  auto needs_merge_block =
+      !has_else_branch || !(then_branch_diverges && else_branch_diverges);
+
+  // Create the necessary blocks based on divergence and else branch existence
   auto then_label =
       m_ctx.builder().make_block(std::string{conventions::then_block_label});
   auto else_label = has_else_branch ? m_ctx.builder().make_block(std::string{
                                           conventions::else_block_label})
                                     : BlockLabel::null();
-  auto merge_label =
-      m_ctx.builder().make_block(std::string{conventions::merge_block_label});
+  // If at least one doesn't diverge, we will need to merge back
+  auto merge_label = needs_merge_block ? m_ctx.builder().make_block(std::string{
+                                             conventions::merge_block_label})
+                                       : BlockLabel::null();
 
-  // Did we emit a return in block? If so, no need to emit a branch
-  if (!m_ctx.builder().current_block_terminated()) {
-    // We are free to add more instructions to this block
-    m_ctx.builder().emit_branch(condition_target, then_label,
-                                has_else_branch ? else_label : merge_label);
-  }
+  // We have to branch here, even if they both diverge or there's no else and if
+  // diverges
+  m_ctx.builder().emit_branch(condition_target, then_label,
+                              has_else_branch ? else_label : merge_label);
 
-  // Emit code for then
+  // Then branch
   m_ctx.builder().enter_block(then_label);
   auto then_target = generate(if_expression.m_then_block);
-  if (!m_ctx.builder().current_block_terminated()) {
+  if (then_branch_diverges != m_ctx.builder().current_block_terminated()) {
+    // Sanity check
+    throw core::InternalCompilerError(
+        "Mismatch in expectations! then_branch_diverges: " +
+        std::to_string(static_cast<int>(then_branch_diverges)) +
+        " current_block_terminated: " +
+        std::to_string(
+            static_cast<int>(m_ctx.builder().current_block_terminated())));
+  }
+
+  if (!then_branch_diverges) {
     // We are free to add more instructions to this block
     if (yields_value) {
       m_ctx.builder().emit_store(result_alloca_slot, then_target);
@@ -216,11 +265,22 @@ Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
     m_ctx.builder().emit_jump(merge_label);
   }
 
+  // Else branch
   if (has_else_branch) {
     // Emit code for else
     m_ctx.builder().enter_block(else_label);
     auto else_target = generate(if_expression.m_else_block.value());
-    if (!m_ctx.builder().current_block_terminated()) {
+    if (else_branch_diverges != m_ctx.builder().current_block_terminated()) {
+      // Sanity check
+      throw core::InternalCompilerError(
+          "Mismatch in expectations! else_branch_diverges: " +
+          std::to_string(static_cast<int>(else_branch_diverges)) +
+          " current_block_terminated: " +
+          std::to_string(
+              static_cast<int>(m_ctx.builder().current_block_terminated())));
+    }
+
+    if (!else_branch_diverges) {
       // We are free to add more instructions to this block
       if (yields_value) {
         m_ctx.builder().emit_store(result_alloca_slot, else_target);
@@ -229,11 +289,15 @@ Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
     }
   }
 
-  // Finish with final load of merged value if it exists
+  if (!needs_merge_block) {
+    // Nothing left to do, all code past here is unreachable
+    return {};
+  }
+
   m_ctx.builder().enter_block(merge_label);
-  return yields_value ? m_ctx.builder().emit_load(result_alloca_slot,
-                                                  llvm_return_type_id)
-                      : Value{};
+  return yields_value
+             ? m_ctx.builder().emit_load(result_alloca_slot, emitted_type_id)
+             : Value{};
 }
 
 Value ExpressionGenerator::call_lambda_expression(

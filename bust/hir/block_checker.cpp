@@ -72,11 +72,11 @@ Block BlockChecker::check_block(const ast::Block &block) {
   // No final expression and no diverging statement, block is unit type
   auto type = m_ctx.m_type_arena.m_unit;
 
-  if (final_expression.has_value()) {
-    type = final_expression.value().m_type;
-  } else if (has_diverging_statement) {
+  if (has_diverging_statement) {
     // Only if no final expression do we set diverging type
     type = m_ctx.m_type_arena.m_never;
+  } else if (final_expression.has_value()) {
+    type = final_expression.value().m_type;
   }
 
   return {{block.m_location},

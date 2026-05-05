@@ -101,7 +101,8 @@ struct Context {
                 .m_name{},
             };
           } else {
-            throw core::InternalCompilerError("Bad type conversion");
+            throw core::InternalCompilerError("Bad type conversion: " +
+                                              m_arena.to_string(type));
           }
         },
         type);

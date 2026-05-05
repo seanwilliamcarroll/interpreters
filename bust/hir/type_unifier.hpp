@@ -369,6 +369,19 @@ struct TypeUnifier {
     return {constraint};
   }
 
+  TypeId join(TypeId type_id_a, TypeId type_id_b) {
+    if (type_id_a == m_type_arena.m_never) {
+      return type_id_b;
+    }
+    if (type_id_b == m_type_arena.m_never) {
+      return type_id_a;
+    }
+
+    unify(type_id_a, type_id_b);
+
+    return find(type_id_a);
+  }
+
   UnifierState extract_state() {
     return {.m_union_find = std::move(m_union_find),
             .m_resolved_type_id = std::move(m_resolved_type_id),

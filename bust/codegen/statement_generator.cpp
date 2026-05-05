@@ -35,6 +35,11 @@ Value StatementGenerator::operator()(
 Value StatementGenerator::operator()(const zir::LetBinding &let_binding) {
   auto value = ExpressionGenerator{m_ctx}.generate(let_binding.m_expression);
 
+  if (m_ctx.builder().current_block_terminated()) {
+    // The expression diverged, do not even create an alloca, we won't use it
+    return {};
+  }
+
   auto zir_binding = m_ctx.arena().get(let_binding.m_identifier);
 
   auto maybe_lambda = m_ctx.arena().get(let_binding.m_expression).m_expr_kind;
@@ -69,6 +74,11 @@ AllocaBinding StatementGenerator::generate(const zir::Place &place) {
 
 Value StatementGenerator::operator()(const zir::Assignment &assignment) {
   auto value = ExpressionGenerator{m_ctx}.generate(assignment.m_expression);
+
+  if (m_ctx.builder().current_block_terminated()) {
+    // The expression diverged, do not even create an alloca, we won't use it
+    return {};
+  }
 
   auto alloca = generate(assignment.m_place);
 

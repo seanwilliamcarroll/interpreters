@@ -53,6 +53,13 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
         let_binding.m_location);
   }
 
+  if (m_ctx.is_type_variable(annotated_type) &&
+      body.m_type == m_ctx.m_type_arena.m_never) {
+    // We've got an unannotated lambda whose body is a never type
+    // Explicitly set the type to the unit type
+    annotated_type = m_ctx.m_type_arena.m_unit;
+  }
+
   auto unified_type = m_ctx.m_type_unifier.find(annotated_type);
 
   auto collapsed_type = TypeVariableCollapser{m_ctx}.collapse(unified_type);
