@@ -305,6 +305,65 @@ TEST_SUITE("bust.codegen.expressions") {
     CHECK_RUN("fn main() -> i64 { { return 42; } }", 42);
   }
 
+  TEST_CASE("early return from non-main top-level function") {
+    // The lambda tests cover early return inside a closure; main covers
+    // the trivial case. This pins down that a plain top-level fn's
+    // m_return_type_stack entry is wired correctly: `return 0` here must
+    // resolve against `double_or_zero`'s -> i64, not main's.
+    CHECK_RUN("fn double_or_zero(x: i64) -> i64 {\n"
+              "  if x == 0 { return 0; }\n"
+              "  x * 2\n"
+              "}\n"
+              "fn main() -> i64 { double_or_zero(21) }",
+              42);
+    CHECK_RUN("fn double_or_zero(x: i64) -> i64 {\n"
+              "  if x == 0 { return 0; }\n"
+              "  x * 2\n"
+              "}\n"
+              "fn main() -> i64 { double_or_zero(0) }",
+              0);
+  }
+
+  TEST_CASE(
+      "if-expression with diverging then-arm widens to other arm's type") {
+    // The then-arm has type Never (it returns), the else-arm has type i64.
+    // The if-expression as a whole must typecheck as i64 — Never unifies
+    // with anything, so the join is i64. If this regressed to "arms must
+    // match exactly", the type checker would reject it.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if false { return 1; } else { 42 };\n"
+              "  x\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("if-expression with diverging else-arm widens to then-arm's type") {
+    // Symmetric to the above: else diverges, then yields i64.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if true { 42 } else { return 1; };\n"
+              "  x\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("if-expression with both arms diverging") {
+    // Both arms `return`, so the if-expr itself is Never and the enclosing
+    // block diverges. `x` is never actually bound at runtime; main exits
+    // through whichever arm the cond selects. Stresses the "BB already
+    // terminated, skip the if-arm epilogue" path on both sides at once —
+    // the merge block ends up with no predecessors.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if true { return 1; } else { return 3; };\n"
+              "  x\n"
+              "}",
+              1);
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if false { return 1; } else { return 3; };\n"
+              "  x\n"
+              "}",
+              3);
+  }
+
   // --- Naked return (no operand) -------------------------------------------
   //
   // `return;` in a unit-returning function emits a `ret` of unit (or just

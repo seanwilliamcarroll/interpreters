@@ -1,0 +1,4 @@
+fn main() -> i64 {
+  let x = if false { return 1; } else { 42 };
+  x
+}
