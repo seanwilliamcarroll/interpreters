@@ -34,6 +34,7 @@ struct DotExpr;
 struct TupleExpr;
 struct WhileExpr;
 struct ForExpr;
+struct BreakExpr;
 
 // --- Literals --------------------------------------------------------------
 
@@ -65,9 +66,10 @@ using ExprKind =
                  std::unique_ptr<BinaryExpr>, std::unique_ptr<UnaryExpr>,
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
-                 std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
-                 std::unique_ptr<ForExpr>, std::unique_ptr<TupleExpr>,
-                 std::unique_ptr<DotExpr>, I8, I32, I64, Bool, Char, Unit>;
+                 std::unique_ptr<BreakExpr>, std::unique_ptr<LambdaExpr>,
+                 std::unique_ptr<WhileExpr>, std::unique_ptr<ForExpr>,
+                 std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>, I8, I32,
+                 I64, Bool, Char, Unit>;
 
 using Statement = std::variant<LetBinding, Assignment, Expression>;
 
@@ -95,6 +97,10 @@ struct TupleExpr {
   std::vector<Expression> m_fields;
 };
 
+struct BreakExpr {
+  std::optional<Expression> m_returned_value;
+};
+
 struct DotExpr {
   Expression m_expression;
   // For now, all that is representable
@@ -108,8 +114,12 @@ struct Block : public core::HasLocation {
   std::optional<Expression> m_final_expression;
 };
 
+struct WhileExpr : public core::HasLocation {
+  Expression m_condition;
+  Block m_body;
+};
+
 // TODO
-struct WhileExpr : public core::HasLocation {};
 struct ForExpr : public core::HasLocation {};
 
 // --- Bindings & definitions ------------------------------------------------

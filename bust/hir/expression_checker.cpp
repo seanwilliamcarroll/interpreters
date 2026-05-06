@@ -519,6 +519,12 @@ Expression ExpressionChecker::operator()(
           })};
 }
 
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &,
+                              const core::SourceLocation &) {
+  return {};
+}
+
 Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::LambdaExpr> &lambda_expression,
     const core::SourceLocation &location) {
