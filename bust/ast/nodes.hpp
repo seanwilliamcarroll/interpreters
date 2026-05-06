@@ -114,13 +114,13 @@ struct Block : public core::HasLocation {
   std::optional<Expression> m_final_expression;
 };
 
-struct WhileExpr : public core::HasLocation {
+struct WhileExpr {
   Expression m_condition;
   Block m_body;
 };
 
 // TODO
-struct ForExpr : public core::HasLocation {};
+struct ForExpr {};
 
 // --- Bindings & definitions ------------------------------------------------
 

@@ -73,8 +73,10 @@ private:
 
   ast::Expression parse_if_expr();
   ast::Expression parse_return_expr();
+  ast::Expression parse_break_expr();
   ast::Expression parse_lambda_expr();
   ast::Expression parse_literal();
+  ast::Expression parse_while_expr();
 
   const Token &peek();
 
