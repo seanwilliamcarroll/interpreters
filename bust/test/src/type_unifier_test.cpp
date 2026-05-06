@@ -250,30 +250,27 @@ TEST_SUITE("bust.free_type_variable_collector") {
     auto tv = context.m_type_unifier.new_type_var();
     hir::TypeKind type = context.m_type_arena.as_type_variable(tv);
 
-    hir::FreeTypeVariableCollector collector{context};
-    std::visit(collector, type);
+    auto free_type_variables = collect_free_variables(context, type);
 
-    CHECK(collector.free_type_variables().size() == 1);
-    CHECK(collector.free_type_variables()[0].m_id == tv.m_id);
+    CHECK(free_type_variables.size() == 1);
+    CHECK(free_type_variables[0].m_id == tv.m_id);
   }
 
   TEST_CASE("collects nothing from concrete primitive") {
     hir::TypeKind type = hir::PrimitiveTypeValue{PrimitiveType::I64};
 
     auto context = hir::Context{};
-    hir::FreeTypeVariableCollector collector{context};
-    std::visit(collector, type);
+    auto free_type_variables = collect_free_variables(context, type);
 
-    CHECK(collector.free_type_variables().empty());
+    CHECK(free_type_variables.empty());
   }
 
   TEST_CASE("collects nothing from NeverType") {
     hir::TypeKind type = hir::NeverType{};
     auto context = hir::Context{};
-    hir::FreeTypeVariableCollector collector{context};
-    std::visit(collector, type);
+    auto free_type_variables = collect_free_variables(context, type);
 
-    CHECK(collector.free_type_variables().empty());
+    CHECK(free_type_variables.empty());
   }
 
   TEST_CASE("collects TVs from inside FunctionType") {
@@ -286,10 +283,9 @@ TEST_SUITE("bust.free_type_variable_collector") {
     params.emplace_back(t0);
     hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
-    hir::FreeTypeVariableCollector collector{context};
-    std::visit(collector, fn_type);
+    auto free_type_variables = collect_free_variables(context, fn_type);
 
-    CHECK(collector.free_type_variables().size() == 2);
+    CHECK(free_type_variables.size() == 2);
   }
 
   TEST_CASE("collects only TVs not concrete parts of fn type") {
@@ -301,11 +297,10 @@ TEST_SUITE("bust.free_type_variable_collector") {
     params.emplace_back(context.m_type_arena.m_i64);
     hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
-    hir::FreeTypeVariableCollector collector{context};
-    std::visit(collector, fn_type);
+    auto free_type_variables = collect_free_variables(context, fn_type);
 
-    CHECK(collector.free_type_variables().size() == 1);
-    CHECK(collector.free_type_variables()[0].m_id == t1.m_id);
+    CHECK(free_type_variables.size() == 1);
+    CHECK(free_type_variables[0].m_id == t1.m_id);
   }
 }
 

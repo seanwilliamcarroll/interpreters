@@ -73,17 +73,15 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
       collapsed_type,
   };
 
-  auto collector = FreeTypeVariableCollector(m_ctx);
-  collector.collect(new_identifier.m_type);
+  auto free_variables = collect_free_variables(m_ctx, new_identifier.m_type);
 
   // Store the new let binding
-  m_ctx.m_env.define(
-      new_identifier.m_name, binding_id,
-      TypeScheme{
-          .m_type = new_identifier.m_type,
-          .m_free_type_variables = std::move(collector.free_type_variables()),
-      },
-      let_binding.m_is_mutable);
+  m_ctx.m_env.define(new_identifier.m_name, binding_id,
+                     TypeScheme{
+                         .m_type = new_identifier.m_type,
+                         .m_free_type_variables = free_variables,
+                     },
+                     let_binding.m_is_mutable);
 
   return LetBinding{
       {let_binding.m_location},

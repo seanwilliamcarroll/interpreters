@@ -11,50 +11,33 @@
 #include <hir/context.hpp>
 #include <hir/types.hpp>
 
+#include "hir/type_folder.hpp"
+
 //****************************************************************************
 namespace bust::hir {
 //****************************************************************************
 
-struct FreeTypeVariableCollector {
+inline std::vector<TypeId> collect_free_variables(hir::Context &ctx,
+                                                  TypeId type_id) {
+  std::vector<TypeId> free_type_variables;
 
-  explicit FreeTypeVariableCollector(Context &ctx) : m_ctx(ctx) {}
-
-  void collect(const TypeKind &type) { std::visit(*this, type); }
-  void collect(const TypeId &type) { collect(m_ctx.m_type_arena.get(type)); }
-
-  void operator()(const PrimitiveTypeValue & /*unused*/) {}
-
-  void operator()(const TypeVariable &type) {
-    // Let's try to resolve the types first
-    auto resolved_type_id = m_ctx.m_type_unifier.find(type);
-    if (!m_ctx.is_type_variable(resolved_type_id)) {
+  auto collect_from_type_variable = [&](const TypeVariable &type_variable) {
+    auto resolved_type_id = ctx.m_type_unifier.find(type_variable);
+    if (!ctx.is_type_variable(resolved_type_id)) {
       return;
     }
-    m_free_type_variables.emplace_back(resolved_type_id);
-  }
+    free_type_variables.emplace_back(resolved_type_id);
+  };
 
-  void operator()(const FunctionType &type) {
-    for (const auto &parameter : type.m_parameters) {
-      collect(parameter);
-    }
+  walk(ctx.m_type_arena, type_id, collect_from_type_variable);
 
-    collect(type.m_return_type);
-  }
+  return free_type_variables;
+}
 
-  void operator()(const TupleType &type) {
-    for (const auto &field : type.m_fields) {
-      collect(field);
-    }
-  }
-
-  void operator()(const NeverType & /*unused*/) {}
-
-  std::vector<TypeId> &free_type_variables() { return m_free_type_variables; }
-
-private:
-  hir::Context &m_ctx;
-  std::vector<TypeId> m_free_type_variables;
-};
+inline std::vector<TypeId> collect_free_variables(hir::Context &ctx,
+                                                  const TypeKind &type) {
+  return collect_free_variables(ctx, ctx.m_type_arena.intern(type));
+}
 
 //****************************************************************************
 } // namespace bust::hir

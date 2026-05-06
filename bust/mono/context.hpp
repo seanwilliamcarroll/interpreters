@@ -42,11 +42,15 @@ struct Context {
 
 struct SubstitutionContext {
   hir::TypeId rewrite_type(hir::TypeId type_id) {
-    return hir::TypeVariableSubstituter{.m_type_arena = m_parent.type_arena(),
-                                        .m_type_unifier =
-                                            m_parent.m_type_unifier,
-                                        .m_new_mapping = m_substitution_mapping}
-        .substitute(type_id);
+    return hir::substitute_types(type_arena(), m_parent.m_type_unifier, type_id,
+                                 m_substitution_mapping);
+    // return hir::TypeVariableSubstituter{.m_type_arena =
+    // m_parent.type_arena(),
+    //                                     .m_type_unifier =
+    //                                         m_parent.m_type_unifier,
+    //                                     .m_new_mapping =
+    //                                     m_substitution_mapping}
+    //     .substitute(type_id);
   }
 
   hir::TypeArena &type_arena() { return m_parent.type_arena(); }
