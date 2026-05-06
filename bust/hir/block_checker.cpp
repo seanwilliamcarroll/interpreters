@@ -19,6 +19,7 @@
 #include <source_location.hpp>
 
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -33,13 +34,33 @@ TypeId BlockChecker::get_statement_type(const Statement &statement) {
   return m_ctx.m_type_arena.m_unit;
 }
 
+TypeId BlockChecker::get_inner_expression_type(const Statement &statement) {
+  return std::visit(
+      [](const auto &s) {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, LetBinding> ||
+                      std::is_same_v<T, Assignment>) {
+          return s.m_expression.m_type;
+        } else if constexpr (std::is_same_v<T, Expression>) {
+          return s.m_type;
+        }
+      },
+      statement);
+}
+
 Block BlockChecker::check_block(const ast::Block &block) {
   ScopeGuard guard(m_ctx.m_env);
+
+  bool has_diverging_statement = false;
 
   std::vector<Statement> statements;
   statements.reserve(block.m_statements.size());
   for (const auto &statement : block.m_statements) {
     statements.emplace_back(std::visit(StatementChecker{m_ctx}, (statement)));
+    if (get_inner_expression_type(statements.back()) ==
+        m_ctx.m_type_arena.m_never) {
+      has_diverging_statement = true;
+    }
   }
 
   auto final_expression =
@@ -48,8 +69,15 @@ Block BlockChecker::check_block(const ast::Block &block) {
             ExpressionChecker{m_ctx}.check_expression(expression));
       });
 
-  auto type = final_expression.has_value() ? final_expression.value().m_type
-                                           : m_ctx.m_type_arena.m_unit;
+  // No final expression and no diverging statement, block is unit type
+  auto type = m_ctx.m_type_arena.m_unit;
+
+  if (has_diverging_statement) {
+    // Only if no final expression do we set diverging type
+    type = m_ctx.m_type_arena.m_never;
+  } else if (final_expression.has_value()) {
+    type = final_expression.value().m_type;
+  }
 
   return {{block.m_location},
           type,

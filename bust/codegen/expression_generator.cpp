@@ -156,67 +156,126 @@ Value ExpressionGenerator::operator()(const zir::Char &literal) {
 Value ExpressionGenerator::operator()(const zir::Block &block) {
   for (const auto &statement : block.m_statements) {
     StatementGenerator{m_ctx}.generate(statement);
+    if (m_ctx.builder().current_block_terminated()) {
+      // The expression diverged, do not even create an alloca, we won't use it
+      return {};
+    }
   }
 
   if (block.m_final_expression.has_value()) {
-    return generate(block.m_final_expression.value());
+    auto final_value = generate(block.m_final_expression.value());
+    if (m_ctx.builder().current_block_terminated()) {
+      // The expression diverged, do not even create an alloca, we won't use it
+      return {};
+    }
+    return final_value;
   }
 
   return {};
 }
 
 Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
-  const auto &if_return_type_id =
-      m_ctx.arena().get_block_type(if_expression.m_then_block);
-  const auto &llvm_return_type_id = m_ctx.to_type(if_return_type_id);
+  // We want to emit the condition first
+  // If it diverged, we end and return up until a function boundary
+  // Else we try to emit then
+  // check if it diverged, note for later, emit store otherwise
+  // if else branch, generate and check divergence
+  // If both diverged, stop here and return back up
+  // If one or neither, continue with stores where appropriate
 
-  const auto has_else_branch = if_expression.m_else_block.has_value();
-  const auto yields_value =
-      has_else_branch && if_return_type_id != m_ctx.arena().m_unit;
-
-  // Emit code for conditional
   auto condition_target = generate(if_expression.m_condition);
+  if (m_ctx.builder().current_block_terminated()) {
+    return {};
+  }
+
+  // What are the types of the two branches
+  const auto then_branch_type_id =
+      m_ctx.arena().get_block_type(if_expression.m_then_block);
+  const auto has_else_branch = if_expression.m_else_block.has_value();
+  const auto else_branch_type_id =
+      has_else_branch
+          ? (m_ctx.arena().get_block_type(if_expression.m_else_block.value()))
+          : m_ctx.arena().m_never;
+
+  auto then_branch_diverges = (then_branch_type_id == m_ctx.arena().m_never);
+  auto else_branch_diverges = (else_branch_type_id == m_ctx.arena().m_never);
+
+  bool yields_value;
+  TypeId emitted_type_id;
+  if (then_branch_diverges && else_branch_diverges) {
+    // Nothing to return from this expression, just generate their blocks
+    yields_value = false;
+  } else if (then_branch_diverges) {
+    yields_value = (else_branch_type_id != m_ctx.arena().m_unit);
+    if (yields_value) {
+      emitted_type_id = m_ctx.to_type(else_branch_type_id);
+    }
+  } else {
+    // Either they both return a value or just if, just check if now
+    yields_value = (then_branch_type_id != m_ctx.arena().m_unit);
+    if (yields_value) {
+      emitted_type_id = m_ctx.to_type(then_branch_type_id);
+    }
+  }
+
   auto result_alloca_slot =
       yields_value
           ? m_ctx.builder().emit_alloca(
-                llvm_return_type_id,
+                emitted_type_id,
                 m_ctx.uniqify_name(std::string{conventions::if_result_local}))
           : Value{};
 
+  auto needs_merge_block =
+      !has_else_branch || !(then_branch_diverges && else_branch_diverges);
+
+  // Create the necessary blocks based on divergence and else branch existence
   auto then_label =
       m_ctx.builder().make_block(std::string{conventions::then_block_label});
   auto else_label = has_else_branch ? m_ctx.builder().make_block(std::string{
                                           conventions::else_block_label})
                                     : BlockLabel::null();
-  auto merge_label =
-      m_ctx.builder().make_block(std::string{conventions::merge_block_label});
+  // If at least one doesn't diverge, we will need to merge back
+  auto merge_label = needs_merge_block ? m_ctx.builder().make_block(std::string{
+                                             conventions::merge_block_label})
+                                       : BlockLabel::null();
 
+  // We have to branch here, even if they both diverge or there's no else and if
+  // diverges
   m_ctx.builder().emit_branch(condition_target, then_label,
                               has_else_branch ? else_label : merge_label);
 
-  // Emit code for then
+  auto complete_branch_block = [&](Value output_value) {
+    if (m_ctx.builder().current_block_terminated()) {
+      return;
+    }
+    if (yields_value) {
+      m_ctx.builder().emit_store(result_alloca_slot, std::move(output_value));
+    }
+    m_ctx.builder().emit_jump(merge_label);
+  };
+
+  // Then branch
   m_ctx.builder().enter_block(then_label);
   auto then_target = generate(if_expression.m_then_block);
-  if (yields_value) {
-    m_ctx.builder().emit_store(result_alloca_slot, then_target);
-  }
-  m_ctx.builder().emit_jump(merge_label);
+  complete_branch_block(std::move(then_target));
 
+  // Else branch
   if (has_else_branch) {
     // Emit code for else
     m_ctx.builder().enter_block(else_label);
     auto else_target = generate(if_expression.m_else_block.value());
-    if (yields_value) {
-      m_ctx.builder().emit_store(result_alloca_slot, else_target);
-    }
-    m_ctx.builder().emit_jump(merge_label);
+    complete_branch_block(std::move(else_target));
   }
 
-  // Finish with final load of merged value if it exists
+  if (!needs_merge_block) {
+    // Nothing left to do, all code past here is unreachable
+    return {};
+  }
+
   m_ctx.builder().enter_block(merge_label);
-  return yields_value ? m_ctx.builder().emit_load(result_alloca_slot,
-                                                  llvm_return_type_id)
-                      : Value{};
+  return yields_value
+             ? m_ctx.builder().emit_load(result_alloca_slot, emitted_type_id)
+             : Value{};
 }
 
 Value ExpressionGenerator::call_lambda_expression(
@@ -446,17 +505,23 @@ Value ExpressionGenerator::generate_logical_binary_instruction(
   // Emit code for lhs
   auto lhs_handle = generate(binary_expression.m_lhs);
   // Store lhs in result handle
-  m_ctx.builder().emit_store(result_alloca_slot, lhs_handle);
-  const auto is_and_op =
-      binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
-  m_ctx.builder().emit_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
-                              is_and_op ? merge_label : rhs_label);
+  if (!m_ctx.builder().current_block_terminated()) {
+    // We are free to add more instructions to this block
+    m_ctx.builder().emit_store(result_alloca_slot, lhs_handle);
+    const auto is_and_op =
+        binary_expression.m_operator == BinaryOperator::LOGICAL_AND;
+    m_ctx.builder().emit_branch(lhs_handle, is_and_op ? rhs_label : merge_label,
+                                is_and_op ? merge_label : rhs_label);
+  }
 
   // Emit code for rhs
   m_ctx.builder().enter_block(rhs_label);
   auto rhs_handle = generate(binary_expression.m_rhs);
-  m_ctx.builder().emit_store(result_alloca_slot, rhs_handle);
-  m_ctx.builder().emit_jump(merge_label);
+  if (!m_ctx.builder().current_block_terminated()) {
+    // We are free to add more instructions to this block
+    m_ctx.builder().emit_store(result_alloca_slot, rhs_handle);
+    m_ctx.builder().emit_jump(merge_label);
+  }
 
   // Emit code for merge
   m_ctx.builder().enter_block(merge_label);
@@ -486,7 +551,15 @@ Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
                                     unary_expression.m_operator);
 }
 
-Value ExpressionGenerator::operator()(const zir::ReturnExpr & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr) {
+  auto return_value = generate(return_expr.m_expression);
+  if (return_value.m_type_id == m_ctx.m_void) {
+    m_ctx.builder().emit_return_void();
+  } else {
+    m_ctx.builder().emit_return(return_value);
+  }
+
+  // Return expressions do not return an actual value here
   return {};
 }
 
@@ -590,7 +663,10 @@ Value ExpressionGenerator::lift_free_lambda(
     m_ctx.emit_parameter_prologue(signature.m_parameters);
 
     auto return_value = generate(lambda_expr.m_body);
-    if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
+
+    if (m_ctx.builder().current_block_terminated()) {
+      // There must have been a return earlier, we couldn't reach this block
+    } else if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().emit_return_void();
     } else {
       m_ctx.builder().emit_return(return_value);
@@ -630,7 +706,10 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
     closure_builder.emit_capture_load_prologue();
 
     auto return_value = generate(lambda_expr.m_body);
-    if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
+
+    if (m_ctx.builder().current_block_terminated()) {
+      // There must have been a return earlier, we couldn't reach this block
+    } else if (lambda_expr.m_return_type == m_ctx.arena().m_unit) {
       m_ctx.builder().emit_return_void();
     } else {
       m_ctx.builder().emit_return(return_value);

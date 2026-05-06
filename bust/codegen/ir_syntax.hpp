@@ -33,6 +33,7 @@ constexpr std::string_view call_void = "call void";
 constexpr std::string_view br = "br";
 constexpr std::string_view ret = "ret";
 constexpr std::string_view ret_void = "ret void";
+constexpr std::string_view unreachable = "unreachable";
 constexpr std::string_view sub = "sub";
 constexpr std::string_view xor_op = "xor";
 

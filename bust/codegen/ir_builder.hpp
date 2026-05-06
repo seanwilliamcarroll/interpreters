@@ -85,6 +85,7 @@ struct IRBuilder {
   [[nodiscard]] Value emit_cast(Value input, LLVMCastOperator op, TypeId to);
   void emit_return(Value value);
   void emit_return_void();
+  void emit_unreachable();
 
   [[nodiscard]] Value malloc_struct(TypeId struct_type);
   [[nodiscard]] Value alloca_struct(TypeId struct_type);
@@ -92,6 +93,8 @@ struct IRBuilder {
                        Value value);
   [[nodiscard]] Value load_from_struct(Value ptr, TypeId struct_type,
                                        size_t index);
+
+  [[nodiscard]] bool current_block_terminated() const;
 
   // Outside of IRBuilder, no one needs to know about functions/blocks directly
   // Just pass around these labels and handles

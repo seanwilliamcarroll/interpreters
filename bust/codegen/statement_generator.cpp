@@ -8,15 +8,16 @@
 
 #include <codegen/context.hpp>
 #include <codegen/expression_generator.hpp>
+#include <codegen/ir_builder.hpp>
 #include <codegen/statement_generator.hpp>
+#include <codegen/symbol_table.hpp>
 #include <codegen/value.hpp>
 #include <zir/arena.hpp>
 #include <zir/nodes.hpp>
 
+#include <type_traits>
 #include <variant>
 #include <vector>
-
-#include "codegen/symbol_table.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
@@ -33,6 +34,11 @@ Value StatementGenerator::operator()(
 
 Value StatementGenerator::operator()(const zir::LetBinding &let_binding) {
   auto value = ExpressionGenerator{m_ctx}.generate(let_binding.m_expression);
+
+  if (m_ctx.builder().current_block_terminated()) {
+    // The expression diverged, do not even create an alloca, we won't use it
+    return {};
+  }
 
   auto zir_binding = m_ctx.arena().get(let_binding.m_identifier);
 
@@ -68,6 +74,11 @@ AllocaBinding StatementGenerator::generate(const zir::Place &place) {
 
 Value StatementGenerator::operator()(const zir::Assignment &assignment) {
   auto value = ExpressionGenerator{m_ctx}.generate(assignment.m_expression);
+
+  if (m_ctx.builder().current_block_terminated()) {
+    // The expression diverged, do not even create an alloca, we won't use it
+    return {};
+  }
 
   auto alloca = generate(assignment.m_place);
 

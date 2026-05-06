@@ -109,6 +109,8 @@ struct ReturnInstruction {
 
 struct ReturnVoidInstruction {};
 
+struct Unreachable {};
+
 using Instruction =
     std::variant<BinaryInstruction, UnaryInstruction, IntegerCompareInstruction,
                  LoadInstruction, StoreInstruction, CastInstruction,
@@ -116,8 +118,9 @@ using Instruction =
                  PtrToIntInstruction, CallVoidInstruction, CallInstruction,
                  AllocaInstruction>;
 
-using Terminator = std::variant<BranchInstruction, JumpInstruction,
-                                ReturnInstruction, ReturnVoidInstruction>;
+using Terminator =
+    std::variant<BranchInstruction, JumpInstruction, ReturnInstruction,
+                 ReturnVoidInstruction, Unreachable>;
 
 //****************************************************************************
 } // namespace bust::codegen

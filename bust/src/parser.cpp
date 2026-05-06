@@ -21,7 +21,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -668,6 +667,29 @@ ast::Expression Parser::parse_if_expr() {
 ast::Expression Parser::parse_return_expr() {
   auto original_location = peek().get_location();
   expect(TokenType::RETURN, __FUNCTION__);
+
+  // Three possibilities: next token is
+  //  - semicolon -> return unit
+  //  - rbrace -> return unit
+  //  - expression -> return expression
+
+  if (peek().get_token_type() == TokenType::SEMICOLON ||
+      peek().get_token_type() == TokenType::RBRACE) {
+    // Note that this is really desugaring
+    // If we ever do more, we should split this out to the desugaring pass
+    // rather than directly inserting an implicit Unit
+
+    return ast::Expression{
+        {original_location},
+        std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{
+            ast::Expression{
+                {original_location},
+                ast::Unit{},
+            },
+        }),
+    };
+  }
+
   return ast::Expression{
       {original_location},
       std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{parse_expression()})};

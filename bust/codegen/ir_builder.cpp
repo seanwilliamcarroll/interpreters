@@ -220,6 +220,8 @@ void IRBuilder::emit_return_void() {
   block().add_terminal(ReturnVoidInstruction{});
 }
 
+void IRBuilder::emit_unreachable() { block().add_terminal(Unreachable{}); }
+
 Value IRBuilder::malloc_struct(TypeId struct_type) {
   auto size_ptr = emit_gep(
       Value{
@@ -250,6 +252,10 @@ Value IRBuilder::load_from_struct(Value ptr, TypeId struct_type, size_t index) {
   auto field_ptr = emit_gep_field(std::move(ptr), struct_type, index);
   auto value_type = m_ctx.type().as_struct(struct_type).m_fields[index];
   return emit_load(field_ptr, value_type);
+}
+
+bool IRBuilder::current_block_terminated() const {
+  return m_current_block_label.m_block->is_terminated();
 }
 
 IRBuilder::InsertionGuard::InsertionGuard(IRBuilder &parent,

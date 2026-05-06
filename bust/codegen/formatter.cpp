@@ -382,6 +382,12 @@ void Formatter::operator()(const ReturnVoidInstruction & /*unused*/) {
   newline();
 }
 
+void Formatter::operator()(const Unreachable & /*unused*/) {
+  indent();
+  m_out << ir_syntax::unreachable;
+  newline();
+}
+
 void Formatter::operator()(const Argument &argument) {
   m_out << str(argument.m_type) << " " << str(argument.m_name);
 }

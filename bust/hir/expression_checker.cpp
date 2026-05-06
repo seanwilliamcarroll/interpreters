@@ -370,10 +370,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
 
   // Directly call because Block is not a variant type, don't need to visit
   auto then_block =
-      BlockChecker{
-          m_ctx,
-      }
-          .check_block(if_expression->m_then_block);
+      BlockChecker{m_ctx}.check_block(if_expression->m_then_block);
 
   if (!if_expression->m_else_block.has_value()) {
     // Just then branch
@@ -398,22 +395,16 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   }
   // Check else branch too
   auto else_block =
-      BlockChecker{
-          m_ctx,
-      }
-          .check_block(if_expression->m_else_block.value());
+      BlockChecker{m_ctx}.check_block(if_expression->m_else_block.value());
 
+  TypeId type{};
   try {
-    m_ctx.m_type_unifier.unify(then_block.m_type, else_block.m_type);
+    type = m_ctx.m_type_unifier.join(then_block.m_type, else_block.m_type);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
         location);
   }
-
-  auto type = m_ctx.m_type_arena.m_never == then_block.m_type
-                  ? m_ctx.m_type_unifier.find(else_block.m_type)
-                  : m_ctx.m_type_unifier.find(then_block.m_type);
 
   return {{
               location,
@@ -544,24 +535,18 @@ Expression ExpressionChecker::operator()(
           ? type_converter.get_type(lambda_expression->m_return_type.value())
           : m_ctx.m_type_unifier.new_type_var();
 
-  auto body =
-      lambda_expression->m_return_type.has_value()
-          ? BlockChecker{m_ctx,}.check_callable_body(
-                parameters, possible_return_type_id, lambda_expression->m_body)
-          : BlockChecker{m_ctx,}.check_block_with_parameters(
-                parameters, lambda_expression->m_body);
-
-  auto return_type_id = lambda_expression->m_return_type.has_value()
-                            ? possible_return_type_id
-                            : body.m_type;
+  auto body = BlockChecker{m_ctx}.check_callable_body(
+      parameters, possible_return_type_id, lambda_expression->m_body);
 
   try {
-    m_ctx.m_type_unifier.unify(return_type_id, body.m_type);
+    m_ctx.m_type_unifier.unify(possible_return_type_id, body.m_type);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
         location);
   }
+
+  auto return_type_id = possible_return_type_id;
 
   auto function_type_id = m_ctx.m_type_arena.intern(FunctionType{
       .m_parameters = std::move(parameter_types),

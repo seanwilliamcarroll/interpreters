@@ -33,7 +33,12 @@ struct Mangler {
                      const hir::BindingId &id, const hir::TypeId &type_id) {
     m_out.str("");
     m_out << original_identifier << "__bi" << std::to_string(id.m_id) << "_";
-    mangle(type_id);
+    try {
+      mangle(type_id);
+    } catch (core::InternalCompilerError &error) {
+      throw core::InternalCompilerError(
+          "Error mangling: " + original_identifier + ": " + error.what());
+    }
     return m_out.str();
   }
 

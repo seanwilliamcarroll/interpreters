@@ -83,6 +83,7 @@ struct Formatter {
   void operator()(const JumpInstruction &);
   void operator()(const ReturnInstruction &);
   void operator()(const ReturnVoidInstruction &);
+  void operator()(const Unreachable &);
 
 private:
   void newline() { m_out << "\n"; }

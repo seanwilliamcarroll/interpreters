@@ -279,6 +279,192 @@ TEST_SUITE("bust.codegen.expressions") {
               42);
   }
 
+  // --- Return statement ----------------------------------------------------
+  //
+  // Codegen for ReturnExpr emits an LLVM `ret` and terminates the basic
+  // block. Tests cover tail-position return, return after other statements,
+  // early return from an if, and return from a nested block.
+
+  TEST_CASE("function body of bare return-statement returns the value") {
+    CHECK_RUN("fn main() -> i64 { return 42; }", 42);
+  }
+
+  TEST_CASE("return-statement after let returns the let-bound value") {
+    CHECK_RUN("fn main() -> i64 { let x = 7; return x; }", 7);
+  }
+
+  TEST_CASE("early return from then-branch") {
+    CHECK_RUN("fn main() -> i64 { if true { return 42; } 0 }", 42);
+  }
+
+  TEST_CASE("if-not-taken falls through past return") {
+    CHECK_RUN("fn main() -> i64 { if false { return 99; } 7 }", 7);
+  }
+
+  TEST_CASE("return inside nested block") {
+    CHECK_RUN("fn main() -> i64 { { return 42; } }", 42);
+  }
+
+  TEST_CASE("early return from non-main top-level function") {
+    // The lambda tests cover early return inside a closure; main covers
+    // the trivial case. This pins down that a plain top-level fn's
+    // m_return_type_stack entry is wired correctly: `return 0` here must
+    // resolve against `double_or_zero`'s -> i64, not main's.
+    CHECK_RUN("fn double_or_zero(x: i64) -> i64 {\n"
+              "  if x == 0 { return 0; }\n"
+              "  x * 2\n"
+              "}\n"
+              "fn main() -> i64 { double_or_zero(21) }",
+              42);
+    CHECK_RUN("fn double_or_zero(x: i64) -> i64 {\n"
+              "  if x == 0 { return 0; }\n"
+              "  x * 2\n"
+              "}\n"
+              "fn main() -> i64 { double_or_zero(0) }",
+              0);
+  }
+
+  TEST_CASE(
+      "if-expression with diverging then-arm widens to other arm's type") {
+    // The then-arm has type Never (it returns), the else-arm has type i64.
+    // The if-expression as a whole must typecheck as i64 — Never unifies
+    // with anything, so the join is i64. If this regressed to "arms must
+    // match exactly", the type checker would reject it.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if false { return 1; } else { 42 };\n"
+              "  x\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("if-expression with diverging else-arm widens to then-arm's type") {
+    // Symmetric to the above: else diverges, then yields i64.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if true { 42 } else { return 1; };\n"
+              "  x\n"
+              "}",
+              42);
+  }
+
+  TEST_CASE("if-expression with both arms diverging") {
+    // Both arms `return`, so the if-expr itself is Never and the enclosing
+    // block diverges. `x` is never actually bound at runtime; main exits
+    // through whichever arm the cond selects. Stresses the "BB already
+    // terminated, skip the if-arm epilogue" path on both sides at once —
+    // the merge block ends up with no predecessors.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if true { return 1; } else { return 3; };\n"
+              "  x\n"
+              "}",
+              1);
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = if false { return 1; } else { return 3; };\n"
+              "  x\n"
+              "}",
+              3);
+  }
+
+  TEST_CASE("let binding whose RHS is a bare return") {
+    // The RHS itself diverges before the binding can take effect. `x` is
+    // never assigned a value at runtime — control unwinds through `return`
+    // first. Trailing `0` is dead code; the block's type is Never and
+    // main's i64 return short-circuits against it. The test pins down that
+    // codegen skips the alloca/store for `x` rather than trying to write a
+    // non-existent value into it.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = return 5;\n"
+              "  0\n"
+              "}",
+              5);
+  }
+
+  TEST_CASE("if-with-both-arms-diverging as block's trailing expression") {
+    // No surrounding let — the diverging if is itself the function body's
+    // tail expression. Block type comes from the final-expression branch
+    // (which here is Never), not the diverging-statement branch. Confirms
+    // that path also threads through codegen without a phi.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  if true { return 1 } else { return 3 }\n"
+              "}",
+              1);
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  if false { return 1 } else { return 3 }\n"
+              "}",
+              3);
+  }
+
+  TEST_CASE("diverging let inside lambda body") {
+    // The lambda's `return` rets the lambda, not main. Verifies that the
+    // m_return_type_stack push/pop around lambda bodies still works when
+    // the lambda's own block is Never-typed, and that the dead trailing
+    // expression doesn't break codegen for the closure.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let f = || -> i64 {\n"
+              "    let x = return 7;\n"
+              "    0\n"
+              "  };\n"
+              "  f()\n"
+              "}",
+              7);
+  }
+
+  TEST_CASE("diverging arm inside a function call argument") {
+    // The if-expression in the argument position has one diverging arm.
+    // When the live arm is taken, the call proceeds normally with i64.
+    // When the diverging arm is taken, main returns directly and the
+    // call never happens. Stresses argument-position codegen against the
+    // BB-already-terminated invariant.
+    CHECK_RUN("fn double(x: i64) -> i64 { x * 2 }\n"
+              "fn main() -> i64 {\n"
+              "  double(if true { 21 } else { return 99 })\n"
+              "}",
+              42);
+    CHECK_RUN("fn double(x: i64) -> i64 { x * 2 }\n"
+              "fn main() -> i64 {\n"
+              "  double(if false { 21 } else { return 99 })\n"
+              "}",
+              99);
+  }
+
+  TEST_CASE("diverging arm inside a higher-order function call argument") {
+    // Same shape as above, but the call site is to a HOF that takes a
+    // function pointer. Exercises the same divergence path through the
+    // mono'd call to apply.
+    CHECK_RUN("fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }\n"
+              "fn main() -> i64 {\n"
+              "  let inc = |x: i64| -> i64 { x + 1 };\n"
+              "  apply(inc, if true { 41 } else { return 99 })\n"
+              "}",
+              42);
+  }
+
+  // --- Naked return (no operand) -------------------------------------------
+  //
+  // `return;` in a unit-returning function emits a `ret` of unit (or just
+  // a bare `ret void`-style terminator depending on unit representation).
+  // Observed via stdout: putchar after the return must NOT fire when the
+  // return is taken.
+
+  TEST_CASE("naked return in unit function returns control") {
+    CHECK_RUN("fn helper() { return; }\n"
+              "fn main() -> i64 { helper(); 42 }",
+              42);
+  }
+
+  TEST_CASE("naked return short-circuits subsequent putchar") {
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn helper(skip: bool) {\n"
+                     "  if skip { return; }\n"
+                     "  putchar('!' as i32);\n"
+                     "}\n"
+                     "fn main() -> i64 {\n"
+                     "  helper(true);\n"
+                     "  helper(false);\n"
+                     "  0\n"
+                     "}",
+                     0, "!");
+  }
+
   // --- Comparison operators ------------------------------------------------
   //
   // These all produce i1 (bool). The most direct way to observe a bool from

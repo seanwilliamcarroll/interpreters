@@ -9,14 +9,18 @@
 //****************************************************************************
 
 #include <arena.hpp>
+#include <exceptions.hpp>
 #include <types.hpp>
 #include <zir/nodes.hpp>
 #include <zir/types.hpp>
 
 #include <optional>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 //****************************************************************************
 namespace bust::zir {
@@ -104,6 +108,29 @@ struct Arena {
     if (block.m_final_expression.has_value()) {
       const auto &expression = get(block.m_final_expression.value());
       return expression.m_type_id;
+    }
+    bool has_diverging_statement = false;
+    for (const auto &statement : block.m_statements) {
+      auto expr_id = std::visit(
+          [&](auto &&s) {
+            using T = std::decay_t<decltype(s)>;
+            if constexpr (std::is_same_v<T, ExpressionStatement> ||
+                          std::is_same_v<T, LetBinding> ||
+                          std::is_same_v<T, Assignment>) {
+              return s.m_expression;
+            } else {
+              throw core::InternalCompilerError("Unknown statement variant!");
+            }
+          },
+          statement);
+      auto expression = get(expr_id);
+      if (expression.m_type_id == m_never) {
+        has_diverging_statement = true;
+        break;
+      }
+    }
+    if (has_diverging_statement) {
+      return m_never;
     }
     return m_unit;
   }

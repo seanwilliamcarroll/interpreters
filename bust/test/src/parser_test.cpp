@@ -712,6 +712,56 @@ TEST_SUITE("bust.parser") {
         func.m_body.m_final_expression->m_expression));
   }
 
+  // --- Naked return (no operand) -------------------------------------------
+  //
+  // `return;` is sugar for `return ();`. The parser desugars at the syntax
+  // layer: a ReturnExpr with no operand is constructed wrapping a Unit
+  // literal, so later passes (type checking, codegen) need no special
+  // case. If a dedicated desugaring pass is later introduced, the parser
+  // could move that expansion there.
+
+  TEST_CASE("bust::parse_naked_return_as_statement") {
+    auto program = parse_string("fn f() { return; }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(std::holds_alternative<Expression>(func.m_body.m_statements[0]));
+    const auto &stmt_expr = std::get<Expression>(func.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(
+        stmt_expr.m_expression));
+    const auto &ret =
+        *std::get<std::unique_ptr<ReturnExpr>>(stmt_expr.m_expression);
+    // Naked return desugars to `return ();` — operand is a Unit literal.
+    CHECK(std::holds_alternative<Unit>(ret.m_expression.m_expression));
+    CHECK_FALSE(func.m_body.m_final_expression.has_value());
+  }
+
+  TEST_CASE("bust::parse_naked_return_as_final_expression") {
+    // `return` with no semicolon and no operand sits as the block's final
+    // expression. Its type later resolves to Never; the operand is Unit.
+    auto program = parse_string("fn f() { return }");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    REQUIRE(func.m_body.m_statements.empty());
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    REQUIRE(std::holds_alternative<std::unique_ptr<ReturnExpr>>(
+        func.m_body.m_final_expression->m_expression));
+    const auto &ret = *std::get<std::unique_ptr<ReturnExpr>>(
+        func.m_body.m_final_expression->m_expression);
+    CHECK(std::holds_alternative<Unit>(ret.m_expression.m_expression));
+  }
+
+  TEST_CASE("bust::parse_naked_return_inside_if") {
+    auto program = parse_string("fn f() {\n"
+                                "  if true { return; }\n"
+                                "  let x = 5;\n"
+                                "}");
+    DUMP_AST(program);
+    const auto &func = get_single_func(program);
+    // if-stmt then let-stmt
+    REQUIRE(func.m_body.m_statements.size() == 2);
+  }
+
   // === Block-like statements without semicolons ============================
 
   TEST_CASE("bust::parse_if_else_as_statement_no_semicolon") {

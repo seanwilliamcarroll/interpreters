@@ -13,9 +13,8 @@
 #include <zir/nodes.hpp>
 #include <zir/statement_lowerer.hpp>
 
+#include <type_traits>
 #include <variant>
-
-#include "exceptions.hpp"
 
 //****************************************************************************
 namespace bust::zir {

@@ -23,11 +23,11 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "ast/dump.hpp"
 
 //****************************************************************************
 namespace bust::hir {
@@ -51,6 +51,13 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
         let_binding.m_location);
+  }
+
+  if (m_ctx.is_type_variable(annotated_type) &&
+      body.m_type == m_ctx.m_type_arena.m_never) {
+    // We've got an unannotated lambda whose body is a never type
+    // Explicitly set the type to the unit type
+    annotated_type = m_ctx.m_type_arena.m_unit;
   }
 
   auto unified_type = m_ctx.m_type_unifier.find(annotated_type);
@@ -121,7 +128,6 @@ bool StatementChecker::is_place_mutable(const Place &place) {
 }
 
 Statement StatementChecker::operator()(const ast::Assignment &assignment) {
-
   // Need to check if we can lower the lhs Expression to a Place
   auto lhs = ExpressionChecker{m_ctx}.check_expression(assignment.m_lhs);
   auto maybe_place = try_lower_place(lhs);

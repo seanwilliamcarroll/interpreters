@@ -146,7 +146,9 @@ void TopItemGenerator::operator()(const zir::FunctionDef &function_def) {
   const auto &return_type_id =
       m_ctx.arena().as_function(binding.m_type).m_return_type;
 
-  if (return_type_id == m_ctx.arena().m_unit) {
+  if (m_ctx.builder().current_block_terminated()) {
+    // // There must have been a return earlier, we couldn't reach this block
+  } else if (return_type_id == m_ctx.arena().m_unit) {
     m_ctx.builder().emit_return_void();
   } else {
     // Wherever we are, we need to add this terminal to the final

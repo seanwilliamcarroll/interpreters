@@ -6,10 +6,8 @@ lies — not to commit to an order yet.
 
 ## Questions in scope
 
-- Tuples in codegen
 - User-defined types (structs)
-- Mutability + assignment operator
-- Loops (revisit while / for) — beneficiary of mutability
+- Loops (`while` / `for`)
 - References (`&T`, `&mut T`) and the borrow checker
 - Pattern matching
 - Algebraic data types (enums / sum types)
@@ -19,17 +17,21 @@ lies — not to commit to an order yet.
 
 ## Dependency graph
 
+(Tuples and mutability already landed; arrows from them are kept to show
+what they unblock.)
+
 ```
-[tuples-codegen]──┐
-                  ├─→ [pattern-matching v0] ─┐
-                  │                          │
-[structs] ────────┼─→ [methods] ─→ [traits-S1] ─→ [traits-S2 / constrained generics]
-                  │                          │
-                  └─→ [ADTs] ←───────────────┘
-                       │
-[mutability + =] ──┬─→ [loops cleanup]
-                   ├─→ [references no-check] ─→ [borrow checker]
-                   └─→ [mutable globals]
+[tuples]──┐
+          ├─→ [pattern-matching v0] ─┐
+          │                          │
+[structs] ┼─→ [methods] ─→ [traits-S1] ─→ [traits-S2 / constrained generics]
+          │                          │
+          └─→ [ADTs] ←───────────────┘
+                │
+
+[mutability] ──┬─→ [while loops]
+               ├─→ [references no-check] ─→ [borrow checker]
+               └─→ [mutable globals]
 
 [const eval] ─→ [global lets]
 
@@ -50,14 +52,12 @@ lies — not to commit to an order yet.
 - **Strategy:** build once, extend by pattern kind: `_` → literal → identifier → tuple → struct → enum-variant. Decision-tree compilation. Exhaustiveness checking is a separate subproject (Maranget's algorithm or simpler).
 
 ### Mutability + assignment
-- **Blocks on:** nothing
-- **Enables:** real `while`/`for`, mutable globals, `&mut`, all method work that takes `&mut self`
-- **Size:** M
-- **Notes:** HIR adds a mut flag on bindings. Type checker enforces. Codegen barely changes — alloca-everything is already in place; just emit a store on assignment. Place-expression / value-expression distinction starts mattering here (precursor to references).
+- **Status:** done. `let mut`, immutable-binding rejection, lambda-parameter mutability, captured-binding mutability checks all land in HIR; codegen emits stores on `Assignment`. Covered by `bust.codegen.expressions` and `bust.type_checker` (search for `let mut`).
+- **Enabled:** real `while`/`for`, mutable globals, `&mut`, all method work that takes `&mut self`
 
 ### Loops cleanup
-- **Status:** `while` is an empty AST stub (`bust/ast/nodes.hpp:106`); nothing flows through HIR/zir/codegen. `for` doesn't exist at all.
-- **Blocks on:** mutability for usefulness; for `for x in xs`, traits Stage 2 + an `Iterator` trait.
+- **Status:** `while` and `for` are empty AST stubs (`bust/ast/nodes.hpp:112-113`); nothing flows through HIR/zir/codegen.
+- **Blocks on:** nothing for `while` (mutability already landed); `for x in xs` waits on traits Stage 2 + an `Iterator` trait.
 - **Size:** S for `while`. `for` waits for traits-S2 — no C-style stopgap.
 - **Notes:** doing `for` right means desugaring through an iterator trait. Skipping the C-style detour avoids retrofit work.
 
@@ -101,7 +101,7 @@ lies — not to commit to an order yet.
 - **Blocks on:** traits-S1, HM extension to qualified types
 - **Enables:** real polymorphism, `Iterator`, idiomatic `for`, `Fn` as a trait
 - **Size:** L (3–4 weeks of focused work)
-- **Notes:** see earlier discussion. Monomorphization (already on `aspirations.md`) is the codegen path. Closure refactor's `CallableType` collapses into "`Fn` is a built-in trait" once this lands.
+- **Notes:** see earlier discussion. Monomorphization is already implemented in `bust/mono/` and is the codegen path. Closure refactor's `CallableType` collapses into "`Fn` is a built-in trait" once this lands.
 
 ### Global let bindings
 - **Blocks on:** for `const`, a const-evaluator; for `static`, an init strategy
@@ -119,27 +119,26 @@ lies — not to commit to an order yet.
 
 A "Rust-shaped" path that minimizes blocked work:
 
-1. **Mutability + assignment** [M] — foundational, unblocks loops + references
-2. **Loops cleanup** [S] — beneficiary of (1)
-3. **Pattern matching v0** (literals + tuples + bindings) [M] — engine ready before structs/ADTs need it
-4. **Structs** [M] — user-defined types
-5. **Methods (inherent impls)** [M] — natural step before traits
-6. **References without checker** [M] — needed for idiomatic `&self`
-7. **ADTs** [L] — extends PM, gives `Option`/`Result`
-8. **Traits Stage 1** [M] — replaces `PrimitiveTypeClass`
-9. **Traits Stage 2 / constrained generics** [L] — real polymorphism
-10. **Closure refactor** — slot in anywhere; especially clean after S2
-11. **Global lets (`static`)** — slot in anywhere
-12. **Borrow checker** [XL] — capstone
+1. **`while` loops** [S] — direct beneficiary of mutability, which already landed
+2. **Pattern matching v0** (literals + tuples + bindings) [M] — engine ready before structs/ADTs need it
+3. **Structs** [M] — user-defined types
+4. **Methods (inherent impls)** [M] — natural step before traits
+5. **References without checker** [M] — needed for idiomatic `&self`
+6. **ADTs** [L] — extends PM, gives `Option`/`Result`
+7. **Traits Stage 1** [M] — replaces `PrimitiveTypeClass`
+8. **Traits Stage 2 / constrained generics** [L] — real polymorphism
+9. **Closure refactor** — slot in anywhere; especially clean after S2
+10. **Global lets (`static`)** — slot in anywhere
+11. **Borrow checker** [XL] — capstone
 
-Alternative: do **structs + methods + traits-S1** earlier (slot 2–4) if you want
+Alternative: do **structs + methods + traits-S1** earlier (slot 1–3) if you want
 the trait machinery in mind sooner; cost is delaying the loops/PM payoff.
 
 ## Cross-cutting questions
 
 - **Generics syntax timing.** `Foo<T>` and `fn foo<T>(...)` could land with structs (Stage 1: unconstrained generics) or wait for traits-S2 (constrained). Easier to add generics when constraints arrive — saves a re-think.
 - **Const-eval scope.** Comes up for `const`, array lengths, generic const params. Probably defer all of it.
-- **Place-vs-value lvalue model.** Every feature past mutability assumes it. Worth nailing the HIR representation when mutability lands rather than retrofitting.
+- **Place-vs-value lvalue model.** Single-variant `Place` exists in HIR and ZIR (`hir/nodes.hpp:128`, `zir/nodes.hpp:69`) — only `Identifier` for now. References, field assignment, and indexed assignment will each broaden the variant.
 - **Visibility / modules.** Not on this list. At some point `pub`/`mod` start mattering for trait coherence — flag for later.
 
 ## Final priority list
@@ -148,37 +147,33 @@ Ordered, with rough sequencing rationale. Each item should be substantially
 complete before moving on; small overlaps and opportunistic out-of-order work
 are fine.
 
-1. **Mutability + assignment operator** — foundational. Cheap because of
-   alloca-everything. Unblocks `while`, `&mut`, and forces the place-vs-value
-   model the rest of the language needs.
-2. **`while` loops** — direct beneficiary of (1). `for` is *deferred* to
-   after traits-S2 so it lands as iterator-trait sugar from day one — no
+1. **`while` loops** — direct beneficiary of mutability. `for` is *deferred*
+   to after traits-S2 so it lands as iterator-trait sugar from day one — no
    C-style stopgap to retrofit.
-3. **Pattern matching v0** (literals, identifiers, tuples, irrefutable in
+2. **Pattern matching v0** (literals, identifiers, tuples, irrefutable in
    `let`) — build the engine while requirements are simple; extend per
    pattern kind as new shapes land.
-4. **Structs** — first user-defined type. Codegen already has `StructType`.
-5. **Methods (inherent impls)** — `Self`, method resolution. Needs (6) for
+3. **Structs** — first user-defined type. Codegen already has `StructType`.
+4. **Methods (inherent impls)** — `Self`, method resolution. Needs (5) for
    `&self`, but the dispatch machinery can stage before references.
-6. **References without borrow checker** — `&T` / `&mut T` with C-pointer
+5. **References without borrow checker** — `&T` / `&mut T` with C-pointer
    semantics; place-vs-value model; auto-ref/auto-deref. Unblocks idiomatic
-   `&self` for (5).
-7. **ADTs (enums)** — extends pattern matching; gives `Option` / `Result`.
+   `&self` for (4).
+6. **ADTs (enums)** — extends pattern matching; gives `Option` / `Result`.
    Tag-only enums first, payloads next.
-8. **Traits Stage 1** (monomorphic only) — replaces `PrimitiveTypeClass`
+7. **Traits Stage 1** (monomorphic only) — replaces `PrimitiveTypeClass`
    with real user-declarable traits.
-9. **Traits Stage 2** (constrained generics + qualified types) — real
+8. **Traits Stage 2** (constrained generics + qualified types) — real
    polymorphism. Re-enables `make_adder` cleanly via `Fn` as a trait, and
    retires the closure bandaid.
-10. **`for` loops via `Iterator` trait** — direct payoff from (9).
+9. **`for` loops via `Iterator` trait** — direct payoff from (8).
     Desugars to `IntoIterator::into_iter` + `Iterator::next` calls.
-11. **Borrow checker** — capstone; multi-month subproject of its own.
+10. **Borrow checker** — capstone; multi-month subproject of its own.
 
 Slot in opportunistically:
 
-- **Global lets (`static`)** — anytime after (1); useful but not blocking
-  anything else.
-- **Generic structs / functions (unconstrained)** — could land with (4),
-  but cleaner to wait until (9) so constraints are in scope from the start.
-- **Closure narrow fix** — only if (9) gets pushed out; otherwise let
+- **Global lets (`static`)** — anytime; useful but not blocking anything else.
+- **Generic structs / functions (unconstrained)** — could land with (3),
+  but cleaner to wait until (8) so constraints are in scope from the start.
+- **Closure narrow fix** — only if (8) gets pushed out; otherwise let
   traits-S2 absorb it.

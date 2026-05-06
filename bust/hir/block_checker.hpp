@@ -21,6 +21,7 @@ namespace bust::hir {
 
 struct BlockChecker {
   TypeId get_statement_type(const Statement &);
+  static TypeId get_inner_expression_type(const Statement &);
   Block check_block(const ast::Block &);
   Block check_block_with_parameters(const std::vector<Parameter> &parameters,
                                     const ast::Block &ast_block);

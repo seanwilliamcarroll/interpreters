@@ -7,22 +7,24 @@ on each other are marked with arrows (→ means "enables").
 
 Three structural investments that unblock future features:
 
-- **Type-property visitor/table.** `is_signed_type`, `width_bits`,
-  `to_llvm_type`, and the `StructType` branch in formatting are each a
-  separate visit over `zir::Type` / `LLVMType`. Adding `ArrayType` means
-  editing every site ("shotgun surgery"). One `type_traits(ty)` returning
-  `{ signed, width, llvm_name, category }` centralizes it.
+- **Type-property visitor/table.** `width_bits` is already a single dispatched
+  function on `LLVMType` (`codegen/types.hpp:68`), but `is_signed_type`,
+  `to_llvm_type`, and the `StructType` branch in formatting are still each a
+  separate visit. Adding `ArrayType` means editing every site ("shotgun
+  surgery"). One `type_traits(ty)` returning `{ signed, width, llvm_name,
+  category }` centralizes it.
 - **Def/use introspection on instructions.** `Instruction` is a variant of
   POD structs — fine for emission, nothing for analysis. Every optimization
   (DCE, CSE, constant folding) and even a validity checker wants to
   enumerate the handles an instruction defines vs uses. Two free functions
   `result(const Instruction&) -> optional<Handle>` and
   `operands(const Instruction&) -> vector<Handle>` unlock every future pass.
-- **Stricter handle typing.** `BranchInstruction::m_iftrue` is typed
-  `Handle` but must semantically be a block label. `CallInstruction::m_callee`
-  must be a function pointer or global. A distinct `BlockLabel` type (and
-  similar narrowing) makes illegal IR unrepresentable — bugs caught at
-  compile time instead of producing malformed IR that LLVM rejects.
+- **Stricter handle typing.** `BlockLabel` (`codegen/block_label.hpp`) is
+  already a distinct, builder-constructed type — `BranchInstruction::m_iftrue`
+  and `JumpInstruction::m_target` are correctly typed. Remaining narrowing:
+  `CallInstruction::m_callee` is still `Value` but must semantically be a
+  function pointer or global; tightening it would catch the last class of
+  malformed-IR-at-runtime bugs at compile time.
 
 ## Aggregate Types
 
@@ -65,18 +67,6 @@ Three structural investments that unblock future features:
   instead of `call @putchar.thunk(null, c)`). Pure optimization atop the
   constant-closure ABI — does not change fat-pointer representation.
 - [ ] Optimizations (LLVM pass pipeline, inlining, etc.)
-
-## Control Flow / Return Analysis
-
-- [ ] Smarter reasoning about `return` expressions in blocks
-  — Currently, `return expr;` with a trailing semicolon makes it a statement,
-  so the block's final expression is absent and the block type is unit. This
-  means `fn foo() -> i64 { return 42; }` is a type error because the block
-  returns `()`, not `i64`. Rust handles this by special-casing return/diverging
-  statements. We should either: (a) treat `return` as a diverging expression
-  (type `!`) so the block type is still valid, or (b) allow semicolons after
-  the final expression in a block without forcing the block type to unit.
-  Either approach would make `return x + y;` legal in tail position.
 
 ## Type Unifier
 

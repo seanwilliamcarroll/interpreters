@@ -306,6 +306,85 @@ TEST_SUITE("bust.codegen.side_effects") {
                      1, "Y");
   }
 
+  // --- Return statement short-circuits side effects ------------------------
+  //
+  // `return` terminates the current basic block, so any statements textually
+  // after it (in the same lexical block) are dead code at runtime — their
+  // putchar calls must not fire.
+
+  TEST_CASE("return prevents subsequent putchar in main") {
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn main() -> i64 {\n"
+                     "  putchar('X' as i32);\n"
+                     "  return 0;\n"
+                     "  putchar('Y' as i32);\n"
+                     "}",
+                     0, "X");
+  }
+
+  TEST_CASE("naked return prevents subsequent putchar in unit fn") {
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn helper() {\n"
+                     "  putchar('A' as i32);\n"
+                     "  return;\n"
+                     "  putchar('B' as i32);\n"
+                     "}\n"
+                     "fn main() -> i64 {\n"
+                     "  helper();\n"
+                     "  0\n"
+                     "}",
+                     0, "A");
+  }
+
+  TEST_CASE("early return in if-then guards subsequent putchar across calls") {
+    // First call: skip=true → ret before putchar fires. Second:
+    // skip=false → fires. Third: skip=true → ret. Output is just 'B'.
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn print_unless(c: i32, skip: bool) {\n"
+                     "  if skip { return; }\n"
+                     "  putchar(c);\n"
+                     "}\n"
+                     "fn main() -> i64 {\n"
+                     "  print_unless('A' as i32, true);\n"
+                     "  print_unless('B' as i32, false);\n"
+                     "  print_unless('C' as i32, true);\n"
+                     "  0\n"
+                     "}",
+                     0, "B");
+  }
+
+  TEST_CASE("side effect in return-expression fires before ret") {
+    // putchar('Q') executes before the ret of its return value. The
+    // post-return putchar('R') does not run because the surrounding block
+    // has been terminated.
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn helper() -> i64 {\n"
+                     "  return putchar('Q' as i32) as i64;\n"
+                     "  putchar('R' as i32);\n"
+                     "}\n"
+                     "fn main() -> i64 { helper(); 0 }",
+                     0, "Q");
+  }
+
+  TEST_CASE("return inside lambda short-circuits its own side effects") {
+    // Lambda's `return` rets the lambda, not main. The post-return
+    // putchar inside the lambda is dead. main's putchar after the call
+    // still fires.
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn main() -> i64 {\n"
+                     "  let say = |c: i32| {\n"
+                     "    putchar(c);\n"
+                     "    return;\n"
+                     "    putchar('!' as i32);\n"
+                     "  };\n"
+                     "  say('H' as i32);\n"
+                     "  say('i' as i32);\n"
+                     "  putchar('\\n' as i32);\n"
+                     "  0\n"
+                     "}",
+                     0, "Hi\n");
+  }
+
 #else
   TEST_CASE("codegen side-effect tests" * doctest::skip()) {
     MESSAGE("lli not found at configure time - execution tests skipped");
