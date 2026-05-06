@@ -9,6 +9,7 @@ FN          = `fn`
 LET         = `let`
 MUT         = `mut`
 RETURN      = `return`
+BREAK       = `break`
 IF          = `if`
 ELSE        = `else`
 WHILE       = `while`
@@ -179,6 +180,7 @@ primary             = literal
                     | for_expr
                     | lambda_expr
                     | return_expr
+                    | break_expr
 
 // `(expr)` is a parenthesized expression; `(expr,)` is a 1-tuple;
 // `(expr, expr, ...)` (with optional trailing comma) is an N-tuple.
@@ -191,11 +193,14 @@ paren_or_tuple_expr = LPAREN expression RPAREN
 
 return_expr         = RETURN expression?
 
+break_expr          = BREAK
+
 if_expr             = IF expression block (ELSE block)?
 
 lambda_expr         = PIPE (parameter_inferred (COMMA parameter_inferred)*)? PIPE (ARROW type)? block
 
-while_expr          = TODO (deferred — recursion covers looping for now)
+while_expr          = WHILE expression block
+
 for_expr            = TODO (deferred — needs ranges/collections)
 
 // Literals
@@ -234,6 +239,17 @@ literal             = INT_LITERAL
   compatible with any expected type (acts like a "never" / bottom type
   without needing to add `!` to the type system).
 - Implicit return: last expression in a block is its value.
+- `while expr block` is an expression of type `()`. The condition must be
+  `bool`. The body block must type as `()` (same rule as a no-`else` `if`).
+  The body is its own scope — bindings inside the body do not leak out.
+  Even `while true { ... }` types as `()`; the type checker does not analyze
+  condition truth, so it must assume the loop may exit normally. Contrast
+  with `loop { ... }` (future), where a body containing no `break` types as
+  Never.
+- `break` is an expression of type Never. It must appear lexically inside a
+  loop body; this is enforced in the type checker, not the parser. `break`
+  targets the innermost enclosing loop. (Labeled break is a future
+  extension.) Codegen lowers `break` to a jump to the loop's exit block.
 
 ## Desirable Features (Future)
 
