@@ -9,9 +9,8 @@
 //****************************************************************************
 
 #include <hir/context.hpp>
+#include <hir/type_folder.hpp>
 #include <hir/types.hpp>
-
-#include "hir/type_folder.hpp"
 
 //****************************************************************************
 namespace bust::hir {

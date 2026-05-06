@@ -62,7 +62,8 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
 
   auto unified_type = m_ctx.m_type_unifier.find(annotated_type);
 
-  auto collapsed_type = TypeVariableCollapser{m_ctx}.collapse(unified_type);
+  auto collapsed_type =
+      collapse_types(m_ctx.m_type_arena, m_ctx.m_type_unifier, unified_type);
 
   auto binding_id = m_ctx.next_let_binding_id();
 
