@@ -48,10 +48,6 @@ struct Context {
       m_instantiation_records[id].push_back(InstantiationRecord{new_mapping});
     }
 
-    // return TypeVariableSubstituter{.m_type_arena = m_type_arena,
-    //                                .m_type_unifier = m_type_unifier,
-    //                                .m_new_mapping = new_mapping}
-    //     .substitute(type_scheme.m_type);
     return substitute_types(m_type_arena, m_type_unifier, type_scheme.m_type,
                             new_mapping);
   }

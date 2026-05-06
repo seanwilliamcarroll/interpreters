@@ -51,14 +51,8 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
     // Record the specialization in the table
 
     hir::TypeSubstitution combined = outer_substitution;
-    // auto substituter =
-    //     hir::TypeVariableSubstituter{.m_type_arena = m_ctx.type_arena(),
-    //                                  .m_type_unifier = m_ctx.m_type_unifier,
-    //                                  .m_new_mapping = outer_substitution};
     for (const auto &[original_type_id, substituted_type_id] :
          record.m_substitution) {
-      // combined[original_type_id] =
-      // substituter.substitute(substituted_type_id);
       combined[original_type_id] =
           hir::substitute_types(m_ctx.type_arena(), m_ctx.m_type_unifier,
                                 substituted_type_id, outer_substitution);
@@ -73,10 +67,6 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
     auto new_type =
         hir::substitute_types(m_ctx.type_arena(), m_ctx.m_type_unifier,
                               let_binding.m_expression.m_type, combined);
-    // hir::TypeVariableSubstituter{.m_type_arena = m_ctx.type_arena(),
-    //                              .m_type_unifier = m_ctx.m_type_unifier,
-    //                              .m_new_mapping = combined}
-    //     .substitute(let_binding.m_expression.m_type);
 
     auto new_id = m_ctx.next_let_binding_id();
     auto new_name = Mangler(m_ctx.type_arena())
