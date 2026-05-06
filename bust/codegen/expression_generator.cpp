@@ -249,7 +249,7 @@ Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
       return;
     }
     if (yields_value) {
-      m_ctx.builder().emit_store(result_alloca_slot, output_value);
+      m_ctx.builder().emit_store(result_alloca_slot, std::move(output_value));
     }
     m_ctx.builder().emit_jump(merge_label);
   };
