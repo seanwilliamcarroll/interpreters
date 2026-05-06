@@ -62,7 +62,8 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
 
   auto unified_type = m_ctx.m_type_unifier.find(annotated_type);
 
-  auto collapsed_type = TypeVariableCollapser{m_ctx}.collapse(unified_type);
+  auto collapsed_type =
+      collapse_types(m_ctx.m_type_arena, m_ctx.m_type_unifier, unified_type);
 
   auto binding_id = m_ctx.next_let_binding_id();
 
@@ -73,17 +74,15 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
       collapsed_type,
   };
 
-  auto collector = FreeTypeVariableCollector(m_ctx);
-  collector.collect(new_identifier.m_type);
+  auto free_variables = collect_free_variables(m_ctx, new_identifier.m_type);
 
   // Store the new let binding
-  m_ctx.m_env.define(
-      new_identifier.m_name, binding_id,
-      TypeScheme{
-          .m_type = new_identifier.m_type,
-          .m_free_type_variables = std::move(collector.free_type_variables()),
-      },
-      let_binding.m_is_mutable);
+  m_ctx.m_env.define(new_identifier.m_name, binding_id,
+                     TypeScheme{
+                         .m_type = new_identifier.m_type,
+                         .m_free_type_variables = free_variables,
+                     },
+                     let_binding.m_is_mutable);
 
   return LetBinding{
       {let_binding.m_location},
