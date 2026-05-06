@@ -315,6 +315,16 @@ hir::ExprKind ExpressionSubstituter::operator()(
   });
 }
 
+hir::ExprKind
+ExpressionSubstituter::operator()(const std::unique_ptr<hir::WhileExpr> &) {
+  return {};
+}
+
+hir::ExprKind
+ExpressionSubstituter::operator()(const std::unique_ptr<hir::BreakExpr> &) {
+  return {};
+}
+
 //****************************************************************************
 } // namespace bust::mono
 //****************************************************************************

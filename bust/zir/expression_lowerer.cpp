@@ -235,6 +235,16 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::DotExpr> &dot_expr) {
   };
 }
 
+ExprKind
+ExpressionLowerer::operator()(const std::unique_ptr<hir::WhileExpr> &) {
+  return {};
+}
+
+ExprKind
+ExpressionLowerer::operator()(const std::unique_ptr<hir::BreakExpr> &) {
+  return {};
+}
+
 //****************************************************************************
 } // namespace bust::zir
 //****************************************************************************
