@@ -84,7 +84,13 @@ add_executable(bust-test
   test/src/main.cpp
   test/src/lexer_test.cpp
   test/src/parser_test.cpp
+  test/src/parser_types_test.cpp
+  test/src/parser_loops_test.cpp
   test/src/type_checker_test.cpp
+  test/src/type_checker_inference_test.cpp
+  test/src/type_checker_blocks_test.cpp
+  test/src/type_checker_types_test.cpp
+  test/src/type_checker_loops_test.cpp
   test/src/type_unifier_test.cpp
   test/src/codegen_expressions_test.cpp
   test/src/codegen_functions_test.cpp
@@ -141,10 +147,16 @@ endif()
 #*****************************************************************************
 
 add_test(NAME bust.lexer COMMAND bust-test -ts=bust.lexer)
-add_test(NAME bust.parser COMMAND bust-test -ts=bust.parser)
+add_test(NAME bust.parser.core COMMAND bust-test -ts=bust.parser.core)
+add_test(NAME bust.parser.types COMMAND bust-test -ts=bust.parser.types)
+add_test(NAME bust.parser.loops COMMAND bust-test -ts=bust.parser.loops)
 add_test(NAME bust.semantic_analysis COMMAND bust-test -ts=bust.semantic_analysis)
 add_test(NAME bust.type_unifier COMMAND bust-test -ts=bust.type_unifier)
-add_test(NAME bust.type_checker COMMAND bust-test -ts=bust.type_checker)
+add_test(NAME bust.type_checker.basics COMMAND bust-test -ts=bust.type_checker.basics)
+add_test(NAME bust.type_checker.inference COMMAND bust-test -ts=bust.type_checker.inference)
+add_test(NAME bust.type_checker.blocks COMMAND bust-test -ts=bust.type_checker.blocks)
+add_test(NAME bust.type_checker.types COMMAND bust-test -ts=bust.type_checker.types)
+add_test(NAME bust.type_checker.loops COMMAND bust-test -ts=bust.type_checker.loops)
 add_test(NAME bust.name_mangler COMMAND bust-test -ts=bust.name_mangler)
 add_test(NAME bust.monomorpher COMMAND bust-test -ts=bust.monomorpher)
 add_test(NAME bust.zir_lowerer COMMAND bust-test -ts=bust.zir_lowerer)
