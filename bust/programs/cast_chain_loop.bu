@@ -1,0 +1,22 @@
+// EXPECT_EXIT: 0
+// EXPECT_STDOUT: "ABC"
+//
+// Casts feed both the loop condition and the loop body. The counter
+// `c` is an `i8` (initialized from a `char` cast); each iteration
+// widens it to `i64` for the comparison and to `i32` to feed putchar.
+// The increment uses an explicitly-typed `1 as i8` literal so the
+// addition stays in i8 — bust does not yet auto-narrow integer
+// literals to context type.
+//
+// Loop runs while c < 'A' + 3 → prints 'A', 'B', 'C', then exits.
+
+extern fn putchar(c: i32) -> i32;
+
+fn main() -> i64 {
+  let mut c: i8 = 'A' as i8;
+  while (c as i64) < ('A' as i64) + 3 {
+    putchar(c as i32);
+    c = c + (1 as i8);
+  }
+  0
+}

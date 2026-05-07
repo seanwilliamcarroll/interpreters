@@ -93,6 +93,8 @@ std::string token_type_to_string(TokenType type) {
     return "MUT \"mut\"";
   case TokenType::RETURN:
     return "RETURN \"return\"";
+  case TokenType::BREAK:
+    return "BREAK \"break\"";
   case TokenType::IF:
     return "IF \"if\"";
   case TokenType::ELSE:

@@ -1,0 +1,103 @@
+// EXPECT_EXIT: 42
+// EXPECT_STDOUT: "Y5abc\n."
+//
+// Catch-all integration program. Touches as many language features as
+// can co-exist in one coherent program — see bust/testing.md "Coverage
+// Audit" for the F-numbered taxonomy.
+//
+// Output is built up character-by-character so each step is auditable:
+//
+//   'Y'           — if-then with no else (F26), driven by &&-short-circuit
+//                   over two casts of the same logical value.
+//   '5'           — invocation of `bump`, an i32 lambda capturing
+//                   `medium` (immutable capture, F39).
+//   'a' 'b' 'c'   — `while true { if i>=3 { break; } ... }` loop printing
+//                   three letters via cast i64→i32 inside the body.
+//   '\n'          — char-literal escape (F2) cast to i32.
+//   '.'           — call to a unit-returning function with naked
+//                   `return` (F30, F35).
+//
+// Final result: the polymorphic identity `id` is instantiated at both
+// `bool` (gating the if) and `i64` (forwarding factorial's result).
+// `factorial(3) = 6`; `id(6) + 36 = 42`. Returns via `return`-with-value.
+//
+// Features deliberately *not* exercised: F40 (mutable capture) and the
+// make_adder closure-return pattern — both deferred until references
+// land. See aspirations.md.
+
+extern fn putchar(c: i32) -> i32;
+
+// F31, F34, F45 — top-level fn taking a tuple parameter.
+fn add_pair(t: (i64, i64)) -> i64 { t.0 + t.1 }
+
+// F33 — direct recursion.
+fn factorial(n: i64) -> i64 {
+  if n <= 1 { 1 } else { n * factorial(n - 1) }
+}
+
+// F35 — implicit `-> ()` return; F30 — naked `return`.
+fn print_dot() {
+  putchar('.' as i32);
+  return;
+}
+
+fn main() -> i64 {
+  // F1, F18, F22 — int literals, arithmetic, precedence + parens.
+  let answer = 1 + 2 * 3 - (4 / 2);
+
+  // F15, F19, F17 — mutable let, unary `-`, assignment.
+  let mut counter = -answer;
+  counter = counter + 10;
+
+  // F16 — shadowing (rebinding `counter` to an immutable copy).
+  let counter = counter;
+
+  // F13, F23 — explicit type annotations + `as` cast (i64 → i8 → i32).
+  let small: i8 = counter as i8;
+  let medium: i32 = small as i32;
+
+  // F8, F20, F21 — bool, comparisons, short-circuit `&&`. Both sides
+  // intentionally use different integer widths to exercise the two
+  // i64-literal casts.
+  let positive: bool = medium > (0 as i32) && small > (0 as i8);
+
+  // F26 — if-then with no else (statement form, unit-typed).
+  if positive { putchar('Y' as i32); }
+
+  // F36, F37, F39, F41 — lambda with explicit return type, capturing
+  // `medium` (immutable), called once.
+  let bump = |b: i32| -> i32 { b + medium };
+  putchar(bump(0 as i32) + ('0' as i32));
+
+  // F42, F45, F32 — 2-tuple literal; passed to top-level fn.
+  let pair = (3 as i64, 4 as i64);
+  let pair_sum = add_pair(pair);
+
+  // F43, F44 — 1-tuple, projection.
+  let one = (pair_sum,);
+
+  // F33, F32, F18 — recursion via top-level fn call.
+  let fact = factorial(one.0 - 4);
+
+  // F38, F46, F47 — type-inferred lambda parameter; instantiated at
+  // both i64 (below) and bool (in the trailing if).
+  let id = |y| { y };
+
+  // F27, F28, F49 — while + break + extern call.
+  let mut i: i64 = 0;
+  while true {
+    if i >= 3 { break; }
+    putchar(('a' as i32) + (i as i32));
+    i = i + 1;
+  }
+
+  // F2 — char escape literal.
+  putchar('\n' as i32);
+
+  // F32 — call to unit-returning fn.
+  print_dot();
+
+  // F25, F29, F47 — if-else expression as the function tail; `return`
+  // with a value; `id` instantiated at bool then at i64.
+  if id(true) { return id(fact) + 36; } else { return 0; }
+}

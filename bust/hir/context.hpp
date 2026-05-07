@@ -130,6 +130,7 @@ struct Context {
   BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
 
   Environment m_env;
+  LoopEnvironment m_loop_env;
   TypeArena m_type_arena;
   std::vector<TypeId> m_return_type_stack;
   TypeUnifier m_type_unifier;

@@ -8,7 +8,6 @@
 #pragma once
 //****************************************************************************
 
-#include <ast/nodes.hpp>
 #include <hir/instantiation_record.hpp>
 #include <hir/type_arena.hpp>
 #include <hir/types.hpp>
@@ -31,8 +30,9 @@ struct ExternFunctionDeclaration;
 struct Block;
 struct TupleExpr;
 struct DotExpr;
+struct WhileExpr;
+struct BreakExpr;
 // TODO
-struct WhileExpr {};
 struct ForExpr {};
 
 // --- Leaf nodes ------------------------------------------------------------
@@ -103,7 +103,8 @@ using ExprKind =
                  std::unique_ptr<CallExpr>, std::unique_ptr<BinaryExpr>,
                  std::unique_ptr<UnaryExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<LambdaExpr>,
-                 std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>>;
+                 std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>,
+                 std::unique_ptr<WhileExpr>, std::unique_ptr<BreakExpr>>;
 
 struct Expression : public core::HasLocation {
   TypeId m_type;
@@ -142,6 +143,15 @@ struct Block : public core::HasLocation {
   TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
+};
+
+struct WhileExpr {
+  Expression m_condition;
+  Block m_body;
+};
+
+struct BreakExpr {
+  std::optional<Expression> m_returned_expression;
 };
 
 // --- Bindings & definitions ------------------------------------------------

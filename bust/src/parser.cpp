@@ -604,6 +604,37 @@ ast::Expression Parser::parse_paren_or_tuple() {
   return expression;
 }
 
+ast::Expression Parser::parse_while_expr() {
+  auto original_location = peek().get_location();
+  expect(TokenType::WHILE, __FUNCTION__);
+
+  auto condition = parse_expression();
+
+  auto body = parse_block();
+
+  return {
+      {original_location},
+      std::make_unique<ast::WhileExpr>(ast::WhileExpr{
+          .m_condition = std::move(condition),
+          .m_body = std::move(body),
+      }),
+  };
+}
+
+ast::Expression Parser::parse_break_expr() {
+  auto original_location = peek().get_location();
+  expect(TokenType::BREAK, __FUNCTION__);
+
+  // For now, we expect nothing after break
+
+  return {
+      {original_location},
+      std::make_unique<ast::BreakExpr>(ast::BreakExpr{
+          .m_returned_value = {},
+      }),
+  };
+}
+
 ast::Expression Parser::parse_primary() {
   switch (peek().get_token_type()) {
   case TokenType::INT_LITERAL:
@@ -629,7 +660,10 @@ ast::Expression Parser::parse_primary() {
     return parse_lambda_expr();
   case TokenType::RETURN:
     return parse_return_expr();
-    // case TokenType::WHILE:
+  case TokenType::WHILE:
+    return parse_while_expr();
+  case TokenType::BREAK:
+    return parse_break_expr();
     // case TokenType::FOR:
   default:
     on_error(peek().get_location(),

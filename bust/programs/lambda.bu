@@ -1,3 +1,13 @@
+// EXPECT_EXIT: 42
+//
+// Higher-order function `apply` takes a function-typed parameter and an
+// argument. Two lambdas (add_one, double) are passed to `apply` and
+// composed by nesting calls. Demonstrates first-class functions, the
+// `fn(T) -> U` type, and lambda passing across function boundaries.
+//
+//   apply(add_one, 20)        = 21
+//   apply(double, 21)         = 42
+
 fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }
 
 fn main() -> i64 {

@@ -1,3 +1,10 @@
+// EXPECT_FAIL: typecheck
+//
+// Negative test: the lambda `|x, y| {x + y}` unifies `x` and `y` to the
+// same numeric type via `+`. Passing `(i64, bool)` violates that
+// unification — once `x` resolves to i64, `y` cannot also be bool. The
+// type checker must reject with a unification error at the second arg.
+
 fn main() -> i64 {
    let f = |x, y| {x + y};
    f(1, true)

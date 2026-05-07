@@ -1,3 +1,13 @@
+// EXPECT_EXIT: 42
+//
+// Short-circuit evaluation of && and || across three layered comparisons.
+// Each let binding probes a different short-circuit pattern; the final
+// if-expression aggregates them. Useful for inspecting generated IR for
+// correct branch structure (no eager evaluation of the RHS) — the
+// existing inline comments document what to look for in the LLVM IR.
+//
+// All three booleans evaluate to true, so the program returns 42.
+
 fn main() -> i64 {
   let x: i64 = 5;
 

@@ -315,6 +315,21 @@ hir::ExprKind ExpressionSubstituter::operator()(
   });
 }
 
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::WhileExpr> &while_expr) {
+  return std::make_unique<hir::WhileExpr>(hir::WhileExpr{
+      .m_condition = substitute(while_expr->m_condition),
+      .m_body = substitute(while_expr->m_body),
+  });
+}
+
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::BreakExpr> & /*unused*/) {
+  return std::make_unique<hir::BreakExpr>(hir::BreakExpr{
+      .m_returned_expression = {},
+  });
+}
+
 //****************************************************************************
 } // namespace bust::mono
 //****************************************************************************

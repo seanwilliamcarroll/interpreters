@@ -1,3 +1,16 @@
+// EXPECT_EXIT: 0
+// EXPECT_STDOUT: "Hi\n"
+//
+// Demonstrates that a naked `return` inside a lambda short-circuits the
+// lambda's own body — any statements textually after the return are
+// dead code and produce no instructions. The lambda's return is also
+// scoped to the lambda; control returns to the caller (main), where the
+// next putchar still fires.
+//
+// Per call: putchar(c) runs, then return; the putchar('!') below it is
+// unreachable. Two calls produce "H" then "i", followed by a trailing
+// "\n" from main itself.
+
 extern fn putchar(c: i32) -> i32;
 
 fn main() -> i64 {

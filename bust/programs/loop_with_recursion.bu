@@ -1,0 +1,28 @@
+// EXPECT_EXIT: 10
+//
+// Recursive helper called from inside a `while` body. Each iteration
+// invokes the self-recursive `sum_to` with a different argument and
+// accumulates the result. Exercises the interaction between the loop's
+// basic-block layout and a function call that itself contains branching
+// control flow + recursion.
+//
+//   sum_to(n) = n + (n-1) + ... + 1 + 0
+//
+//   i = 1: total += sum_to(1) = 1   → total = 1
+//   i = 2: total += sum_to(2) = 3   → total = 4
+//   i = 3: total += sum_to(3) = 6   → total = 10
+//   i = 4: condition false, exit
+
+fn sum_to(n: i64) -> i64 {
+  if n == 0 { 0 } else { n + sum_to(n - 1) }
+}
+
+fn main() -> i64 {
+  let mut i = 1;
+  let mut total = 0;
+  while i <= 3 {
+    total = total + sum_to(i);
+    i = i + 1;
+  }
+  total
+}

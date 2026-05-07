@@ -1,0 +1,26 @@
+// EXPECT_EXIT: 3
+//
+// A 2-tuple is mutated across iterations of a `while` loop. The whole
+// tuple is reassigned each iteration (per-field place expressions like
+// `t.0 = ...` are deferred — see grammar.md "place" notes); the new
+// tuple is built from the *current* values of `t.0` and `t.1`.
+//
+//   t = (counter, accumulator)
+//   each iteration: t = (t.0 + 1, t.1 + t.0)
+//   exit when t.0 reaches 3
+//
+//   start:    (0, 0)
+//   iter 1:   (1, 0)        // accum gets old counter (0)
+//   iter 2:   (2, 1)        // accum gets old counter (1)
+//   iter 3:   (3, 3)        // accum gets old counter (2); 1 + 2 = 3
+//   condition false, exit.
+//
+//   t.1 = 3.
+
+fn main() -> i64 {
+  let mut t = (0, 0);
+  while t.0 < 3 {
+    t = (t.0 + 1, t.1 + t.0);
+  }
+  t.1
+}

@@ -335,6 +335,21 @@ TEST_SUITE("bust.lexer") {
          TokenType::INT_LITERAL, TokenType::RBRACE, TokenType::EOF_TOKEN});
   }
 
+  TEST_CASE("bust::lexer_while_expression") {
+    check_token_types("while x < 10 { 1; }",
+                      {TokenType::WHILE, TokenType::IDENTIFIER, TokenType::LESS,
+                       TokenType::INT_LITERAL, TokenType::LBRACE,
+                       TokenType::INT_LITERAL, TokenType::SEMICOLON,
+                       TokenType::RBRACE, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_break_in_while") {
+    check_token_types("while true { break; }",
+                      {TokenType::WHILE, TokenType::TRUE, TokenType::LBRACE,
+                       TokenType::BREAK, TokenType::SEMICOLON,
+                       TokenType::RBRACE, TokenType::EOF_TOKEN});
+  }
+
   TEST_CASE("bust::lexer_arithmetic") {
     check_token_types(
         "a + b * c - d / e % f",

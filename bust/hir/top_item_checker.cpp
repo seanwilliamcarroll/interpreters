@@ -92,6 +92,7 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
   // (allows recursion)
   auto expected_return_type = m_ctx.as_function(signature.m_type).m_return_type;
 
+  FunctionContextScopeGuard guard{m_ctx.m_loop_env};
   auto body = BlockChecker{m_ctx}.check_callable_body(
       signature.m_parameters, expected_return_type, function_def.m_body);
 

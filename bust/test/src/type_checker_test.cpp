@@ -2699,6 +2699,245 @@ TEST_SUITE("bust.type_checker") {
                              "}"));
   }
 
+  // --- While ---------------------------------------------------------------
+  //
+  // `main` must return i64, so structural-introspection tests put the
+  // while/break logic in a separate function (whose body may be Unit) and
+  // pair it with a trivial `fn main() -> i64 { 0 }`. CHECK_THROWS_AS /
+  // CHECK_NOTHROW tests put the logic inside main itself with a trailing
+  // `0` to satisfy the i64 return.
+
+  TEST_CASE("while expression has unit type") {
+    auto hir = type_check("fn looper() {\n"
+                          "  while true { }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &expr = *func.m_body.m_final_expression;
+    REQUIRE(std::holds_alternative<std::unique_ptr<hir::WhileExpr>>(
+        expr.m_expression));
+    auto &ptype =
+        std::get<hir::PrimitiveTypeValue>(hir.m_type_arena.get(expr.m_type));
+    CHECK(ptype.m_type == PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("while condition and body are typed inside the HIR node") {
+    auto hir = type_check("fn looper() {\n"
+                          "  while true { }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &expr = *func.m_body.m_final_expression;
+    auto &while_expr =
+        *std::get<std::unique_ptr<hir::WhileExpr>>(expr.m_expression);
+    auto &cond_ptype = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(while_expr.m_condition.m_type));
+    CHECK(cond_ptype.m_type == PrimitiveType::BOOL);
+    auto &body_ptype = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(while_expr.m_body.m_type));
+    CHECK(body_ptype.m_type == PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("while with non-bool condition throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while 42 { }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("while with non-unit body throws") {
+    // Body's final expression is `42` (i64), not `()`. Same rule as a
+    // no-`else` if: the body must type as unit.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true { 42 }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("while body with trailing-semicolon expression typechecks") {
+    // `42;` is a statement, so the block has no final expression and types
+    // as unit.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { 42; }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("while body may contain let bindings") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { let x: i64 = 1; }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("while body bindings do not leak out (fresh scope)") {
+    // `x` is bound only inside the while body; referencing it after the
+    // while exits must fail with an undeclared-identifier error.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while false { let x: i64 = 1; }\n"
+                               "  x\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("while with comparison condition typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let x: i64 = 0;\n"
+                             "  while x < 10 { }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("while as a statement followed by a final expression") {
+    auto hir = type_check("fn main() -> i64 {\n"
+                          "  while true { }\n"
+                          "  0\n"
+                          "}");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_statements.size() == 1);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &final_ptype = std::get<hir::PrimitiveTypeValue>(
+        hir.m_type_arena.get(func.m_body.m_final_expression->m_type));
+    CHECK(final_ptype.m_type == PrimitiveType::I64);
+  }
+
+  // --- Break ---------------------------------------------------------------
+
+  TEST_CASE("break inside while body typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { break; }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("break expression has Never type") {
+    auto hir = type_check("fn looper() {\n"
+                          "  while true { break; }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &expr = *func.m_body.m_final_expression;
+    auto &while_expr =
+        *std::get<std::unique_ptr<hir::WhileExpr>>(expr.m_expression);
+    REQUIRE(while_expr.m_body.m_statements.size() == 1);
+    auto &stmt = std::get<hir::Expression>(while_expr.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<hir::BreakExpr>>(
+        stmt.m_expression));
+    CHECK(std::holds_alternative<hir::NeverType>(
+        hir.m_type_arena.get(stmt.m_type)));
+  }
+
+  TEST_CASE("break outside any loop throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  break;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break inside if inside while typechecks") {
+    // The loop-scope check walks up through nested non-loop scopes,
+    // so an `if` inside a `while` should not block `break`.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { if true { break; } }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("break inside bare-block inside while typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { { break; } }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("break inside inner of nested while typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { while true { break; } }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("break after the loop ends throws — outside scope again") {
+    // The two statements: `while true {}` and `break;`. The break is at
+    // the function body level, not inside the loop, so it must be
+    // rejected.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true { }\n"
+                               "  break;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break as block final expression typechecks (Never)") {
+    // `break` with no semicolon makes the body's final expression Never;
+    // Never unifies with Unit so the body still types as Unit.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { break }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  // --- Break and lambda boundaries -----------------------------------------
+  //
+  // A lambda body is its own function and therefore a hard boundary for
+  // loop context: `break` inside a lambda must target a loop *inside that
+  // lambda's own body*, never a loop in the enclosing function. This
+  // requires the loop environment to mark function/lambda boundaries so
+  // the loop-scope search stops at them rather than walking through.
+
+  TEST_CASE("break inside top-level lambda throws — not in a loop") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = || { break; };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break inside lambda defined inside while throws — "
+            "lambda is a loop-context boundary") {
+    // Lexically the break is enclosed by a `while`, but it sits inside a
+    // lambda body, so it does NOT target the surrounding loop. Must be
+    // rejected.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true {\n"
+                               "    let f = || { break; };\n"
+                               "  }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break sibling to lambda inside while typechecks") {
+    // Sanity check: the break is in the while body itself (not inside the
+    // lambda), so it targets the enclosing while normally.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true {\n"
+                             "    let f = || { 0 };\n"
+                             "    break;\n"
+                             "  }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("break inside while inside lambda typechecks — "
+            "innermost loop wins") {
+    // `break` is inside a `while` that is inside a lambda; the lambda's
+    // own loop satisfies the loop-context requirement.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let f = || { while true { break; } };\n"
+                             "  0\n"
+                             "}"));
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

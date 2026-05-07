@@ -1,0 +1,24 @@
+// EXPECT_EXIT: 0
+// EXPECT_STDOUT: "ABC"
+//
+// A closure that captures an *immutable* outer value (`banner`) is called
+// from inside a `while` loop. Each iteration computes a different offset
+// and the closure prints the result. Demonstrates that a closure stays
+// callable across loop iterations and that captured (non-mut) state is
+// stable across calls.
+//
+// Mutable-capture (a counter that the closure itself increments) is
+// deferred until references / `&mut` land — see aspirations.md.
+
+extern fn putchar(c: i32) -> i32;
+
+fn main() -> i64 {
+  let banner = 'A' as i32;
+  let print_at = |offset: i32| { putchar(banner + offset); };
+  let mut i = 0;
+  while i < 3 {
+    print_at(i as i32);
+    i = i + 1;
+  }
+  0
+}

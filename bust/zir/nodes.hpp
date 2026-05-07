@@ -119,10 +119,21 @@ struct DotExpr {
   auto operator<=>(const DotExpr &) const = default;
 };
 
+struct WhileExpr {
+  ExprId m_condition;
+  Block m_body;
+  auto operator<=>(const WhileExpr &) const = default;
+};
+
+struct BreakExpr {
+  std::optional<ExprId> m_returned_expression;
+  auto operator<=>(const BreakExpr &) const = default;
+};
+
 using ExprKind =
     std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr, TupleExpr,
                  CallExpr, BinaryExpr, UnaryExpr, ReturnExpr, CastExpr, IfExpr,
-                 LambdaExpr, DotExpr, Block>;
+                 LambdaExpr, DotExpr, Block, WhileExpr, BreakExpr>;
 
 struct Expression {
   TypeId m_type_id;
@@ -299,6 +310,26 @@ template <> struct hash<bust::zir::DotExpr> {
     size_t seed = 0;
     core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(expr.m_expression));
     core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
+    return seed;
+  }
+};
+
+template <> struct hash<bust::zir::WhileExpr> {
+  size_t operator()(const bust::zir::WhileExpr &expr) const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(expr.m_condition));
+    core::hash_combine(seed, std::hash<bust::zir::Block>{}(expr.m_body));
+    return seed;
+  }
+};
+
+template <> struct hash<bust::zir::BreakExpr> {
+  size_t operator()(const bust::zir::BreakExpr &expr) const noexcept {
+    size_t seed = 0;
+    if (expr.m_returned_expression.has_value()) {
+      core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(
+                                   expr.m_returned_expression.value()));
+    }
     return seed;
   }
 };

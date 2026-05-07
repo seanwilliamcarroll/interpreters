@@ -721,7 +721,6 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 }
 
 Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
-
   // For now, assume that the expression is a tuple
   auto tuple_value = generate(dot_expr.m_expression);
 
@@ -734,6 +733,62 @@ Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
 
   return m_ctx.builder().load_from_struct(tuple_value, tuple_type_id,
                                           dot_expr.m_tuple_index);
+}
+
+Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr) {
+  if (m_ctx.builder().current_block_terminated()) {
+    // diverged before we got here diverged
+    return {};
+  }
+
+  auto while_condition_label = m_ctx.builder().make_block(
+      std::string{conventions::while_condition_block_label});
+  m_ctx.builder().emit_jump(while_condition_label);
+
+  // Jump to our block to evaluate the condition
+  m_ctx.builder().enter_block(while_condition_label);
+
+  auto condition_value = generate(while_expr.m_condition);
+  if (m_ctx.builder().current_block_terminated()) {
+    // condition diverged
+    return {};
+  }
+
+  auto while_loop_label = m_ctx.builder().make_block(
+      std::string{conventions::while_loop_block_label});
+  auto merge_label =
+      m_ctx.builder().make_block(std::string{conventions::merge_block_label});
+  m_ctx.builder().emit_branch(condition_value, while_loop_label, merge_label);
+
+  // Now execute the body code
+  {
+    m_ctx.builder().enter_block(while_loop_label);
+
+    BlockLabelStackGuard guard(m_ctx.loop_stack(), merge_label);
+    generate(while_expr.m_body);
+
+    if (m_ctx.builder().current_block_terminated()) {
+      // loop diverged, go to merge block?
+      m_ctx.builder().enter_block(merge_label);
+      return {};
+    }
+
+    // Always jump back to the condition to rerun that code to evaluate the
+    // condition expression again
+    m_ctx.builder().emit_jump(while_condition_label);
+  }
+
+  m_ctx.builder().enter_block(merge_label);
+
+  // Nothing to return
+  return {};
+}
+
+Value ExpressionGenerator::operator()(const zir::BreakExpr & /*unused*/) {
+  // Need to emit a jump to the merge block of the closest loop
+  m_ctx.builder().emit_jump(m_ctx.loop_stack().current_block_label());
+  // No value currently
+  return {};
 }
 
 //****************************************************************************

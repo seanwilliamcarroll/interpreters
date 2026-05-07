@@ -39,6 +39,8 @@ struct ExpressionChecker {
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::ReturnExpr> &,
                         const core::SourceLocation &);
+  Expression operator()(const std::unique_ptr<ast::BreakExpr> &,
+                        const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::LambdaExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::DotExpr> &,

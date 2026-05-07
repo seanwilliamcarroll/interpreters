@@ -58,6 +58,8 @@ constexpr std::string_view else_block_label = "else";
 constexpr std::string_view merge_block_label = "merge";
 constexpr std::string_view rhs_block_label = "rhs";
 constexpr std::string_view post_return_block_label = "post_return";
+constexpr std::string_view while_condition_block_label = "while_condition";
+constexpr std::string_view while_loop_block_label = "while_loop";
 
 // Synthetic local / global name roots ----------------------------------------
 

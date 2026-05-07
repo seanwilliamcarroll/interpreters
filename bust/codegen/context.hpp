@@ -26,6 +26,8 @@
 #include <string>
 #include <vector>
 
+#include "codegen/block_label.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -185,12 +187,15 @@ struct Context {
     return m_name_tracker.uniquify(name);
   }
 
+  BlockLabelStack &loop_stack() { return m_loop_stack; }
+
 private:
   Module m_module;
   SymbolTable m_symbol_table;
   const zir::Arena &m_arena;
   TypeArena m_type_arena;
   IRBuilder m_builder;
+  BlockLabelStack m_loop_stack;
 
 public:
   TypeId m_void;

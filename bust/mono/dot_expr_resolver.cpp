@@ -155,24 +155,16 @@ void DotExprResolver::operator()(
   resolve(lambda_expr->m_body);
 }
 
-// --- The case you will fill in ---------------------------------------------
-//
-// For a DotExpr:
-//   1. Walk the target expression first (it may contain nested DotExprs).
-//   2. Rewrite the target's type through the current substitution mapping
-//      (m_ctx.rewrite_type) to get its concrete form.
-//   3. Verify the concrete type is a TupleType; throw otherwise.
-//   4. Bounds-check `m_tuple_index` against the tuple's arity; throw if out
-//      of range.
-//   5. Unify the DotExpr's own result type (a fresh type variable allocated
-//      by the type checker) with `tuple.m_fields[m_tuple_index]` via
-//      `m_ctx.m_parent.m_type_unifier.unify(...)`. That edge is what lets
-//      `rewrite_type` later return a concrete type for the outer expression.
-//
 void DotExprResolver::operator()(
     const std::unique_ptr<hir::DotExpr> & /*unused*/) {
   throw core::InternalCompilerError("Unreachable!!");
 }
+
+void DotExprResolver::operator()(
+    const std::unique_ptr<hir::WhileExpr> & /*unused*/) {}
+
+void DotExprResolver::operator()(
+    const std::unique_ptr<hir::BreakExpr> & /*unused*/) {}
 
 //****************************************************************************
 } // namespace bust::mono

@@ -1,3 +1,10 @@
+// EXPECT_FAIL: typecheck
+//
+// Negative test: the lambda `|x| {x + x}` has a Numeric type-class
+// constraint on `x` (because of `+`). Calling it with `true` violates
+// that constraint — bool does not implement Numeric. The type checker
+// must reject this with a unification / constraint error.
+
 fn main() -> i64 {
    let f = |x| {x + x};
    f(true)

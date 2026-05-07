@@ -1,3 +1,9 @@
+// EXPECT_EXIT: 55
+//
+// Canonical recursion. The classic doubly-recursive Fibonacci function,
+// exercising self-recursion, integer arithmetic, and if/else as an
+// expression. fib(10) = 55.
+
 fn fibonacci(n: i64) -> i64 {
   if n <= 1 {
     n

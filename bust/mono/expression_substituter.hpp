@@ -46,6 +46,8 @@ struct ExpressionSubstituter {
   hir::ExprKind operator()(const std::unique_ptr<hir::CastExpr> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::LambdaExpr> &);
   hir::ExprKind operator()(const std::unique_ptr<hir::DotExpr> &);
+  hir::ExprKind operator()(const std::unique_ptr<hir::WhileExpr> &);
+  hir::ExprKind operator()(const std::unique_ptr<hir::BreakExpr> &);
 
   SubstitutionContext &m_ctx;
 };

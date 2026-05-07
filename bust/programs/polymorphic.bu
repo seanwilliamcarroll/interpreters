@@ -1,3 +1,14 @@
+// EXPECT_EXIT: 9
+//
+// Hindley-Milner polymorphism in action. The identity lambda `|y| {y}` is
+// applied at *two different types* in the same program — first to a
+// `bool` (in the if-condition), then to an `i64` (in the return-value).
+// Monomorphization should produce two specialized instantiations from
+// a single source definition.
+//
+// Control flow: x(true) is `true`, so we take the then-branch and return
+// x(9) = 9. The trailing `x(11)` is dead code but still type-checks.
+
 fn main() -> i64 {
     let x = |y| {y};
 
