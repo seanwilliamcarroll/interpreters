@@ -235,14 +235,20 @@ ExpressionLowerer::operator()(const std::unique_ptr<hir::DotExpr> &dot_expr) {
   };
 }
 
-ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::WhileExpr> &) {
-  return {};
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::WhileExpr> &while_expr) {
+  return WhileExpr{
+      .m_condition = lower(while_expr->m_condition),
+      .m_body = lower(while_expr->m_body),
+  };
 }
 
-ExprKind
-ExpressionLowerer::operator()(const std::unique_ptr<hir::BreakExpr> &) {
-  return {};
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::BreakExpr> &break_expr) {
+  return BreakExpr{
+      .m_returned_expression = break_expr->m_returned_expression.and_then(
+          [&](const auto &expr) { return std::make_optional(lower(expr)); }),
+  };
 }
 
 //****************************************************************************
