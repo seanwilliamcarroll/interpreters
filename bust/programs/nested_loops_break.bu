@@ -1,0 +1,28 @@
+// EXPECT_EXIT: 0
+// EXPECT_STDOUT: "OiiOiiOii"
+//
+// Two nested `while` loops. The inner loop's `break` exits *only* the
+// innermost loop — control resumes at the outer loop's next iteration.
+// If `break` mistakenly targeted the outer loop, the program would
+// print just "OiiO" or similar truncated output. Each outer iteration
+// prints 'O', then the inner loop prints 'i' twice (i=0, i=1) and
+// breaks at i=2.
+//
+// Three outer iterations × ("O" + "i" + "i") = "OiiOiiOii".
+
+extern fn putchar(c: i32) -> i32;
+
+fn main() -> i64 {
+  let mut o = 0;
+  while o < 3 {
+    putchar('O' as i32);
+    let mut i = 0;
+    while i < 5 {
+      if i == 2 { break; }
+      putchar('i' as i32);
+      i = i + 1;
+    }
+    o = o + 1;
+  }
+  0
+}

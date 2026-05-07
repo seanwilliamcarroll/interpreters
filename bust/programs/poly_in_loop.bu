@@ -1,0 +1,27 @@
+// EXPECT_EXIT: 3
+//
+// The polymorphic identity lambda `id` is instantiated at *two
+// different types* (i64 and bool) in the same program. The i64
+// instantiation is invoked once per loop iteration; the bool
+// instantiation is invoked once after the loop. Demonstrates that
+// monomorphization correctly produces two specializations from a
+// single source definition, and that both are reachable in the same
+// generated module.
+//
+//   loop accumulates id(0) + id(1) + id(2) = 3
+//   id(true) is true, so the if-then yields `total`.
+
+fn main() -> i64 {
+  let id = |x| { x };
+  let mut total = 0;
+  let mut i = 0;
+  while i < 3 {
+    total = total + id(i);
+    i = i + 1;
+  }
+  if id(true) {
+    total
+  } else {
+    0
+  }
+}

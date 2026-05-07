@@ -49,6 +49,50 @@ TEST_SUITE("bust.integration") {
     RUN_INTEGRATION_PROGRAM("short_circuit.bu");
   }
 
+  // --- Loop combinations ---------------------------------------------------
+
+  TEST_CASE("loop_helper_lambda — closure called inside while") {
+    RUN_INTEGRATION_PROGRAM("loop_helper_lambda.bu");
+  }
+
+  TEST_CASE("loop_with_recursion — recursive helper called in while body") {
+    RUN_INTEGRATION_PROGRAM("loop_with_recursion.bu");
+  }
+
+  TEST_CASE("nested_loops_break — inner break only exits innermost loop") {
+    RUN_INTEGRATION_PROGRAM("nested_loops_break.bu");
+  }
+
+  TEST_CASE("lambda_with_loop — lambda body containing while + break") {
+    RUN_INTEGRATION_PROGRAM("lambda_with_loop.bu");
+  }
+
+  TEST_CASE("lambda_return_in_loop — lambda's return is scoped to lambda") {
+    RUN_INTEGRATION_PROGRAM("lambda_return_in_loop.bu");
+  }
+
+  TEST_CASE("tuple_loop — tuple reassignment across iterations") {
+    RUN_INTEGRATION_PROGRAM("tuple_loop.bu");
+  }
+
+  TEST_CASE("poly_in_loop — polymorphic id at i64 and bool") {
+    RUN_INTEGRATION_PROGRAM("poly_in_loop.bu");
+  }
+
+  TEST_CASE("cast_chain_loop — casts in loop condition + body") {
+    RUN_INTEGRATION_PROGRAM("cast_chain_loop.bu");
+  }
+
+  TEST_CASE("short_circuit_in_loop — &&/|| gating a break") {
+    RUN_INTEGRATION_PROGRAM("short_circuit_in_loop.bu");
+  }
+
+  // --- Catch-all -----------------------------------------------------------
+
+  TEST_CASE("everything — single program touching most features") {
+    RUN_INTEGRATION_PROGRAM("everything.bu");
+  }
+
   // --- Negative tests (typecheck must reject) ------------------------------
 
   TEST_CASE("bad_poly — bool fails Numeric constraint") {

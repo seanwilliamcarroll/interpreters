@@ -178,9 +178,11 @@ stable; add new features at the end.
 
 ## Existing Integration Programs
 
-These programs already live in `bust/programs/` and are wired into the
+These programs live in `bust/programs/` and are wired into the
 `bust.integration` suite. Their feature columns reference the F-numbers
 from the taxonomy above.
+
+### Smoke / canonical examples
 
 | Program                  | Features Covered                              | Notes                                                    |
 |--------------------------|-----------------------------------------------|----------------------------------------------------------|
@@ -190,14 +192,38 @@ from the taxonomy above.
 | `polymorphic.bu`         | F25, F29, F36, F38, F46, F47                  | Identity lambda used at both `bool` and `i64`.           |
 | `short_circuit.bu`       | F1, F8, F13, F14, F18, F20, F21, F25          | `&&` / `\|\|` chains; commented for IR inspection.       |
 | `side_effect_return.bu`  | F2, F23, F30, F36, F49                        | Lambda + naked `return` + dead code; prints `Hi\n`.      |
-| `bad_poly.bu`            | (negative — invariant on Numeric constraint)  | `EXPECT_FAIL: typecheck`. `\|x\|{x+x}(true)`.            |
-| `bad_poly_2.bu`          | (negative — invariant on type unification)    | `EXPECT_FAIL: typecheck`. `\|x,y\|{x+y}(1, true)`.       |
 
-## Integration Test Matrix (Forward-looking)
+### Loop combinations
 
-Each row below is a *future* integration program covering a specific
-feature combination. They will be added as features land and as gaps
-in the existing-program coverage above are identified.
+| Program                       | Features Covered                                   | Notes                                                                        |
+|-------------------------------|----------------------------------------------------|------------------------------------------------------------------------------|
+| `loop_helper_lambda.bu`       | F2, F15, F17, F20, F23, F27, F36, F38, F39, F49    | Closure capturing immutable `banner` called inside `while` loop.             |
+| `loop_with_recursion.bu`      | F1, F15, F17, F18, F20, F25, F27, F31, F33, F34    | `sum_to(i)` invoked each iteration; total = 1 + 3 + 6 = 10.                  |
+| `nested_loops_break.bu`       | F1, F15, F17, F20, F23, F25, F27, F28, F49         | Inner `break` exits only innermost loop; outputs "OiiOiiOii".                |
+| `lambda_with_loop.bu`         | F1, F3, F15, F17, F20, F23, F25, F27, F28, F36, F49| Lambda body contains `while` + `break`; `loop_stack` per-lambda.             |
+| `lambda_return_in_loop.bu`    | F2, F15, F17, F20, F23, F27, F30, F36, F49         | Lambda's `return` exits only the lambda; outer loop continues.               |
+| `tuple_loop.bu`               | F1, F15, F17, F18, F20, F27, F42, F44              | 2-tuple reassigned each iteration; final `t.1 == 3`.                         |
+| `poly_in_loop.bu`             | F1, F3, F15, F17, F20, F25, F27, F36, F38, F46, F47| Polymorphic `id` instantiated at i64 (in loop) and bool (after loop).        |
+| `cast_chain_loop.bu`          | F1, F2, F7, F9, F13, F15, F17, F20, F23, F27, F49  | i8 counter, widening casts to i32/i64 in condition and body.                 |
+| `short_circuit_in_loop.bu`    | F1, F2, F3, F15, F17, F20, F21, F23, F25, F27, F28, F49 | `&&` / `\|\|` mixed in a break-guard; SC proves no eager eval.          |
+
+### Catch-all
+
+| Program          | Features Covered                                                                                                 | Notes                                                                |
+|------------------|------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
+| `everything.bu`  | F1–F4, F7–F9, F11, F13–F23, F25–F39, F41–F49                                                                     | Single coherent program touching most features. Output `Y5abc\n.`.   |
+
+### Negative tests (typecheck rejects)
+
+| Program           | Notes                                                                |
+|-------------------|----------------------------------------------------------------------|
+| `bad_poly.bu`     | `EXPECT_FAIL: typecheck`. `\|x\|{x+x}(true)` — Numeric constraint.   |
+| `bad_poly_2.bu`   | `EXPECT_FAIL: typecheck`. `\|x,y\|{x+y}(1, true)` — unification.     |
+
+## Forward-looking Matrix (deferred)
+
+Programs that are blocked on features not yet implemented — kept here
+as a backlog. They'll be added when the prerequisite feature lands.
 
 | Program                       | Features Covered                                                           | What It Demonstrates                                                                                  |
 |-------------------------------|----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
