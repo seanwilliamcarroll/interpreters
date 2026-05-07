@@ -53,6 +53,8 @@ struct ExpressionGenerator {
   Value operator()(const zir::LambdaExpr &);
 
   Value operator()(const zir::DotExpr &);
+  Value operator()(const zir::WhileExpr &);
+  Value operator()(const zir::BreakExpr &);
 
   Context &m_ctx;
 };

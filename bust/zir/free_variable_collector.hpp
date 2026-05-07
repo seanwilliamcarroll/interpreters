@@ -221,6 +221,10 @@ struct FreeVariableCollector {
 
   FreeVariables operator()(const DotExpr & /*unused*/) { return {}; }
 
+  FreeVariables operator()(const WhileExpr & /*unused*/) { return {}; }
+
+  FreeVariables operator()(const BreakExpr & /*unused*/) { return {}; }
+
   Context &m_ctx;
   BoundVariableEnvironment m_env;
 };

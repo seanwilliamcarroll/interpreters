@@ -311,6 +311,29 @@ private:
     IndentGuard g(*this);
     dump_expr(v.m_expression);
   }
+
+  void dump_expr_kind(const WhileExpr &v) {
+    m_out << "While\n";
+    IndentGuard g(*this);
+    line("cond:");
+    {
+      IndentGuard g2(*this);
+      dump_expr(v.m_condition);
+    }
+    line("body:");
+    {
+      IndentGuard g2(*this);
+      dump_expr_kind(v.m_body);
+    }
+  }
+
+  void dump_expr_kind(const BreakExpr &v) {
+    m_out << "Break\n";
+    if (v.m_returned_expression.has_value()) {
+      IndentGuard g(*this);
+      dump_expr(v.m_returned_expression.value());
+    }
+  }
 };
 
 //****************************************************************************

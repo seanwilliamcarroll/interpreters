@@ -721,7 +721,6 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
 }
 
 Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
-
   // For now, assume that the expression is a tuple
   auto tuple_value = generate(dot_expr.m_expression);
 
@@ -735,6 +734,10 @@ Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
   return m_ctx.builder().load_from_struct(tuple_value, tuple_type_id,
                                           dot_expr.m_tuple_index);
 }
+
+Value ExpressionGenerator::operator()(const zir::WhileExpr &) { return {}; }
+
+Value ExpressionGenerator::operator()(const zir::BreakExpr &) { return {}; }
 
 //****************************************************************************
 } // namespace bust::codegen
