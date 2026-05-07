@@ -519,12 +519,6 @@ Expression ExpressionChecker::operator()(
           })};
 }
 
-Expression
-ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &,
-                              const core::SourceLocation &) {
-  return {};
-}
-
 Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::LambdaExpr> &lambda_expression,
     const core::SourceLocation &location) {
@@ -541,6 +535,7 @@ Expression ExpressionChecker::operator()(
           ? type_converter.get_type(lambda_expression->m_return_type.value())
           : m_ctx.m_type_unifier.new_type_var();
 
+  FunctionContextScopeGuard guard{m_ctx.m_loop_env};
   auto body = BlockChecker{m_ctx}.check_callable_body(
       parameters, possible_return_type_id, lambda_expression->m_body);
 
@@ -633,11 +628,6 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
   };
 }
 
-Expression ExpressionChecker::operator()(
-    const std::unique_ptr<ast::WhileExpr> & /*unused*/,
-    const core::SourceLocation & /*unused*/) {
-  throw core::InternalCompilerError("Not yet implemented");
-}
 Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
                               const core::SourceLocation & /*unused*/) {
@@ -723,6 +713,62 @@ Expression ExpressionChecker::operator()(const ast::Unit & /*unused*/,
           Unit{{
               location,
           }}};
+}
+
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
+                              const core::SourceLocation &location) {
+  // Need to check and unify condition with boolean
+  auto condition = check_expression(while_expr->m_condition);
+  try {
+    m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_bool, condition.m_type);
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException(
+        "TypeChecker", std::string("Type unification error!: ") + error.what(),
+        location);
+  }
+
+  // Need to check and unify block with unit
+  LoopContextScopeGuard guard{m_ctx.m_loop_env};
+  auto body = BlockChecker{m_ctx}.check_block(while_expr->m_body);
+  try {
+    m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, body.m_type);
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException(
+        "TypeChecker", std::string("Type unification error!: ") + error.what(),
+        location);
+  }
+
+  return {
+      {
+          location,
+      },
+      m_ctx.m_type_arena.m_unit,
+      std::make_unique<WhileExpr>(WhileExpr{
+          .m_condition = std::move(condition),
+          .m_body = std::move(body),
+      }),
+  };
+}
+
+Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::BreakExpr> & /*unused*/,
+    const core::SourceLocation &location) {
+  // Need to make sure here that we are inside of some kind of loop
+  if (!m_ctx.m_loop_env.is_in_loop_scope()) {
+    throw core::CompilerException(
+        "TypeChecker", "Cannot have break statement outside of a loop scope!",
+        location);
+  }
+
+  // TODO See about a returned expression
+  return {
+      {location},
+      m_ctx.m_type_arena.m_never,
+      std::make_unique<BreakExpr>(BreakExpr{
+          .m_returned_expression = {},
+      }),
+  };
 }
 
 //****************************************************************************

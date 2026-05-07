@@ -12,6 +12,7 @@
 #include <hir/types.hpp>
 #include <scope_guard.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <optional>
 #include <ranges>
@@ -117,6 +118,53 @@ private:
 };
 
 using ScopeGuard = core::ScopeGuard<Environment>;
+
+struct LoopEnvironment {
+  enum class ScopeState : uint8_t {
+    FUNCTION_TOP,
+    IN_LOOP,
+  };
+
+  LoopEnvironment() { m_scopes.push_back(ScopeState::FUNCTION_TOP); }
+
+  void push_scope(ScopeState new_scope_state) {
+    m_scopes.push_back(new_scope_state);
+  }
+  void pop_scope() noexcept {
+    assert(m_scopes.size() > 1 && "Cannot pop scope, already at global scope!");
+    m_scopes.pop_back();
+  }
+
+  [[nodiscard]] bool is_in_loop_scope() const {
+    return m_scopes.back() == ScopeState::IN_LOOP;
+  }
+
+private:
+  std::vector<ScopeState> m_scopes;
+};
+
+template <LoopEnvironment::ScopeState AddedState>
+struct LoopEnvironmentScopeGuard {
+  explicit LoopEnvironmentScopeGuard(LoopEnvironment &scoped)
+      : m_scoped(scoped) {
+    m_scoped.push_scope(AddedState);
+  }
+  ~LoopEnvironmentScopeGuard() { m_scoped.pop_scope(); }
+
+  LoopEnvironmentScopeGuard(const LoopEnvironmentScopeGuard &) = delete;
+  LoopEnvironmentScopeGuard &
+  operator=(const LoopEnvironmentScopeGuard &) = delete;
+  LoopEnvironmentScopeGuard(LoopEnvironmentScopeGuard &&) = delete;
+  LoopEnvironmentScopeGuard &operator=(LoopEnvironmentScopeGuard &&) = delete;
+
+private:
+  LoopEnvironment &m_scoped;
+};
+
+using FunctionContextScopeGuard =
+    LoopEnvironmentScopeGuard<LoopEnvironment::ScopeState::FUNCTION_TOP>;
+using LoopContextScopeGuard =
+    LoopEnvironmentScopeGuard<LoopEnvironment::ScopeState::IN_LOOP>;
 
 //****************************************************************************
 } // namespace bust::hir
