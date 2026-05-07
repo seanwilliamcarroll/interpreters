@@ -91,6 +91,7 @@ add_executable(bust-test
   test/src/codegen_side_effects_test.cpp
   test/src/codegen_lambdas_test.cpp
   test/src/codegen_tuples_test.cpp
+  test/src/codegen_loops_test.cpp
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/monomorpher_test.cpp
@@ -147,5 +148,6 @@ add_test(NAME bust.codegen.functions COMMAND bust-test -ts=bust.codegen.function
 add_test(NAME bust.codegen.side_effects COMMAND bust-test -ts=bust.codegen.side_effects)
 add_test(NAME bust.codegen.lambdas COMMAND bust-test -ts=bust.codegen.lambdas)
 add_test(NAME bust.codegen.tuples COMMAND bust-test -ts=bust.codegen.tuples)
+add_test(NAME bust.codegen.loops COMMAND bust-test -ts=bust.codegen.loops)
 
 #*****************************************************************************
