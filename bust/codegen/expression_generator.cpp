@@ -784,7 +784,7 @@ Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::BreakExpr &) {
+Value ExpressionGenerator::operator()(const zir::BreakExpr & /*unused*/) {
   // Need to emit a jump to the merge block of the closest loop
   m_ctx.builder().emit_jump(m_ctx.loop_stack().current_block_label());
   // No value currently
