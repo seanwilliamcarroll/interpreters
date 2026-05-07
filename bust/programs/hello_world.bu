@@ -1,3 +1,10 @@
+// EXPECT_EXIT: 0
+// EXPECT_STDOUT: "Hello, World!\n"
+//
+// The canonical first program. Exercises an extern declaration, repeated
+// extern calls, char literals (including the `\n` escape), and the `as`
+// cast from `char` to `i32` (since putchar takes i32 in C).
+
 extern fn putchar(c: i32) -> i32;
 
 fn main() -> i64 {

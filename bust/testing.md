@@ -21,12 +21,12 @@ The bust test suite has three layers, each living in `bust/test/src/`:
 
 3. **Integration** — full programs loaded from disk, exercising
    *combinations* of features. Lives in `integration_test.cpp` (suite
-   `bust.integration`), with programs under `bust/programs/integration/`.
-   Each program is a complete `.bu` file with expected exit code and
-   stdout encoded in header comments. The test driver runs the entire
-   pipeline, attaches dumps from every successful stage, and re-raises
-   any captured error so doctest reports the failure with all available
-   context.
+   `bust.integration`), with programs in `bust/programs/` (flat — no
+   subdirectory). Each program is a complete `.bu` file with expected
+   exit code and stdout encoded in header comments. The test driver
+   runs the entire pipeline, attaches dumps from every successful
+   stage, and re-raises any captured error so doctest reports the
+   failure with all available context.
 
 ## Pipeline + Dumps
 
@@ -35,12 +35,13 @@ real `bust` driver: **source → AST → HIR → ZIR → LLVM IR → run via lli
 
 Each stage has a dumper:
 
-| Stage   | Dumper                       |
-|---------|------------------------------|
-| AST     | `ast::Dumper::dump(Program)` |
-| HIR     | `hir::Dumper::dump(Program)` |
-| ZIR     | `zir::Dumper::dump(Program)` |
-| LLVM IR | `CodeGen()(program)` (text)  |
+| Stage   | Dumper                        |
+|---------|-------------------------------|
+| AST     | `ast::Dumper::dump(Program)`  |
+| HIR     | `hir::Dumper::dump(Program)`  |
+| MONO    | `mono::Dumper::dump(Program)` |
+| ZIR     | `zir::Dumper::dump(Program)`  |
+| LLVM IR | `CodeGen()(program)` (text)   |
 
 The `run_pipeline` helper runs each stage in a try/catch, populates the
 dump on success, captures the exception on failure, and **never throws**.
@@ -175,12 +176,28 @@ stable; add new features at the end.
 
 ---
 
-## Integration Test Matrix
+## Existing Integration Programs
 
-Each row is one program in `bust/programs/integration/`. The "Features"
-column lists the features the program is *meant* to exercise. Every
-feature should appear in at least one program; `everything.bu` is the
-catch-all.
+These programs already live in `bust/programs/` and are wired into the
+`bust.integration` suite. Their feature columns reference the F-numbers
+from the taxonomy above.
+
+| Program                  | Features Covered                              | Notes                                                    |
+|--------------------------|-----------------------------------------------|----------------------------------------------------------|
+| `hello_world.bu`         | F2, F23, F31, F32, F35, F48, F49              | Canonical extern + putchar program.                      |
+| `fibonacci.bu`           | F1, F18, F20, F25, F31, F33, F34              | Doubly-recursive fib(10) = 55.                           |
+| `lambda.bu`              | F11, F31, F32, F34, F36, F37, F39             | Higher-order `apply` taking `fn(i64) -> i64`.            |
+| `polymorphic.bu`         | F25, F29, F36, F38, F46, F47                  | Identity lambda used at both `bool` and `i64`.           |
+| `short_circuit.bu`       | F1, F8, F13, F14, F18, F20, F21, F25          | `&&` / `\|\|` chains; commented for IR inspection.       |
+| `side_effect_return.bu`  | F2, F23, F30, F36, F49                        | Lambda + naked `return` + dead code; prints `Hi\n`.      |
+| `bad_poly.bu`            | (negative — invariant on Numeric constraint)  | `EXPECT_FAIL: typecheck`. `\|x\|{x+x}(true)`.            |
+| `bad_poly_2.bu`          | (negative — invariant on type unification)    | `EXPECT_FAIL: typecheck`. `\|x,y\|{x+y}(1, true)`.       |
+
+## Integration Test Matrix (Forward-looking)
+
+Each row below is a *future* integration program covering a specific
+feature combination. They will be added as features land and as gaps
+in the existing-program coverage above are identified.
 
 | Program                       | Features Covered                                                           | What It Demonstrates                                                                                  |
 |-------------------------------|----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|

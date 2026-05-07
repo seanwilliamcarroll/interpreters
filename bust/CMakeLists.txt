@@ -92,6 +92,7 @@ add_executable(bust-test
   test/src/codegen_lambdas_test.cpp
   test/src/codegen_tuples_test.cpp
   test/src/codegen_loops_test.cpp
+  test/src/integration_test.cpp
   test/src/name_mangler_test.cpp
   test/src/validate_main_test.cpp
   test/src/monomorpher_test.cpp
@@ -121,6 +122,11 @@ else()
   message(STATUS "lli not found - codegen execution tests will be skipped")
 endif()
 
+# Path to the integration-test program directory. Used by the
+# bust.integration test suite to load .bu programs from disk at runtime.
+target_compile_definitions(bust-test PRIVATE
+  BUST_PROGRAMS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/programs")
+
 #*****************************************************************************
 
 if(ENABLE_ASAN)
@@ -149,5 +155,6 @@ add_test(NAME bust.codegen.side_effects COMMAND bust-test -ts=bust.codegen.side_
 add_test(NAME bust.codegen.lambdas COMMAND bust-test -ts=bust.codegen.lambdas)
 add_test(NAME bust.codegen.tuples COMMAND bust-test -ts=bust.codegen.tuples)
 add_test(NAME bust.codegen.loops COMMAND bust-test -ts=bust.codegen.loops)
+add_test(NAME bust.integration COMMAND bust-test -ts=bust.integration)
 
 #*****************************************************************************
