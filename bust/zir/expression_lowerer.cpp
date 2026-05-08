@@ -243,12 +243,23 @@ ExprKind ExpressionLowerer::operator()(
   };
 }
 
+ExprKind
+ExpressionLowerer::operator()(const std::unique_ptr<hir::LoopExpr> &loop_expr) {
+  return LoopExpr{
+      .m_body = lower(loop_expr->m_body),
+  };
+}
+
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::BreakExpr> &break_expr) {
   return BreakExpr{
-      .m_returned_expression = break_expr->m_returned_expression.and_then(
-          [&](const auto &expr) { return std::make_optional(lower(expr)); }),
+      .m_returned_expression = lower(break_expr->m_returned_expression),
   };
+}
+
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::ContinueExpr> & /*unused*/) {
+  return ContinueExpr{};
 }
 
 //****************************************************************************

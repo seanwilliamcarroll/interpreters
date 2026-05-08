@@ -125,15 +125,25 @@ struct WhileExpr {
   auto operator<=>(const WhileExpr &) const = default;
 };
 
+struct LoopExpr {
+  Block m_body;
+  auto operator<=>(const LoopExpr &) const = default;
+};
+
 struct BreakExpr {
-  std::optional<ExprId> m_returned_expression;
+  ExprId m_returned_expression;
   auto operator<=>(const BreakExpr &) const = default;
+};
+
+struct ContinueExpr {
+  auto operator<=>(const ContinueExpr &) const = default;
 };
 
 using ExprKind =
     std::variant<Unit, Bool, Char, I8, I32, I64, IdentifierExpr, TupleExpr,
                  CallExpr, BinaryExpr, UnaryExpr, ReturnExpr, CastExpr, IfExpr,
-                 LambdaExpr, DotExpr, Block, WhileExpr, BreakExpr>;
+                 LambdaExpr, DotExpr, Block, WhileExpr, LoopExpr, BreakExpr,
+                 ContinueExpr>;
 
 struct Expression {
   TypeId m_type_id;
@@ -257,6 +267,13 @@ template <> struct hash<bust::zir::I64> {
   }
 };
 
+template <> struct hash<bust::zir::ContinueExpr> {
+  static constexpr size_t HASH_VALUE = 6;
+  size_t operator()(const bust::zir::ContinueExpr & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
 template <> struct hash<bust::zir::Expression> {
   size_t operator()(const bust::zir::Expression &expr) const noexcept {
     size_t seed = 0;
@@ -323,14 +340,15 @@ template <> struct hash<bust::zir::WhileExpr> {
   }
 };
 
+template <> struct hash<bust::zir::LoopExpr> {
+  size_t operator()(const bust::zir::LoopExpr &expr) const noexcept {
+    return std::hash<bust::zir::Block>{}(expr.m_body);
+  }
+};
+
 template <> struct hash<bust::zir::BreakExpr> {
   size_t operator()(const bust::zir::BreakExpr &expr) const noexcept {
-    size_t seed = 0;
-    if (expr.m_returned_expression.has_value()) {
-      core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(
-                                   expr.m_returned_expression.value()));
-    }
-    return seed;
+    return std::hash<bust::zir::ExprId>{}(expr.m_returned_expression);
   }
 };
 

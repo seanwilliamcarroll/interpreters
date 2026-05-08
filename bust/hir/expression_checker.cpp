@@ -762,9 +762,9 @@ Expression ExpressionChecker::operator()(
   };
 }
 
-Expression ExpressionChecker::operator()(
-    const std::unique_ptr<ast::BreakExpr> & /*unused*/,
-    const core::SourceLocation &location) {
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
+                              const core::SourceLocation &location) {
   // Need to make sure here that we are inside of some kind of loop
   if (!m_ctx.m_loop_env.is_in_loop_scope()) {
     throw core::CompilerException(
@@ -777,7 +777,8 @@ Expression ExpressionChecker::operator()(
       {location},
       m_ctx.m_type_arena.m_never,
       std::make_unique<BreakExpr>(BreakExpr{
-          .m_returned_expression = {},
+          .m_returned_expression =
+              check_expression(break_expr->m_returned_value),
       }),
   };
 }

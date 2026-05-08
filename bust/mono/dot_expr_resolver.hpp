@@ -45,7 +45,9 @@ struct DotExprResolver {
   void operator()(const std::unique_ptr<hir::LambdaExpr> &);
   void operator()(const std::unique_ptr<hir::DotExpr> &);
   void operator()(const std::unique_ptr<hir::WhileExpr> &);
+  void operator()(const std::unique_ptr<hir::LoopExpr> &);
   void operator()(const std::unique_ptr<hir::BreakExpr> &);
+  void operator()(const std::unique_ptr<hir::ContinueExpr> &);
 
   SubstitutionContext &m_ctx;
 };

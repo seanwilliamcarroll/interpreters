@@ -324,10 +324,22 @@ hir::ExprKind ExpressionSubstituter::operator()(
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
-    const std::unique_ptr<hir::BreakExpr> & /*unused*/) {
-  return std::make_unique<hir::BreakExpr>(hir::BreakExpr{
-      .m_returned_expression = {},
+    const std::unique_ptr<hir::LoopExpr> &loop_expr) {
+  return std::make_unique<hir::LoopExpr>(hir::LoopExpr{
+      .m_body = substitute(loop_expr->m_body),
   });
+}
+
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::BreakExpr> &break_expr) {
+  return std::make_unique<hir::BreakExpr>(hir::BreakExpr{
+      .m_returned_expression = substitute(break_expr->m_returned_expression),
+  });
+}
+
+hir::ExprKind ExpressionSubstituter::operator()(
+    const std::unique_ptr<hir::ContinueExpr> & /*unused*/) {
+  return std::make_unique<hir::ContinueExpr>(hir::ContinueExpr{});
 }
 
 //****************************************************************************

@@ -219,11 +219,32 @@ struct FreeVariableCollector {
     return free_variables;
   }
 
-  FreeVariables operator()(const DotExpr & /*unused*/) { return {}; }
+  FreeVariables operator()(const DotExpr &dot_expr) {
+    FreeVariables free_variables;
+    collect_append(dot_expr.m_expression, free_variables);
+    return free_variables;
+  }
 
-  FreeVariables operator()(const WhileExpr & /*unused*/) { return {}; }
+  FreeVariables operator()(const WhileExpr &while_expr) {
+    FreeVariables free_variables;
+    collect_append(while_expr.m_condition, free_variables);
+    collect_append(while_expr.m_body, free_variables);
+    return free_variables;
+  }
 
-  FreeVariables operator()(const BreakExpr & /*unused*/) { return {}; }
+  FreeVariables operator()(const LoopExpr &loop_expr) {
+    FreeVariables free_variables;
+    collect_append(loop_expr.m_body, free_variables);
+    return free_variables;
+  }
+
+  FreeVariables operator()(const BreakExpr &break_expr) {
+    FreeVariables free_variables;
+    collect_append(break_expr.m_returned_expression, free_variables);
+    return free_variables;
+  }
+
+  FreeVariables operator()(const ContinueExpr & /*unused*/) { return {}; }
 
   Context &m_ctx;
   BoundVariableEnvironment m_env;

@@ -31,7 +31,9 @@ struct Block;
 struct TupleExpr;
 struct DotExpr;
 struct WhileExpr;
+struct LoopExpr;
 struct BreakExpr;
+struct ContinueExpr;
 // TODO
 struct ForExpr {};
 
@@ -104,7 +106,8 @@ using ExprKind =
                  std::unique_ptr<UnaryExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<LambdaExpr>,
                  std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>,
-                 std::unique_ptr<WhileExpr>, std::unique_ptr<BreakExpr>>;
+                 std::unique_ptr<WhileExpr>, std::unique_ptr<LoopExpr>,
+                 std::unique_ptr<BreakExpr>, std::unique_ptr<ContinueExpr>>;
 
 struct Expression : public core::HasLocation {
   TypeId m_type;
@@ -150,9 +153,15 @@ struct WhileExpr {
   Block m_body;
 };
 
-struct BreakExpr {
-  std::optional<Expression> m_returned_expression;
+struct LoopExpr {
+  Block m_body;
 };
+
+struct BreakExpr {
+  Expression m_returned_expression;
+};
+
+struct ContinueExpr {};
 
 // --- Bindings & definitions ------------------------------------------------
 
