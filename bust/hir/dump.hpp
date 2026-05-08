@@ -273,6 +273,30 @@ private:
             m_out << "Dot(" << v->m_tuple_index << ")\n";
             IndentGuard g(*this);
             dump_expression(v->m_expression);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<WhileExpr>>) {
+            m_out << "While\n";
+            IndentGuard g(*this);
+            line("cond:");
+            {
+              IndentGuard g2(*this);
+              dump_expression(v->m_condition);
+            }
+            line("body:");
+            {
+              IndentGuard g2(*this);
+              dump_block(v->m_body);
+            }
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<LoopExpr>>) {
+            m_out << "Loop\n";
+            IndentGuard g(*this);
+            dump_block(v->m_body);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<BreakExpr>>) {
+            m_out << "Break\n";
+            IndentGuard g(*this);
+            dump_expression(v->m_returned_expression);
+          } else if constexpr (std::is_same_v<T,
+                                              std::unique_ptr<ContinueExpr>>) {
+            m_out << "Continue\n";
           }
         },
         e.m_expression);
