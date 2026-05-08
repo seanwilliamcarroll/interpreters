@@ -558,6 +558,102 @@ TEST_SUITE("bust.zir_lowerer") {
     REQUIRE(func.m_body.m_final_expression.has_value());
   }
 
+  // --- Loops, break, and continue --------------------------------------------
+  //
+  // Light structural coverage to lock down the ZIR shapes for control-flow
+  // primitives. These confirm the key invariants the codegen pass will rely
+  // on: bare `break;` carries a unit payload (sugar survives lowering),
+  // `continue` is a distinct node from `break`, and a `loop`'s ZIR type is
+  // the resolved break-target type (not a leftover type variable).
+
+  TEST_CASE("while loop lowers to WhileExpr") {
+    auto zir = lower_string("fn looper() { while true { } } "
+                            "fn main() -> i64 { 0 }");
+    auto &looper = std::get<zir::FunctionDef>(zir.m_top_items[0]);
+    REQUIRE(looper.m_body.m_final_expression.has_value());
+    auto &kind = expr_kind(zir, looper.m_body.m_final_expression.value());
+    REQUIRE(std::holds_alternative<zir::WhileExpr>(kind));
+    auto &while_expr = std::get<zir::WhileExpr>(kind);
+    auto &cond_kind = expr_kind(zir, while_expr.m_condition);
+    REQUIRE(std::holds_alternative<zir::Bool>(cond_kind));
+    CHECK(std::get<zir::Bool>(cond_kind).m_value == true);
+  }
+
+  TEST_CASE("bare break in while lowers with unit payload") {
+    // `break;` sugars to `break ();` at parse time. The sugar must
+    // survive lowering — codegen for break needs a real value to pass
+    // back, even when that value is unit.
+    auto zir = lower_string("fn looper() { while true { break; } } "
+                            "fn main() -> i64 { 0 }");
+    auto &looper = std::get<zir::FunctionDef>(zir.m_top_items[0]);
+    auto &while_kind = expr_kind(zir, looper.m_body.m_final_expression.value());
+    auto &while_expr = std::get<zir::WhileExpr>(while_kind);
+    REQUIRE(while_expr.m_body.m_statements.size() == 1);
+    auto &stmt = while_expr.m_body.m_statements[0];
+    REQUIRE(std::holds_alternative<zir::ExpressionStatement>(stmt));
+    auto &break_kind =
+        expr_kind(zir, std::get<zir::ExpressionStatement>(stmt).m_expression);
+    REQUIRE(std::holds_alternative<zir::BreakExpr>(break_kind));
+    auto &break_expr = std::get<zir::BreakExpr>(break_kind);
+    auto &payload_kind = expr_kind(zir, break_expr.m_returned_expression);
+    CHECK(std::holds_alternative<zir::Unit>(payload_kind));
+    CHECK(std::holds_alternative<zir::UnitType>(
+        type_of(zir, expr_type(zir, break_expr.m_returned_expression))));
+  }
+
+  TEST_CASE("continue lowers to ContinueExpr (distinct from break)") {
+    auto zir = lower_string("fn looper() { while true { continue; } } "
+                            "fn main() -> i64 { 0 }");
+    auto &looper = std::get<zir::FunctionDef>(zir.m_top_items[0]);
+    auto &while_kind = expr_kind(zir, looper.m_body.m_final_expression.value());
+    auto &while_expr = std::get<zir::WhileExpr>(while_kind);
+    REQUIRE(while_expr.m_body.m_statements.size() == 1);
+    auto &cont_kind = expr_kind(zir, std::get<zir::ExpressionStatement>(
+                                         while_expr.m_body.m_statements[0])
+                                         .m_expression);
+    CHECK(std::holds_alternative<zir::ContinueExpr>(cont_kind));
+  }
+
+  TEST_CASE("loop with break-value: LoopExpr wraps body with BreakExpr") {
+    // Verify the structural shape codegen will need: LoopExpr -> Block ->
+    // ExpressionStatement(BreakExpr) -> i64 payload.
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let x: i64 = loop { break 42; };\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    auto &loop_kind = expr_kind(zir, let.m_expression);
+    REQUIRE(std::holds_alternative<zir::LoopExpr>(loop_kind));
+    auto &loop_expr = std::get<zir::LoopExpr>(loop_kind);
+    REQUIRE(loop_expr.m_body.m_statements.size() == 1);
+    auto &stmt = loop_expr.m_body.m_statements[0];
+    REQUIRE(std::holds_alternative<zir::ExpressionStatement>(stmt));
+    auto &break_kind =
+        expr_kind(zir, std::get<zir::ExpressionStatement>(stmt).m_expression);
+    REQUIRE(std::holds_alternative<zir::BreakExpr>(break_kind));
+    auto &break_expr = std::get<zir::BreakExpr>(break_kind);
+    auto &payload = expr_kind(zir, break_expr.m_returned_expression);
+    REQUIRE(std::holds_alternative<zir::I64>(payload));
+    CHECK(std::get<zir::I64>(payload).m_value == 42);
+  }
+
+  TEST_CASE("loop expression's ZIR type is the break-target type (i64)") {
+    // The loop's type starts as a type variable in HIR (or as the first
+    // break's type, if you took the no-fresh-var optimization), and must
+    // resolve to a concrete ZIR type before reaching codegen. If type
+    // resolution didn't happen, ZIR lowering would fail noisily — this
+    // test pins down that it succeeds and lands on i64.
+    auto zir = lower_string("fn main() -> i64 {\n"
+                            "  let x: i64 = loop { break 42; };\n"
+                            "  x\n"
+                            "}");
+    auto &func = first_function(zir);
+    auto &let = std::get<zir::LetBinding>(func.m_body.m_statements[0]);
+    CHECK(std::holds_alternative<zir::I64Type>(
+        type_of(zir, expr_type(zir, let.m_expression))));
+  }
+
   // --- Blocks ----------------------------------------------------------------
 
   TEST_CASE("block with statements and final expression") {
