@@ -145,7 +145,8 @@ struct LoopEnvironment {
   }
 
   [[nodiscard]] bool is_in_loop_scope() const {
-    return m_scopes.back().m_state == ScopeState::WHILE_LOOP;
+    return m_scopes.back().m_state == ScopeState::WHILE_LOOP ||
+           m_scopes.back().m_state == ScopeState::LOOP_LOOP;
   }
 
   void push_type(TypeId type_id) {

@@ -748,7 +748,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
       throw core::CompilerException(
           "TypeChecker",
           std::string("Type unification error! Break statements in while loop "
-                      "cannot return a value!: ") +
+                      "cannot return a value other than unit!: ") +
               error.what(),
           location);
     }
@@ -772,6 +772,13 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
   // Need to check and unify block with unit
   LoopContextScopeGuard guard{m_ctx.m_loop_env};
   auto body = BlockChecker{m_ctx}.check_block(loop_expr->m_body);
+  try {
+    m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, body.m_type);
+  } catch (std::runtime_error &error) {
+    throw core::CompilerException(
+        "TypeChecker", std::string("Type unification error!: ") + error.what(),
+        location);
+  }
 
   // Now check for the collected returned values
   const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
@@ -779,8 +786,8 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
   if (returned_types.empty()) {
     loop_type_id = m_ctx.m_type_arena.m_never;
   } else {
-    loop_type_id = m_ctx.m_type_unifier.new_type_var();
-    for (const auto &collected_type_id : returned_types) {
+    loop_type_id = returned_types.front();
+    for (const auto &collected_type_id : returned_types | std::views::drop(1)) {
       try {
         m_ctx.m_type_unifier.unify(collected_type_id, loop_type_id);
       } catch (std::runtime_error &error) {
