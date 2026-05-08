@@ -71,9 +71,11 @@ enum class TokenType : uint8_t {
   MUT,
   RETURN,
   BREAK,
+  CONTINUE,
   IF,
   ELSE,
   WHILE,
+  LOOP,
   FOR,
   TRUE,
   FALSE,
@@ -98,7 +100,7 @@ using LexerInterface = core::LexerInterface<TokenType>;
 
 std::string token_type_to_string(TokenType type);
 
-inline constexpr std::array<std::pair<std::string_view, TokenType>, 18>
+inline constexpr std::array<std::pair<std::string_view, TokenType>, 20>
     keywords{{
         {"fn", TokenType::FN},
         {"extern", TokenType::EXTERN},
@@ -106,9 +108,11 @@ inline constexpr std::array<std::pair<std::string_view, TokenType>, 18>
         {"mut", TokenType::MUT},
         {"return", TokenType::RETURN},
         {"break", TokenType::BREAK},
+        {"continue", TokenType::CONTINUE},
         {"if", TokenType::IF},
         {"else", TokenType::ELSE},
         {"while", TokenType::WHILE},
+        {"loop", TokenType::LOOP},
         {"for", TokenType::FOR},
         {"true", TokenType::TRUE},
         {"false", TokenType::FALSE},

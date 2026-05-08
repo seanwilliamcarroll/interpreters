@@ -10,6 +10,7 @@
 
 #include <codegen/arena.hpp>
 #include <codegen/basic_block.hpp>
+#include <codegen/block_label.hpp>
 #include <codegen/function.hpp>
 #include <codegen/ir_builder.hpp>
 #include <codegen/module.hpp>
@@ -25,8 +26,6 @@
 #include <cassert>
 #include <string>
 #include <vector>
-
-#include "codegen/block_label.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
