@@ -621,6 +621,20 @@ ast::Expression Parser::parse_while_expr() {
   };
 }
 
+ast::Expression Parser::parse_loop_expr() {
+  auto original_location = peek().get_location();
+  expect(TokenType::LOOP, __FUNCTION__);
+
+  auto body = parse_block();
+
+  return {
+      {original_location},
+      std::make_unique<ast::LoopExpr>(ast::LoopExpr{
+          .m_body = std::move(body),
+      }),
+  };
+}
+
 ast::Expression Parser::parse_break_expr() {
   auto original_location = peek().get_location();
   expect(TokenType::BREAK, __FUNCTION__);
@@ -632,6 +646,15 @@ ast::Expression Parser::parse_break_expr() {
       std::make_unique<ast::BreakExpr>(ast::BreakExpr{
           .m_returned_value = {},
       }),
+  };
+}
+
+ast::Expression Parser::parse_continue_expr() {
+  auto original_location = peek().get_location();
+  expect(TokenType::CONTINUE, __FUNCTION__);
+  return {
+      {original_location},
+      std::make_unique<ast::ContinueExpr>(ast::ContinueExpr{}),
   };
 }
 
@@ -662,8 +685,12 @@ ast::Expression Parser::parse_primary() {
     return parse_return_expr();
   case TokenType::WHILE:
     return parse_while_expr();
+  case TokenType::LOOP:
+    return parse_loop_expr();
   case TokenType::BREAK:
     return parse_break_expr();
+  case TokenType::CONTINUE:
+    return parse_continue_expr();
     // case TokenType::FOR:
   default:
     on_error(peek().get_location(),

@@ -752,6 +752,17 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
 }
 
 Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::LoopExpr> & // loop_expr
+    ,
+    const core::SourceLocation &location) {
+  return {
+      {location},
+      {},
+      {},
+  };
+}
+
+Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::BreakExpr> & /*unused*/,
     const core::SourceLocation &location) {
   // Need to make sure here that we are inside of some kind of loop
@@ -768,6 +779,16 @@ Expression ExpressionChecker::operator()(
       std::make_unique<BreakExpr>(BreakExpr{
           .m_returned_expression = {},
       }),
+  };
+}
+
+Expression ExpressionChecker::operator()(
+    const std::unique_ptr<ast::ContinueExpr> & /*unused*/,
+    const core::SourceLocation &location) {
+  return {
+      {location},
+      {},
+      {},
   };
 }
 

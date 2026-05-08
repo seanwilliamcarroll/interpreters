@@ -33,8 +33,10 @@ struct Block;
 struct DotExpr;
 struct TupleExpr;
 struct WhileExpr;
+struct LoopExpr;
 struct ForExpr;
 struct BreakExpr;
+struct ContinueExpr;
 
 // --- Literals --------------------------------------------------------------
 
@@ -66,8 +68,9 @@ using ExprKind =
                  std::unique_ptr<BinaryExpr>, std::unique_ptr<UnaryExpr>,
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
-                 std::unique_ptr<BreakExpr>, std::unique_ptr<LambdaExpr>,
-                 std::unique_ptr<WhileExpr>, std::unique_ptr<ForExpr>,
+                 std::unique_ptr<BreakExpr>, std::unique_ptr<ContinueExpr>,
+                 std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
+                 std::unique_ptr<LoopExpr>, std::unique_ptr<ForExpr>,
                  std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>, I8, I32,
                  I64, Bool, Char, Unit>;
 
@@ -101,6 +104,8 @@ struct BreakExpr {
   std::optional<Expression> m_returned_value;
 };
 
+struct ContinueExpr {};
+
 struct DotExpr {
   Expression m_expression;
   // For now, all that is representable
@@ -116,6 +121,10 @@ struct Block : public core::HasLocation {
 
 struct WhileExpr {
   Expression m_condition;
+  Block m_body;
+};
+
+struct LoopExpr {
   Block m_body;
 };
 
