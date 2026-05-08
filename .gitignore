@@ -19,7 +19,7 @@
 !.clang-tidy
 *~
 build/
-build-release/
+build-*/
 CMakeUserPresets.json
 
 #*****************************************************************************
