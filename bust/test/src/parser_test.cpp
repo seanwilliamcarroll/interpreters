@@ -1089,6 +1089,17 @@ TEST_SUITE("bust.parser.core") {
                     core::CompilerException);
   }
 
+  TEST_CASE("bust::parse_let_if_requires_trailing_semicolon") {
+    // The closing `}` of the if's else block does not terminate the
+    // let binding — a trailing semicolon is still required, even
+    // though a bare if-expression as a statement does not need one.
+    CHECK_THROWS_AS(parse_string("fn main() -> i64 {\n"
+                                 "  let x = if true { 1 } else { 2 }\n"
+                                 "  x\n"
+                                 "}"),
+                    core::CompilerException);
+  }
+
   TEST_CASE("bust::parse_unexpected_token") {
     CHECK_THROWS_AS(parse_string("fn main() -> i64 { ; }"),
                     core::CompilerException);

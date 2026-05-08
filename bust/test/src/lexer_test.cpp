@@ -350,6 +350,26 @@ TEST_SUITE("bust.lexer") {
                        TokenType::RBRACE, TokenType::EOF_TOKEN});
   }
 
+  TEST_CASE("bust::lexer_loop_expression") {
+    check_token_types("loop { 1; }",
+                      {TokenType::LOOP, TokenType::LBRACE,
+                       TokenType::INT_LITERAL, TokenType::SEMICOLON,
+                       TokenType::RBRACE, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_break_with_value") {
+    check_token_types("break 42;",
+                      {TokenType::BREAK, TokenType::INT_LITERAL,
+                       TokenType::SEMICOLON, TokenType::EOF_TOKEN});
+  }
+
+  TEST_CASE("bust::lexer_continue_in_loop") {
+    check_token_types("loop { continue; }",
+                      {TokenType::LOOP, TokenType::LBRACE, TokenType::CONTINUE,
+                       TokenType::SEMICOLON, TokenType::RBRACE,
+                       TokenType::EOF_TOKEN});
+  }
+
   TEST_CASE("bust::lexer_arithmetic") {
     check_token_types(
         "a + b * c - d / e % f",
