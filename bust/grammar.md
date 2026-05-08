@@ -10,10 +10,12 @@ LET         = `let`
 MUT         = `mut`
 RETURN      = `return`
 BREAK       = `break`
+CONTINUE    = `continue`
 IF          = `if`
 ELSE        = `else`
 WHILE       = `while`
 FOR         = `for`
+LOOP        = `loop`
 TRUE        = `true`
 FALSE       = `false`
 
@@ -130,6 +132,7 @@ expression_no_semicolon
                     | block
                     | while_expr
                     | for_expr
+                    | loop_expr
 
 let_binding         = LET MUT? IDENTIFIER (COLON type)? EQUALS expression SEMICOLON
 
@@ -178,9 +181,11 @@ primary             = literal
                     | if_expr
                     | while_expr
                     | for_expr
+                    | loop_expr
                     | lambda_expr
                     | return_expr
                     | break_expr
+                    | continue_expr
 
 // `(expr)` is a parenthesized expression; `(expr,)` is a 1-tuple;
 // `(expr, expr, ...)` (with optional trailing comma) is an N-tuple.
@@ -193,7 +198,9 @@ paren_or_tuple_expr = LPAREN expression RPAREN
 
 return_expr         = RETURN expression?
 
-break_expr          = BREAK
+break_expr          = BREAK expression?
+
+continue_expr       = CONTINUE
 
 if_expr             = IF expression block (ELSE block)?
 
@@ -202,6 +209,8 @@ lambda_expr         = PIPE (parameter_inferred (COMMA parameter_inferred)*)? PIP
 while_expr          = WHILE expression block
 
 for_expr            = TODO (deferred — needs ranges/collections)
+
+loop_expr           = LOOP block
 
 // Literals
 
@@ -239,17 +248,42 @@ literal             = INT_LITERAL
   compatible with any expected type (acts like a "never" / bottom type
   without needing to add `!` to the type system).
 - Implicit return: last expression in a block is its value.
+- The optional payload in `return expression?` and `break expression?` is
+  decided by FIRST-set lookahead: a payload is parsed iff the next token can
+  begin an expression. Boundary tokens (`;`, `}`, `,`, `)`, etc.) end the
+  bare form. The payload itself is parsed at full expression precedence, so
+  `return 1 + 2` and `break 1 + 2` greedily consume the rest of the
+  expression — equivalent to `return (1 + 2)` and `break (1 + 2)`.
 - `while expr block` is an expression of type `()`. The condition must be
   `bool`. The body block must type as `()` (same rule as a no-`else` `if`).
   The body is its own scope — bindings inside the body do not leak out.
   Even `while true { ... }` types as `()`; the type checker does not analyze
-  condition truth, so it must assume the loop may exit normally. Contrast
-  with `loop { ... }` (future), where a body containing no `break` types as
-  Never.
-- `break` is an expression of type Never. It must appear lexically inside a
-  loop body; this is enforced in the type checker, not the parser. `break`
-  targets the innermost enclosing loop. (Labeled break is a future
-  extension.) Codegen lowers `break` to a jump to the loop's exit block.
+  condition truth, so it must assume the loop may exit normally. Because the
+  break-target type is fixed to `()`, any `break expr` inside a `while`/`for`
+  must have `expr: ()` — surfaced as a unification error, ideally enriched
+  with a hint along the lines of "`break` with a value is only allowed
+  inside `loop`".
+- `loop block` is an expression. The body block must type as `()` (same rule
+  as `while`); its tail value is discarded each iteration. The loop's value
+  comes from `break expr` exits — sugar `break;` ≡ `break ();` applies, so
+  a loop whose only exits are bare breaks has type `()`; a loop with
+  `break expr;` exits has the unified type of those expressions. A loop
+  with no `break` exit at all has type Never (the loop genuinely cannot
+  complete normally).
+- `break` and `break expr` are expressions of type Never (compatible with
+  any expected type). Naked `break` is sugar for `break ()`, desugared at
+  parse time. `break` must appear lexically inside a loop body; the type
+  checker enforces this. The payload's type unifies with the enclosing
+  loop's break-target type — `()` for `while`/`for`, inferred from the body
+  for `loop`. `break` targets the innermost enclosing loop; the search for
+  that loop stops at any function or lambda boundary. (Labeled break is a
+  future extension.) Codegen lowers `break expr` to: store `expr` to the
+  loop's value slot (if any), then jump to the loop's exit block.
+- `continue` is an expression of type Never. It must appear lexically inside
+  a loop body and targets the innermost enclosing loop (of any kind); the
+  search stops at any function or lambda boundary. Codegen lowers it to a
+  jump to the loop's header — the condition test for `while`/`for`, the top
+  of the body for `loop`.
 
 ## Desirable Features (Future)
 

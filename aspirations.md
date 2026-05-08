@@ -55,6 +55,21 @@ Three structural investments that unblock future features:
   binding. Substantial feature on its own; the rule above is the bridge
   in the meantime.
 
+## Loops & Control Flow
+
+- [ ] Labeled `break` / `continue` (`'outer: loop { ... break 'outer 42; }`)
+  — Lets nested loops break/continue an outer loop directly. Grammar is
+  small (label binding on the loop + label argument on `break`/`continue`);
+  the substance is per-label break-value unification in the type checker.
+  Defer until plain `loop` + `break value` lands and there's a motivating
+  nested-loop case.
+- [ ] `while` / `for` as value-yielding expressions (very low priority)
+  — Rust pins these to `()` because the body may execute zero times, so
+  there's no break-value on the no-iteration path. Resolutions would be an
+  `else` clause for the no-iteration branch, wrapping in `Option<T>`, or
+  requiring a default value. Pick up only if a strong ergonomic case
+  emerges.
+
 ## Codegen (LLVM IR)
 
 - [ ] Direct calls for statically-known callees (skip fat pointer entirely)
