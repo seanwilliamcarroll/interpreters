@@ -729,7 +729,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
   }
 
   // Need to check and unify block with unit
-  LoopContextScopeGuard guard{m_ctx.m_loop_env};
+  WhileContextScopeGuard guard{m_ctx.m_loop_env};
   auto body = BlockChecker{m_ctx}.check_block(while_expr->m_body);
   try {
     m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, body.m_type);
@@ -737,6 +737,21 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
         location);
+  }
+
+  const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
+
+  for (const auto &collected_type_id : returned_types) {
+    try {
+      m_ctx.m_type_unifier.unify(collected_type_id, m_ctx.m_type_arena.m_unit);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException(
+          "TypeChecker",
+          std::string("Type unification error! Break statements in while loop "
+                      "cannot return a value!: ") +
+              error.what(),
+          location);
+    }
   }
 
   return {
@@ -751,14 +766,40 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
   };
 }
 
-Expression ExpressionChecker::operator()(
-    const std::unique_ptr<ast::LoopExpr> & // loop_expr
-    ,
-    const core::SourceLocation &location) {
+Expression
+ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
+                              const core::SourceLocation &location) {
+  // Need to check and unify block with unit
+  LoopContextScopeGuard guard{m_ctx.m_loop_env};
+  auto body = BlockChecker{m_ctx}.check_block(loop_expr->m_body);
+
+  // Now check for the collected returned values
+  const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
+  TypeId loop_type_id;
+  if (returned_types.empty()) {
+    loop_type_id = m_ctx.m_type_arena.m_never;
+  } else {
+    loop_type_id = m_ctx.m_type_unifier.new_type_var();
+    for (const auto &collected_type_id : returned_types) {
+      try {
+        m_ctx.m_type_unifier.unify(collected_type_id, loop_type_id);
+      } catch (std::runtime_error &error) {
+        throw core::CompilerException(
+            "TypeChecker",
+            std::string("Type unification error! Likely mismatch between break "
+                        "returns inside loop expression!: ") +
+                error.what(),
+            location);
+      }
+    }
+  }
+
   return {
       {location},
-      {},
-      {},
+      loop_type_id,
+      std::make_unique<LoopExpr>(LoopExpr{
+          .m_body = std::move(body),
+      }),
   };
 }
 
@@ -772,13 +813,16 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
         location);
   }
 
-  // TODO See about a returned expression
+  // Add the type of this break statement's returned value to the collected
+  // return types
+  auto returned_expression = check_expression(break_expr->m_returned_value);
+  m_ctx.m_loop_env.push_type(returned_expression.m_type);
+
   return {
       {location},
       m_ctx.m_type_arena.m_never,
       std::make_unique<BreakExpr>(BreakExpr{
-          .m_returned_expression =
-              check_expression(break_expr->m_returned_value),
+          .m_returned_expression = std::move(returned_expression),
       }),
   };
 }
@@ -786,10 +830,17 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
 Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::ContinueExpr> & /*unused*/,
     const core::SourceLocation &location) {
+  // Need to make sure here that we are inside of some kind of loop
+  if (!m_ctx.m_loop_env.is_in_loop_scope()) {
+    throw core::CompilerException(
+        "TypeChecker",
+        "Cannot have continue statement outside of a loop scope!", location);
+  }
+
   return {
       {location},
-      {},
-      {},
+      m_ctx.m_type_arena.m_never,
+      std::make_unique<ContinueExpr>(ContinueExpr{}),
   };
 }
 

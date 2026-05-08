@@ -122,13 +122,22 @@ using ScopeGuard = core::ScopeGuard<Environment>;
 struct LoopEnvironment {
   enum class ScopeState : uint8_t {
     FUNCTION_TOP,
-    IN_LOOP,
+    WHILE_LOOP,
+    LOOP_LOOP,
   };
 
-  LoopEnvironment() { m_scopes.push_back(ScopeState::FUNCTION_TOP); }
+  struct Scope {
+    ScopeState m_state;
+    std::vector<TypeId> m_collected_types;
+  };
+
+  LoopEnvironment() {
+    m_scopes.push_back(
+        {.m_state = ScopeState::FUNCTION_TOP, .m_collected_types = {}});
+  }
 
   void push_scope(ScopeState new_scope_state) {
-    m_scopes.push_back(new_scope_state);
+    m_scopes.push_back({.m_state = new_scope_state, .m_collected_types = {}});
   }
   void pop_scope() noexcept {
     assert(m_scopes.size() > 1 && "Cannot pop scope, already at global scope!");
@@ -136,11 +145,20 @@ struct LoopEnvironment {
   }
 
   [[nodiscard]] bool is_in_loop_scope() const {
-    return m_scopes.back() == ScopeState::IN_LOOP;
+    return m_scopes.back().m_state == ScopeState::WHILE_LOOP;
+  }
+
+  void push_type(TypeId type_id) {
+    m_scopes.back().m_collected_types.push_back(type_id);
+  }
+
+  [[nodiscard]]
+  const std::vector<TypeId> &current_collected_types() const {
+    return m_scopes.back().m_collected_types;
   }
 
 private:
-  std::vector<ScopeState> m_scopes;
+  std::vector<Scope> m_scopes;
 };
 
 template <LoopEnvironment::ScopeState AddedState>
@@ -163,8 +181,10 @@ private:
 
 using FunctionContextScopeGuard =
     LoopEnvironmentScopeGuard<LoopEnvironment::ScopeState::FUNCTION_TOP>;
+using WhileContextScopeGuard =
+    LoopEnvironmentScopeGuard<LoopEnvironment::ScopeState::WHILE_LOOP>;
 using LoopContextScopeGuard =
-    LoopEnvironmentScopeGuard<LoopEnvironment::ScopeState::IN_LOOP>;
+    LoopEnvironmentScopeGuard<LoopEnvironment::ScopeState::LOOP_LOOP>;
 
 //****************************************************************************
 } // namespace bust::hir
