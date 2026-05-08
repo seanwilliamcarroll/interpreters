@@ -112,20 +112,20 @@ stash_save
 
 # ── Clean build ──────────────────────────────────────────────────────────────
 
-step "Removing build/"
-rm -rf build/
-pass "build/ removed"
+step "Removing build-full/"
+rm -rf build-full/
+pass "build-full/ removed"
 
-step "Configuring (cmake --preset mp)"
-if cmake --preset mp; then
+step "Configuring (cmake --preset mp-full)"
+if cmake --preset mp-full; then
   pass "Configuration succeeded"
 else
   fail "Configuration failed"
   exit 1
 fi
 
-step "Building (cmake --build --preset mp)"
-if cmake --build --preset mp; then
+step "Building (cmake --build --preset mp-full)"
+if cmake --build --preset mp-full; then
   pass "Build succeeded"
 else
   fail "Build failed"
@@ -134,8 +134,8 @@ fi
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 
-step "Running tests (ctest --preset mp)"
-if ctest --preset mp; then
+step "Running tests (ctest --preset mp-full)"
+if ctest --preset mp-full; then
   pass "All tests passed"
 else
   fail "Tests failed"
@@ -157,7 +157,7 @@ if [ -n "$CLANG_TIDY" ]; then
   for src in $CHANGED_FILES; do
     [ -f "$src" ] || continue
 
-    FILE_OUTPUT=$("$CLANG_TIDY" -p build "$src" 2>&1 || true)
+    FILE_OUTPUT=$("$CLANG_TIDY" -p build-full "$src" 2>&1 || true)
 
     if echo "$FILE_OUTPUT" | grep -qE '(warning|error):'; then
       FAILURES=$((FAILURES + 1))

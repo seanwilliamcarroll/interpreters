@@ -50,9 +50,12 @@ set(PROJECT_WARNINGS
 )
 
 option(ENABLE_ASAN "Enable AddressSanitizer for debug builds" OFF)
+option(BUILD_BLIP  "Build the blip language interpreter and its tests" OFF)
 
 add_subdirectory(core)
-add_subdirectory(blip)
+if(BUILD_BLIP)
+  add_subdirectory(blip)
+endif()
 add_subdirectory(bust)
 
 #*****************************************************************************
