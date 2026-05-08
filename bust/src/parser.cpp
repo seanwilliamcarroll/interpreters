@@ -639,12 +639,23 @@ ast::Expression Parser::parse_break_expr() {
   auto original_location = peek().get_location();
   expect(TokenType::BREAK, __FUNCTION__);
 
-  // For now, we expect nothing after break
+  ast::Expression returned_expression;
+  if (peek().get_token_type() == TokenType::RBRACE ||
+      peek().get_token_type() == TokenType::SEMICOLON) {
+    // Desugar naked break to break ()
+    returned_expression = {
+        {original_location},
+        ast::Unit{},
+    };
+  } else {
+    // Actually return a value
+    returned_expression = parse_expression();
+  }
 
   return {
       {original_location},
       std::make_unique<ast::BreakExpr>(ast::BreakExpr{
-          .m_returned_value = {},
+          .m_returned_value = std::move(returned_expression),
       }),
   };
 }

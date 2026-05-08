@@ -117,8 +117,7 @@ TEST_SUITE("bust.parser.loops") {
         stmt_expr.m_expression));
     const auto &brk =
         *std::get<std::unique_ptr<BreakExpr>>(stmt_expr.m_expression);
-    // break does not yet support a returned value — slot must be empty.
-    CHECK_FALSE(brk.m_returned_value.has_value());
+    CHECK(std::holds_alternative<ast::Unit>(brk.m_returned_value.m_expression));
   }
 
   TEST_CASE("bust::parse_break_as_final_expression") {

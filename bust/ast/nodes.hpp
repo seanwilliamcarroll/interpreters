@@ -101,7 +101,7 @@ struct TupleExpr {
 };
 
 struct BreakExpr {
-  std::optional<Expression> m_returned_value;
+  Expression m_returned_value;
 };
 
 struct ContinueExpr {};
