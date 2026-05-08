@@ -341,6 +341,8 @@ bool is_expression_no_semicolon(const ast::Expression &expression) {
              expression.m_expression) ||
          std::holds_alternative<std::unique_ptr<ast::WhileExpr>>(
              expression.m_expression) ||
+         std::holds_alternative<std::unique_ptr<ast::LoopExpr>>(
+             expression.m_expression) ||
          std::holds_alternative<std::unique_ptr<ast::ForExpr>>(
              expression.m_expression);
 }
