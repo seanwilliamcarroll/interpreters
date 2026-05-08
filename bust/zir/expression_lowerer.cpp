@@ -66,7 +66,9 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
 
   m_ctx.env().define(identifier.m_name, binding_id);
 
-  return {.m_id = binding_id};
+  return {
+      .m_id = binding_id,
+  };
 }
 
 IdentifierExpr ExpressionLowerer::lower(const hir::Parameter &parameter) {
@@ -180,7 +182,9 @@ ExprKind ExpressionLowerer::operator()(
 
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expr) {
-  return ReturnExpr{.m_expression = lower(return_expr->m_expression)};
+  return ReturnExpr{
+      .m_expression = lower(return_expr->m_expression),
+  };
 }
 
 ExprKind
