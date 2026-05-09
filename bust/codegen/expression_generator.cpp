@@ -48,15 +48,21 @@ Value ExpressionGenerator::generate(const zir::ExprId &expr_id) {
   return generate(m_ctx.arena().get(expr_id));
 }
 
-Value ExpressionGenerator::generate(const zir::ExprKind &expr_kind) {
-  return std::visit(*this, expr_kind);
-}
-
 Value ExpressionGenerator::generate(const zir::Expression &expression) {
-  return generate(expression.m_expr_kind);
+  return std::visit(
+      [&](auto &&kind) {
+        using T = std::decay_t<decltype(kind)>;
+        if constexpr (std::is_same_v<T, zir::Block>) {
+          return (*this)(kind);
+        } else {
+          return (*this)(kind, expression.m_type_id);
+        }
+      },
+      expression.m_expr_kind);
 }
 
-Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
+Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier,
+                                      zir::TypeId /*unused*/) {
   auto zir_binding = m_ctx.arena().get(identifier.m_id);
 
   auto binding = m_ctx.symbols().lookup(zir_binding.m_name);
@@ -79,7 +85,8 @@ Value ExpressionGenerator::operator()(const zir::IdentifierExpr &identifier) {
                                    alloca_binding.m_internal_type_id);
 }
 
-Value ExpressionGenerator::operator()(const zir::TupleExpr &tuple_expr) {
+Value ExpressionGenerator::operator()(const zir::TupleExpr &tuple_expr,
+                                      zir::TypeId /*unused*/) {
 
   // Need to alloca the tuple, and do stores to the different fields, then
   // return the ssa to a load from this alloca
@@ -109,32 +116,37 @@ Value ExpressionGenerator::operator()(const zir::TupleExpr &tuple_expr) {
   return m_ctx.builder().emit_load(allocad_struct, struct_type_id);
 }
 
-Value ExpressionGenerator::operator()(const zir::Unit & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::Unit & /*unused*/,
+                                      zir::TypeId /*unused*/) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::I8 &literal) {
+Value ExpressionGenerator::operator()(const zir::I8 &literal,
+                                      zir::TypeId /*unused*/) {
   return {
       .m_handle = LiteralHandle{std::to_string(literal.m_value)},
       .m_type_id = m_ctx.m_i8,
   };
 }
 
-Value ExpressionGenerator::operator()(const zir::I32 &literal) {
+Value ExpressionGenerator::operator()(const zir::I32 &literal,
+                                      zir::TypeId /*unused*/) {
   return {
       .m_handle = LiteralHandle{std::to_string(literal.m_value)},
       .m_type_id = m_ctx.m_i32,
   };
 }
 
-Value ExpressionGenerator::operator()(const zir::I64 &literal) {
+Value ExpressionGenerator::operator()(const zir::I64 &literal,
+                                      zir::TypeId /*unused*/) {
   return {
       .m_handle = LiteralHandle{std::to_string(literal.m_value)},
       .m_type_id = m_ctx.m_i64,
   };
 }
 
-Value ExpressionGenerator::operator()(const zir::Bool &literal) {
+Value ExpressionGenerator::operator()(const zir::Bool &literal,
+                                      zir::TypeId /*unused*/) {
   return {
       .m_handle =
           LiteralHandle{
@@ -145,7 +157,8 @@ Value ExpressionGenerator::operator()(const zir::Bool &literal) {
   };
 }
 
-Value ExpressionGenerator::operator()(const zir::Char &literal) {
+Value ExpressionGenerator::operator()(const zir::Char &literal,
+                                      zir::TypeId /*unused*/) {
   return {
       .m_handle =
           LiteralHandle{std::to_string(static_cast<int8_t>(literal.m_value))},
@@ -154,6 +167,10 @@ Value ExpressionGenerator::operator()(const zir::Char &literal) {
 }
 
 Value ExpressionGenerator::operator()(const zir::Block &block) {
+  return generate(block);
+}
+
+Value ExpressionGenerator::generate(const zir::Block &block) {
   for (const auto &statement : block.m_statements) {
     StatementGenerator{m_ctx}.generate(statement);
     if (m_ctx.builder().current_block_terminated()) {
@@ -174,7 +191,8 @@ Value ExpressionGenerator::operator()(const zir::Block &block) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression) {
+Value ExpressionGenerator::operator()(const zir::IfExpr &if_expression,
+                                      zir::TypeId /*unused*/) {
   // We want to emit the condition first
   // If it diverged, we end and return up until a function boundary
   // Else we try to emit then
@@ -313,7 +331,8 @@ Value ExpressionGenerator::call_lambda_expression(
                                    m_ctx.to_type(function_return_type_id));
 }
 
-Value ExpressionGenerator::operator()(const zir::CallExpr &call_expression) {
+Value ExpressionGenerator::operator()(const zir::CallExpr &call_expression,
+                                      zir::TypeId /*unused*/) {
   // Need to check if we are calling a pointer or a closure
 
   const auto &callee_expression = m_ctx.arena().get(call_expression.m_callee);
@@ -529,8 +548,8 @@ Value ExpressionGenerator::generate_logical_binary_instruction(
   return m_ctx.builder().emit_load(result_alloca_slot, m_ctx.m_i1);
 }
 
-Value ExpressionGenerator::operator()(
-    const zir::BinaryExpr &binary_expression) {
+Value ExpressionGenerator::operator()(const zir::BinaryExpr &binary_expression,
+                                      zir::TypeId /*unused*/) {
   if (is_binary_compare(binary_expression.m_operator)) {
     return generate_integer_compare_instruction(binary_expression);
   }
@@ -542,7 +561,8 @@ Value ExpressionGenerator::operator()(
   return generate_arithmetic_binary_instruction(binary_expression);
 }
 
-Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
+Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression,
+                                      zir::TypeId /*unused*/) {
   auto expression = m_ctx.arena().get(unary_expression.m_expression);
 
   auto input_handle = generate(unary_expression.m_expression);
@@ -551,7 +571,8 @@ Value ExpressionGenerator::operator()(const zir::UnaryExpr &unary_expression) {
                                     unary_expression.m_operator);
 }
 
-Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr) {
+Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr,
+                                      zir::TypeId /*unused*/) {
   auto return_value = generate(return_expr.m_expression);
   if (return_value.m_type_id == m_ctx.m_void) {
     m_ctx.builder().emit_return_void();
@@ -563,7 +584,8 @@ Value ExpressionGenerator::operator()(const zir::ReturnExpr &return_expr) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::CastExpr &cast_expression) {
+Value ExpressionGenerator::operator()(const zir::CastExpr &cast_expression,
+                                      zir::TypeId /*unused*/) {
 
   auto expression = m_ctx.arena().get(cast_expression.m_expression);
 
@@ -681,7 +703,8 @@ Value ExpressionGenerator::lift_free_lambda(
   return function_ptr;
 }
 
-Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
+Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr,
+                                      zir::TypeId /*unused*/) {
   ScopeGuard scope_guard(m_ctx.symbols());
 
   if (lambda_expr.m_captures.empty()) {
@@ -720,7 +743,8 @@ Value ExpressionGenerator::operator()(const zir::LambdaExpr &lambda_expr) {
   return closure_builder.package_fat_pointer(lambda, env);
 }
 
-Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
+Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr,
+                                      zir::TypeId /*unused*/) {
   // For now, assume that the expression is a tuple
   auto tuple_value = generate(dot_expr.m_expression);
 
@@ -735,7 +759,8 @@ Value ExpressionGenerator::operator()(const zir::DotExpr &dot_expr) {
                                           dot_expr.m_tuple_index);
 }
 
-Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr) {
+Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr,
+                                      zir::TypeId /*unused*/) {
   if (m_ctx.builder().current_block_terminated()) {
     // diverged before we got here diverged
     return {};
@@ -755,7 +780,7 @@ Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr) {
   }
 
   auto while_loop_label = m_ctx.builder().make_block(
-      std::string{conventions::while_loop_block_label});
+      std::string{conventions::while_body_block_label});
   auto merge_label =
       m_ctx.builder().make_block(std::string{conventions::merge_block_label});
   m_ctx.builder().emit_branch(condition_value, while_loop_label, merge_label);
@@ -764,7 +789,16 @@ Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr) {
   {
     m_ctx.builder().enter_block(while_loop_label);
 
-    BlockLabelStackGuard guard(m_ctx.loop_stack(), merge_label);
+    BlockLabelStackGuard guard(m_ctx.loop_stack(),
+                               {
+                                   .m_break_label = merge_label,
+                                   .m_continue_label = while_condition_label,
+                                   .m_break_returned_value =
+                                       {
+                                           .m_handle{},
+                                           .m_type_id = m_ctx.m_void,
+                                       },
+                               });
     generate(while_expr.m_body);
 
     if (m_ctx.builder().current_block_terminated()) {
@@ -784,18 +818,82 @@ Value ExpressionGenerator::operator()(const zir::WhileExpr &while_expr) {
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::LoopExpr & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::LoopExpr &loop_expr,
+                                      zir::TypeId type_id) {
+  if (m_ctx.builder().current_block_terminated()) {
+    // diverged before we got here
+    return {};
+  }
+
+  // First we create a label for the loop body
+  auto loop_body_label = m_ctx.builder().make_block(
+      std::string{conventions::loop_body_block_label});
+
+  // If we're typed to never, we're done, just return
+
+  // If we're typed to anything else, emit merge block since we have a break
+  // inside
+  auto loop_diverges = type_id == m_ctx.arena().m_never;
+  auto returned_type = loop_diverges ? m_ctx.m_void : m_ctx.to_type(type_id);
+  auto emits_valid_type = !loop_diverges && type_id != m_ctx.arena().m_unit;
+  auto alloca_slot =
+      emits_valid_type
+          ? m_ctx.builder().emit_alloca(
+                returned_type,
+                m_ctx.uniqify_name(std::string{conventions::loop_result_local}))
+          : Value{
+                .m_handle{},
+                .m_type_id = m_ctx.m_void,
+            };
+
+  auto merge_label = loop_diverges ? BlockLabel::null()
+                                   : m_ctx.builder().make_block(std::string{
+                                         conventions::merge_block_label});
+
+  // If not unit or never, emit alloca return value slot and load from it at the
+  // beginning of the merge block before returning the value
+  {
+    m_ctx.builder().enter_block(loop_body_label);
+    BlockLabelStackGuard guard(m_ctx.loop_stack(),
+                               {
+                                   .m_break_label = merge_label,
+                                   .m_continue_label = loop_body_label,
+                                   .m_break_returned_value = alloca_slot,
+                               });
+    auto body_value = generate(loop_expr.m_body);
+    if (m_ctx.builder().current_block_terminated()) {
+      // diverged before we got here
+      return {};
+    }
+    m_ctx.builder().emit_jump(loop_body_label);
+  }
+  m_ctx.builder().enter_block(merge_label);
+
+  if (emits_valid_type) {
+    return m_ctx.builder().emit_load(alloca_slot, returned_type);
+  }
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::BreakExpr & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::BreakExpr &break_expr,
+                                      zir::TypeId /*unused*/) {
+
+  auto returned_value = generate(break_expr.m_returned_expression);
+
   // Need to emit a jump to the merge block of the closest loop
-  m_ctx.builder().emit_jump(m_ctx.loop_stack().current_block_label());
-  // No value currently
+  auto loop_info = m_ctx.loop_stack().current_loop_information();
+  m_ctx.builder().emit_jump(loop_info.m_break_label);
+  if (loop_info.m_break_returned_value.m_type_id != m_ctx.m_void) {
+    m_ctx.builder().emit_store(loop_info.m_break_returned_value,
+                               returned_value);
+  }
   return {};
 }
 
-Value ExpressionGenerator::operator()(const zir::ContinueExpr & /*unused*/) {
+Value ExpressionGenerator::operator()(const zir::ContinueExpr & /*unused*/,
+                                      zir::TypeId /*unused*/) {
+  auto loop_info = m_ctx.loop_stack().current_loop_information();
+  m_ctx.builder().emit_jump(loop_info.m_continue_label);
   return {};
 }
 

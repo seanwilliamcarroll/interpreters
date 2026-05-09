@@ -13,6 +13,9 @@
 #include <string>
 #include <vector>
 
+#include "codegen/types.hpp"
+#include "codegen/value.hpp"
+
 //****************************************************************************
 namespace bust::codegen {
 //****************************************************************************
@@ -32,28 +35,38 @@ private:
   friend struct IRBuilder;
 };
 
+struct LoopInformation {
+  BlockLabel m_break_label;
+  BlockLabel m_continue_label;
+  Value m_break_returned_value;
+};
+
 struct BlockLabelStack {
 
-  void push_scope(BlockLabel label) { m_block_labels.push_back(label); }
+  void push_scope(LoopInformation loop_info) {
+    m_loop_information_stack.push_back(loop_info);
+  }
+
   void pop_scope() noexcept {
-    assert(!m_block_labels.empty() &&
+    assert(!m_loop_information_stack.empty() &&
            "Cannot pop scope, already at global scope!");
-    m_block_labels.pop_back();
+    m_loop_information_stack.pop_back();
   }
 
   [[nodiscard]]
-  const BlockLabel &current_block_label() const {
-    return m_block_labels.back();
+  const LoopInformation &current_loop_information() const {
+    return m_loop_information_stack.back();
   }
 
 private:
-  std::vector<BlockLabel> m_block_labels;
+  std::vector<LoopInformation> m_loop_information_stack;
 };
 
 struct BlockLabelStackGuard {
-  explicit BlockLabelStackGuard(BlockLabelStack &stack, BlockLabel label)
+  explicit BlockLabelStackGuard(BlockLabelStack &stack,
+                                LoopInformation loop_info)
       : m_stack(stack) {
-    m_stack.push_scope(label);
+    m_stack.push_scope(loop_info);
   }
   ~BlockLabelStackGuard() { m_stack.pop_scope(); }
 

@@ -59,11 +59,13 @@ constexpr std::string_view merge_block_label = "merge";
 constexpr std::string_view rhs_block_label = "rhs";
 constexpr std::string_view post_return_block_label = "post_return";
 constexpr std::string_view while_condition_block_label = "while_condition";
-constexpr std::string_view while_loop_block_label = "while_loop";
+constexpr std::string_view while_body_block_label = "while_body";
+constexpr std::string_view loop_body_block_label = "loop_body";
 
 // Synthetic local / global name roots ----------------------------------------
 
 constexpr std::string_view if_result_local = "if_result";
+constexpr std::string_view loop_result_local = "loop_result";
 constexpr std::string_view short_circuit_result_local =
     "short_circuit_logic_result";
 constexpr std::string_view lambda_global = "lambda";

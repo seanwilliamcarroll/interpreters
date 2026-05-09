@@ -35,7 +35,7 @@ TEST_SUITE("bust.codegen.loops") {
 
   TEST_CASE("while emits a labeled while_loop block") {
     auto ir = codegen("fn main() -> i64 { while false { } 0 }");
-    CHECK(ir.find("while_loop") != std::string::npos);
+    CHECK(ir.find("while_body") != std::string::npos);
   }
 
   TEST_CASE("while emits a merge block for loop exit") {
