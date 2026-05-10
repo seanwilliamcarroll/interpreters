@@ -9,12 +9,12 @@
 #pragma once
 //****************************************************************************
 
+#include <codegen/types.hpp>
+#include <codegen/value.hpp>
+
 #include <cassert>
 #include <string>
 #include <vector>
-
-#include "codegen/types.hpp"
-#include "codegen/value.hpp"
 
 //****************************************************************************
 namespace bust::codegen {
