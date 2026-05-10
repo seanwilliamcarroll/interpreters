@@ -161,10 +161,23 @@ void DotExprResolver::operator()(
 }
 
 void DotExprResolver::operator()(
-    const std::unique_ptr<hir::WhileExpr> & /*unused*/) {}
+    const std::unique_ptr<hir::WhileExpr> &while_expr) {
+  resolve(while_expr->m_condition);
+  resolve(while_expr->m_body);
+}
 
 void DotExprResolver::operator()(
-    const std::unique_ptr<hir::BreakExpr> & /*unused*/) {}
+    const std::unique_ptr<hir::LoopExpr> &loop_expr) {
+  resolve(loop_expr->m_body);
+}
+
+void DotExprResolver::operator()(
+    const std::unique_ptr<hir::BreakExpr> &break_expr) {
+  resolve(break_expr->m_returned_expression);
+}
+
+void DotExprResolver::operator()(
+    const std::unique_ptr<hir::ContinueExpr> & /*unused*/) {}
 
 //****************************************************************************
 } // namespace bust::mono

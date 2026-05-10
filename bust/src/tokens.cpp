@@ -95,12 +95,16 @@ std::string token_type_to_string(TokenType type) {
     return "RETURN \"return\"";
   case TokenType::BREAK:
     return "BREAK \"break\"";
+  case TokenType::CONTINUE:
+    return "CONTINUE \"continue\"";
   case TokenType::IF:
     return "IF \"if\"";
   case TokenType::ELSE:
     return "ELSE \"else\"";
   case TokenType::WHILE:
     return "WHILE \"while\"";
+  case TokenType::LOOP:
+    return "LOOP \"loop\"";
   case TokenType::FOR:
     return "FOR \"for\"";
   case TokenType::AS:

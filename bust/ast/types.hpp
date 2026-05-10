@@ -20,11 +20,13 @@
 namespace bust::ast {
 //****************************************************************************
 
-struct PrimitiveTypeIdentifier : public core::HasLocation {
+struct PrimitiveTypeIdentifier {
+  core::SourceLocation m_location;
   PrimitiveType m_type;
 };
 
-struct DefinedType : public core::HasLocation {
+struct DefinedType {
+  core::SourceLocation m_location;
   std::string m_type;
 };
 
@@ -36,12 +38,14 @@ using TypeIdentifier = std::variant<PrimitiveTypeIdentifier, DefinedType,
                                     std::unique_ptr<TupleTypeIdentifier>,
                                     std::unique_ptr<FunctionTypeIdentifier>>;
 
-struct FunctionTypeIdentifier : public core::HasLocation {
+struct FunctionTypeIdentifier {
+  core::SourceLocation m_location;
   std::vector<TypeIdentifier> m_parameter_types;
   TypeIdentifier m_return_type;
 };
 
-struct TupleTypeIdentifier : public core::HasLocation {
+struct TupleTypeIdentifier {
+  core::SourceLocation m_location;
   std::vector<TypeIdentifier> m_field_types;
 };
 
@@ -57,9 +61,11 @@ inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
             params.push_back(clone_type_identifier(p));
           }
           return std::make_unique<FunctionTypeIdentifier>(
-              FunctionTypeIdentifier{{v->m_location},
-                                     std::move(params),
-                                     clone_type_identifier(v->m_return_type)});
+              FunctionTypeIdentifier{
+                  v->m_location,
+                  std::move(params),
+                  clone_type_identifier(v->m_return_type),
+              });
         } else if constexpr (std::is_same_v<
                                  T, std::unique_ptr<TupleTypeIdentifier>>) {
           std::vector<TypeIdentifier> field_types;
@@ -68,6 +74,7 @@ inline TypeIdentifier clone_type_identifier(const TypeIdentifier &tid) {
             field_types.emplace_back(clone_type_identifier(type));
           }
           return std::make_unique<TupleTypeIdentifier>(TupleTypeIdentifier{
+              .m_location = v->m_location,
               .m_field_types = std::move(field_types),
           });
         } else {

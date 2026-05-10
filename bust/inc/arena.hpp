@@ -20,8 +20,6 @@
 namespace bust {
 //****************************************************************************
 
-// TODO: Concept to enforce Variant-ness?
-
 template <typename Type>
 concept Hashable = requires(Type input) {
   { std::hash<Type>{}(input) } -> std::convertible_to<std::size_t>;

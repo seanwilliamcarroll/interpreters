@@ -30,11 +30,7 @@ struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Identifier;
 struct Block;
-struct DotExpr;
-struct TupleExpr;
-struct WhileExpr;
 struct ForExpr;
-struct BreakExpr;
 
 // --- Literals --------------------------------------------------------------
 
@@ -59,6 +55,12 @@ using CastExpr = CastExprBase<Expression, TypeIdentifier>;
 using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr =
     LambdaExprBase<Parameter, Block, std::optional<TypeIdentifier>>;
+using TupleExpr = TupleExprBase<Expression>;
+using BreakExpr = BreakExprBase<Expression>;
+using ContinueExpr = ContinueExprBase;
+using WhileExpr = WhileExprBase<Expression, Block>;
+using DotExpr = DotExprBase<Expression>;
+using LoopExpr = LoopExprBase<Block>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -66,8 +68,9 @@ using ExprKind =
                  std::unique_ptr<BinaryExpr>, std::unique_ptr<UnaryExpr>,
                  std::unique_ptr<IfExpr>, std::unique_ptr<Block>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<ReturnExpr>,
-                 std::unique_ptr<BreakExpr>, std::unique_ptr<LambdaExpr>,
-                 std::unique_ptr<WhileExpr>, std::unique_ptr<ForExpr>,
+                 std::unique_ptr<BreakExpr>, std::unique_ptr<ContinueExpr>,
+                 std::unique_ptr<LambdaExpr>, std::unique_ptr<WhileExpr>,
+                 std::unique_ptr<LoopExpr>, std::unique_ptr<ForExpr>,
                  std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>, I8, I32,
                  I64, Bool, Char, Unit>;
 
@@ -77,46 +80,31 @@ using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public core::HasLocation {
+struct Identifier {
+  core::SourceLocation m_location;
   std::string m_name;
   std::optional<TypeIdentifier> m_type;
 };
 
-struct Parameter : public core::HasLocation {
+struct Parameter {
+  core::SourceLocation m_location;
   Identifier m_id;
   bool m_is_mutable = false;
 };
 
 // --- Expressions -----------------------------------------------------------
 
-struct Expression : public core::HasLocation {
+struct Expression {
+  core::SourceLocation m_location;
   ExprKind m_expression;
-};
-
-struct TupleExpr {
-  std::vector<Expression> m_fields;
-};
-
-struct BreakExpr {
-  std::optional<Expression> m_returned_value;
-};
-
-struct DotExpr {
-  Expression m_expression;
-  // For now, all that is representable
-  size_t m_tuple_index;
 };
 
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public core::HasLocation {
+struct Block {
+  core::SourceLocation m_location;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
-};
-
-struct WhileExpr {
-  Expression m_condition;
-  Block m_body;
 };
 
 // TODO
@@ -124,12 +112,14 @@ struct ForExpr {};
 
 // --- Bindings & definitions ------------------------------------------------
 
-struct Assignment : public core::HasLocation {
+struct Assignment {
+  core::SourceLocation m_location;
   Expression m_lhs;
   Expression m_rhs;
 };
 
-struct LetBinding : public core::HasLocation {
+struct LetBinding {
+  core::SourceLocation m_location;
   Identifier m_variable;
   Expression m_expression;
   bool m_is_mutable = false;
@@ -141,18 +131,21 @@ struct FunctionDeclaration {
   TypeIdentifier m_return_type;
 };
 
-struct FunctionDef : public core::HasLocation {
+struct FunctionDef {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
   Block m_body;
 };
 
-struct ExternFunctionDeclaration : public core::HasLocation {
+struct ExternFunctionDeclaration {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
 };
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public core::HasLocation {
+struct Program {
+  core::SourceLocation m_location;
   std::vector<TopItem> m_items;
 };
 

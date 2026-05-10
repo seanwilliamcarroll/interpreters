@@ -1,0 +1,12 @@
+// EXPECT_FAIL: typecheck
+//
+// `while` loops are unit-typed expressions; their `break` may not carry
+// a payload. Only `loop` supports `break <expr>` (whose payloads
+// determine the loop's result type). The type checker must reject this.
+
+fn main() -> i64 {
+  while true {
+    break 5;
+  }
+  0
+}

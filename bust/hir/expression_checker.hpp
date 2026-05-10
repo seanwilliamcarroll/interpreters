@@ -41,11 +41,15 @@ struct ExpressionChecker {
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::BreakExpr> &,
                         const core::SourceLocation &);
+  Expression operator()(const std::unique_ptr<ast::ContinueExpr> &,
+                        const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::LambdaExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::DotExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::WhileExpr> &,
+                        const core::SourceLocation &);
+  Expression operator()(const std::unique_ptr<ast::LoopExpr> &,
                         const core::SourceLocation &);
   Expression operator()(const std::unique_ptr<ast::ForExpr> &,
                         const core::SourceLocation &);
@@ -55,6 +59,19 @@ struct ExpressionChecker {
   Expression operator()(const ast::Bool &, const core::SourceLocation &);
   Expression operator()(const ast::Char &, const core::SourceLocation &);
   Expression operator()(const ast::Unit &, const core::SourceLocation &);
+
+  void try_unify(const auto &type_a, const auto &type_b,
+                 const core::SourceLocation &location,
+                 const std::string &additional_message = "") {
+    try {
+      m_ctx.type_unifier().unify(type_a, type_b);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException("TypeChecker",
+                                    "Type unification error!\n" +
+                                        additional_message + error.what(),
+                                    location);
+    }
+  }
 
   Context &m_ctx;
 };

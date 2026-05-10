@@ -49,11 +49,6 @@ bool try_validate_main(const ast::FunctionDef &function_def) {
 }
 
 ast::Program ValidateMain::operator()(ast::Program program) const {
-  // TODO: validate that:
-  // 1. Exactly one FunctionDef named "main" exists
-  // 2. main's return type is i64
-  // Throw core::CompilerException("SemanticError", ...) on failure
-
   bool found_main = false;
   for (const auto &top_level_item : program.m_items) {
     if (!std::holds_alternative<ast::FunctionDef>(top_level_item)) {

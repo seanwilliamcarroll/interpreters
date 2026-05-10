@@ -40,7 +40,6 @@ ExprId ExpressionLowerer::lower(const hir::Expression &expression) {
   auto new_expression =
       Expression{.m_type_id = new_type, .m_expr_kind = expr_kind};
 
-  // TODO: Location
   // One place we actually push expressions
   return m_ctx.arena().push(std::move(new_expression));
 }
@@ -66,7 +65,9 @@ ExpressionLowerer::lower_definition(const hir::Identifier &identifier) {
 
   m_ctx.env().define(identifier.m_name, binding_id);
 
-  return {.m_id = binding_id};
+  return {
+      .m_id = binding_id,
+  };
 }
 
 IdentifierExpr ExpressionLowerer::lower(const hir::Parameter &parameter) {
@@ -180,7 +181,9 @@ ExprKind ExpressionLowerer::operator()(
 
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expr) {
-  return ReturnExpr{.m_expression = lower(return_expr->m_expression)};
+  return ReturnExpr{
+      .m_expression = lower(return_expr->m_expression),
+  };
 }
 
 ExprKind
@@ -243,12 +246,23 @@ ExprKind ExpressionLowerer::operator()(
   };
 }
 
+ExprKind
+ExpressionLowerer::operator()(const std::unique_ptr<hir::LoopExpr> &loop_expr) {
+  return LoopExpr{
+      .m_body = lower(loop_expr->m_body),
+  };
+}
+
 ExprKind ExpressionLowerer::operator()(
     const std::unique_ptr<hir::BreakExpr> &break_expr) {
   return BreakExpr{
-      .m_returned_expression = break_expr->m_returned_expression.and_then(
-          [&](const auto &expr) { return std::make_optional(lower(expr)); }),
+      .m_returned_expression = lower(break_expr->m_returned_expression),
   };
+}
+
+ExprKind ExpressionLowerer::operator()(
+    const std::unique_ptr<hir::ContinueExpr> & /*unused*/) {
+  return ContinueExpr{};
 }
 
 //****************************************************************************

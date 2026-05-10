@@ -66,6 +66,38 @@ struct LambdaExprBase {
                        &) const = default;
 };
 
+template <typename ExpressionType> struct TupleExprBase {
+  std::vector<ExpressionType> m_fields;
+  auto operator<=>(const TupleExprBase<ExpressionType> &) const = default;
+};
+
+template <typename ExpressionType> struct BreakExprBase {
+  ExpressionType m_returned_expression;
+  auto operator<=>(const BreakExprBase<ExpressionType> &) const = default;
+};
+
+struct ContinueExprBase {
+  auto operator<=>(const ContinueExprBase &) const = default;
+};
+
+template <typename ExpressionType, typename BlockType> struct WhileExprBase {
+  ExpressionType m_condition;
+  BlockType m_body;
+  auto
+  operator<=>(const WhileExprBase<ExpressionType, BlockType> &) const = default;
+};
+
+template <typename ExpressionType> struct DotExprBase {
+  ExpressionType m_expression;
+  size_t m_tuple_index;
+  auto operator<=>(const DotExprBase<ExpressionType> &) const = default;
+};
+
+template <typename BlockType> struct LoopExprBase {
+  BlockType m_body;
+  auto operator<=>(const LoopExprBase &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -160,6 +192,61 @@ struct hash<bust::LambdaExprBase<IdentifierType, BlockType, ReturnType>> {
     core::hash_combine(seed, std::hash<BlockType>{}(expr.m_body));
     core::hash_combine(seed, std::hash<ReturnType>{}(expr.m_return_type));
     return seed;
+  }
+};
+
+template <typename ExpressionType>
+struct hash<bust::TupleExprBase<ExpressionType>> {
+  size_t
+  operator()(const bust::TupleExprBase<ExpressionType> &expr) const noexcept {
+    size_t seed = 0;
+    for (const auto &field : expr.m_fields) {
+      core::hash_combine(seed, std::hash<ExpressionType>{}(field));
+    }
+    return seed;
+  }
+};
+
+template <typename ExpressionType>
+struct hash<bust::BreakExprBase<ExpressionType>> {
+  size_t
+  operator()(const bust::BreakExprBase<ExpressionType> &expr) const noexcept {
+    return std::hash<ExpressionType>{}(expr.m_returned_expression);
+  }
+};
+
+template <> struct hash<bust::ContinueExprBase> {
+  static constexpr size_t HASH_VALUE = 6;
+  size_t operator()(const bust::ContinueExprBase & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <typename ExpressionType, typename BlockType>
+struct hash<bust::WhileExprBase<ExpressionType, BlockType>> {
+  size_t operator()(const bust::WhileExprBase<ExpressionType, BlockType> &expr)
+      const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, std::hash<ExpressionType>{}(expr.m_condition));
+    core::hash_combine(seed, std::hash<BlockType>{}(expr.m_body));
+    return seed;
+  }
+};
+
+template <typename ExpressionType>
+struct hash<bust::DotExprBase<ExpressionType>> {
+  size_t
+  operator()(const bust::DotExprBase<ExpressionType> &expr) const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, std::hash<ExpressionType>{}(expr.m_expression));
+    core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
+    return seed;
+  }
+};
+
+template <typename BlockType> struct hash<bust::LoopExprBase<BlockType>> {
+  size_t operator()(const bust::LoopExprBase<BlockType> &expr) const noexcept {
+    return std::hash<BlockType>{}(expr.m_body);
   }
 };
 

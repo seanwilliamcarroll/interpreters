@@ -231,7 +231,14 @@ private:
           } else if constexpr (std::is_same_v<T, std::unique_ptr<DotExpr>>) {
             dump_dot(*v);
           } else if constexpr (std::is_same_v<T, std::unique_ptr<WhileExpr>>) {
-            line("While(TODO)");
+            dump_while(*v);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<LoopExpr>>) {
+            dump_loop(*v);
+          } else if constexpr (std::is_same_v<T, std::unique_ptr<BreakExpr>>) {
+            dump_break(*v);
+          } else if constexpr (std::is_same_v<T,
+                                              std::unique_ptr<ContinueExpr>>) {
+            line("Continue");
           } else if constexpr (std::is_same_v<T, std::unique_ptr<ForExpr>>) {
             line("For(TODO)");
           } else {
@@ -345,6 +352,33 @@ private:
     line("Return");
     IndentGuard g(*this);
     dump_expression(r.m_expression);
+  }
+
+  void dump_break(const BreakExpr &b) {
+    line("Break");
+    IndentGuard g(*this);
+    dump_expression(b.m_returned_expression);
+  }
+
+  void dump_while(const WhileExpr &w) {
+    line("While");
+    IndentGuard g(*this);
+    line("cond:");
+    {
+      IndentGuard g2(*this);
+      dump_expression(w.m_condition);
+    }
+    line("body:");
+    {
+      IndentGuard g2(*this);
+      dump_block(w.m_body);
+    }
+  }
+
+  void dump_loop(const LoopExpr &l) {
+    line("Loop");
+    IndentGuard g(*this);
+    dump_block(l.m_body);
   }
 
   void dump_tuple(const TupleExpr &t) {

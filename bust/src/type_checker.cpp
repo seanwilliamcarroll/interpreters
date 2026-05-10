@@ -54,12 +54,15 @@ hir::Program TypeChecker::operator()(const ast::Program &program) {
 
   auto post_check_state = context.get_post_check_data();
 
-  return {{program.m_location},
-          std::move(post_check_state.m_type_arena),
-          std::move(typed_items),
-          std::move(post_check_state.m_unifier_state),
+  return {
+      .m_location = program.m_location,
+      .m_type_arena = std::move(post_check_state.m_type_arena),
+      .m_top_items = std::move(typed_items),
+      .m_unifier_state = std::move(post_check_state.m_unifier_state),
+      .m_instantiation_records =
           std::move(post_check_state.m_instantiation_records),
-          post_check_state.m_next_let_binding_id};
+      .m_next_let_binding_id = post_check_state.m_next_let_binding_id,
+  };
 }
 
 //****************************************************************************

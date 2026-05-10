@@ -37,9 +37,11 @@ TopItemMonomorpher::operator()(const hir::FunctionDef &function_def) {
       ExpressionSubstituter{sub_context}.substitute(function_def.m_body);
 
   std::vector<hir::TopItem> top_items;
-  top_items.emplace_back(hir::FunctionDef{{function_def.m_location},
-                                          function_def.m_signature,
-                                          std::move(new_body)});
+  top_items.emplace_back(hir::FunctionDef{
+      .m_location = function_def.m_location,
+      .m_signature = function_def.m_signature,
+      .m_body = std::move(new_body),
+  });
 
   return top_items;
 }
@@ -47,9 +49,10 @@ TopItemMonomorpher::operator()(const hir::FunctionDef &function_def) {
 std::vector<hir::TopItem> TopItemMonomorpher::operator()(
     const hir::ExternFunctionDeclaration &extern_func_declaration) {
   std::vector<hir::TopItem> top_items;
-  top_items.emplace_back(
-      hir::ExternFunctionDeclaration{{extern_func_declaration.m_location},
-                                     extern_func_declaration.m_signature});
+  top_items.emplace_back(hir::ExternFunctionDeclaration{
+      .m_location = extern_func_declaration.m_location,
+      .m_signature = extern_func_declaration.m_signature,
+  });
   return top_items;
 }
 

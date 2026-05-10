@@ -1,0 +1,18 @@
+// EXPECT_EXIT: 9
+//
+// A lambda's body uses `loop { ... break <val>; }`. The break here
+// targets the lambda's own loop, not anything in the caller — verifies
+// that loop_stack is per-function/per-lambda. The lambda searches for
+// the smallest perfect square ≥ target; called with target = 5, the
+// first i*i meeting the condition is 3*3 = 9.
+
+fn main() -> i64 {
+  let smallest_square_ge = |target: i64| -> i64 {
+    let mut i = 0;
+    loop {
+      if i * i >= target { break i * i; }
+      i = i + 1;
+    }
+  };
+  smallest_square_ge(5)
+}

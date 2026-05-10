@@ -1,0 +1,9 @@
+// EXPECT_FAIL: typecheck
+//
+// `continue` is only valid inside a loop body (whether `while` or
+// `loop`). Top-level use must be rejected by the type checker.
+
+fn main() -> i64 {
+  continue;
+  0
+}

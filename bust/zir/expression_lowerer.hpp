@@ -44,7 +44,9 @@ struct ExpressionLowerer {
   ExprKind operator()(const std::unique_ptr<hir::LambdaExpr> &);
   ExprKind operator()(const std::unique_ptr<hir::DotExpr> &);
   ExprKind operator()(const std::unique_ptr<hir::WhileExpr> &);
+  ExprKind operator()(const std::unique_ptr<hir::LoopExpr> &);
   ExprKind operator()(const std::unique_ptr<hir::BreakExpr> &);
+  ExprKind operator()(const std::unique_ptr<hir::ContinueExpr> &);
 
   Context &m_ctx;
 };

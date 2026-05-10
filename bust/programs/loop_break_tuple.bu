@@ -1,0 +1,17 @@
+// EXPECT_EXIT: 22
+//
+// `break` can carry any typed value, including tuples. The loop searches
+// for the smallest i where i*i exceeds 16 (i = 5, since 5*5 = 25 > 16)
+// and breaks with the pair (i, i*i). Combines the loop-result alloca
+// with the tuple-as-struct alloca path.
+//
+// Result: pair.0 + pair.1 - 8 = 5 + 25 - 8 = 22.
+
+fn main() -> i64 {
+  let mut i = 0;
+  let pair = loop {
+    if i * i > 16 { break (i, i * i); }
+    i = i + 1;
+  };
+  pair.0 + pair.1 - 8
+}

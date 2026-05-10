@@ -1,0 +1,20 @@
+// EXPECT_EXIT: 0
+// EXPECT_STDOUT: "13579"
+//
+// `continue` skips the rest of the loop body and resumes at the loop's
+// re-entry point. In a `while`, that's the condition check (so the
+// counter increment must come *before* the continue, otherwise we'd
+// loop forever on the first even value). Output: only the odd values
+// 1, 3, 5, 7, 9.
+
+extern fn putchar(c: i32) -> i32;
+
+fn main() -> i64 {
+  let mut i = 0;
+  while i < 10 {
+    i = i + 1;
+    if (i % 2) == 0 { continue; }
+    putchar(('0' as i32) + (i as i32));
+  }
+  0
+}

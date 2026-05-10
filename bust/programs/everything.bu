@@ -17,9 +17,14 @@
 //   '.'           — call to a unit-returning function with naked
 //                   `return` (F30, F35).
 //
+// `bonus` (= 36) — F50/F51/F52: a typed `loop` that walks k = 1, 2, ...
+//                  using `continue` to skip even values, accumulating
+//                  the sum of odd k into `sum`, and `break sum` once
+//                  k reaches 11. 1+3+5+7+9+11 = 36.
+//
 // Final result: the polymorphic identity `id` is instantiated at both
 // `bool` (gating the if) and `i64` (forwarding factorial's result).
-// `factorial(3) = 6`; `id(6) + 36 = 42`. Returns via `return`-with-value.
+// `factorial(3) = 6`; `id(6) + bonus = 42`. Returns via `return`-with-value.
 //
 // Features deliberately *not* exercised: F40 (mutable capture) and the
 // make_adder closure-return pattern — both deferred until references
@@ -97,7 +102,19 @@ fn main() -> i64 {
   // F32 — call to unit-returning fn.
   print_dot();
 
+  // F50, F51, F52 — typed `loop` whose result is delivered by
+  // `break sum`. `continue` skips even k so only odd values reach the
+  // accumulator. Stops once k hits 11; sum = 1+3+5+7+9+11 = 36.
+  let mut k = 0;
+  let mut sum = 0;
+  let bonus = loop {
+    k = k + 1;
+    if (k % 2) == 0 { continue; }
+    sum = sum + k;
+    if k >= 11 { break sum; }
+  };
+
   // F25, F29, F47 — if-else expression as the function tail; `return`
   // with a value; `id` instantiated at bool then at i64.
-  if id(true) { return id(fact) + 36; } else { return 0; }
+  if id(true) { return id(fact) + bonus; } else { return 0; }
 }

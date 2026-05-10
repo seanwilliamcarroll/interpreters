@@ -469,6 +469,386 @@ TEST_SUITE("bust.type_checker.loops") {
                              "}"));
   }
 
+  // --- Loop ---------------------------------------------------------------
+  //
+  // `loop {}` is an unconditional infinite loop whose value comes only
+  // from `break expr` exits. With no breaks, the loop's type is Never
+  // (it genuinely never produces a value); with breaks, all break
+  // payloads must unify and that unified type is the loop's type.
+  // `break;` sugars to `break ();`, so a loop with only bare breaks
+  // types as unit. The loop body itself, like a while body, must type
+  // as unit.
+
+  TEST_CASE("loop with no break has Never type") {
+    auto hir = type_check("fn looper() {\n"
+                          "  loop { }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    REQUIRE(func.m_body.m_final_expression.has_value());
+    auto &expr = *func.m_body.m_final_expression;
+    REQUIRE(std::holds_alternative<std::unique_ptr<hir::LoopExpr>>(
+        expr.m_expression));
+    CHECK(std::holds_alternative<hir::NeverType>(
+        hir.m_type_arena.get(expr.m_type)));
+  }
+
+  TEST_CASE("loop with bare break has unit type") {
+    // break; sugars to break (); so the only collected payload is unit.
+    auto hir = type_check("fn looper() {\n"
+                          "  loop { break; }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &expr = *func.m_body.m_final_expression;
+    auto &kind = hir.m_type_arena.get(expr.m_type);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    CHECK(std::get<hir::PrimitiveTypeValue>(kind).m_type ==
+          PrimitiveType::UNIT);
+  }
+
+  TEST_CASE("loop with break <i64> has i64 type") {
+    auto hir = type_check("fn looper() -> i64 {\n"
+                          "  loop { break 42; }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &expr = *func.m_body.m_final_expression;
+    auto &kind = hir.m_type_arena.get(expr.m_type);
+    REQUIRE(std::holds_alternative<hir::PrimitiveTypeValue>(kind));
+    CHECK(std::get<hir::PrimitiveTypeValue>(kind).m_type == PrimitiveType::I64);
+  }
+
+  TEST_CASE("loop with break <bool> binds to bool let") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let b: bool = loop { break true; };\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("loop value can be bound to a let with matching annotation") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let x: i64 = loop { break 5; };\n"
+                             "  x\n"
+                             "}"));
+  }
+
+  TEST_CASE("loop value used directly as final expression typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  loop { break 7; }\n"
+                             "}"));
+  }
+
+  TEST_CASE("loop with mismatched break payloads throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  loop { break 1; break true; };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("loop with multiple matching breaks unifies (i64)") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let x: i64 = loop {\n"
+                             "    if true { break 1; }\n"
+                             "    break 2;\n"
+                             "  };\n"
+                             "  x\n"
+                             "}"));
+  }
+
+  TEST_CASE("loop with break payload of mismatched annotation throws") {
+    // `let x: bool = loop { break 1; };` — break's payload is i64 but the
+    // let expects bool. Mismatch should fail.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let x: bool = loop { break 1; };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break expression inside loop has Never type") {
+    // The break expression itself is divergent, regardless of payload.
+    auto hir = type_check("fn looper() -> i64 {\n"
+                          "  loop { break 42; }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &expr = *func.m_body.m_final_expression;
+    auto &loop_expr =
+        *std::get<std::unique_ptr<hir::LoopExpr>>(expr.m_expression);
+    REQUIRE(loop_expr.m_body.m_statements.size() == 1);
+    auto &stmt = std::get<hir::Expression>(loop_expr.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<hir::BreakExpr>>(
+        stmt.m_expression));
+    CHECK(std::holds_alternative<hir::NeverType>(
+        hir.m_type_arena.get(stmt.m_type)));
+  }
+
+  TEST_CASE("loop body bindings do not leak (fresh scope)") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  loop { let x: i64 = 1; break; };\n"
+                               "  x\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("loop body with trailing-semicolon expression typechecks") {
+    // `42;` is a discarded statement; the body still types as unit
+    // (followed by a Never-typed break) so the loop-body-must-unify-unit
+    // check is satisfied.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  loop { 42; break; };\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("loop with non-unit body throws") {
+    // Same rule as while: the body's final expression must type as unit.
+    // Here trailing 42 makes the body's type i64.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  loop { 42 };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("loop containing only return typechecks (loop type Never)") {
+    // The loop has Never type (no breaks contribute), and `return` exits
+    // the function. main's i64 return type is satisfied by the return,
+    // and the loop-as-final-expression type Never unifies with i64.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  loop { return 42; }\n"
+                             "}"));
+  }
+
+  TEST_CASE("loop with no break body satisfies any function return type") {
+    // A loop with no breaks has type Never, compatible with any expected
+    // return type (here, i64).
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  loop { }\n"
+                             "}"));
+  }
+
+  // --- Continue -----------------------------------------------------------
+
+  TEST_CASE("continue inside while body typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { continue; }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("continue inside loop body typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  loop { continue; }\n"
+                             "}"));
+  }
+
+  TEST_CASE("continue expression has Never type") {
+    auto hir = type_check("fn looper() {\n"
+                          "  while true { continue; }\n"
+                          "}\n"
+                          "fn main() -> i64 { 0 }");
+    DUMP_HIR(hir);
+    auto &func = std::get<hir::FunctionDef>(hir.m_top_items[0]);
+    auto &expr = *func.m_body.m_final_expression;
+    auto &while_expr =
+        *std::get<std::unique_ptr<hir::WhileExpr>>(expr.m_expression);
+    REQUIRE(while_expr.m_body.m_statements.size() == 1);
+    auto &stmt = std::get<hir::Expression>(while_expr.m_body.m_statements[0]);
+    REQUIRE(std::holds_alternative<std::unique_ptr<hir::ContinueExpr>>(
+        stmt.m_expression));
+    CHECK(std::holds_alternative<hir::NeverType>(
+        hir.m_type_arena.get(stmt.m_type)));
+  }
+
+  TEST_CASE("continue inside if inside while typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true { if true { continue; } }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("continue outside any loop throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  continue;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("continue after the loop ends throws — outside scope again") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true { }\n"
+                               "  continue;\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("continue inside top-level lambda throws — not in a loop") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = || { continue; };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("continue inside lambda inside while throws — "
+            "lambda is a loop-context boundary") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true {\n"
+                               "    let f = || { continue; };\n"
+                               "  }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("continue sibling to lambda inside while typechecks") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true {\n"
+                             "    let f = || { 0 };\n"
+                             "    continue;\n"
+                             "  }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("continue inside while inside lambda typechecks — "
+            "innermost loop wins") {
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let f = || { while true { continue; } };\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  // --- Break with value ---------------------------------------------------
+  //
+  // `break expr` is only valid inside `loop`; inside `while`/`for` the
+  // loop's break-target type is fixed to unit, so any non-unit payload
+  // fails unification at the enclosing while/for. Within a `loop`, all
+  // break payloads must unify; a nested loop's breaks belong to THAT
+  // loop, not the outer one.
+
+  TEST_CASE("break with i64 value inside while throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true { break 42; }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break with bool value inside while throws") {
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  while true { break true; }\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break with tuple value in loop typechecks") {
+    CHECK_NOTHROW(
+        type_check("fn main() -> i64 {\n"
+                   "  let p: (i64, bool) = loop { break (1, true); };\n"
+                   "  0\n"
+                   "}"));
+  }
+
+  TEST_CASE("nested loops: inner break unit, outer break i64 typechecks") {
+    // Inner break targets inner loop (no payload → unit). Outer break
+    // targets outer loop with i64 payload. The two collected-type sets
+    // are independent.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let x: i64 = loop {\n"
+                             "    loop { break; };\n"
+                             "    break 7;\n"
+                             "  };\n"
+                             "  x\n"
+                             "}"));
+  }
+
+  TEST_CASE("nested loops: each loop's breaks unify independently") {
+    // Inner loop's break is bool → inner loop has type bool.
+    // Outer loop's break is i64 → outer loop has type i64.
+    // No cross-contamination.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  let x: i64 = loop {\n"
+                             "    let b: bool = loop { break true; };\n"
+                             "    break 1;\n"
+                             "  };\n"
+                             "  x\n"
+                             "}"));
+  }
+
+  TEST_CASE("break with value in loop nested inside while typechecks") {
+    // The inner break is inside `loop`, so its i64 payload is valid
+    // there. The outer while never sees the inner break.
+    CHECK_NOTHROW(type_check("fn main() -> i64 {\n"
+                             "  while true {\n"
+                             "    let x: i64 = loop { break 1; };\n"
+                             "  }\n"
+                             "  0\n"
+                             "}"));
+  }
+
+  TEST_CASE("nested loops with mismatched outer breaks throws") {
+    // Inner loop's break is independent; outer's two breaks must unify.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  loop {\n"
+                               "    loop { break true; };\n"
+                               "    break 1;\n"
+                               "    break true;\n"
+                               "  };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break inside lambda inside loop throws — "
+            "lambda is a boundary") {
+    // The lambda body has no enclosing loop of its own. break inside
+    // it must be rejected even though the lambda is lexically inside a
+    // loop.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  loop {\n"
+                               "    let f = || { break 42; };\n"
+                               "    break;\n"
+                               "  };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break with payload inside top-level lambda throws") {
+    // No enclosing loop anywhere — break with or without payload fails.
+    CHECK_THROWS_AS(type_check("fn main() -> i64 {\n"
+                               "  let f = || { break 42; };\n"
+                               "  0\n"
+                               "}"),
+                    core::CompilerException);
+  }
+
+  TEST_CASE("break with payload inside lambda inside loop, nested loop "
+            "inside lambda typechecks — innermost loop wins") {
+    // The break is inside a `loop` that is inside a lambda. The lambda's
+    // own loop satisfies the loop-context requirement; the outer loop is
+    // not the target.
+    CHECK_NOTHROW(
+        type_check("fn main() -> i64 {\n"
+                   "  loop {\n"
+                   "    let f = || { let x: i64 = loop { break 9; }; };\n"
+                   "    break;\n"
+                   "  };\n"
+                   "  0\n"
+                   "}"));
+  }
+
 } // TEST_SUITE
 //****************************************************************************
 } // namespace bust

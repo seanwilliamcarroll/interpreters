@@ -27,9 +27,12 @@ struct LetBindingSubstituter {
 
     auto expression = substituter.substitute(let_binding.m_expression);
 
-    return {{let_binding.m_location},
-            std::move(new_identifier),
-            std::move(expression)};
+    return {
+        .m_location = let_binding.m_location,
+        .m_variable = std::move(new_identifier),
+        .m_expression = std::move(expression),
+        .m_is_mutable = let_binding.m_is_mutable,
+    };
   }
 
   SubstitutionContext &m_ctx;

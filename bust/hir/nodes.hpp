@@ -14,6 +14,7 @@
 #include <hir/unifier_state.hpp>
 #include <nodes.hpp>
 #include <operators.hpp>
+#include <source_location.hpp>
 
 #include <optional>
 #include <vector>
@@ -28,54 +29,57 @@ struct Expression;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct Block;
-struct TupleExpr;
-struct DotExpr;
-struct WhileExpr;
-struct BreakExpr;
 // TODO
 struct ForExpr {};
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public core::HasLocation {
+struct Identifier {
+  core::SourceLocation m_location;
   std::string m_name;
   BindingId m_id;
   TypeId m_type;
 };
 
-struct Parameter : public core::HasLocation {
+struct Parameter {
+  core::SourceLocation m_location;
   Identifier m_id;
   bool m_is_mutable;
 };
 
 // --- Literals --------------------------------------------------------------
 
-template <PrimitiveType InternalType>
-struct Literal : public core::HasLocation {
+template <PrimitiveType InternalType> struct Literal {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = InternalType;
 };
 
-template <> struct Literal<PrimitiveType::BOOL> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::BOOL> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::BOOL;
   bool m_value;
 };
 
-template <> struct Literal<PrimitiveType::CHAR> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::CHAR> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::CHAR;
   char m_value;
 };
 
-template <> struct Literal<PrimitiveType::I8> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::I8> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::I8;
   int8_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I32> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::I32> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::I32;
   int32_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I64> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::I64> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
@@ -96,6 +100,12 @@ using ReturnExpr = ReturnExprBase<Expression>;
 using CastExpr = CastExprBase<Expression, TypeId>;
 using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr = LambdaExprBase<Parameter, Block, TypeId>;
+using TupleExpr = TupleExprBase<Expression>;
+using BreakExpr = BreakExprBase<Expression>;
+using ContinueExpr = ContinueExprBase;
+using WhileExpr = WhileExprBase<Expression, Block>;
+using DotExpr = DotExprBase<Expression>;
+using LoopExpr = LoopExprBase<Block>;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -104,23 +114,17 @@ using ExprKind =
                  std::unique_ptr<UnaryExpr>, std::unique_ptr<ReturnExpr>,
                  std::unique_ptr<CastExpr>, std::unique_ptr<LambdaExpr>,
                  std::unique_ptr<TupleExpr>, std::unique_ptr<DotExpr>,
-                 std::unique_ptr<WhileExpr>, std::unique_ptr<BreakExpr>>;
+                 std::unique_ptr<WhileExpr>, std::unique_ptr<LoopExpr>,
+                 std::unique_ptr<BreakExpr>, std::unique_ptr<ContinueExpr>>;
 
-struct Expression : public core::HasLocation {
+struct Expression {
+  core::SourceLocation m_location;
   TypeId m_type;
   ExprKind m_expression;
 };
 
-struct DotExpr {
-  Expression m_expression;
-  size_t m_tuple_index;
-};
-
-struct TupleExpr {
-  std::vector<Expression> m_fields;
-};
-
-struct LetBinding : public core::HasLocation {
+struct LetBinding {
+  core::SourceLocation m_location;
   Identifier m_variable;
   Expression m_expression;
   bool m_is_mutable = false;
@@ -128,7 +132,8 @@ struct LetBinding : public core::HasLocation {
 
 using Place = std::variant<Identifier>;
 
-struct Assignment : public core::HasLocation {
+struct Assignment {
+  core::SourceLocation m_location;
   Place m_place;
   Expression m_expression;
 };
@@ -139,19 +144,11 @@ using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public core::HasLocation {
+struct Block {
+  core::SourceLocation m_location;
   TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
-};
-
-struct WhileExpr {
-  Expression m_condition;
-  Block m_body;
-};
-
-struct BreakExpr {
-  std::optional<Expression> m_returned_expression;
 };
 
 // --- Bindings & definitions ------------------------------------------------
@@ -163,18 +160,21 @@ struct FunctionDeclaration {
   std::vector<Parameter> m_parameters;
 };
 
-struct ExternFunctionDeclaration : public core::HasLocation {
+struct ExternFunctionDeclaration {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
 };
 
-struct FunctionDef : public core::HasLocation {
+struct FunctionDef {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
   Block m_body;
 };
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public core::HasLocation {
+struct Program {
+  core::SourceLocation m_location;
   TypeArena m_type_arena;
   std::vector<TopItem> m_top_items;
   UnifierState m_unifier_state;

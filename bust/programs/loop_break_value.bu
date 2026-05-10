@@ -1,0 +1,19 @@
+// EXPECT_EXIT: 42
+//
+// `loop { ... break <expr>; }` is a typed expression whose value is the
+// payload of the `break`. The loop here scans i = 0, 1, 2, ... looking
+// for the first i where i * 7 == 42; when found, `break i * 7` exits
+// the loop carrying that value. Main returns it.
+//
+// Verifies that:
+//   - the loop's result alloca is plumbed through to the break site,
+//   - the merge block loads the stored value,
+//   - the loaded value is usable as the function's tail expression.
+
+fn main() -> i64 {
+  let mut i = 0;
+  loop {
+    if i * 7 == 42 { break i * 7; }
+    i = i + 1;
+  }
+}

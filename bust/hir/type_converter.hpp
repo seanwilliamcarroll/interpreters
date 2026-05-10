@@ -34,7 +34,7 @@ struct TypeConverter {
   }
 
   TypeId operator()(const ast::PrimitiveTypeIdentifier &type) {
-    return m_ctx.m_type_arena.intern(PrimitiveTypeValue{
+    return m_ctx.type_arena().intern(PrimitiveTypeValue{
         type.m_type,
     });
   }
@@ -45,7 +45,7 @@ struct TypeConverter {
     for (const auto &param : type->m_field_types) {
       field_types.push_back(convert(param));
     }
-    return m_ctx.m_type_arena.intern(TupleType{
+    return m_ctx.type_arena().intern(TupleType{
         .m_fields = std::move(field_types),
     });
   }
@@ -57,7 +57,7 @@ struct TypeConverter {
       param_types.push_back(convert(param));
     }
     auto return_type = convert(type->m_return_type);
-    return m_ctx.m_type_arena.intern(FunctionType{
+    return m_ctx.type_arena().intern(FunctionType{
         .m_parameters = std::move(param_types),
         .m_return_type = return_type,
     });
@@ -71,7 +71,7 @@ struct TypeConverter {
     if (identifier.m_type.has_value()) {
       return std::visit((*this), identifier.m_type.value());
     }
-    return m_ctx.m_type_unifier.new_type_var();
+    return m_ctx.type_unifier().new_type_var();
   }
 
   TypeId get_type(const ast::Parameter &parameter) {
@@ -80,15 +80,15 @@ struct TypeConverter {
 
   Parameter convert_parameter(const ast::Parameter &parameter) {
     return {
-        {
-            parameter.m_location,
-        },
-        {
-            .m_name = parameter.m_id.m_name,
-            .m_id = m_ctx.next_let_binding_id(),
-            .m_type = get_type(parameter),
-        },
-        parameter.m_is_mutable,
+        .m_location = parameter.m_location,
+        .m_id =
+            {
+                .m_location = parameter.m_location,
+                .m_name = parameter.m_id.m_name,
+                .m_id = m_ctx.next_let_binding_id(),
+                .m_type = get_type(parameter),
+            },
+        .m_is_mutable = parameter.m_is_mutable,
     };
   }
 

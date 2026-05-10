@@ -323,16 +323,24 @@ private:
     line("body:");
     {
       IndentGuard g2(*this);
-      dump_expr_kind(v.m_body);
+      dump_block(v.m_body);
     }
+  }
+
+  void dump_expr_kind(const LoopExpr &v) {
+    m_out << "Loop\n";
+    IndentGuard g(*this);
+    dump_block(v.m_body);
   }
 
   void dump_expr_kind(const BreakExpr &v) {
     m_out << "Break\n";
-    if (v.m_returned_expression.has_value()) {
-      IndentGuard g(*this);
-      dump_expr(v.m_returned_expression.value());
-    }
+    IndentGuard g(*this);
+    dump_expr(v.m_returned_expression);
+  }
+
+  void dump_expr_kind(const ContinueExpr & /*unused*/) {
+    m_out << "Continue\n";
   }
 };
 
