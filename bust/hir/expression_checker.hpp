@@ -64,7 +64,7 @@ struct ExpressionChecker {
                  const core::SourceLocation &location,
                  const std::string &additional_message = "") {
     try {
-      m_ctx.m_type_unifier.unify(type_a, type_b);
+      m_ctx.type_unifier().unify(type_a, type_b);
     } catch (std::runtime_error &error) {
       throw core::CompilerException("TypeChecker",
                                     "Type unification error!\n" +

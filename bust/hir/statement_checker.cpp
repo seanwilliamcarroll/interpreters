@@ -46,7 +46,7 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
   // If annotated type is Unknown, go with type of expression
   // Else, unify the two (throws on mismatch)
   try {
-    m_ctx.m_type_unifier.unify(annotated_type, body.m_type);
+    m_ctx.type_unifier().unify(annotated_type, body.m_type);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
@@ -54,16 +54,16 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
   }
 
   if (m_ctx.is_type_variable(annotated_type) &&
-      body.m_type == m_ctx.m_type_arena.m_never) {
+      body.m_type == m_ctx.type_arena().m_never) {
     // We've got an unannotated lambda whose body is a never type
     // Explicitly set the type to the unit type
-    annotated_type = m_ctx.m_type_arena.m_unit;
+    annotated_type = m_ctx.type_arena().m_unit;
   }
 
-  auto unified_type = m_ctx.m_type_unifier.find(annotated_type);
+  auto unified_type = m_ctx.type_unifier().find(annotated_type);
 
   auto collapsed_type =
-      collapse_types(m_ctx.m_type_arena, m_ctx.m_type_unifier, unified_type);
+      collapse_types(m_ctx.type_arena(), m_ctx.type_unifier(), unified_type);
 
   auto binding_id = m_ctx.next_let_binding_id();
 
@@ -77,7 +77,7 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
   auto free_variables = collect_free_variables(m_ctx, new_identifier.m_type);
 
   // Store the new let binding
-  m_ctx.m_env.define(new_identifier.m_name, binding_id,
+  m_ctx.env().define(new_identifier.m_name, binding_id,
                      TypeScheme{
                          .m_type = new_identifier.m_type,
                          .m_free_type_variables = free_variables,
@@ -114,7 +114,7 @@ bool StatementChecker::is_place_mutable(const Place &place) {
       [&](auto &&p) -> bool {
         using T = std::decay_t<decltype(p)>;
         if constexpr (std::is_same_v<T, Identifier>) {
-          auto maybe_binding = m_ctx.m_env.lookup(p.m_name);
+          auto maybe_binding = m_ctx.env().lookup(p.m_name);
           if (!maybe_binding.has_value()) {
             throw core::CompilerException(
                 "TypeChecker", "Unknown identifier: " + p.m_name, p.m_location);
@@ -147,7 +147,7 @@ Statement StatementChecker::operator()(const ast::Assignment &assignment) {
 
   // Need to unify these two
   try {
-    m_ctx.m_type_unifier.unify(lhs.m_type, rhs.m_type);
+    m_ctx.type_unifier().unify(lhs.m_type, rhs.m_type);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),

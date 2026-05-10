@@ -31,7 +31,7 @@ TypeId BlockChecker::get_statement_type(const Statement &statement) {
   if (std::holds_alternative<Expression>(statement)) {
     return std::get<Expression>(statement).m_type;
   }
-  return m_ctx.m_type_arena.m_unit;
+  return m_ctx.type_arena().m_unit;
 }
 
 TypeId BlockChecker::get_inner_expression_type(const Statement &statement) {
@@ -49,7 +49,7 @@ TypeId BlockChecker::get_inner_expression_type(const Statement &statement) {
 }
 
 Block BlockChecker::check_block(const ast::Block &block) {
-  ScopeGuard guard(m_ctx.m_env);
+  ScopeGuard guard(m_ctx.env());
 
   bool has_diverging_statement = false;
 
@@ -58,7 +58,7 @@ Block BlockChecker::check_block(const ast::Block &block) {
   for (const auto &statement : block.m_statements) {
     statements.emplace_back(std::visit(StatementChecker{m_ctx}, (statement)));
     if (get_inner_expression_type(statements.back()) ==
-        m_ctx.m_type_arena.m_never) {
+        m_ctx.type_arena().m_never) {
       has_diverging_statement = true;
     }
   }
@@ -70,11 +70,11 @@ Block BlockChecker::check_block(const ast::Block &block) {
       });
 
   // No final expression and no diverging statement, block is unit type
-  auto type = m_ctx.m_type_arena.m_unit;
+  auto type = m_ctx.type_arena().m_unit;
 
   if (has_diverging_statement) {
     // Only if no final expression do we set diverging type
-    type = m_ctx.m_type_arena.m_never;
+    type = m_ctx.type_arena().m_never;
   } else if (final_expression.has_value()) {
     type = final_expression.value().m_type;
   }
@@ -89,9 +89,9 @@ Block BlockChecker::check_block(const ast::Block &block) {
 
 Block BlockChecker::check_block_with_parameters(
     const std::vector<Parameter> &parameters, const ast::Block &ast_block) {
-  ScopeGuard guard(m_ctx.m_env);
+  ScopeGuard guard(m_ctx.env());
   for (const auto &parameter : parameters) {
-    m_ctx.m_env.define(parameter.m_id.m_name, parameter.m_id.m_id,
+    m_ctx.env().define(parameter.m_id.m_name, parameter.m_id.m_id,
                        parameter.m_id.m_type, parameter.m_is_mutable);
   }
   return check_block(ast_block);
@@ -100,9 +100,9 @@ Block BlockChecker::check_block_with_parameters(
 Block BlockChecker::check_callable_body(
     const std::vector<Parameter> &parameters, const TypeId &return_type,
     const ast::Block &ast_body) {
-  m_ctx.m_return_type_stack.push_back(return_type);
+  m_ctx.push_return_type(return_type);
   auto body = check_block_with_parameters(parameters, ast_body);
-  m_ctx.m_return_type_stack.pop_back();
+  m_ctx.pop_return_type();
   return body;
 }
 

@@ -93,7 +93,7 @@ PrimitiveTypeClass required_type_class_for_binary_op(BinaryOperator op) {
 
 Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
                                          const core::SourceLocation &location) {
-  auto maybe_type = m_ctx.m_env.lookup(identifier.m_name);
+  auto maybe_type = m_ctx.env().lookup(identifier.m_name);
   if (!maybe_type.has_value()) {
     throw core::CompilerException(
         "TypeChecker",
@@ -132,7 +132,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::TupleExpr> &tuple_expr,
     fields.emplace_back(check_expression(field));
     field_types.emplace_back(fields.back().m_type);
   }
-  auto tuple_type = m_ctx.m_type_arena.intern(TupleType{
+  auto tuple_type = m_ctx.type_arena().intern(TupleType{
       .m_fields = std::move(field_types),
   });
 
@@ -183,7 +183,7 @@ Expression ExpressionChecker::operator()(
     }
     // They all match
 
-    auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
+    auto return_type = m_ctx.type_unifier().find(function_type.m_return_type);
 
     return {
         .m_location = location,
@@ -201,9 +201,9 @@ Expression ExpressionChecker::operator()(
     for (const auto &argument : arguments) {
       function_type.m_parameters.push_back(argument.m_type);
     }
-    function_type.m_return_type = m_ctx.m_type_unifier.new_type_var();
+    function_type.m_return_type = m_ctx.type_unifier().new_type_var();
 
-    auto function_type_id = m_ctx.m_type_arena.intern(function_type);
+    auto function_type_id = m_ctx.type_arena().intern(function_type);
 
     // Do single unification
     try_unify(function_type_id, callee_type_id, callee.m_location,
@@ -211,7 +211,7 @@ Expression ExpressionChecker::operator()(
                   " cannot unify with: " + m_ctx.to_string(function_type_id) +
                   " Unification error: ");
 
-    auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
+    auto return_type = m_ctx.type_unifier().find(function_type.m_return_type);
 
     return {.m_location = location,
             .m_type = return_type,
@@ -236,16 +236,16 @@ Expression ExpressionChecker::operator()(
 
   try_unify(lhs.m_type, rhs.m_type, rhs.m_location);
 
-  auto type_id = m_ctx.m_type_unifier.find(lhs.m_type);
+  auto type_id = m_ctx.type_unifier().find(lhs.m_type);
 
   // Apply operator constraint
   auto required =
       required_type_class_for_binary_op(binary_expression->m_operator);
   try {
     if (m_ctx.is_type_variable(type_id)) {
-      m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(type_id), required);
+      m_ctx.type_unifier().constrain(m_ctx.as_type_variable(type_id), required);
     } else if (!is_type_in_type_class(required,
-                                      m_ctx.m_type_arena.get(type_id))) {
+                                      m_ctx.type_arena().get(type_id))) {
       throw core::CompilerException("TypeChecker",
                                     "Type " + m_ctx.to_string(type_id) +
                                         " is disallowed by binary operator: " +
@@ -259,8 +259,8 @@ Expression ExpressionChecker::operator()(
   }
 
   auto final_type = is_comparison_op(binary_expression->m_operator)
-                        ? m_ctx.m_type_arena.m_bool
-                        : m_ctx.m_type_unifier.find(type_id);
+                        ? m_ctx.type_arena().m_bool
+                        : m_ctx.type_unifier().find(type_id);
 
   return {
       .m_location = location,
@@ -282,11 +282,11 @@ Expression ExpressionChecker::operator()(
       required_type_class_for_unary_op(unary_expression->m_operator);
   try {
     if (m_ctx.is_type_variable(expression.m_type)) {
-      m_ctx.m_type_unifier.constrain(m_ctx.as_type_variable(expression.m_type),
+      m_ctx.type_unifier().constrain(m_ctx.as_type_variable(expression.m_type),
                                      required_type_class);
     } else if (!is_type_in_type_class(
                    required_type_class,
-                   m_ctx.m_type_arena.get(expression.m_type))) {
+                   m_ctx.type_arena().get(expression.m_type))) {
       throw core::CompilerException(
           "TypeChecker",
           "Type Mismatch! UnaryExpr: " + unary_expression->m_operator +
@@ -299,7 +299,7 @@ Expression ExpressionChecker::operator()(
         location);
   }
 
-  auto final_type = m_ctx.m_type_unifier.find(expression.m_type);
+  auto final_type = m_ctx.type_unifier().find(expression.m_type);
 
   auto final_expression = Expression{
       .m_location = expression.m_location,
@@ -323,11 +323,11 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
 
   auto condition = check_expression(if_expression->m_condition);
 
-  try_unify(condition.m_type, m_ctx.m_type_arena.m_bool, location);
+  try_unify(condition.m_type, m_ctx.type_arena().m_bool, location);
 
   auto resolved_condition = Expression{
       .m_location = condition.m_location,
-      .m_type = m_ctx.m_type_unifier.find(condition.m_type),
+      .m_type = m_ctx.type_unifier().find(condition.m_type),
       .m_expression = std::move(condition.m_expression),
   };
 
@@ -338,11 +338,11 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   if (!if_expression->m_else_block.has_value()) {
     // Just then branch
 
-    try_unify(m_ctx.m_type_arena.m_unit, then_block.m_type, location);
+    try_unify(m_ctx.type_arena().m_unit, then_block.m_type, location);
 
     return {
         .m_location = location,
-        .m_type = m_ctx.m_type_arena.m_unit,
+        .m_type = m_ctx.type_arena().m_unit,
         .m_expression = std::make_unique<IfExpr>(IfExpr{
             .m_condition = std::move(resolved_condition),
             .m_then_block = std::move(then_block),
@@ -356,7 +356,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
 
   TypeId type{};
   try {
-    type = m_ctx.m_type_unifier.join(then_block.m_type, else_block.m_type);
+    type = m_ctx.type_unifier().join(then_block.m_type, else_block.m_type);
   } catch (std::runtime_error &error) {
     throw core::CompilerException(
         "TypeChecker", std::string("Type unification error!: ") + error.what(),
@@ -391,7 +391,7 @@ Expression ExpressionChecker::operator()(
 
   auto hir_expression = check_expression(cast_expression->m_expression);
 
-  auto original_type_id = m_ctx.m_type_unifier.find(hir_expression.m_type);
+  auto original_type_id = m_ctx.type_unifier().find(hir_expression.m_type);
 
   auto new_type_id =
       std::visit(TypeConverter{m_ctx}, cast_expression->m_new_type);
@@ -432,14 +432,14 @@ Expression ExpressionChecker::operator()(
     const core::SourceLocation &location) {
   auto expression = check_expression(return_expression->m_expression);
 
-  if (m_ctx.m_return_type_stack.empty()) {
+  if (m_ctx.return_type_stack_empty()) {
     throw core::InternalCompilerError(
         "return expression outside function body");
   }
 
-  try_unify(expression.m_type, m_ctx.m_return_type_stack.back(), location);
+  try_unify(expression.m_type, m_ctx.current_return_type(), location);
 
-  auto expression_type = m_ctx.m_type_unifier.find(expression.m_type);
+  auto expression_type = m_ctx.type_unifier().find(expression.m_type);
 
   auto final_expression =
       (expression_type == expression.m_type)
@@ -452,7 +452,7 @@ Expression ExpressionChecker::operator()(
 
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_never,
+      .m_type = m_ctx.type_arena().m_never,
       .m_expression = std::make_unique<ReturnExpr>(ReturnExpr{
           .m_expression = std::move(final_expression),
       }),
@@ -471,9 +471,9 @@ Expression ExpressionChecker::operator()(
   auto possible_return_type_id =
       lambda_expression->m_return_type.has_value()
           ? type_converter.get_type(lambda_expression->m_return_type.value())
-          : m_ctx.m_type_unifier.new_type_var();
+          : m_ctx.type_unifier().new_type_var();
 
-  FunctionContextScopeGuard guard{m_ctx.m_loop_env};
+  FunctionContextScopeGuard guard{m_ctx.loop_env()};
   auto body = BlockChecker{m_ctx}.check_callable_body(
       parameters, possible_return_type_id, lambda_expression->m_body);
 
@@ -481,7 +481,7 @@ Expression ExpressionChecker::operator()(
 
   auto return_type_id = possible_return_type_id;
 
-  auto function_type_id = m_ctx.m_type_arena.intern(FunctionType{
+  auto function_type_id = m_ctx.type_arena().intern(FunctionType{
       .m_parameters = std::move(parameter_types),
       .m_return_type = return_type_id,
   });
@@ -507,9 +507,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
 
   auto expression = check_expression(dot_expr->m_expression);
 
-  if (m_ctx.m_type_arena.is_type_variable(expression.m_type)) {
+  if (m_ctx.type_arena().is_type_variable(expression.m_type)) {
     // Defer check until monomorpher then
-    auto return_type = m_ctx.m_type_unifier.new_type_var();
+    auto return_type = m_ctx.type_unifier().new_type_var();
 
     return {
         .m_location = location,
@@ -521,7 +521,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
     };
   }
 
-  if (!m_ctx.m_type_arena.is_tuple(expression.m_type)) {
+  if (!m_ctx.type_arena().is_tuple(expression.m_type)) {
     throw core::CompilerException(
         "TypeChecker",
         "Tuple dot operator requires that the "
@@ -531,7 +531,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
   }
 
   // We can check arity here
-  const auto &tuple_type = m_ctx.m_type_arena.as_tuple(expression.m_type);
+  const auto &tuple_type = m_ctx.type_arena().as_tuple(expression.m_type);
   const auto arity = tuple_type.m_fields.size();
 
   if (dot_expr->m_tuple_index >= arity) {
@@ -566,7 +566,7 @@ Expression ExpressionChecker::operator()(const ast::I8 &literal,
                                          const core::SourceLocation &location) {
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_i8,
+      .m_type = m_ctx.type_arena().m_i8,
       .m_expression =
           I8{
               .m_location = location,
@@ -579,7 +579,7 @@ Expression ExpressionChecker::operator()(const ast::I32 &literal,
                                          const core::SourceLocation &location) {
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_i32,
+      .m_type = m_ctx.type_arena().m_i32,
       .m_expression =
           I32{
               .m_location = location,
@@ -592,7 +592,7 @@ Expression ExpressionChecker::operator()(const ast::I64 &literal,
                                          const core::SourceLocation &location) {
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_i64,
+      .m_type = m_ctx.type_arena().m_i64,
       .m_expression =
           I64{
               .m_location = location,
@@ -605,7 +605,7 @@ Expression ExpressionChecker::operator()(const ast::Bool &literal,
                                          const core::SourceLocation &location) {
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_bool,
+      .m_type = m_ctx.type_arena().m_bool,
       .m_expression =
           Bool{
               .m_location = location,
@@ -618,7 +618,7 @@ Expression ExpressionChecker::operator()(const ast::Char &literal,
                                          const core::SourceLocation &location) {
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_char,
+      .m_type = m_ctx.type_arena().m_char,
       .m_expression =
           Char{
               .m_location = location,
@@ -631,7 +631,7 @@ Expression ExpressionChecker::operator()(const ast::Unit & /*unused*/,
                                          const core::SourceLocation &location) {
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_unit,
+      .m_type = m_ctx.type_arena().m_unit,
       .m_expression =
           Unit{
               .m_location = location,
@@ -644,24 +644,24 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
                               const core::SourceLocation &location) {
   // Need to check and unify condition with boolean
   auto condition = check_expression(while_expr->m_condition);
-  try_unify(m_ctx.m_type_arena.m_bool, condition.m_type, location);
+  try_unify(m_ctx.type_arena().m_bool, condition.m_type, location);
 
   // Need to check and unify block with unit
-  WhileContextScopeGuard guard{m_ctx.m_loop_env};
+  WhileContextScopeGuard guard{m_ctx.loop_env()};
   auto body = BlockChecker{m_ctx}.check_block(while_expr->m_body);
-  try_unify(m_ctx.m_type_arena.m_unit, body.m_type, location);
+  try_unify(m_ctx.type_arena().m_unit, body.m_type, location);
 
-  const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
+  const auto &returned_types = m_ctx.loop_env().current_collected_types();
 
   for (const auto &collected_type_id : returned_types) {
-    try_unify(collected_type_id, m_ctx.m_type_arena.m_unit, location,
+    try_unify(collected_type_id, m_ctx.type_arena().m_unit, location,
               "Break statements in while loop "
               "cannot return a value other than unit!\n");
   }
 
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_unit,
+      .m_type = m_ctx.type_arena().m_unit,
       .m_expression = std::make_unique<WhileExpr>(WhileExpr{
           .m_condition = std::move(condition),
           .m_body = std::move(body),
@@ -673,15 +673,15 @@ Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
                               const core::SourceLocation &location) {
   // Need to check and unify block with unit
-  LoopContextScopeGuard guard{m_ctx.m_loop_env};
+  LoopContextScopeGuard guard{m_ctx.loop_env()};
   auto body = BlockChecker{m_ctx}.check_block(loop_expr->m_body);
-  try_unify(m_ctx.m_type_arena.m_unit, body.m_type, location);
+  try_unify(m_ctx.type_arena().m_unit, body.m_type, location);
 
   // Now check for the collected returned values
-  const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
+  const auto &returned_types = m_ctx.loop_env().current_collected_types();
   TypeId loop_type_id;
   if (returned_types.empty()) {
-    loop_type_id = m_ctx.m_type_arena.m_never;
+    loop_type_id = m_ctx.type_arena().m_never;
   } else {
     loop_type_id = returned_types.front();
     for (const auto &collected_type_id : returned_types | std::views::drop(1)) {
@@ -704,7 +704,7 @@ Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
                               const core::SourceLocation &location) {
   // Need to make sure here that we are inside of some kind of loop
-  if (!m_ctx.m_loop_env.is_in_loop_scope()) {
+  if (!m_ctx.loop_env().is_in_loop_scope()) {
     throw core::CompilerException(
         "TypeChecker", "Cannot have break statement outside of a loop scope!",
         location);
@@ -714,11 +714,11 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
   // return types
   auto returned_expression =
       check_expression(break_expr->m_returned_expression);
-  m_ctx.m_loop_env.push_type(returned_expression.m_type);
+  m_ctx.loop_env().push_type(returned_expression.m_type);
 
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_never,
+      .m_type = m_ctx.type_arena().m_never,
       .m_expression = std::make_unique<BreakExpr>(BreakExpr{
           .m_returned_expression = std::move(returned_expression),
       }),
@@ -729,7 +729,7 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::ContinueExpr> & /*unused*/,
     const core::SourceLocation &location) {
   // Need to make sure here that we are inside of some kind of loop
-  if (!m_ctx.m_loop_env.is_in_loop_scope()) {
+  if (!m_ctx.loop_env().is_in_loop_scope()) {
     throw core::CompilerException(
         "TypeChecker",
         "Cannot have continue statement outside of a loop scope!", location);
@@ -737,7 +737,7 @@ Expression ExpressionChecker::operator()(
 
   return {
       .m_location = location,
-      .m_type = m_ctx.m_type_arena.m_never,
+      .m_type = m_ctx.type_arena().m_never,
       .m_expression = std::make_unique<ContinueExpr>(ContinueExpr{}),
   };
 }

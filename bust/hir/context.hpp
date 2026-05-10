@@ -129,6 +129,24 @@ struct Context {
 
   BindingId next_let_binding_id() { return {.m_id = m_next_let_binding_id++}; }
 
+  Environment &env() { return m_env; }
+  LoopEnvironment &loop_env() { return m_loop_env; }
+  TypeArena &type_arena() { return m_type_arena; }
+
+  void push_return_type(TypeId type_id) {
+    m_return_type_stack.push_back(type_id);
+  }
+  void pop_return_type() { m_return_type_stack.pop_back(); }
+  [[nodiscard]] bool return_type_stack_empty() const {
+    return m_return_type_stack.empty();
+  }
+  [[nodiscard]] TypeId current_return_type() const {
+    return m_return_type_stack.back();
+  }
+
+  TypeUnifier &type_unifier() { return m_type_unifier; }
+
+private:
   Environment m_env;
   LoopEnvironment m_loop_env;
   TypeArena m_type_arena;

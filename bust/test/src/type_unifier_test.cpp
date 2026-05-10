@@ -247,8 +247,8 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects type variable from bare TV") {
     auto context = hir::Context{};
-    auto tv = context.m_type_unifier.new_type_var();
-    hir::TypeKind type = context.m_type_arena.as_type_variable(tv);
+    auto tv = context.type_unifier().new_type_var();
+    hir::TypeKind type = context.type_arena().as_type_variable(tv);
 
     auto free_type_variables = collect_free_variables(context, type);
 
@@ -275,8 +275,8 @@ TEST_SUITE("bust.free_type_variable_collector") {
 
   TEST_CASE("collects TVs from inside FunctionType") {
     auto context = hir::Context{};
-    auto t0 = context.m_type_unifier.new_type_var();
-    auto t1 = context.m_type_unifier.new_type_var();
+    auto t0 = context.type_unifier().new_type_var();
+    auto t1 = context.type_unifier().new_type_var();
 
     // fn(?T0) -> ?T1
     std::vector<hir::TypeId> params;
@@ -291,10 +291,10 @@ TEST_SUITE("bust.free_type_variable_collector") {
   TEST_CASE("collects only TVs not concrete parts of fn type") {
     // fn(i64) -> ?T1 — only ?T1 is a TV
     auto context = hir::Context{};
-    auto t1 = context.m_type_unifier.new_type_var();
+    auto t1 = context.type_unifier().new_type_var();
 
     std::vector<hir::TypeId> params;
-    params.emplace_back(context.m_type_arena.m_i64);
+    params.emplace_back(context.type_arena().m_i64);
     hir::TypeKind fn_type = hir::FunctionType{std::move(params), t1};
 
     auto free_type_variables = collect_free_variables(context, fn_type);
