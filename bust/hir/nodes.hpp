@@ -32,7 +32,6 @@ struct Block;
 struct DotExpr;
 struct WhileExpr;
 struct LoopExpr;
-struct ContinueExpr;
 // TODO
 struct ForExpr {};
 
@@ -106,6 +105,7 @@ using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr = LambdaExprBase<Parameter, Block, TypeId>;
 using TupleExpr = TupleExprBase<Expression>;
 using BreakExpr = BreakExprBase<Expression>;
+using ContinueExpr = ContinueExprBase;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -164,8 +164,6 @@ struct WhileExpr {
 struct LoopExpr {
   Block m_body;
 };
-
-struct ContinueExpr {};
 
 // --- Bindings & definitions ------------------------------------------------
 

@@ -101,6 +101,7 @@ using CastExpr = CastExprBase<ExprId, TypeId>;
 using IfExpr = IfExprBase<ExprId, Block>;
 using TupleExpr = TupleExprBase<ExprId>;
 using BreakExpr = BreakExprBase<ExprId>;
+using ContinueExpr = ContinueExprBase;
 
 struct LambdaExpr {
   std::vector<IdentifierExpr> m_parameters;
@@ -125,10 +126,6 @@ struct WhileExpr {
 struct LoopExpr {
   Block m_body;
   auto operator<=>(const LoopExpr &) const = default;
-};
-
-struct ContinueExpr {
-  auto operator<=>(const ContinueExpr &) const = default;
 };
 
 using ExprKind =
@@ -245,13 +242,6 @@ template <> struct hash<bust::zir::I32> {
 template <> struct hash<bust::zir::I64> {
   static constexpr size_t HASH_VALUE = 5;
   size_t operator()(const bust::zir::I64 & /*unused*/) const noexcept {
-    return hash<size_t>{}(HASH_VALUE);
-  }
-};
-
-template <> struct hash<bust::zir::ContinueExpr> {
-  static constexpr size_t HASH_VALUE = 6;
-  size_t operator()(const bust::zir::ContinueExpr & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
   }
 };

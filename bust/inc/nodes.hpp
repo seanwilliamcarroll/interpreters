@@ -76,6 +76,10 @@ template <typename ExpressionType> struct BreakExprBase {
   auto operator<=>(const BreakExprBase<ExpressionType> &) const = default;
 };
 
+struct ContinueExprBase {
+  auto operator<=>(const ContinueExprBase &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -190,6 +194,13 @@ struct hash<bust::BreakExprBase<ExpressionType>> {
   size_t
   operator()(const bust::BreakExprBase<ExpressionType> &expr) const noexcept {
     return std::hash<ExpressionType>{}(expr.m_returned_expression);
+  }
+};
+
+template <> struct hash<bust::ContinueExprBase> {
+  static constexpr size_t HASH_VALUE = 6;
+  size_t operator()(const bust::ContinueExprBase & /*unused*/) const noexcept {
+    return hash<size_t>{}(HASH_VALUE);
   }
 };
 
