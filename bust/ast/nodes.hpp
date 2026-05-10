@@ -34,7 +34,6 @@ struct DotExpr;
 struct WhileExpr;
 struct LoopExpr;
 struct ForExpr;
-struct BreakExpr;
 struct ContinueExpr;
 
 // --- Literals --------------------------------------------------------------
@@ -61,6 +60,7 @@ using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr =
     LambdaExprBase<Parameter, Block, std::optional<TypeIdentifier>>;
 using TupleExpr = TupleExprBase<Expression>;
+using BreakExpr = BreakExprBase<Expression>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -97,10 +97,6 @@ struct Parameter {
 struct Expression {
   core::SourceLocation m_location;
   ExprKind m_expression;
-};
-
-struct BreakExpr {
-  Expression m_returned_value;
 };
 
 struct ContinueExpr {};

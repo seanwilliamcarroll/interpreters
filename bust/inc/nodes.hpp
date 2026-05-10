@@ -71,6 +71,11 @@ template <typename ExpressionType> struct TupleExprBase {
   auto operator<=>(const TupleExprBase<ExpressionType> &) const = default;
 };
 
+template <typename ExpressionType> struct BreakExprBase {
+  ExpressionType m_returned_expression;
+  auto operator<=>(const BreakExprBase<ExpressionType> &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -177,6 +182,14 @@ struct hash<bust::TupleExprBase<ExpressionType>> {
       core::hash_combine(seed, std::hash<ExpressionType>{}(field));
     }
     return seed;
+  }
+};
+
+template <typename ExpressionType>
+struct hash<bust::BreakExprBase<ExpressionType>> {
+  size_t
+  operator()(const bust::BreakExprBase<ExpressionType> &expr) const noexcept {
+    return std::hash<ExpressionType>{}(expr.m_returned_expression);
   }
 };
 

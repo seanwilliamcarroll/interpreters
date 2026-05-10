@@ -127,7 +127,8 @@ TEST_SUITE("bust.parser.loops") {
         stmt_expr.m_expression));
     const auto &brk =
         *std::get<std::unique_ptr<BreakExpr>>(stmt_expr.m_expression);
-    CHECK(std::holds_alternative<ast::Unit>(brk.m_returned_value.m_expression));
+    CHECK(std::holds_alternative<ast::Unit>(
+        brk.m_returned_expression.m_expression));
   }
 
   TEST_CASE("bust::parse_break_as_final_expression") {
@@ -247,7 +248,7 @@ TEST_SUITE("bust.parser.loops") {
         stmt_expr.m_expression));
     const auto &brk =
         *std::get<std::unique_ptr<BreakExpr>>(stmt_expr.m_expression);
-    CHECK(std::holds_alternative<I64>(brk.m_returned_value.m_expression));
+    CHECK(std::holds_alternative<I64>(brk.m_returned_expression.m_expression));
   }
 
   TEST_CASE("bust::parse_break_value_is_greedy") {
@@ -268,7 +269,7 @@ TEST_SUITE("bust.parser.loops") {
     const auto &brk =
         *std::get<std::unique_ptr<BreakExpr>>(stmt_expr.m_expression);
     CHECK(std::holds_alternative<std::unique_ptr<BinaryExpr>>(
-        brk.m_returned_value.m_expression));
+        brk.m_returned_expression.m_expression));
   }
 
   TEST_CASE("bust::parse_break_with_value_outside_loop_parses_ok") {
@@ -283,7 +284,7 @@ TEST_SUITE("bust.parser.loops") {
         stmt_expr.m_expression));
     const auto &brk =
         *std::get<std::unique_ptr<BreakExpr>>(stmt_expr.m_expression);
-    CHECK(std::holds_alternative<I64>(brk.m_returned_value.m_expression));
+    CHECK(std::holds_alternative<I64>(brk.m_returned_expression.m_expression));
   }
 
   // === Continue ============================================================

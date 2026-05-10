@@ -357,7 +357,7 @@ private:
   void dump_break(const BreakExpr &b) {
     line("Break");
     IndentGuard g(*this);
-    dump_expression(b.m_returned_value);
+    dump_expression(b.m_returned_expression);
   }
 
   void dump_while(const WhileExpr &w) {

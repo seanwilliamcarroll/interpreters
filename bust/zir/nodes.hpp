@@ -100,6 +100,7 @@ using ReturnExpr = ReturnExprBase<ExprId>;
 using CastExpr = CastExprBase<ExprId, TypeId>;
 using IfExpr = IfExprBase<ExprId, Block>;
 using TupleExpr = TupleExprBase<ExprId>;
+using BreakExpr = BreakExprBase<ExprId>;
 
 struct LambdaExpr {
   std::vector<IdentifierExpr> m_parameters;
@@ -124,11 +125,6 @@ struct WhileExpr {
 struct LoopExpr {
   Block m_body;
   auto operator<=>(const LoopExpr &) const = default;
-};
-
-struct BreakExpr {
-  ExprId m_returned_expression;
-  auto operator<=>(const BreakExpr &) const = default;
 };
 
 struct ContinueExpr {
@@ -329,12 +325,6 @@ template <> struct hash<bust::zir::WhileExpr> {
 template <> struct hash<bust::zir::LoopExpr> {
   size_t operator()(const bust::zir::LoopExpr &expr) const noexcept {
     return std::hash<bust::zir::Block>{}(expr.m_body);
-  }
-};
-
-template <> struct hash<bust::zir::BreakExpr> {
-  size_t operator()(const bust::zir::BreakExpr &expr) const noexcept {
-    return std::hash<bust::zir::ExprId>{}(expr.m_returned_expression);
   }
 };
 

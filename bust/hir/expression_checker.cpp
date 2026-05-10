@@ -777,7 +777,8 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
 
   // Add the type of this break statement's returned value to the collected
   // return types
-  auto returned_expression = check_expression(break_expr->m_returned_value);
+  auto returned_expression =
+      check_expression(break_expr->m_returned_expression);
   m_ctx.m_loop_env.push_type(returned_expression.m_type);
 
   return {

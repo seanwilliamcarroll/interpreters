@@ -702,7 +702,7 @@ ast::Expression Parser::parse_break_expr() {
   return {
       .m_location = original_location,
       .m_expression = std::make_unique<ast::BreakExpr>(ast::BreakExpr{
-          .m_returned_value = std::move(returned_expression),
+          .m_returned_expression = std::move(returned_expression),
       }),
   };
 }
