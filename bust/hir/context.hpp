@@ -127,7 +127,7 @@ struct Context {
     };
   }
 
-  BindingId next_let_binding_id() { return {m_next_let_binding_id++}; }
+  BindingId next_let_binding_id() { return {.m_id = m_next_let_binding_id++}; }
 
   Environment m_env;
   LoopEnvironment m_loop_env;
