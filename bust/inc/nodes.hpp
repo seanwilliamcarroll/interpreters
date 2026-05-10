@@ -87,6 +87,12 @@ template <typename ExpressionType, typename BlockType> struct WhileExprBase {
   operator<=>(const WhileExprBase<ExpressionType, BlockType> &) const = default;
 };
 
+template <typename ExpressionType> struct DotExprBase {
+  ExpressionType m_expression;
+  size_t m_tuple_index;
+  auto operator<=>(const DotExprBase<ExpressionType> &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -218,6 +224,17 @@ struct hash<bust::WhileExprBase<ExpressionType, BlockType>> {
     size_t seed = 0;
     core::hash_combine(seed, std::hash<ExpressionType>{}(expr.m_condition));
     core::hash_combine(seed, std::hash<BlockType>{}(expr.m_body));
+    return seed;
+  }
+};
+
+template <typename ExpressionType>
+struct hash<bust::DotExprBase<ExpressionType>> {
+  size_t
+  operator()(const bust::DotExprBase<ExpressionType> &expr) const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, std::hash<ExpressionType>{}(expr.m_expression));
+    core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
     return seed;
   }
 };

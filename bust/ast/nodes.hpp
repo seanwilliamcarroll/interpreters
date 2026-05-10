@@ -30,7 +30,6 @@ struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Identifier;
 struct Block;
-struct DotExpr;
 struct LoopExpr;
 struct ForExpr;
 
@@ -61,6 +60,7 @@ using TupleExpr = TupleExprBase<Expression>;
 using BreakExpr = BreakExprBase<Expression>;
 using ContinueExpr = ContinueExprBase;
 using WhileExpr = WhileExprBase<Expression, Block>;
+using DotExpr = DotExprBase<Expression>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -97,11 +97,6 @@ struct Parameter {
 struct Expression {
   core::SourceLocation m_location;
   ExprKind m_expression;
-};
-
-struct DotExpr {
-  Expression m_expression;
-  size_t m_tuple_index;
 };
 
 // --- Control flow ----------------------------------------------------------

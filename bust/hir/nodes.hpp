@@ -29,7 +29,6 @@ struct Expression;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct Block;
-struct DotExpr;
 struct LoopExpr;
 // TODO
 struct ForExpr {};
@@ -106,6 +105,7 @@ using TupleExpr = TupleExprBase<Expression>;
 using BreakExpr = BreakExprBase<Expression>;
 using ContinueExpr = ContinueExprBase;
 using WhileExpr = WhileExprBase<Expression, Block>;
+using DotExpr = DotExprBase<Expression>;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -121,11 +121,6 @@ struct Expression {
   core::SourceLocation m_location;
   TypeId m_type;
   ExprKind m_expression;
-};
-
-struct DotExpr {
-  Expression m_expression;
-  size_t m_tuple_index;
 };
 
 struct LetBinding {

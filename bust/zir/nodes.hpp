@@ -103,6 +103,7 @@ using TupleExpr = TupleExprBase<ExprId>;
 using BreakExpr = BreakExprBase<ExprId>;
 using ContinueExpr = ContinueExprBase;
 using WhileExpr = WhileExprBase<ExprId, Block>;
+using DotExpr = DotExprBase<ExprId>;
 
 struct LambdaExpr {
   std::vector<IdentifierExpr> m_parameters;
@@ -110,12 +111,6 @@ struct LambdaExpr {
   TypeId m_return_type;
   std::vector<IdentifierExpr> m_captures;
   auto operator<=>(const LambdaExpr &) const = default;
-};
-
-struct DotExpr {
-  ExprId m_expression;
-  size_t m_tuple_index;
-  auto operator<=>(const DotExpr &) const = default;
 };
 
 struct LoopExpr {
@@ -285,15 +280,6 @@ template <> struct hash<bust::zir::LambdaExpr> {
     for (const auto &capture : expr.m_captures) {
       core::hash_combine(seed, std::hash<bust::zir::IdentifierExpr>{}(capture));
     }
-    return seed;
-  }
-};
-
-template <> struct hash<bust::zir::DotExpr> {
-  size_t operator()(const bust::zir::DotExpr &expr) const noexcept {
-    size_t seed = 0;
-    core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(expr.m_expression));
-    core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
     return seed;
   }
 };
