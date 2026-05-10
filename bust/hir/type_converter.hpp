@@ -80,15 +80,15 @@ struct TypeConverter {
 
   Parameter convert_parameter(const ast::Parameter &parameter) {
     return {
-        {
-            parameter.m_location,
-        },
-        {
-            .m_name = parameter.m_id.m_name,
-            .m_id = m_ctx.next_let_binding_id(),
-            .m_type = get_type(parameter),
-        },
-        parameter.m_is_mutable,
+        .m_location = parameter.m_location,
+        .m_id =
+            {
+                .m_location = parameter.m_location,
+                .m_name = parameter.m_id.m_name,
+                .m_id = m_ctx.next_let_binding_id(),
+                .m_type = get_type(parameter),
+            },
+        .m_is_mutable = parameter.m_is_mutable,
     };
   }
 

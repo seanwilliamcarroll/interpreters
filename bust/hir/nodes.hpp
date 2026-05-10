@@ -14,6 +14,7 @@
 #include <hir/unifier_state.hpp>
 #include <nodes.hpp>
 #include <operators.hpp>
+#include <source_location.hpp>
 
 #include <optional>
 #include <vector>
@@ -39,45 +40,52 @@ struct ForExpr {};
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public core::HasLocation {
+struct Identifier {
+  core::SourceLocation m_location;
   std::string m_name;
   BindingId m_id;
   TypeId m_type;
 };
 
-struct Parameter : public core::HasLocation {
+struct Parameter {
+  core::SourceLocation m_location;
   Identifier m_id;
   bool m_is_mutable;
 };
 
 // --- Literals --------------------------------------------------------------
 
-template <PrimitiveType InternalType>
-struct Literal : public core::HasLocation {
+template <PrimitiveType InternalType> struct Literal {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = InternalType;
 };
 
-template <> struct Literal<PrimitiveType::BOOL> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::BOOL> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::BOOL;
   bool m_value;
 };
 
-template <> struct Literal<PrimitiveType::CHAR> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::CHAR> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::CHAR;
   char m_value;
 };
 
-template <> struct Literal<PrimitiveType::I8> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::I8> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::I8;
   int8_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I32> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::I32> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::I32;
   int32_t m_value;
 };
 
-template <> struct Literal<PrimitiveType::I64> : public core::HasLocation {
+template <> struct Literal<PrimitiveType::I64> {
+  core::SourceLocation m_location;
   static constexpr PrimitiveType m_type = PrimitiveType::I64;
   int64_t m_value;
 };
@@ -109,7 +117,8 @@ using ExprKind =
                  std::unique_ptr<WhileExpr>, std::unique_ptr<LoopExpr>,
                  std::unique_ptr<BreakExpr>, std::unique_ptr<ContinueExpr>>;
 
-struct Expression : public core::HasLocation {
+struct Expression {
+  core::SourceLocation m_location;
   TypeId m_type;
   ExprKind m_expression;
 };
@@ -123,7 +132,8 @@ struct TupleExpr {
   std::vector<Expression> m_fields;
 };
 
-struct LetBinding : public core::HasLocation {
+struct LetBinding {
+  core::SourceLocation m_location;
   Identifier m_variable;
   Expression m_expression;
   bool m_is_mutable = false;
@@ -131,7 +141,8 @@ struct LetBinding : public core::HasLocation {
 
 using Place = std::variant<Identifier>;
 
-struct Assignment : public core::HasLocation {
+struct Assignment {
+  core::SourceLocation m_location;
   Place m_place;
   Expression m_expression;
 };
@@ -142,7 +153,8 @@ using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public core::HasLocation {
+struct Block {
+  core::SourceLocation m_location;
   TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
@@ -172,18 +184,21 @@ struct FunctionDeclaration {
   std::vector<Parameter> m_parameters;
 };
 
-struct ExternFunctionDeclaration : public core::HasLocation {
+struct ExternFunctionDeclaration {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
 };
 
-struct FunctionDef : public core::HasLocation {
+struct FunctionDef {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
   Block m_body;
 };
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public core::HasLocation {
+struct Program {
+  core::SourceLocation m_location;
   TypeArena m_type_arena;
   std::vector<TopItem> m_top_items;
   UnifierState m_unifier_state;

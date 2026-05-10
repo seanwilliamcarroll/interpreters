@@ -79,10 +79,12 @@ Block BlockChecker::check_block(const ast::Block &block) {
     type = final_expression.value().m_type;
   }
 
-  return {{block.m_location},
-          type,
-          std::move(statements),
-          std::move(final_expression)};
+  return {
+      .m_location = block.m_location,
+      .m_type = type,
+      .m_statements = std::move(statements),
+      .m_final_expression = std::move(final_expression),
+  };
 }
 
 Block BlockChecker::check_block_with_parameters(

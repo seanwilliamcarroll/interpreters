@@ -36,7 +36,9 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
   if (iter == m_ctx.m_instantiation_records.end()) {
     // Nothing to substitute
     auto context = SubstitutionContext{
-        .m_parent = m_ctx, .m_substitution_mapping = outer_substitution};
+        .m_parent = m_ctx,
+        .m_substitution_mapping = outer_substitution,
+    };
     auto output = LetBindingSubstituter{context}.substitute(let_binding);
     std::vector<hir::LetBinding> new_let_bindings;
     new_let_bindings.emplace_back(std::move(output));
@@ -58,8 +60,10 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
                                 substituted_type_id, outer_substitution);
     }
 
-    auto context = SubstitutionContext{.m_parent = m_ctx,
-                                       .m_substitution_mapping = combined};
+    auto context = SubstitutionContext{
+        .m_parent = m_ctx,
+        .m_substitution_mapping = combined,
+    };
 
     DotExprResolver{context}.resolve(let_binding.m_expression);
     combined = context.m_substitution_mapping;
@@ -73,9 +77,11 @@ std::vector<hir::LetBinding> LetBindingMonomorpher::monomorph(
                         .mangle(let_binding.m_variable.m_name,
                                 let_binding.m_variable.m_id, new_type);
 
-    m_ctx.m_env.define(
-        let_binding.m_variable.m_id, new_type,
-        Specialization{.m_mangled_name = new_name, .m_new_id = new_id});
+    m_ctx.m_env.define(let_binding.m_variable.m_id, new_type,
+                       Specialization{
+                           .m_mangled_name = new_name,
+                           .m_new_id = new_id,
+                       });
 
     new_let_bindings.push_back(
         LetBindingSubstituter{context}.substitute(let_binding));

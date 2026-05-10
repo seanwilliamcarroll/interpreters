@@ -55,9 +55,10 @@ void TopItemChecker::collect_function_signature(
   auto [_, parameter_types] =
       TypeConverter{m_ctx}.convert_parameters(declaration.m_parameters);
 
-  auto function_type_id = m_ctx.m_type_arena.intern(
-      FunctionType{.m_parameters = std::move(parameter_types),
-                   .m_return_type = return_type_id});
+  auto function_type_id = m_ctx.m_type_arena.intern(FunctionType{
+      .m_parameters = std::move(parameter_types),
+      .m_return_type = return_type_id,
+  });
 
   m_ctx.m_env.define(declaration.m_id.m_name, m_ctx.next_let_binding_id(),
                      function_type_id, /*is_mutable=*/false);
@@ -79,10 +80,12 @@ hir::FunctionDeclaration TopItemChecker::check_declaration(
   auto [parameters, _] = TypeConverter{m_ctx}.convert_parameters(
       function_declaration.m_parameters);
 
-  return FunctionDeclaration{.m_function_id = function_declaration.m_id.m_name,
-                             .m_id = binding.m_id,
-                             .m_type = function_type_id,
-                             .m_parameters = std::move(parameters)};
+  return FunctionDeclaration{
+      .m_function_id = function_declaration.m_id.m_name,
+      .m_id = binding.m_id,
+      .m_type = function_type_id,
+      .m_parameters = std::move(parameters),
+  };
 }
 
 TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
@@ -105,15 +108,20 @@ TopItem TopItemChecker::operator()(const ast::FunctionDef &function_def) {
   }
 
   return FunctionDef{
-      {function_def.m_location}, std::move(signature), std::move(body)};
+      .m_location = function_def.m_location,
+      .m_signature = std::move(signature),
+      .m_body = std::move(body),
+  };
 }
 
 TopItem
 TopItemChecker::operator()(const ast::ExternFunctionDeclaration &extern_func) {
   auto signature = check_declaration(extern_func.m_signature);
 
-  return ExternFunctionDeclaration{{extern_func.m_location},
-                                   std::move(signature)};
+  return ExternFunctionDeclaration{
+      .m_location = extern_func.m_location,
+      .m_signature = std::move(signature),
+  };
 }
 
 //****************************************************************************

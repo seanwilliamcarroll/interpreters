@@ -108,18 +108,18 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
       m_ctx.create_fresh_type_vars(binding.m_id, binding.m_type_scheme);
 
   return {
-      {
-          location,
-      },
-      final_type,
-      Identifier{
-          {
-              location,
+      .m_location = location,
+      .m_type = final_type,
+      .m_expression =
+          Identifier{
+              .m_location =
+                  {
+                      location,
+                  },
+              .m_name = identifier.m_name,
+              .m_id = binding.m_id,
+              .m_type = final_type,
           },
-          identifier.m_name,
-          binding.m_id,
-          final_type,
-      },
   };
 }
 
@@ -140,11 +140,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::TupleExpr> &tuple_expr,
   });
 
   return {
-      {
-          location,
-      },
-      tuple_type,
-      std::make_unique<TupleExpr>(TupleExpr{
+      .m_location = location,
+      .m_type = tuple_type,
+      .m_expression = std::make_unique<TupleExpr>(TupleExpr{
           .m_fields = std::move(fields),
       }),
   };
@@ -197,11 +195,9 @@ Expression ExpressionChecker::operator()(
 
     auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
 
-    return {{
-                location,
-            },
-            return_type,
-            std::make_unique<CallExpr>(CallExpr{
+    return {.m_location = location,
+            .m_type = return_type,
+            .m_expression = std::make_unique<CallExpr>(CallExpr{
                 std::move(callee),
                 std::move(arguments),
             })};
@@ -232,11 +228,9 @@ Expression ExpressionChecker::operator()(
 
     auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
 
-    return {{
-                location,
-            },
-            return_type,
-            std::make_unique<CallExpr>(CallExpr{
+    return {.m_location = location,
+            .m_type = return_type,
+            .m_expression = std::make_unique<CallExpr>(CallExpr{
                 std::move(callee),
                 std::move(arguments),
             })};
@@ -289,11 +283,9 @@ Expression ExpressionChecker::operator()(
                         ? m_ctx.m_type_arena.m_bool
                         : m_ctx.m_type_unifier.find(type_id);
 
-  return {{
-              location,
-          },
-          final_type,
-          std::make_unique<BinaryExpr>(BinaryExpr{
+  return {.m_location = location,
+          .m_type = final_type,
+          .m_expression = std::make_unique<BinaryExpr>(BinaryExpr{
               binary_expression->m_operator,
               std::move(lhs),
               std::move(rhs),
@@ -329,18 +321,14 @@ Expression ExpressionChecker::operator()(
   auto final_type = m_ctx.m_type_unifier.find(expression.m_type);
 
   auto final_expression = Expression{
-      {
-          expression.m_location,
-      },
-      final_type,
-      std::move(expression.m_expression),
+      .m_location = expression.m_location,
+      .m_type = final_type,
+      .m_expression = std::move(expression.m_expression),
   };
 
-  return {{
-              location,
-          },
-          final_expression.m_type,
-          std::make_unique<UnaryExpr>(UnaryExpr{
+  return {.m_location = location,
+          .m_type = final_expression.m_type,
+          .m_expression = std::make_unique<UnaryExpr>(UnaryExpr{
               unary_expression->m_operator,
               std::move(final_expression),
           })};
@@ -361,11 +349,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   }
 
   auto resolved_condition = Expression{
-      {
-          condition.m_location,
-      },
-      m_ctx.m_type_unifier.find(condition.m_type),
-      std::move(condition.m_expression),
+      .m_location = condition.m_location,
+      .m_type = m_ctx.m_type_unifier.find(condition.m_type),
+      .m_expression = std::move(condition.m_expression),
   };
 
   // Directly call because Block is not a variant type, don't need to visit
@@ -383,11 +369,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
           std::string("Type unification error!: ") + error.what(), location);
     }
 
-    return {{
-                location,
-            },
-            m_ctx.m_type_arena.m_unit,
-            std::make_unique<IfExpr>(IfExpr{
+    return {.m_location = location,
+            .m_type = m_ctx.m_type_arena.m_unit,
+            .m_expression = std::make_unique<IfExpr>(IfExpr{
                 std::move(resolved_condition),
                 std::move(then_block),
                 {},
@@ -406,11 +390,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
         location);
   }
 
-  return {{
-              location,
-          },
-          type,
-          std::make_unique<IfExpr>(IfExpr{
+  return {.m_location = location,
+          .m_type = type,
+          .m_expression = std::make_unique<IfExpr>(IfExpr{
               std::move(resolved_condition),
               std::move(then_block),
               std::optional<Block>(std::move(else_block)),
@@ -426,11 +408,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block,
       }
           .check_block(*block);
   return {
-      {
-          location,
-      },
-      hir_block.m_type,
-      std::make_unique<Block>(std::move(hir_block)),
+      .m_location = location,
+      .m_type = hir_block.m_type,
+      .m_expression = std::make_unique<Block>(std::move(hir_block)),
   };
 }
 
@@ -469,11 +449,9 @@ Expression ExpressionChecker::operator()(
                                   location);
   }
 
-  return {{
-              location,
-          },
-          new_type_id,
-          std::make_unique<CastExpr>(CastExpr{
+  return {.m_location = location,
+          .m_type = new_type_id,
+          .m_expression = std::make_unique<CastExpr>(CastExpr{
               std::move(hir_expression),
               new_type_id,
           })};
@@ -500,21 +478,18 @@ Expression ExpressionChecker::operator()(
 
   auto expression_type = m_ctx.m_type_unifier.find(expression.m_type);
 
-  auto final_expression = (expression_type == expression.m_type)
-                              ? std::move(expression)
-                              : Expression{
-                                    {
-                                        expression.m_location,
-                                    },
-                                    expression_type,
-                                    std::move(expression.m_expression),
-                                };
+  auto final_expression =
+      (expression_type == expression.m_type)
+          ? std::move(expression)
+          : Expression{
+                .m_location = expression.m_location,
+                .m_type = expression_type,
+                .m_expression = std::move(expression.m_expression),
+            };
 
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_never,
-          std::make_unique<ReturnExpr>(ReturnExpr{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_never,
+          .m_expression = std::make_unique<ReturnExpr>(ReturnExpr{
               std::move(final_expression),
           })};
 }
@@ -554,11 +529,9 @@ Expression ExpressionChecker::operator()(
       .m_return_type = return_type_id,
   });
 
-  return {{
-              location,
-          },
-          function_type_id,
-          std::make_unique<LambdaExpr>(LambdaExpr{
+  return {.m_location = location,
+          .m_type = function_type_id,
+          .m_expression = std::make_unique<LambdaExpr>(LambdaExpr{
               std::move(parameters),
               std::move(body),
               return_type_id,
@@ -580,11 +553,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
     auto return_type = m_ctx.m_type_unifier.new_type_var();
 
     return {
-        {
-            location,
-        },
-        return_type,
-        std::make_unique<DotExpr>(DotExpr{
+        .m_location = location,
+        .m_type = return_type,
+        .m_expression = std::make_unique<DotExpr>(DotExpr{
             .m_expression = std::move(expression),
             .m_tuple_index = dot_expr->m_tuple_index,
         }),
@@ -617,11 +588,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::DotExpr> &dot_expr,
   auto final_type = tuple_type.m_fields[dot_expr->m_tuple_index];
 
   return {
-      {
-          location,
-      },
-      final_type,
-      std::make_unique<DotExpr>(DotExpr{
+      .m_location = location,
+      .m_type = final_type,
+      .m_expression = std::make_unique<DotExpr>(DotExpr{
           .m_expression = std::move(expression),
           .m_tuple_index = dot_expr->m_tuple_index,
       }),
@@ -636,11 +605,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
 
 Expression ExpressionChecker::operator()(const ast::I8 &literal,
                                          const core::SourceLocation &location) {
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_i8,
-          I8{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_i8,
+          .m_expression = I8{
               {
                   location,
               },
@@ -650,11 +617,9 @@ Expression ExpressionChecker::operator()(const ast::I8 &literal,
 
 Expression ExpressionChecker::operator()(const ast::I32 &literal,
                                          const core::SourceLocation &location) {
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_i32,
-          I32{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_i32,
+          .m_expression = I32{
               {
                   location,
               },
@@ -664,11 +629,9 @@ Expression ExpressionChecker::operator()(const ast::I32 &literal,
 
 Expression ExpressionChecker::operator()(const ast::I64 &literal,
                                          const core::SourceLocation &location) {
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_i64,
-          I64{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_i64,
+          .m_expression = I64{
               {
                   location,
               },
@@ -678,11 +641,9 @@ Expression ExpressionChecker::operator()(const ast::I64 &literal,
 
 Expression ExpressionChecker::operator()(const ast::Bool &literal,
                                          const core::SourceLocation &location) {
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_bool,
-          Bool{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_bool,
+          .m_expression = Bool{
               {
                   location,
               },
@@ -692,11 +653,9 @@ Expression ExpressionChecker::operator()(const ast::Bool &literal,
 
 Expression ExpressionChecker::operator()(const ast::Char &literal,
                                          const core::SourceLocation &location) {
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_char,
-          Char{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_char,
+          .m_expression = Char{
               {
                   location,
               },
@@ -706,11 +665,9 @@ Expression ExpressionChecker::operator()(const ast::Char &literal,
 
 Expression ExpressionChecker::operator()(const ast::Unit & /*unused*/,
                                          const core::SourceLocation &location) {
-  return {{
-              location,
-          },
-          m_ctx.m_type_arena.m_unit,
-          Unit{{
+  return {.m_location = location,
+          .m_type = m_ctx.m_type_arena.m_unit,
+          .m_expression = Unit{{
               location,
           }}};
 }
@@ -755,11 +712,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
   }
 
   return {
-      {
-          location,
-      },
-      m_ctx.m_type_arena.m_unit,
-      std::make_unique<WhileExpr>(WhileExpr{
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_unit,
+      .m_expression = std::make_unique<WhileExpr>(WhileExpr{
           .m_condition = std::move(condition),
           .m_body = std::move(body),
       }),
@@ -802,9 +757,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
   }
 
   return {
-      {location},
-      loop_type_id,
-      std::make_unique<LoopExpr>(LoopExpr{
+      .m_location = location,
+      .m_type = loop_type_id,
+      .m_expression = std::make_unique<LoopExpr>(LoopExpr{
           .m_body = std::move(body),
       }),
   };
@@ -826,9 +781,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::BreakExpr> &break_expr,
   m_ctx.m_loop_env.push_type(returned_expression.m_type);
 
   return {
-      {location},
-      m_ctx.m_type_arena.m_never,
-      std::make_unique<BreakExpr>(BreakExpr{
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_never,
+      .m_expression = std::make_unique<BreakExpr>(BreakExpr{
           .m_returned_expression = std::move(returned_expression),
       }),
   };
@@ -845,9 +800,9 @@ Expression ExpressionChecker::operator()(
   }
 
   return {
-      {location},
-      m_ctx.m_type_arena.m_never,
-      std::make_unique<ContinueExpr>(ContinueExpr{}),
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_never,
+      .m_expression = std::make_unique<ContinueExpr>(ContinueExpr{}),
   };
 }
 

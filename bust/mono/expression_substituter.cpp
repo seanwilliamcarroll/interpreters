@@ -51,18 +51,18 @@ ExpressionSubstituter::substitute(const hir::Expression &expression) {
   }
 
   return {
-      {expression.m_location},
-      new_type,
-      std::move(substituted_expr_kind),
+      .m_location = expression.m_location,
+      .m_type = new_type,
+      .m_expression = std::move(substituted_expr_kind),
   };
 }
 
 hir::Parameter
 ExpressionSubstituter::substitute(const hir::Parameter &parameter) {
   return {
-      {parameter.m_location},
-      substitute(parameter.m_id),
-      parameter.m_is_mutable,
+      .m_location = parameter.m_location,
+      .m_id = substitute(parameter.m_id),
+      .m_is_mutable = parameter.m_is_mutable,
   };
 }
 
@@ -75,18 +75,20 @@ ExpressionSubstituter::substitute(const hir::Identifier &identifier) {
 
   if (possible_specialization == nullptr) {
     return hir::Identifier{
-        {identifier.m_location},
-        identifier.m_name,
-        identifier.m_id,
-        new_type,
+        .m_location = identifier.m_location,
+        .m_name = identifier.m_name,
+        .m_id = identifier.m_id,
+        .m_type = new_type,
     };
   }
   const auto &specialization = *possible_specialization;
 
-  return hir::Identifier{{identifier.m_location},
-                         specialization.m_mangled_name,
-                         specialization.m_new_id,
-                         new_type};
+  return hir::Identifier{
+      .m_location = identifier.m_location,
+      .m_name = specialization.m_mangled_name,
+      .m_id = specialization.m_new_id,
+      .m_type = new_type,
+  };
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
@@ -146,9 +148,9 @@ hir::Place ExpressionSubstituter::substitute(const hir::Place &place) {
 hir::Assignment
 ExpressionSubstituter::substitute(const hir::Assignment &assignment) {
   return {
-      {assignment.m_location},
-      substitute(assignment.m_place),
-      substitute(assignment.m_expression),
+      .m_location = assignment.m_location,
+      .m_place = substitute(assignment.m_place),
+      .m_expression = substitute(assignment.m_expression),
   };
 }
 
@@ -187,10 +189,12 @@ hir::Block ExpressionSubstituter::substitute(const hir::Block &block) {
         return std::make_optional(substitute(final_expression));
       });
 
-  return {{block.m_location},
-          new_type,
-          std::move(new_statements),
-          std::move(final_expression)};
+  return {
+      .m_location = block.m_location,
+      .m_type = new_type,
+      .m_statements = std::move(new_statements),
+      .m_final_expression = std::move(final_expression),
+  };
 }
 
 hir::ExprKind
@@ -208,7 +212,10 @@ ExpressionSubstituter::operator()(const std::unique_ptr<hir::IfExpr> &if_expr) {
   });
 
   return std::make_unique<hir::IfExpr>(hir::IfExpr{
-      std::move(condition), std::move(then_block), std::move(else_block)});
+      std::move(condition),
+      std::move(then_block),
+      std::move(else_block),
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
@@ -222,8 +229,10 @@ hir::ExprKind ExpressionSubstituter::operator()(
     arguments.emplace_back(substitute(argument));
   }
 
-  return std::make_unique<hir::CallExpr>(
-      hir::CallExpr{std::move(callee), std::move(arguments)});
+  return std::make_unique<hir::CallExpr>(hir::CallExpr{
+      std::move(callee),
+      std::move(arguments),
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
@@ -232,8 +241,11 @@ hir::ExprKind ExpressionSubstituter::operator()(
   auto lhs = substitute(binary_expr->m_lhs);
   auto rhs = substitute(binary_expr->m_rhs);
 
-  return std::make_unique<hir::BinaryExpr>(
-      hir::BinaryExpr{binary_expr->m_operator, std::move(lhs), std::move(rhs)});
+  return std::make_unique<hir::BinaryExpr>(hir::BinaryExpr{
+      binary_expr->m_operator,
+      std::move(lhs),
+      std::move(rhs),
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
@@ -241,22 +253,28 @@ hir::ExprKind ExpressionSubstituter::operator()(
 
   auto expr = substitute(unary_expr->m_expression);
 
-  return std::make_unique<hir::UnaryExpr>(
-      hir::UnaryExpr{unary_expr->m_operator, std::move(expr)});
+  return std::make_unique<hir::UnaryExpr>(hir::UnaryExpr{
+      unary_expr->m_operator,
+      std::move(expr),
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
     const std::unique_ptr<hir::ReturnExpr> &return_expr) {
   auto expr = substitute(return_expr->m_expression);
-  return std::make_unique<hir::ReturnExpr>(hir::ReturnExpr{std::move(expr)});
+  return std::make_unique<hir::ReturnExpr>(hir::ReturnExpr{
+      std::move(expr),
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
     const std::unique_ptr<hir::CastExpr> &cast_expr) {
   auto expr = substitute(cast_expr->m_expression);
   auto new_type = m_ctx.rewrite_type(cast_expr->m_new_type);
-  return std::make_unique<hir::CastExpr>(
-      hir::CastExpr{std::move(expr), new_type});
+  return std::make_unique<hir::CastExpr>(hir::CastExpr{
+      std::move(expr),
+      new_type,
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(
@@ -278,7 +296,10 @@ hir::ExprKind ExpressionSubstituter::operator()(
   auto new_body = substitute(lambda_expr->m_body);
 
   return std::make_unique<hir::LambdaExpr>(hir::LambdaExpr{
-      std::move(new_parameters), std::move(new_body), new_return_type});
+      std::move(new_parameters),
+      std::move(new_body),
+      new_return_type,
+  });
 }
 
 hir::ExprKind ExpressionSubstituter::operator()(

@@ -68,10 +68,10 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
   auto binding_id = m_ctx.next_let_binding_id();
 
   auto new_identifier = Identifier{
-      {let_binding.m_variable.m_location},
-      let_binding.m_variable.m_name,
-      binding_id,
-      collapsed_type,
+      .m_location = let_binding.m_variable.m_location,
+      .m_name = let_binding.m_variable.m_name,
+      .m_id = binding_id,
+      .m_type = collapsed_type,
   };
 
   auto free_variables = collect_free_variables(m_ctx, new_identifier.m_type);
@@ -85,10 +85,10 @@ Statement StatementChecker::operator()(const ast::LetBinding &let_binding) {
                      let_binding.m_is_mutable);
 
   return LetBinding{
-      {let_binding.m_location},
-      std::move(new_identifier),
-      std::move(body),
-      let_binding.m_is_mutable,
+      .m_location = let_binding.m_location,
+      .m_variable = std::move(new_identifier),
+      .m_expression = std::move(body),
+      .m_is_mutable = let_binding.m_is_mutable,
   };
 }
 
@@ -155,9 +155,9 @@ Statement StatementChecker::operator()(const ast::Assignment &assignment) {
   }
 
   return Assignment{
-      {assignment.m_location},
-      std::move(place),
-      std::move(rhs),
+      .m_location = assignment.m_location,
+      .m_place = std::move(place),
+      .m_expression = std::move(rhs),
   };
 }
 
