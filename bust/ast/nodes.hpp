@@ -30,7 +30,6 @@ struct ExternFunctionDeclaration;
 struct LetBinding;
 struct Identifier;
 struct Block;
-struct LoopExpr;
 struct ForExpr;
 
 // --- Literals --------------------------------------------------------------
@@ -61,6 +60,7 @@ using BreakExpr = BreakExprBase<Expression>;
 using ContinueExpr = ContinueExprBase;
 using WhileExpr = WhileExprBase<Expression, Block>;
 using DotExpr = DotExprBase<Expression>;
+using LoopExpr = LoopExprBase<Block>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -105,10 +105,6 @@ struct Block {
   core::SourceLocation m_location;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
-};
-
-struct LoopExpr {
-  Block m_body;
 };
 
 // TODO

@@ -29,7 +29,6 @@ struct Expression;
 struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct Block;
-struct LoopExpr;
 // TODO
 struct ForExpr {};
 
@@ -106,6 +105,7 @@ using BreakExpr = BreakExprBase<Expression>;
 using ContinueExpr = ContinueExprBase;
 using WhileExpr = WhileExprBase<Expression, Block>;
 using DotExpr = DotExprBase<Expression>;
+using LoopExpr = LoopExprBase<Block>;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -149,10 +149,6 @@ struct Block {
   TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
-};
-
-struct LoopExpr {
-  Block m_body;
 };
 
 // --- Bindings & definitions ------------------------------------------------

@@ -93,6 +93,11 @@ template <typename ExpressionType> struct DotExprBase {
   auto operator<=>(const DotExprBase<ExpressionType> &) const = default;
 };
 
+template <typename BlockType> struct LoopExprBase {
+  BlockType m_body;
+  auto operator<=>(const LoopExprBase &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -236,6 +241,12 @@ struct hash<bust::DotExprBase<ExpressionType>> {
     core::hash_combine(seed, std::hash<ExpressionType>{}(expr.m_expression));
     core::hash_combine(seed, std::hash<size_t>{}(expr.m_tuple_index));
     return seed;
+  }
+};
+
+template <typename BlockType> struct hash<bust::LoopExprBase<BlockType>> {
+  size_t operator()(const bust::LoopExprBase<BlockType> &expr) const noexcept {
+    return std::hash<BlockType>{}(expr.m_body);
   }
 };
 

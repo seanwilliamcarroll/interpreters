@@ -104,6 +104,7 @@ using BreakExpr = BreakExprBase<ExprId>;
 using ContinueExpr = ContinueExprBase;
 using WhileExpr = WhileExprBase<ExprId, Block>;
 using DotExpr = DotExprBase<ExprId>;
+using LoopExpr = LoopExprBase<Block>;
 
 struct LambdaExpr {
   std::vector<IdentifierExpr> m_parameters;
@@ -111,11 +112,6 @@ struct LambdaExpr {
   TypeId m_return_type;
   std::vector<IdentifierExpr> m_captures;
   auto operator<=>(const LambdaExpr &) const = default;
-};
-
-struct LoopExpr {
-  Block m_body;
-  auto operator<=>(const LoopExpr &) const = default;
 };
 
 using ExprKind =
@@ -281,12 +277,6 @@ template <> struct hash<bust::zir::LambdaExpr> {
       core::hash_combine(seed, std::hash<bust::zir::IdentifierExpr>{}(capture));
     }
     return seed;
-  }
-};
-
-template <> struct hash<bust::zir::LoopExpr> {
-  size_t operator()(const bust::zir::LoopExpr &expr) const noexcept {
-    return std::hash<bust::zir::Block>{}(expr.m_body);
   }
 };
 
