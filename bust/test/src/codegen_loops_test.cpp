@@ -673,6 +673,220 @@ TEST_SUITE("bust.codegen.loops") {
                      0, "13");
   }
 
+  // --- Multiple break sites and non-literal payloads -----------------------
+
+  TEST_CASE("two break sites, first reachable — fires with i*10") {
+    // Two break sites in the same loop. Only the first is reached at
+    // runtime. Validates that both compile (shared alloca by construction)
+    // and the right value is loaded at merge.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut i = 0;\n"
+              "  loop {\n"
+              "    if i == 3 { break i * 10; }\n"
+              "    if i == 5 { break i * 30; }\n"
+              "    i = i + 1;\n"
+              "  }\n"
+              "}",
+              30);
+  }
+
+  TEST_CASE("two break sites, second reachable — fires with i*30") {
+    // Same shape as above but starting state forces the *second* break
+    // to fire before the first becomes reachable. With a per-site alloca
+    // bug, this would yield uninitialized memory. Values stay under 256
+    // so the lli exit-code (8-bit truncated) matches the i64 result.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut i = 5;\n"
+              "  loop {\n"
+              "    if i == 3 { break i * 10; }\n"
+              "    if i == 5 { break i * 30; }\n"
+              "    i = i + 1;\n"
+              "  }\n"
+              "}",
+              150);
+  }
+
+  TEST_CASE("break payload is a non-literal expression") {
+    // `i + 1` is an SSA value, not a constant. Exercises the store path
+    // with a non-LiteralHandle source.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut i = 0;\n"
+              "  loop {\n"
+              "    if i == 6 { break i + 1; }\n"
+              "    i = i + 1;\n"
+              "  }\n"
+              "}",
+              7);
+  }
+
+  TEST_CASE("break payload is a function call result") {
+    CHECK_RUN("fn double(x: i64) -> i64 { x + x }\n"
+              "fn main() -> i64 {\n"
+              "  let mut i = 0;\n"
+              "  loop {\n"
+              "    if i == 6 { break double(i); }\n"
+              "    i = i + 1;\n"
+              "  }\n"
+              "}",
+              12);
+  }
+
+  // --- Loop result composed into surrounding expressions -------------------
+
+  TEST_CASE("loop result used in arithmetic expression") {
+    // (loop_result) + 4 — the load at merge must produce a real Value
+    // usable as a binary operand.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  (loop { break 3; }) + 4\n"
+              "}",
+              7);
+  }
+
+  TEST_CASE("loop result let-bound and multiplied") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let x = loop { break 5; };\n"
+              "  x * 2\n"
+              "}",
+              10);
+  }
+
+  TEST_CASE("loop carrying tuple — projections compose") {
+    // Break carries a 2-tuple (i64, i64). Exercises struct-alloca/store at
+    // both the tuple-build and the loop-result paths.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let pair = loop { break (3, 7); };\n"
+              "  pair.0 + pair.1\n"
+              "}",
+              10);
+  }
+
+  // --- Loop nested inside other control flow -------------------------------
+
+  TEST_CASE("loop inside if-then branch yields a value") {
+    // The `if` chooses between a loop and a literal. Both branches yield
+    // i64. Exercises composition of LoopExpr's merge with IfExpr's merge.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let cond = true;\n"
+              "  if cond { loop { break 5; } } else { 7 }\n"
+              "}",
+              5);
+  }
+
+  TEST_CASE("loop inside if-else branch yields a value") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let cond = false;\n"
+              "  if cond { 7 } else { loop { break 5; } }\n"
+              "}",
+              5);
+  }
+
+  // --- Continue: position and embedding ------------------------------------
+
+  TEST_CASE(
+      "continue is the last statement in body — no duplicate terminator") {
+    // The continue here terminates the body block. The wrap-around
+    // `emit_jump(loop_body_label)` must be skipped (the block is already
+    // terminated). If the wrap-around fires unconditionally, BasicBlock
+    // throws on the duplicate terminator and codegen aborts.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut i = 0;\n"
+              "  loop {\n"
+              "    if i == 3 { break; }\n"
+              "    i = i + 1;\n"
+              "    continue;\n"
+              "  }\n"
+              "  i\n"
+              "}",
+              3);
+  }
+
+  TEST_CASE("continue inside an if branch — odd-only sum") {
+    // `continue` is reached only when (i % 2) == 0. The `sum = sum + i`
+    // statement runs only on odd i. 1 + 3 + 5 = 9.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let mut i = 0;\n"
+              "  let mut sum = 0;\n"
+              "  while i < 5 {\n"
+              "    i = i + 1;\n"
+              "    if (i % 2) == 0 { continue; }\n"
+              "    sum = sum + i;\n"
+              "  }\n"
+              "  sum\n"
+              "}",
+              9);
+  }
+
+  // --- Narrower break payload types ----------------------------------------
+
+  TEST_CASE("loop carrying bool — used in if to pick exit code") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let result = loop { break true; };\n"
+              "  if result { 1 } else { 0 }\n"
+              "}",
+              1);
+  }
+
+  TEST_CASE("loop carrying char — cast to i64 for return") {
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let c = loop { break 'A'; };\n"
+              "  c as i64\n"
+              "}",
+              65);
+  }
+
+  // --- Loop in a unit-returning function -----------------------------------
+
+  TEST_CASE("loop with break inside a unit-returning helper") {
+    // Mirrors the existing while-in-helper test, with `loop` instead.
+    // Helper returns (); main returns 0 after observing side effects.
+    CHECK_RUN_OUTPUT("extern fn putchar(c: i32) -> i32;\n"
+                     "fn helper() {\n"
+                     "  let mut i = 0;\n"
+                     "  loop {\n"
+                     "    if i == 3 { break; }\n"
+                     "    putchar(('0' as i32) + (i as i32));\n"
+                     "    i = i + 1;\n"
+                     "  }\n"
+                     "}\n"
+                     "fn main() -> i64 {\n"
+                     "  helper();\n"
+                     "  0\n"
+                     "}",
+                     0, "012");
+  }
+
+  // --- Sequential loops — alloca naming uniqueness -------------------------
+
+  TEST_CASE("two sequential typed loops — distinct allocas") {
+    // Two `loop_result` allocas in the same function. If `uniqify_name`
+    // is broken or skipped, LLVM would reject the duplicate name.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  let a = loop { break 3; };\n"
+              "  let b = loop { break 4; };\n"
+              "  a + b\n"
+              "}",
+              7);
+  }
+
+  // --- Deep nesting --------------------------------------------------------
+
+  TEST_CASE("three nested loops — outermost break value propagates") {
+    // Each loop's value is independent. Inner loops are statement-position
+    // (their values discarded). The outermost loop's break sets main's
+    // return value. Verifies the loop_stack pushes/pops correctly across
+    // three levels.
+    CHECK_RUN("fn main() -> i64 {\n"
+              "  loop {\n"
+              "    loop {\n"
+              "      loop { break 42; }\n"
+              "      break 99;\n"
+              "    }\n"
+              "    break 100;\n"
+              "  }\n"
+              "}",
+              100);
+  }
+
   // --- IR shape: alloca for typed loop, none for Never ---------------------
 
   TEST_CASE("typed loop emits a loop_result alloca") {
