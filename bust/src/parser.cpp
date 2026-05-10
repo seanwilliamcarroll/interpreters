@@ -48,7 +48,10 @@ ast::Program Parser::parse_program() {
     top_items.push_back(parse_top_item());
   }
 
-  return {{.m_location = starting_location}, std::move(top_items)};
+  return {
+      .m_location = starting_location,
+      .m_items = std::move(top_items),
+  };
 }
 
 ast::TopItem Parser::parse_top_item() {
@@ -110,9 +113,11 @@ Parser::parse_function_type_identifier() {
   auto return_type = parse_type_identifier();
 
   return std::make_unique<ast::FunctionTypeIdentifier>(
-      ast::FunctionTypeIdentifier{{original_location},
-                                  std::move(argument_types),
-                                  std::move(return_type)});
+      ast::FunctionTypeIdentifier{
+          .m_location = original_location,
+          .m_parameter_types = std::move(argument_types),
+          .m_return_type = std::move(return_type),
+      });
 }
 
 std::unique_ptr<ast::TupleTypeIdentifier>
@@ -137,31 +142,36 @@ Parser::parse_tuple_type_identifier() {
   expect(TokenType::RPAREN, __FUNCTION__);
 
   return std::make_unique<ast::TupleTypeIdentifier>(ast::TupleTypeIdentifier{
-      {original_location},
-      std::move(types),
+      .m_location = {original_location},
+      .m_field_types = std::move(types),
   });
 }
 
 ast::TypeIdentifier Parser::parse_type_identifier() {
   switch (peek().get_token_type()) {
   case TokenType::UNIT:
-    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
-                                        PrimitiveType::UNIT};
+    return ast::PrimitiveTypeIdentifier{
+        .m_location = {advance()->get_location()},
+        .m_type = PrimitiveType::UNIT};
   case TokenType::BOOL:
-    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
-                                        PrimitiveType::BOOL};
+    return ast::PrimitiveTypeIdentifier{
+        .m_location = {advance()->get_location()},
+        .m_type = PrimitiveType::BOOL};
   case TokenType::CHAR:
-    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
-                                        PrimitiveType::CHAR};
+    return ast::PrimitiveTypeIdentifier{
+        .m_location = {advance()->get_location()},
+        .m_type = PrimitiveType::CHAR};
   case TokenType::I8:
-    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
-                                        PrimitiveType::I8};
+    return ast::PrimitiveTypeIdentifier{
+        .m_location = {advance()->get_location()}, .m_type = PrimitiveType::I8};
   case TokenType::I32:
-    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
-                                        PrimitiveType::I32};
+    return ast::PrimitiveTypeIdentifier{
+        .m_location = {advance()->get_location()},
+        .m_type = PrimitiveType::I32};
   case TokenType::I64:
-    return ast::PrimitiveTypeIdentifier{{advance()->get_location()},
-                                        PrimitiveType::I64};
+    return ast::PrimitiveTypeIdentifier{
+        .m_location = {advance()->get_location()},
+        .m_type = PrimitiveType::I64};
   case TokenType::FN:
     return parse_function_type_identifier();
   case TokenType::LPAREN:
@@ -171,8 +181,8 @@ ast::TypeIdentifier Parser::parse_type_identifier() {
         parse_location_name_from_identifier("Malformed type annotation");
 
     return ast::DefinedType{
-        {location},
-        identifier_name,
+        .m_location = {location},
+        .m_type = identifier_name,
     };
   }
 }
@@ -196,7 +206,9 @@ ast::Identifier Parser::parse_non_annotated_identifier() {
              "Expected Identifier without Type Annotation here!");
   }
 
-  return {{location}, identifier_name, std::nullopt};
+  return {.m_location = {location},
+          .m_name = identifier_name,
+          .m_type = std::nullopt};
 }
 
 ast::Identifier Parser::parse_possibly_annotated_identifier() {
@@ -207,7 +219,9 @@ ast::Identifier Parser::parse_possibly_annotated_identifier() {
                   ? std::optional(parse_type_annotation())
                   : std::nullopt;
 
-  return {{location}, identifier_name, std::move(type)};
+  return {.m_location = {location},
+          .m_name = identifier_name,
+          .m_type = std::move(type)};
 }
 
 ast::Identifier Parser::parse_annotated_identifier() {
@@ -216,7 +230,9 @@ ast::Identifier Parser::parse_annotated_identifier() {
 
   auto type = parse_type_annotation();
 
-  return {{location}, identifier_name, std::move(type)};
+  return {.m_location = {location},
+          .m_name = identifier_name,
+          .m_type = std::move(type)};
 }
 
 ast::FunctionDeclaration Parser::parse_function_declaration() {
@@ -238,8 +254,8 @@ ast::FunctionDeclaration Parser::parse_function_declaration() {
   auto return_type = (peek().get_token_type() == TokenType::ARROW)
                          ? parse_function_return_type()
                          : ast::PrimitiveTypeIdentifier{
-                               {function_id.m_location},
-                               PrimitiveType::UNIT,
+                               .m_location = {function_id.m_location},
+                               .m_type = PrimitiveType::UNIT,
                            };
 
   return {.m_id = std::move(function_id),
@@ -253,7 +269,9 @@ ast::FunctionDef Parser::parse_func_def() {
 
   auto body = parse_block();
 
-  return {{original_location}, std::move(signature), std::move(body)};
+  return {.m_location = {original_location},
+          .m_signature = std::move(signature),
+          .m_body = std::move(body)};
 }
 
 ast::ExternFunctionDeclaration Parser::parse_extern_func_declaration() {
@@ -262,7 +280,8 @@ ast::ExternFunctionDeclaration Parser::parse_extern_func_declaration() {
   auto signature = parse_function_declaration();
   expect(TokenType::SEMICOLON, __FUNCTION__);
 
-  return {{original_location}, std::move(signature)};
+  return {.m_location = {original_location},
+          .m_signature = std::move(signature)};
 }
 
 ast::LetBinding Parser::parse_let_binding() {
@@ -284,10 +303,10 @@ ast::LetBinding Parser::parse_let_binding() {
   expect(TokenType::SEMICOLON, __FUNCTION__);
 
   return {
-      {original_location},
-      std::move(identifier),
-      std::move(body),
-      is_mutable,
+      .m_location = {original_location},
+      .m_variable = std::move(identifier),
+      .m_expression = std::move(body),
+      .m_is_mutable = is_mutable,
   };
 }
 
@@ -300,6 +319,7 @@ std::vector<ast::Parameter> Parser::parse_param_list() {
       is_mutable = true;
     }
     parameters.push_back({
+        .m_location = peek().get_location(),
         .m_id = parse_annotated_identifier(),
         .m_is_mutable = is_mutable,
     });
@@ -322,6 +342,7 @@ std::vector<ast::Parameter> Parser::parse_lambda_param_list() {
       is_mutable = true;
     }
     parameters.push_back({
+        .m_location = peek().get_location(),
         .m_id = parse_possibly_annotated_identifier(),
         .m_is_mutable = is_mutable,
     });
@@ -372,9 +393,9 @@ ast::Block Parser::parse_block() {
       auto rhs = parse_expression();
       expect(TokenType::SEMICOLON, __FUNCTION__);
       statements.emplace_back(ast::Assignment{
-          {original_location},
-          std::move(lhs),
-          std::move(rhs),
+          .m_location = {original_location},
+          .m_lhs = std::move(lhs),
+          .m_rhs = std::move(rhs),
       });
       continue;
     }
@@ -388,14 +409,20 @@ ast::Block Parser::parse_block() {
 
     expect(TokenType::RBRACE, __FUNCTION__);
 
-    return {{original_location},
-            std::move(statements),
-            std::move(final_expression)};
+    return {
+        .m_location = {original_location},
+        .m_statements = std::move(statements),
+        .m_final_expression = std::move(final_expression),
+    };
   }
 
   expect(TokenType::RBRACE, __FUNCTION__);
 
-  return {{original_location}, std::move(statements), std::nullopt};
+  return {
+      .m_location = {original_location},
+      .m_statements = std::move(statements),
+      .m_final_expression = std::nullopt,
+  };
 }
 
 // --- Expression precedence chain -------------------------------------------
@@ -414,9 +441,14 @@ ast::Expression Parser::parse_binary_expression(
   while (iter != possible_mappings.end()) {
     auto op = iter->second;
     advance();
-    expression = {{{original_location}},
-                  std::make_unique<ast::BinaryExpr>(ast::BinaryExpr{
-                      op, std::move(expression), next_clause_to_parse()})};
+    expression = {
+        original_location,
+        std::make_unique<ast::BinaryExpr>(ast::BinaryExpr{
+            op,
+            std::move(expression),
+            next_clause_to_parse(),
+        }),
+    };
     iter = possible_mappings.find(peek().get_token_type());
   }
 
@@ -486,9 +518,13 @@ ast::Expression Parser::parse_unary_pre() {
     auto original_location = peek().get_location();
     auto op = iter->second;
     advance();
-    return {{original_location},
-            std::make_unique<ast::UnaryExpr>(
-                ast::UnaryExpr{op, parse_cast_expr()})};
+    return {
+        .m_location = original_location,
+        .m_expression = std::make_unique<ast::UnaryExpr>(ast::UnaryExpr{
+            op,
+            parse_cast_expr(),
+        }),
+    };
   }
 
   return parse_cast_expr();
@@ -504,10 +540,13 @@ ast::Expression Parser::parse_cast_expr() {
 
     auto casting_type = parse_type_identifier();
 
-    postfix =
-        ast::Expression{{original_location},
-                        std::make_unique<ast::CastExpr>(ast::CastExpr{
-                            std::move(postfix), std::move(casting_type)})};
+    postfix = {
+        .m_location = original_location,
+        .m_expression = std::make_unique<ast::CastExpr>(ast::CastExpr{
+            std::move(postfix),
+            std::move(casting_type),
+        }),
+    };
   }
 
   return postfix;
@@ -523,10 +562,13 @@ ast::Expression Parser::parse_postfix() {
          peek().get_token_type() == TokenType::DOT) {
     if (peek().get_token_type() == TokenType::UNIT) {
       expect(TokenType::UNIT, __FUNCTION__);
-      expression =
-          ast::Expression{{original_location},
-                          std::make_unique<ast::CallExpr>(
-                              ast::CallExpr{std::move(expression), {}})};
+      expression = {
+          .m_location = original_location,
+          .m_expression = std::make_unique<ast::CallExpr>(ast::CallExpr{
+              std::move(expression),
+              {},
+          }),
+      };
       continue;
     }
     if (peek().get_token_type() == TokenType::DOT) {
@@ -540,9 +582,9 @@ ast::Expression Parser::parse_postfix() {
       }
       auto literal = parse_literal();
       auto int_literal = std::get<ast::I64>(literal.m_expression);
-      expression = ast::Expression{
-          {original_location},
-          std::make_unique<ast::DotExpr>(ast::DotExpr{
+      expression = {
+          .m_location = original_location,
+          .m_expression = std::make_unique<ast::DotExpr>(ast::DotExpr{
               .m_expression = std::move(expression),
               .m_tuple_index = static_cast<size_t>(int_literal.m_value),
           })};
@@ -561,10 +603,13 @@ ast::Expression Parser::parse_postfix() {
     }
 
     expect(TokenType::RPAREN, __FUNCTION__);
-    expression =
-        ast::Expression{{original_location},
-                        std::make_unique<ast::CallExpr>(ast::CallExpr{
-                            std::move(expression), std::move(arguments)})};
+    expression = {
+        .m_location = original_location,
+        .m_expression = std::make_unique<ast::CallExpr>(ast::CallExpr{
+            std::move(expression),
+            std::move(arguments),
+        }),
+    };
   }
 
   return expression;
@@ -595,9 +640,9 @@ ast::Expression Parser::parse_paren_or_tuple() {
     expect(TokenType::COMMA, __FUNCTION__);
   }
 
-  expression = ast::Expression{
-      {original_location},
-      std::make_unique<ast::TupleExpr>(ast::TupleExpr{
+  expression = {
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::TupleExpr>(ast::TupleExpr{
           .m_fields = std::move(fields),
       }),
   };
@@ -615,8 +660,8 @@ ast::Expression Parser::parse_while_expr() {
   auto body = parse_block();
 
   return {
-      {original_location},
-      std::make_unique<ast::WhileExpr>(ast::WhileExpr{
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::WhileExpr>(ast::WhileExpr{
           .m_condition = std::move(condition),
           .m_body = std::move(body),
       }),
@@ -630,8 +675,8 @@ ast::Expression Parser::parse_loop_expr() {
   auto body = parse_block();
 
   return {
-      {original_location},
-      std::make_unique<ast::LoopExpr>(ast::LoopExpr{
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::LoopExpr>(ast::LoopExpr{
           .m_body = std::move(body),
       }),
   };
@@ -646,8 +691,8 @@ ast::Expression Parser::parse_break_expr() {
       peek().get_token_type() == TokenType::SEMICOLON) {
     // Desugar naked break to break ()
     returned_expression = {
-        {original_location},
-        ast::Unit{},
+        .m_location = original_location,
+        .m_expression = ast::Unit{},
     };
   } else {
     // Actually return a value
@@ -655,8 +700,8 @@ ast::Expression Parser::parse_break_expr() {
   }
 
   return {
-      {original_location},
-      std::make_unique<ast::BreakExpr>(ast::BreakExpr{
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::BreakExpr>(ast::BreakExpr{
           .m_returned_value = std::move(returned_expression),
       }),
   };
@@ -666,8 +711,8 @@ ast::Expression Parser::parse_continue_expr() {
   auto original_location = peek().get_location();
   expect(TokenType::CONTINUE, __FUNCTION__);
   return {
-      {original_location},
-      std::make_unique<ast::ContinueExpr>(ast::ContinueExpr{}),
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::ContinueExpr>(ast::ContinueExpr{}),
   };
 }
 
@@ -681,13 +726,19 @@ ast::Expression Parser::parse_primary() {
     return parse_literal();
   case TokenType::IDENTIFIER: {
     auto identifier = parse_non_annotated_identifier();
-    return {{identifier.m_location}, std::move(identifier)};
+    return {
+        .m_location = identifier.m_location,
+        .m_expression = std::move(identifier),
+    };
   }
   case TokenType::LPAREN:
     return parse_paren_or_tuple();
   case TokenType::LBRACE: {
     auto block = std::make_unique<ast::Block>(parse_block());
-    return {{block->m_location}, std::move(block)};
+    return {
+        .m_location = block->m_location,
+        .m_expression = std::move(block),
+    };
   }
   case TokenType::IF:
     return parse_if_expr();
@@ -726,16 +777,24 @@ ast::Expression Parser::parse_if_expr() {
     expect(TokenType::ELSE, __FUNCTION__);
     auto else_block = std::optional<ast::Block>(parse_block());
 
-    return ast::Expression{{original_location},
-                           std::make_unique<ast::IfExpr>(ast::IfExpr{
-                               std::move(condition), std::move(then_block),
-                               std::move(else_block)})};
+    return {
+        .m_location = original_location,
+        .m_expression = std::make_unique<ast::IfExpr>(ast::IfExpr{
+            std::move(condition),
+            std::move(then_block),
+            std::move(else_block),
+        }),
+    };
   }
 
-  return ast::Expression{
-      {original_location},
-      std::make_unique<ast::IfExpr>(ast::IfExpr{
-          std::move(condition), std::move(then_block), std::nullopt})};
+  return {
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::IfExpr>(ast::IfExpr{
+          std::move(condition),
+          std::move(then_block),
+          std::nullopt,
+      }),
+  };
 }
 
 ast::Expression Parser::parse_return_expr() {
@@ -753,20 +812,23 @@ ast::Expression Parser::parse_return_expr() {
     // If we ever do more, we should split this out to the desugaring pass
     // rather than directly inserting an implicit Unit
 
-    return ast::Expression{
-        {original_location},
-        std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{
-            ast::Expression{
-                {original_location},
-                ast::Unit{},
+    return {
+        .m_location = original_location,
+        .m_expression = std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{
+            {
+                .m_location = original_location,
+                .m_expression = ast::Unit{},
             },
         }),
     };
   }
 
-  return ast::Expression{
-      {original_location},
-      std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{parse_expression()})};
+  return {
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::ReturnExpr>(ast::ReturnExpr{
+          parse_expression(),
+      }),
+  };
 }
 
 ast::Expression Parser::parse_lambda_expr() {
@@ -793,22 +855,34 @@ ast::Expression Parser::parse_lambda_expr() {
 
   auto body = parse_block();
 
-  return ast::Expression{{original_location},
-                         std::make_unique<ast::LambdaExpr>(ast::LambdaExpr{
-                             std::move(arguments),
-
-                             std::move(body), std::move(function_type)})};
+  return {
+      .m_location = original_location,
+      .m_expression = std::make_unique<ast::LambdaExpr>(ast::LambdaExpr{
+          std::move(arguments),
+          std::move(body),
+          std::move(function_type),
+      }),
+  };
 }
 
 ast::Expression Parser::parse_literal() {
   const auto original_location = peek().get_location();
   switch (peek().get_token_type()) {
   case TokenType::TRUE:
-    return {{advance()->get_location()}, ast::Bool{true}};
+    return {.m_location = advance()->get_location(),
+            .m_expression = ast::Bool{
+                .m_value = true,
+            }};
   case TokenType::FALSE:
-    return {{advance()->get_location()}, ast::Bool{false}};
+    return {.m_location = advance()->get_location(),
+            .m_expression = ast::Bool{
+                .m_value = false,
+            }};
   case TokenType::UNIT:
-    return {{advance()->get_location()}, ast::Unit{}};
+    return {
+        .m_location = advance()->get_location(),
+        .m_expression = ast::Unit{},
+    };
   case TokenType::INT_LITERAL: {
     const auto token = advance();
     const auto *int_token_ptr = dynamic_cast<const TokenNumber *>(token.get());
@@ -816,8 +890,10 @@ ast::Expression Parser::parse_literal() {
       on_error(token->get_location(), "Error casting token to TokenNumber");
     }
     try {
-      return {{original_location},
-              ast::I64{std::stoll(int_token_ptr->get_value())}};
+      return {.m_location = original_location,
+              .m_expression = ast::I64{
+                  .m_value = std::stoll(int_token_ptr->get_value()),
+              }};
     } catch (std::out_of_range &error) {
       on_error(int_token_ptr->get_location(),
                "Could not cast TokenNumber with lexeme: \"",
@@ -840,15 +916,26 @@ ast::Expression Parser::parse_literal() {
       };
       auto iter = escaped_chars.find(lexeme[2]);
       if (iter != escaped_chars.end()) {
-        return {{original_location}, ast::Char{iter->second}};
+        return {.m_location = original_location,
+                .m_expression = ast::Char{
+                    .m_value = iter->second,
+                }};
       }
       // Must be \x, want indices 3 and 4
-      return {{original_location},
-              ast::Char{static_cast<char>(std::stoi(
-                  lexeme.substr(3, 2), nullptr, HEXADECIMAL_BASE_16))}};
+      return {
+          .m_location = original_location,
+          .m_expression =
+              ast::Char{
+                  .m_value = static_cast<char>(std::stoi(
+                      lexeme.substr(3, 2), nullptr, HEXADECIMAL_BASE_16)),
+              },
+      };
     }
     // Must have been printable
-    return {{original_location}, ast::Char{lexeme[1]}};
+    return {.m_location = original_location,
+            .m_expression = ast::Char{
+                lexeme[1],
+            }};
   }
   default:
     on_error(peek().get_location(),

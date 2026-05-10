@@ -80,19 +80,22 @@ using TopItem = std::variant<FunctionDef, ExternFunctionDeclaration>;
 
 // --- Leaf nodes ------------------------------------------------------------
 
-struct Identifier : public core::HasLocation {
+struct Identifier {
+  core::SourceLocation m_location;
   std::string m_name;
   std::optional<TypeIdentifier> m_type;
 };
 
-struct Parameter : public core::HasLocation {
+struct Parameter {
+  core::SourceLocation m_location;
   Identifier m_id;
   bool m_is_mutable = false;
 };
 
 // --- Expressions -----------------------------------------------------------
 
-struct Expression : public core::HasLocation {
+struct Expression {
+  core::SourceLocation m_location;
   ExprKind m_expression;
 };
 
@@ -114,7 +117,8 @@ struct DotExpr {
 
 // --- Control flow ----------------------------------------------------------
 
-struct Block : public core::HasLocation {
+struct Block {
+  core::SourceLocation m_location;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
 };
@@ -133,12 +137,14 @@ struct ForExpr {};
 
 // --- Bindings & definitions ------------------------------------------------
 
-struct Assignment : public core::HasLocation {
+struct Assignment {
+  core::SourceLocation m_location;
   Expression m_lhs;
   Expression m_rhs;
 };
 
-struct LetBinding : public core::HasLocation {
+struct LetBinding {
+  core::SourceLocation m_location;
   Identifier m_variable;
   Expression m_expression;
   bool m_is_mutable = false;
@@ -150,18 +156,21 @@ struct FunctionDeclaration {
   TypeIdentifier m_return_type;
 };
 
-struct FunctionDef : public core::HasLocation {
+struct FunctionDef {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
   Block m_body;
 };
 
-struct ExternFunctionDeclaration : public core::HasLocation {
+struct ExternFunctionDeclaration {
+  core::SourceLocation m_location;
   FunctionDeclaration m_signature;
 };
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public core::HasLocation {
+struct Program {
+  core::SourceLocation m_location;
   std::vector<TopItem> m_items;
 };
 
