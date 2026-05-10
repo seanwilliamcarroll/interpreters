@@ -179,28 +179,23 @@ Expression ExpressionChecker::operator()(
 
     for (const auto &[index, parameter_type, argument] : std::views::zip(
              std::views::iota(0ULL), function_type.m_parameters, arguments)) {
-      try {
-        m_ctx.m_type_unifier.unify(parameter_type, argument.m_type);
-      } catch (std::runtime_error &error) {
-        throw core::CompilerException(
-            "TypeChecker",
-            "Type unification error!\n Parameter at index: " +
-                std::to_string(index) +
-                " expects type: " + m_ctx.to_string(parameter_type) +
-                " Unification error: " + error.what(),
-            argument.m_location);
-      }
+      try_unify(parameter_type, argument.m_type, argument.m_location,
+                "Parameter at index: " + std::to_string(index) +
+                    " expects type: " + m_ctx.to_string(parameter_type) +
+                    " Unification error: ");
     }
     // They all match
 
     auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
 
-    return {.m_location = location,
-            .m_type = return_type,
-            .m_expression = std::make_unique<CallExpr>(CallExpr{
-                std::move(callee),
-                std::move(arguments),
-            })};
+    return {
+        .m_location = location,
+        .m_type = return_type,
+        .m_expression = std::make_unique<CallExpr>(CallExpr{
+            std::move(callee),
+            std::move(arguments),
+        }),
+    };
   }
   if (m_ctx.is_type_variable(callee_type_id)) {
     // Need to make fresh type variables
@@ -214,17 +209,10 @@ Expression ExpressionChecker::operator()(
     auto function_type_id = m_ctx.m_type_arena.intern(function_type);
 
     // Do single unification
-    try {
-      m_ctx.m_type_unifier.unify(function_type_id, callee_type_id);
-    } catch (std::runtime_error &error) {
-      throw core::CompilerException(
-          "TypeChecker",
-          "Type unification error!\nCallee type: " +
-              m_ctx.to_string(callee_type_id) +
-              " cannot unify with: " + m_ctx.to_string(function_type_id) +
-              " Unification error: " + error.what(),
-          callee.m_location);
-    }
+    try_unify(function_type_id, callee_type_id, callee.m_location,
+              "Callee type: " + m_ctx.to_string(callee_type_id) +
+                  " cannot unify with: " + m_ctx.to_string(function_type_id) +
+                  " Unification error: ");
 
     auto return_type = m_ctx.m_type_unifier.find(function_type.m_return_type);
 
@@ -249,13 +237,7 @@ Expression ExpressionChecker::operator()(
   auto lhs = check_expression(binary_expression->m_lhs);
   auto rhs = check_expression(binary_expression->m_rhs);
 
-  try {
-    m_ctx.m_type_unifier.unify(lhs.m_type, rhs.m_type);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error: ") + error.what(),
-        location);
-  }
+  try_unify(lhs.m_type, rhs.m_type, rhs.m_location);
 
   auto type_id = m_ctx.m_type_unifier.find(lhs.m_type);
 
@@ -340,13 +322,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
 
   auto condition = check_expression(if_expression->m_condition);
 
-  try {
-    m_ctx.m_type_unifier.unify(condition.m_type, m_ctx.m_type_arena.m_bool);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error!: ") + error.what(),
-        location);
-  }
+  try_unify(condition.m_type, m_ctx.m_type_arena.m_bool, location);
 
   auto resolved_condition = Expression{
       .m_location = condition.m_location,
@@ -361,21 +337,17 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
   if (!if_expression->m_else_block.has_value()) {
     // Just then branch
 
-    try {
-      m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, then_block.m_type);
-    } catch (std::runtime_error &error) {
-      throw core::CompilerException(
-          "TypeChecker",
-          std::string("Type unification error!: ") + error.what(), location);
-    }
+    try_unify(m_ctx.m_type_arena.m_unit, then_block.m_type, location);
 
-    return {.m_location = location,
-            .m_type = m_ctx.m_type_arena.m_unit,
-            .m_expression = std::make_unique<IfExpr>(IfExpr{
-                std::move(resolved_condition),
-                std::move(then_block),
-                {},
-            })};
+    return {
+        .m_location = location,
+        .m_type = m_ctx.m_type_arena.m_unit,
+        .m_expression = std::make_unique<IfExpr>(IfExpr{
+            .m_condition = std::move(resolved_condition),
+            .m_then_block = std::move(then_block),
+            .m_else_block = {},
+        }),
+    };
   }
   // Check else branch too
   auto else_block =
@@ -467,14 +439,7 @@ Expression ExpressionChecker::operator()(
         "return expression outside function body");
   }
 
-  try {
-    m_ctx.m_type_unifier.unify(expression.m_type,
-                               m_ctx.m_return_type_stack.back());
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error!: ") + error.what(),
-        location);
-  }
+  try_unify(expression.m_type, m_ctx.m_return_type_stack.back(), location);
 
   auto expression_type = m_ctx.m_type_unifier.find(expression.m_type);
 
@@ -487,11 +452,13 @@ Expression ExpressionChecker::operator()(
                 .m_expression = std::move(expression.m_expression),
             };
 
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_never,
-          .m_expression = std::make_unique<ReturnExpr>(ReturnExpr{
-              std::move(final_expression),
-          })};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_never,
+      .m_expression = std::make_unique<ReturnExpr>(ReturnExpr{
+          .m_expression = std::move(final_expression),
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(
@@ -514,13 +481,7 @@ Expression ExpressionChecker::operator()(
   auto body = BlockChecker{m_ctx}.check_callable_body(
       parameters, possible_return_type_id, lambda_expression->m_body);
 
-  try {
-    m_ctx.m_type_unifier.unify(possible_return_type_id, body.m_type);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error!: ") + error.what(),
-        location);
-  }
+  try_unify(possible_return_type_id, body.m_type, location);
 
   auto return_type_id = possible_return_type_id;
 
@@ -529,13 +490,15 @@ Expression ExpressionChecker::operator()(
       .m_return_type = return_type_id,
   });
 
-  return {.m_location = location,
-          .m_type = function_type_id,
-          .m_expression = std::make_unique<LambdaExpr>(LambdaExpr{
-              std::move(parameters),
-              std::move(body),
-              return_type_id,
-          })};
+  return {
+      .m_location = location,
+      .m_type = function_type_id,
+      .m_expression = std::make_unique<LambdaExpr>(LambdaExpr{
+          .m_parameters = std::move(parameters),
+          .m_body = std::move(body),
+          .m_return_type = return_type_id,
+      }),
+  };
 }
 
 Expression
@@ -677,38 +640,19 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::WhileExpr> &while_expr,
                               const core::SourceLocation &location) {
   // Need to check and unify condition with boolean
   auto condition = check_expression(while_expr->m_condition);
-  try {
-    m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_bool, condition.m_type);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error!: ") + error.what(),
-        location);
-  }
+  try_unify(m_ctx.m_type_arena.m_bool, condition.m_type, location);
 
   // Need to check and unify block with unit
   WhileContextScopeGuard guard{m_ctx.m_loop_env};
   auto body = BlockChecker{m_ctx}.check_block(while_expr->m_body);
-  try {
-    m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, body.m_type);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error!: ") + error.what(),
-        location);
-  }
+  try_unify(m_ctx.m_type_arena.m_unit, body.m_type, location);
 
   const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
 
   for (const auto &collected_type_id : returned_types) {
-    try {
-      m_ctx.m_type_unifier.unify(collected_type_id, m_ctx.m_type_arena.m_unit);
-    } catch (std::runtime_error &error) {
-      throw core::CompilerException(
-          "TypeChecker",
-          std::string("Type unification error! Break statements in while loop "
-                      "cannot return a value other than unit!: ") +
-              error.what(),
-          location);
-    }
+    try_unify(collected_type_id, m_ctx.m_type_arena.m_unit, location,
+              "Break statements in while loop "
+              "cannot return a value other than unit!\n");
   }
 
   return {
@@ -727,13 +671,7 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
   // Need to check and unify block with unit
   LoopContextScopeGuard guard{m_ctx.m_loop_env};
   auto body = BlockChecker{m_ctx}.check_block(loop_expr->m_body);
-  try {
-    m_ctx.m_type_unifier.unify(m_ctx.m_type_arena.m_unit, body.m_type);
-  } catch (std::runtime_error &error) {
-    throw core::CompilerException(
-        "TypeChecker", std::string("Type unification error!: ") + error.what(),
-        location);
-  }
+  try_unify(m_ctx.m_type_arena.m_unit, body.m_type, location);
 
   // Now check for the collected returned values
   const auto &returned_types = m_ctx.m_loop_env.current_collected_types();
@@ -743,16 +681,9 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::LoopExpr> &loop_expr,
   } else {
     loop_type_id = returned_types.front();
     for (const auto &collected_type_id : returned_types | std::views::drop(1)) {
-      try {
-        m_ctx.m_type_unifier.unify(collected_type_id, loop_type_id);
-      } catch (std::runtime_error &error) {
-        throw core::CompilerException(
-            "TypeChecker",
-            std::string("Type unification error! Likely mismatch between break "
-                        "returns inside loop expression!: ") +
-                error.what(),
-            location);
-      }
+      try_unify(collected_type_id, loop_type_id, location,
+                "Likely mismatch between break "
+                "returns inside loop expression!\n");
     }
   }
 

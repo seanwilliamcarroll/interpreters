@@ -60,6 +60,19 @@ struct ExpressionChecker {
   Expression operator()(const ast::Char &, const core::SourceLocation &);
   Expression operator()(const ast::Unit &, const core::SourceLocation &);
 
+  void try_unify(const auto &type_a, const auto &type_b,
+                 const core::SourceLocation &location,
+                 const std::string &additional_message = "") {
+    try {
+      m_ctx.m_type_unifier.unify(type_a, type_b);
+    } catch (std::runtime_error &error) {
+      throw core::CompilerException("TypeChecker",
+                                    "Type unification error!\n" +
+                                        additional_message + error.what(),
+                                    location);
+    }
+  }
+
   Context &m_ctx;
 };
 
