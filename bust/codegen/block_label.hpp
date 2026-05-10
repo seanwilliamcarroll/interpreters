@@ -44,7 +44,7 @@ struct LoopInformation {
 struct BlockLabelStack {
 
   void push_scope(LoopInformation loop_info) {
-    m_loop_information_stack.push_back(loop_info);
+    m_loop_information_stack.emplace_back(std::move(loop_info));
   }
 
   void pop_scope() noexcept {
@@ -66,7 +66,7 @@ struct BlockLabelStackGuard {
   explicit BlockLabelStackGuard(BlockLabelStack &stack,
                                 LoopInformation loop_info)
       : m_stack(stack) {
-    m_stack.push_scope(loop_info);
+    m_stack.push_scope(std::move(loop_info));
   }
   ~BlockLabelStackGuard() { m_stack.pop_scope(); }
 
