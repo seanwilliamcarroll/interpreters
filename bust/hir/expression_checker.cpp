@@ -112,10 +112,7 @@ Expression ExpressionChecker::operator()(const ast::Identifier &identifier,
       .m_type = final_type,
       .m_expression =
           Identifier{
-              .m_location =
-                  {
-                      location,
-                  },
+              .m_location = location,
               .m_name = identifier.m_name,
               .m_id = binding.m_id,
               .m_type = final_type,
@@ -265,13 +262,15 @@ Expression ExpressionChecker::operator()(
                         ? m_ctx.m_type_arena.m_bool
                         : m_ctx.m_type_unifier.find(type_id);
 
-  return {.m_location = location,
-          .m_type = final_type,
-          .m_expression = std::make_unique<BinaryExpr>(BinaryExpr{
-              binary_expression->m_operator,
-              std::move(lhs),
-              std::move(rhs),
-          })};
+  return {
+      .m_location = location,
+      .m_type = final_type,
+      .m_expression = std::make_unique<BinaryExpr>(BinaryExpr{
+          .m_operator = binary_expression->m_operator,
+          .m_lhs = std::move(lhs),
+          .m_rhs = std::move(rhs),
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(
@@ -308,12 +307,14 @@ Expression ExpressionChecker::operator()(
       .m_expression = std::move(expression.m_expression),
   };
 
-  return {.m_location = location,
-          .m_type = final_expression.m_type,
-          .m_expression = std::make_unique<UnaryExpr>(UnaryExpr{
-              unary_expression->m_operator,
-              std::move(final_expression),
-          })};
+  return {
+      .m_location = location,
+      .m_type = final_expression.m_type,
+      .m_expression = std::make_unique<UnaryExpr>(UnaryExpr{
+          .m_operator = unary_expression->m_operator,
+          .m_expression = std::move(final_expression),
+      }),
+  };
 }
 
 Expression
@@ -362,23 +363,21 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::IfExpr> &if_expression,
         location);
   }
 
-  return {.m_location = location,
-          .m_type = type,
-          .m_expression = std::make_unique<IfExpr>(IfExpr{
-              std::move(resolved_condition),
-              std::move(then_block),
-              std::optional<Block>(std::move(else_block)),
-          })};
+  return {
+      .m_location = location,
+      .m_type = type,
+      .m_expression = std::make_unique<IfExpr>(IfExpr{
+          .m_condition = std::move(resolved_condition),
+          .m_then_block = std::move(then_block),
+          .m_else_block = std::optional<Block>(std::move(else_block)),
+      }),
+  };
 }
 
 Expression
 ExpressionChecker::operator()(const std::unique_ptr<ast::Block> &block,
                               const core::SourceLocation &location) {
-  auto hir_block =
-      BlockChecker{
-          m_ctx,
-      }
-          .check_block(*block);
+  auto hir_block = BlockChecker{m_ctx}.check_block(*block);
   return {
       .m_location = location,
       .m_type = hir_block.m_type,
@@ -394,11 +393,8 @@ Expression ExpressionChecker::operator()(
 
   auto original_type_id = m_ctx.m_type_unifier.find(hir_expression.m_type);
 
-  auto new_type_id = std::visit(
-      TypeConverter{
-          m_ctx,
-      },
-      cast_expression->m_new_type);
+  auto new_type_id =
+      std::visit(TypeConverter{m_ctx}, cast_expression->m_new_type);
 
   if (!m_ctx.is_primitive(original_type_id) ||
       !m_ctx.is_primitive(new_type_id)) {
@@ -421,12 +417,14 @@ Expression ExpressionChecker::operator()(
                                   location);
   }
 
-  return {.m_location = location,
-          .m_type = new_type_id,
-          .m_expression = std::make_unique<CastExpr>(CastExpr{
-              std::move(hir_expression),
-              new_type_id,
-          })};
+  return {
+      .m_location = location,
+      .m_type = new_type_id,
+      .m_expression = std::make_unique<CastExpr>(CastExpr{
+          .m_expression = std::move(hir_expression),
+          .m_new_type = new_type_id,
+      }),
+  };
 }
 
 Expression ExpressionChecker::operator()(
@@ -465,9 +463,7 @@ Expression ExpressionChecker::operator()(
     const std::unique_ptr<ast::LambdaExpr> &lambda_expression,
     const core::SourceLocation &location) {
   // Want to evaluate body and see what the type is
-  auto type_converter = TypeConverter{
-      m_ctx,
-  };
+  auto type_converter = TypeConverter{m_ctx};
 
   auto [parameters, parameter_types] =
       type_converter.convert_parameters(lambda_expression->m_parameters);
@@ -568,71 +564,79 @@ ExpressionChecker::operator()(const std::unique_ptr<ast::ForExpr> & /*unused*/,
 
 Expression ExpressionChecker::operator()(const ast::I8 &literal,
                                          const core::SourceLocation &location) {
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_i8,
-          .m_expression = I8{
-              {
-                  location,
-              },
-              literal.m_value,
-          }};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_i8,
+      .m_expression =
+          I8{
+              .m_location = location,
+              .m_value = literal.m_value,
+          },
+  };
 }
 
 Expression ExpressionChecker::operator()(const ast::I32 &literal,
                                          const core::SourceLocation &location) {
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_i32,
-          .m_expression = I32{
-              {
-                  location,
-              },
-              literal.m_value,
-          }};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_i32,
+      .m_expression =
+          I32{
+              .m_location = location,
+              .m_value = literal.m_value,
+          },
+  };
 }
 
 Expression ExpressionChecker::operator()(const ast::I64 &literal,
                                          const core::SourceLocation &location) {
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_i64,
-          .m_expression = I64{
-              {
-                  location,
-              },
-              literal.m_value,
-          }};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_i64,
+      .m_expression =
+          I64{
+              .m_location = location,
+              .m_value = literal.m_value,
+          },
+  };
 }
 
 Expression ExpressionChecker::operator()(const ast::Bool &literal,
                                          const core::SourceLocation &location) {
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_bool,
-          .m_expression = Bool{
-              {
-                  location,
-              },
-              literal.m_value,
-          }};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_bool,
+      .m_expression =
+          Bool{
+              .m_location = location,
+              .m_value = literal.m_value,
+          },
+  };
 }
 
 Expression ExpressionChecker::operator()(const ast::Char &literal,
                                          const core::SourceLocation &location) {
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_char,
-          .m_expression = Char{
-              {
-                  location,
-              },
-              literal.m_value,
-          }};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_char,
+      .m_expression =
+          Char{
+              .m_location = location,
+              .m_value = literal.m_value,
+          },
+  };
 }
 
 Expression ExpressionChecker::operator()(const ast::Unit & /*unused*/,
                                          const core::SourceLocation &location) {
-  return {.m_location = location,
-          .m_type = m_ctx.m_type_arena.m_unit,
-          .m_expression = Unit{{
-              location,
-          }}};
+  return {
+      .m_location = location,
+      .m_type = m_ctx.m_type_arena.m_unit,
+      .m_expression =
+          Unit{
+              .m_location = location,
+          },
+  };
 }
 
 Expression
