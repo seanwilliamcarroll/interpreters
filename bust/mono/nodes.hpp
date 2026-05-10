@@ -19,7 +19,8 @@ namespace bust::mono {
 
 // --- Program ---------------------------------------------------------------
 
-struct Program : public core::HasLocation {
+struct Program {
+  core::SourceLocation m_location;
   hir::TypeArena m_type_arena;
   std::vector<hir::TopItem> m_top_items;
   hir::UnifierState m_unifier_state;

@@ -38,10 +38,12 @@ mono::Program Monomorpher::operator()(hir::Program program) {
     new_top_items.clear();
   }
 
-  return {{program.m_location},
-          std::move(program.m_type_arena),
-          std::move(top_items),
-          std::move(program.m_unifier_state)};
+  return {
+      .m_location = program.m_location,
+      .m_type_arena = std::move(program.m_type_arena),
+      .m_top_items = std::move(top_items),
+      .m_unifier_state = std::move(program.m_unifier_state),
+  };
 }
 
 //****************************************************************************
