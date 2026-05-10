@@ -833,9 +833,9 @@ Value ExpressionGenerator::operator()(const zir::LoopExpr &loop_expr,
 
   // If we're typed to anything else, emit merge block since we have a break
   // inside
-  auto loop_diverges = type_id == m_ctx.arena().m_never;
-  auto returned_type = loop_diverges ? m_ctx.m_void : m_ctx.to_type(type_id);
-  auto emits_valid_type = !loop_diverges && type_id != m_ctx.arena().m_unit;
+  auto loop_cannot_end = type_id == m_ctx.arena().m_never;
+  auto returned_type = loop_cannot_end ? m_ctx.m_void : m_ctx.to_type(type_id);
+  auto emits_valid_type = !loop_cannot_end && type_id != m_ctx.arena().m_unit;
   auto alloca_slot =
       emits_valid_type
           ? m_ctx.builder().emit_alloca(
@@ -846,9 +846,12 @@ Value ExpressionGenerator::operator()(const zir::LoopExpr &loop_expr,
                 .m_type_id = m_ctx.m_void,
             };
 
-  auto merge_label = loop_diverges ? BlockLabel::null()
-                                   : m_ctx.builder().make_block(std::string{
-                                         conventions::merge_block_label});
+  auto merge_label = loop_cannot_end ? BlockLabel::null()
+                                     : m_ctx.builder().make_block(std::string{
+                                           conventions::merge_block_label});
+
+  // Finish off current block by jumping to loop
+  m_ctx.builder().emit_jump(loop_body_label);
 
   // If not unit or never, emit alloca return value slot and load from it at the
   // beginning of the merge block before returning the value
@@ -861,12 +864,15 @@ Value ExpressionGenerator::operator()(const zir::LoopExpr &loop_expr,
                                    .m_break_returned_value = alloca_slot,
                                });
     auto body_value = generate(loop_expr.m_body);
-    if (m_ctx.builder().current_block_terminated()) {
-      // diverged before we got here
-      return {};
+    if (!m_ctx.builder().current_block_terminated()) {
+      m_ctx.builder().emit_jump(loop_body_label);
     }
-    m_ctx.builder().emit_jump(loop_body_label);
   }
+  if (loop_cannot_end) {
+    // Nothing to merge into
+    return {};
+  }
+  // Loop can end, so we go to merge block
   m_ctx.builder().enter_block(merge_label);
 
   if (emits_valid_type) {
@@ -882,11 +888,11 @@ Value ExpressionGenerator::operator()(const zir::BreakExpr &break_expr,
 
   // Need to emit a jump to the merge block of the closest loop
   auto loop_info = m_ctx.loop_stack().current_loop_information();
-  m_ctx.builder().emit_jump(loop_info.m_break_label);
   if (loop_info.m_break_returned_value.m_type_id != m_ctx.m_void) {
     m_ctx.builder().emit_store(loop_info.m_break_returned_value,
                                returned_value);
   }
+  m_ctx.builder().emit_jump(loop_info.m_break_label);
   return {};
 }
 
