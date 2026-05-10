@@ -87,6 +87,24 @@ TEST_SUITE("bust.integration") {
     RUN_INTEGRATION_PROGRAM("short_circuit_in_loop.bu");
   }
 
+  // --- loop / break-with-value / continue ----------------------------------
+
+  TEST_CASE("loop_break_value — typed loop result via break <expr>") {
+    RUN_INTEGRATION_PROGRAM("loop_break_value.bu");
+  }
+
+  TEST_CASE("continue_skip_evens — continue dispatches to while condition") {
+    RUN_INTEGRATION_PROGRAM("continue_skip_evens.bu");
+  }
+
+  TEST_CASE("loop_break_in_lambda — lambda's own loop_stack") {
+    RUN_INTEGRATION_PROGRAM("loop_break_in_lambda.bu");
+  }
+
+  TEST_CASE("loop_break_tuple — break carrying a tuple value") {
+    RUN_INTEGRATION_PROGRAM("loop_break_tuple.bu");
+  }
+
   // --- Catch-all -----------------------------------------------------------
 
   TEST_CASE("everything — single program touching most features") {
@@ -101,6 +119,14 @@ TEST_SUITE("bust.integration") {
 
   TEST_CASE("bad_poly_2 — mixed (i64, bool) fails unification") {
     RUN_INTEGRATION_PROGRAM("bad_poly_2.bu");
+  }
+
+  TEST_CASE("bad_continue_outside_loop — continue must be inside a loop") {
+    RUN_INTEGRATION_PROGRAM("bad_continue_outside_loop.bu");
+  }
+
+  TEST_CASE("bad_break_value_in_while — while break must be unit-typed") {
+    RUN_INTEGRATION_PROGRAM("bad_break_value_in_while.bu");
   }
 }
 

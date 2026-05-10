@@ -167,12 +167,25 @@ stable; add new features at the end.
 - **F48** — `extern fn` declaration
 - **F49** — Calling an extern (e.g., `putchar`)
 
+### Loop expressions (typed-result and continue)
+- **F50** — `loop { ... }` infinite-or-break loop expression. Result type
+  is the unified type of its `break <expr>` payloads, or `Never` when
+  the body has no break path out.
+- **F51** — `break <expr>` carrying a typed payload. Valid only inside
+  `loop` (a `while` body's `break` must be unit-typed). All payloads of
+  break sites in the same `loop` must unify.
+- **F52** — `continue` — skip the rest of the body and resume at the
+  loop's re-entry point (condition for `while`, body label for `loop`).
+
 ### Semantic Invariants (cross-cutting; verified by error-path tests)
 - **I1** — `main` exists and returns `i64`
 - **I2** — `break` only inside loop bodies (type-checker enforced)
 - **I3** — `let mut` required for assignment to a place
 - **I4** — While body must be unit-typed; condition must be bool
 - **I5** — Lambda body type must match declared / inferred return type
+- **I6** — `continue` only inside loop bodies (type-checker enforced)
+- **I7** — `break <expr>` (non-unit payload) only valid inside `loop`,
+  not `while`
 
 ---
 
@@ -207,18 +220,29 @@ from the taxonomy above.
 | `cast_chain_loop.bu`          | F1, F2, F7, F9, F13, F15, F17, F20, F23, F27, F49  | i8 counter, widening casts to i32/i64 in condition and body.                 |
 | `short_circuit_in_loop.bu`    | F1, F2, F3, F15, F17, F20, F21, F23, F25, F27, F28, F49 | `&&` / `\|\|` mixed in a break-guard; SC proves no eager eval.          |
 
+### loop / break-with-value / continue
+
+| Program                       | Features Covered                                          | Notes                                                                                  |
+|-------------------------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------|
+| `loop_break_value.bu`         | F1, F15, F17, F18, F20, F50, F51                          | Counter walks until i*7 == 42; `break i*7` exits with the answer.                      |
+| `continue_skip_evens.bu`      | F1, F15, F17, F18, F20, F23, F26, F27, F49, F52           | `while` + `continue` pattern; prints odd values 1..9.                                  |
+| `loop_break_in_lambda.bu`     | F1, F11, F13, F15, F17, F20, F32, F36, F37, F50, F51      | Lambda body uses `loop` + `break <val>`; verifies per-lambda loop_stack.               |
+| `loop_break_tuple.bu`         | F1, F14, F15, F17, F18, F20, F42, F44, F50, F51           | `break (i, i*i)` carries a 2-tuple; combines tuple alloca with loop-result alloca.     |
+
 ### Catch-all
 
 | Program          | Features Covered                                                                                                 | Notes                                                                |
 |------------------|------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
-| `everything.bu`  | F1–F4, F7–F9, F11, F13–F23, F25–F39, F41–F49                                                                     | Single coherent program touching most features. Output `Y5abc\n.`.   |
+| `everything.bu`  | F1–F4, F7–F9, F11, F13–F23, F25–F39, F41–F49                                                                     | Single coherent program touching most features. Output `Y5abc\n.` Does not yet cover F50–F52 — follow-up. |
 
 ### Negative tests (typecheck rejects)
 
-| Program           | Notes                                                                |
-|-------------------|----------------------------------------------------------------------|
-| `bad_poly.bu`     | `EXPECT_FAIL: typecheck`. `\|x\|{x+x}(true)` — Numeric constraint.   |
-| `bad_poly_2.bu`   | `EXPECT_FAIL: typecheck`. `\|x,y\|{x+y}(1, true)` — unification.     |
+| Program                          | Notes                                                                |
+|----------------------------------|----------------------------------------------------------------------|
+| `bad_poly.bu`                    | `EXPECT_FAIL: typecheck`. `\|x\|{x+x}(true)` — Numeric constraint.   |
+| `bad_poly_2.bu`                  | `EXPECT_FAIL: typecheck`. `\|x,y\|{x+y}(1, true)` — unification.     |
+| `bad_continue_outside_loop.bu`   | I6. `continue;` at function top.                                     |
+| `bad_break_value_in_while.bu`    | I7. `while true { break 5; }` — payload not allowed on while-break.  |
 
 ## Forward-looking Matrix (deferred)
 
