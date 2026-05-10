@@ -80,6 +80,13 @@ struct ContinueExprBase {
   auto operator<=>(const ContinueExprBase &) const = default;
 };
 
+template <typename ExpressionType, typename BlockType> struct WhileExprBase {
+  ExpressionType m_condition;
+  BlockType m_body;
+  auto
+  operator<=>(const WhileExprBase<ExpressionType, BlockType> &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -201,6 +208,17 @@ template <> struct hash<bust::ContinueExprBase> {
   static constexpr size_t HASH_VALUE = 6;
   size_t operator()(const bust::ContinueExprBase & /*unused*/) const noexcept {
     return hash<size_t>{}(HASH_VALUE);
+  }
+};
+
+template <typename ExpressionType, typename BlockType>
+struct hash<bust::WhileExprBase<ExpressionType, BlockType>> {
+  size_t operator()(const bust::WhileExprBase<ExpressionType, BlockType> &expr)
+      const noexcept {
+    size_t seed = 0;
+    core::hash_combine(seed, std::hash<ExpressionType>{}(expr.m_condition));
+    core::hash_combine(seed, std::hash<BlockType>{}(expr.m_body));
+    return seed;
   }
 };
 

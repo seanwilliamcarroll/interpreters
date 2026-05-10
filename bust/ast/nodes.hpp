@@ -31,7 +31,6 @@ struct LetBinding;
 struct Identifier;
 struct Block;
 struct DotExpr;
-struct WhileExpr;
 struct LoopExpr;
 struct ForExpr;
 
@@ -61,6 +60,7 @@ using LambdaExpr =
 using TupleExpr = TupleExprBase<Expression>;
 using BreakExpr = BreakExprBase<Expression>;
 using ContinueExpr = ContinueExprBase;
+using WhileExpr = WhileExprBase<Expression, Block>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -110,11 +110,6 @@ struct Block {
   core::SourceLocation m_location;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
-};
-
-struct WhileExpr {
-  Expression m_condition;
-  Block m_body;
 };
 
 struct LoopExpr {

@@ -30,7 +30,6 @@ struct FunctionDef;
 struct ExternFunctionDeclaration;
 struct Block;
 struct DotExpr;
-struct WhileExpr;
 struct LoopExpr;
 // TODO
 struct ForExpr {};
@@ -106,6 +105,7 @@ using LambdaExpr = LambdaExprBase<Parameter, Block, TypeId>;
 using TupleExpr = TupleExprBase<Expression>;
 using BreakExpr = BreakExprBase<Expression>;
 using ContinueExpr = ContinueExprBase;
+using WhileExpr = WhileExprBase<Expression, Block>;
 
 using ExprKind =
     std::variant<Identifier, Unit, I8, I32, I64, Bool, Char,
@@ -154,11 +154,6 @@ struct Block {
   TypeId m_type;
   std::vector<Statement> m_statements;
   std::optional<Expression> m_final_expression;
-};
-
-struct WhileExpr {
-  Expression m_condition;
-  Block m_body;
 };
 
 struct LoopExpr {
