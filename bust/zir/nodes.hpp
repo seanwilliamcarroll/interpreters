@@ -74,11 +74,6 @@ struct Assignment {
   auto operator<=>(const Assignment &) const = default;
 };
 
-struct TupleExpr {
-  std::vector<ExprId> m_fields;
-  auto operator<=>(const TupleExpr &) const = default;
-};
-
 struct ExpressionStatement {
   ExprId m_expression;
   auto operator<=>(const ExpressionStatement &) const = default;
@@ -104,6 +99,7 @@ using UnaryExpr = UnaryExprBase<ExprId>;
 using ReturnExpr = ReturnExprBase<ExprId>;
 using CastExpr = CastExprBase<ExprId, TypeId>;
 using IfExpr = IfExprBase<ExprId, Block>;
+using TupleExpr = TupleExprBase<ExprId>;
 
 struct LambdaExpr {
   std::vector<IdentifierExpr> m_parameters;
@@ -204,16 +200,6 @@ template <> struct hash<bust::zir::Assignment> {
     core::hash_combine(seed, hash<bust::zir::Place>{}(assignment.m_place));
     core::hash_combine(seed,
                        hash<bust::zir::ExprId>{}(assignment.m_expression));
-    return seed;
-  }
-};
-
-template <> struct hash<bust::zir::TupleExpr> {
-  size_t operator()(const bust::zir::TupleExpr &id) const noexcept {
-    size_t seed = 0;
-    for (const auto &field : id.m_fields) {
-      core::hash_combine(seed, std::hash<bust::zir::ExprId>{}(field));
-    }
     return seed;
   }
 };

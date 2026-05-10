@@ -66,6 +66,11 @@ struct LambdaExprBase {
                        &) const = default;
 };
 
+template <typename ExpressionType> struct TupleExprBase {
+  std::vector<ExpressionType> m_fields;
+  auto operator<=>(const TupleExprBase<ExpressionType> &) const = default;
+};
+
 //****************************************************************************
 } // namespace bust
 //****************************************************************************
@@ -159,6 +164,18 @@ struct hash<bust::LambdaExprBase<IdentifierType, BlockType, ReturnType>> {
     }
     core::hash_combine(seed, std::hash<BlockType>{}(expr.m_body));
     core::hash_combine(seed, std::hash<ReturnType>{}(expr.m_return_type));
+    return seed;
+  }
+};
+
+template <typename ExpressionType>
+struct hash<bust::TupleExprBase<ExpressionType>> {
+  size_t
+  operator()(const bust::TupleExprBase<ExpressionType> &expr) const noexcept {
+    size_t seed = 0;
+    for (const auto &field : expr.m_fields) {
+      core::hash_combine(seed, std::hash<ExpressionType>{}(field));
+    }
     return seed;
   }
 };

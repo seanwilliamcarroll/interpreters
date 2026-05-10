@@ -31,7 +31,6 @@ struct LetBinding;
 struct Identifier;
 struct Block;
 struct DotExpr;
-struct TupleExpr;
 struct WhileExpr;
 struct LoopExpr;
 struct ForExpr;
@@ -61,6 +60,7 @@ using CastExpr = CastExprBase<Expression, TypeIdentifier>;
 using IfExpr = IfExprBase<Expression, Block>;
 using LambdaExpr =
     LambdaExprBase<Parameter, Block, std::optional<TypeIdentifier>>;
+using TupleExpr = TupleExprBase<Expression>;
 
 // Recursive variants use unique_ptr to break the cycle.
 using ExprKind =
@@ -97,10 +97,6 @@ struct Parameter {
 struct Expression {
   core::SourceLocation m_location;
   ExprKind m_expression;
-};
-
-struct TupleExpr {
-  std::vector<Expression> m_fields;
 };
 
 struct BreakExpr {
