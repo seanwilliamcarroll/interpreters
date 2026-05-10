@@ -233,7 +233,7 @@ from the taxonomy above.
 
 | Program          | Features Covered                                                                                                 | Notes                                                                |
 |------------------|------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
-| `everything.bu`  | F1–F4, F7–F9, F11, F13–F23, F25–F39, F41–F49                                                                     | Single coherent program touching most features. Output `Y5abc\n.` Does not yet cover F50–F52 — follow-up. |
+| `everything.bu`  | F1–F4, F7–F9, F11, F13–F23, F25–F39, F41–F52                                                                     | Single coherent program touching most features. Output `Y5abc\n.`.   |
 
 ### Negative tests (typecheck rejects)
 
