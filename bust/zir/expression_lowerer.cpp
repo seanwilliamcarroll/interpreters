@@ -40,7 +40,6 @@ ExprId ExpressionLowerer::lower(const hir::Expression &expression) {
   auto new_expression =
       Expression{.m_type_id = new_type, .m_expr_kind = expr_kind};
 
-  // TODO: Location
   // One place we actually push expressions
   return m_ctx.arena().push(std::move(new_expression));
 }
